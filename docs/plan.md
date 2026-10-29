@@ -13,7 +13,7 @@
 
 - [x] 1-1 飛行モデル `flight/`。プレースホルダー機体（Cone + Box）で飛べる。失速・地面衝突 — main 直接マージ: https://github.com/kuroneko0269-code/skyraid/commit/400ab418c802401553cbc0640d13780a2f4793c4
 - [x] 1-2 追従カメラ。速度で画角と距離が変化 — main 直接マージ: https://github.com/kuroneko0269-code/skyraid/commit/e7b97c60f693818480880e00c978a28e03b1331a
-- [ ] 1-3 地形（ハイトマップの島）と海面、スカイボックス、太陽光
+- [x] 1-3 地形（ハイトマップの島）と海面、スカイボックス、太陽光 — main 直接マージ: https://github.com/kuroneko0269-code/skyraid/commit/697c233042379be8b5c1adb345e9e8b2e3e0ca69
 - [ ] 1-4 HUD（速度・高度・姿勢）
 - [x] 1-5 タッチ操作とゲームパッド対応（スマホ優先のため 1-3・1-4 より前倒し） — main 直接マージ: https://github.com/kuroneko0269-code/skyraid/commit/2c9d0345b7d6c600a1311dec6ffc0e674ade5cf9
 - [ ] 1-6 フリーフライトモードとタイトル画面
