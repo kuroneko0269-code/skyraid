@@ -334,3 +334,66 @@
 .hud-radar-island.is-edge {
   background: transparent;
 }
+
+/* ---- 射撃（2-1） ---- */
+/* 機銃の熱ゲージ。オーバーヒート中は赤く点滅 */
+.hud.is-overheat .hud-heat .hud-gauge-track {
+  border-color: var(--hud-red);
+}
+
+.hud.is-overheat .hud-heat .hud-gauge-fill {
+  background: var(--hud-red);
+  animation: hud-blink 0.4s steps(1, end) infinite;
+}
+
+.hud.is-overheat .hud-heat .hud-gauge-label {
+  color: var(--hud-red);
+}
+
+/* ヒットマーカー: 画面中央の ×（命中後 0.1 秒） */
+.hud-hitmarker {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+}
+
+.hud-hitmarker::before,
+.hud-hitmarker::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 100%;
+  border-left: 3px solid rgba(255, 255, 255, 0.95);
+  transform: translateX(-50%) rotate(45deg);
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
+}
+
+.hud-hitmarker::after {
+  transform: translateX(-50%) rotate(-45deg);
+}
+
+.hud.is-hit .hud-hitmarker {
+  display: block;
+}
+
+/* 撃墜数（右の高度の下） */
+.hud-kills {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.hud-kills-label {
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.hud-kills-value {
+  font: 700 calc(var(--hud-value-size) * 0.8) / 1.1 var(--hud-mono);
+  font-variant-numeric: tabular-nums;
+}

@@ -6,6 +6,8 @@ export const HUD_CONFIG = {
   groundWarningAgl: 100,
   /** 失速表示を出す失速の度合い（FlightState.stall、0〜1）。0 より大きければ失速中 */
   stallThreshold: 0,
+  /** 命中したとき中央に × を出す時間（秒）。2-1 */
+  hitMarkerSeconds: 0.1,
   ladder: {
     /** 目盛りの間隔（度）。±90 まで */
     stepDeg: 10,

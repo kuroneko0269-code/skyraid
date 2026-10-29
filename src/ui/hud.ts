@@ -1,6 +1,6 @@
 import './hud.css';
 import { HUD_CONFIG } from '../data/hud';
-import { TOUCH_CONFIG } from '../data/touch';
+import { applyCssVariables, el, gauge } from './hud-dom';
 import type { Quat } from '../flight/math';
 import {
   attitudeFromQuat,
@@ -37,68 +37,13 @@ export interface HudFrame {
   orientation: Readonly<Quat>;
   /** 進行方向マーカーの画面座標（px、左上原点）。null なら隠す（カメラの後ろ） */
   flightPath: { x: number; y: number } | null;
-}
-
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className: string,
-  parent: HTMLElement,
-  text?: string,
-): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  e.className = className;
-  if (text !== undefined) e.textContent = text;
-  parent.appendChild(e);
-  return e;
-}
-
-/** 縦のゲージ（スロットル・アフターバーナー）。fill を scaleY で伸縮する */
-function gauge(parent: HTMLElement, label: string): HTMLDivElement {
-  const wrap = el('div', 'hud-gauge', parent);
-  const track = el('div', 'hud-gauge-track', wrap);
-  const fill = el('div', 'hud-gauge-fill', track);
-  el('div', 'hud-gauge-label', wrap, label);
-  return fill;
-}
-
-/** 数値パラメータを CSS 変数で渡す */
-function applyCssVariables(root: HTMLElement): void {
-  const l = HUD_CONFIG.ladder;
-  const r = HUD_CONFIG.radar;
-  const vars: Record<string, number> = {
-    '--hud-ppd-normal': l.pxPerDeg,
-    '--hud-ppd-compact': l.compactPxPerDeg,
-    '--hud-ladder-w-normal': l.width,
-    '--hud-ladder-h-normal': l.height,
-    '--hud-ladder-w-compact': l.compactWidth,
-    '--hud-ladder-h-compact': l.compactHeight,
-    '--hud-rung-w-normal': l.rungWidth,
-    '--hud-rung-w-compact': l.compactRungWidth,
-    '--hud-horizon-w-normal': l.horizonWidth,
-    '--hud-horizon-w-compact': l.compactHorizonWidth,
-    '--hud-radar-normal': r.size,
-    '--hud-radar-compact': r.compactSize,
-  };
-  for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, String(value));
-  root.style.setProperty('--hud-touch-shift', `${touchGapShift()}px`);
-}
-
-/**
- * タッチ操作中にレーダーを置く横位置のずれ（画面中央から、px）。
- * 左下のスティック（待機位置）の右端と、右下のボタン群・スロットルの左端の間の中央に置く
- */
-function touchGapShift(): number {
-  const t = TOUCH_CONFIG;
-  // + 16 は touch-controls.css の .tc-stick-base の left と同じ余白
-  const stickRight = t.edgeMargin + t.stick.radius * 2 + 16;
-  const buttonsWidth =
-    t.edgeMargin +
-    t.throttle.width +
-    t.buttons.sliderGap +
-    t.buttons.size +
-    t.buttons.gap +
-    t.buttons.fireSize;
-  return (stickRight - buttonsWidth) / 2;
+  /** 機銃の熱（0〜1）とオーバーヒート中か（2-1） */
+  gunHeat: number;
+  gunOverheated: boolean;
+  /** 命中直後でヒットマーカーを出すか */
+  hitMarker: boolean;
+  /** 撃墜数 */
+  kills: number;
 }
 
 /**
@@ -115,6 +60,8 @@ export class Hud {
   private readonly altText: HTMLSpanElement;
   private readonly throttleFill: HTMLDivElement;
   private readonly abFill: HTMLDivElement;
+  private readonly heatFill: HTMLDivElement;
+  private readonly killsText: HTMLSpanElement;
   private readonly island: HTMLDivElement;
 
   private readonly attitude: Attitude = { pitch: 0, roll: 0, heading: 0 };
@@ -137,6 +84,10 @@ export class Hud {
     radarX: NaN,
     radarY: NaN,
     radarEdge: false,
+    heat: NaN,
+    overheat: false,
+    hit: false,
+    kills: '',
   };
 
   constructor(parent: HTMLElement) {
@@ -160,6 +111,7 @@ export class Hud {
       el('span', 'hud-rung-label', rung, label);
     }
     this.fpm = el('div', 'hud-fpm', root);
+    el('div', 'hud-hitmarker', root);
     el('div', 'hud-warn hud-stall', root, 'STALL');
 
     // 左: スロットル・AB ゲージと速度
@@ -167,6 +119,8 @@ export class Hud {
     const gauges = el('div', 'hud-gauges', left);
     this.throttleFill = gauge(gauges, 'THR');
     this.abFill = gauge(gauges, 'AB');
+    // 機銃の熱ゲージ（オーバーヒートで赤く点滅）
+    this.heatFill = gauge(gauges, 'GUN', 'hud-heat');
     const speedBox = el('div', 'hud-box', left);
     el('div', 'hud-box-label', speedBox, 'SPD');
     this.speedText = el('span', 'hud-box-value', speedBox);
@@ -179,6 +133,9 @@ export class Hud {
     this.altText = el('span', 'hud-box-value', altBox);
     el('div', 'hud-box-unit', altBox, 'm');
     el('div', 'hud-warn hud-ground', right, 'PULL UP');
+    const kills = el('div', 'hud-kills', right);
+    el('span', 'hud-kills-label', kills, 'KILL');
+    this.killsText = el('span', 'hud-kills-value', kills);
 
     // 下: レーダー（機首方向が上）。今は自機と島の中心だけ
     const radar = el('div', 'hud-radar', root);
@@ -245,6 +202,8 @@ export class Hud {
       last.abState = abState;
     }
 
+    this.updateCombat(f);
+
     const ground = isGroundWarning(f.altitudeAboveGround, HUD_CONFIG.groundWarningAgl);
     if (ground !== last.ground) {
       last.ground = ground;
@@ -283,6 +242,24 @@ export class Hud {
     }
   }
 
+  private updateCombat(f: Readonly<HudFrame>): void {
+    const last = this.last;
+    if (changed(last.heat, f.gunHeat, HUD_CONFIG.epsilon.gauge)) {
+      last.heat = f.gunHeat;
+      this.heatFill.style.transform = `scaleY(${f.gunHeat.toFixed(3)})`;
+    }
+    if (f.gunOverheated !== last.overheat) {
+      last.overheat = f.gunOverheated;
+      this.root.classList.toggle('is-overheat', f.gunOverheated);
+    }
+    if (f.hitMarker !== last.hit) {
+      last.hit = f.hitMarker;
+      this.root.classList.toggle('is-hit', f.hitMarker);
+    }
+    const kills = String(f.kills);
+    if (kills !== last.kills) this.killsText.textContent = last.kills = kills;
+  }
+
   private updateFlightPath(pos: { x: number; y: number } | null): void {
     const last = this.last;
     const shown = pos !== null;
@@ -301,8 +278,8 @@ export class Hud {
 
   private invalidate(): void {
     const last = this.last;
-    last.speed = last.alt = '';
-    last.throttle = last.ab = last.pitch = last.roll = NaN;
+    last.speed = last.alt = last.kills = '';
+    last.throttle = last.ab = last.heat = last.pitch = last.roll = NaN;
     last.fpmX = last.fpmY = last.radarX = last.radarY = NaN;
   }
 }

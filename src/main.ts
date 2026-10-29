@@ -17,6 +17,9 @@ import { parseFlightOptions } from './core/flight-options';
 import { ACTIONS } from './data/keybinds';
 import { WORLD_CONFIG } from './data/terrain';
 import { Aircraft, type AircraftControls } from './entities/aircraft';
+import { TargetField } from './entities/target-balloon';
+import { CombatSystem } from './combat/combat-system';
+import { CombatView } from './render/combat-view';
 import { applyInterpolatedPose, createPlaceholderAircraft } from './render/aircraft-mesh';
 import { ChaseCamera } from './render/chase-camera';
 import { DemoCamera } from './render/demo-camera';
@@ -25,7 +28,8 @@ import { RenderPipeline, getGpuRendererName } from './render/pipeline';
 import { createWorldScene } from './render/scene';
 import { getGroundHeight } from './render/terrain-height';
 import { DebugOverlay } from './ui/debug-overlay';
-import { Hud, type HudFrame } from './ui/hud';
+import { Hud } from './ui/hud';
+import { createHudFrame, fillHudFrame } from './ui/hud-feed';
 import { createQualitySelect } from './ui/quality-select';
 import {
   createFullscreenButton,
@@ -142,21 +146,11 @@ const controls: AircraftControls = {
   throttleTarget: null,
 };
 let lastCrashCount = aircraft.crashCount;
+// 射撃（2-1）: 島の上空の的を機銃で撃つ。判定は固定ステップ、演出は描画フレーム
+const combat = new CombatSystem(new TargetField(getGroundHeight), getGroundHeight);
+const combatView = new CombatView(scene, aircraftMesh, combat);
 const flightPath = { x: 0, y: 0 };
-const hudFrame: HudFrame = {
-  speed: 0,
-  throttle: 0,
-  afterburnerGauge: 0,
-  afterburnerActive: false,
-  afterburnerLocked: false,
-  x: 0,
-  y: 0,
-  z: 0,
-  altitudeAboveGround: 0,
-  stall: 0,
-  orientation: aircraft.state.orientation,
-  flightPath: null,
-};
+const hudFrame = createHudFrame(aircraft);
 
 const loop = new GameLoop();
 // 固定ステップ更新は飛行中だけ（ポーズ・メニュー中は GameLoop ごと止める）
@@ -186,6 +180,7 @@ loop.onUpdate((dt) => {
   controls.afterburner = input.isDown('afterburner');
   controls.throttleTarget = input.takeThrottleTarget();
   aircraft.step(controls, dt);
+  combat.step(input.isDown('fire'), aircraft.state, dt);
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
   handleCommonKeys();
 });
@@ -197,6 +192,7 @@ loop.onRender((alpha) => {
   if (state !== 'pause') worldTime += frameSeconds;
   if (usesDemoCamera(state)) demoCamera.update(frameSeconds);
   else if (state === 'flight') updateFlightView(alpha, frameSeconds);
+  combatView.update(alpha, state === 'flight' ? frameSeconds : 0, camera.position);
   world.update(camera.position, worldTime);
   if (state === 'flight' && hud.visible) updateHud();
   pipeline.render();
@@ -221,6 +217,8 @@ void runBoot(BOOT_TASKS, (progress) => {
 function startFreeFlight(): void {
   aircraft.respawn(WORLD_CONFIG.start);
   lastCrashCount = aircraft.crashCount;
+  combat.reset();
+  combatView.reset();
   chaseCamera.snap();
 }
 
@@ -273,18 +271,7 @@ function updateFlightView(alpha: number, frameSeconds: number): void {
 
 /** HUD に機体の状態を渡す（DOM の書き換えは HUD 側で変化があったときだけ） */
 function updateHud(): void {
-  const state = aircraft.state;
-  const p = state.position;
-  hudFrame.speed = state.speed;
-  hudFrame.throttle = aircraft.throttle;
-  hudFrame.afterburnerGauge = state.afterburnerGauge;
-  hudFrame.afterburnerActive = state.afterburnerActive;
-  hudFrame.afterburnerLocked = state.afterburnerLocked;
-  hudFrame.x = p.x;
-  hudFrame.y = p.y;
-  hudFrame.z = p.z;
-  hudFrame.altitudeAboveGround = p.y - getGroundHeight(p.x, p.z);
-  hudFrame.stall = state.stall;
+  fillHudFrame(hudFrame, aircraft, combat, getGroundHeight);
   hudFrame.flightPath = projectFlightPath(
     camera,
     aircraftMesh,
