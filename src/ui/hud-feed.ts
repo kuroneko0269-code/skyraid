@@ -2,6 +2,7 @@
 import type { CombatSystem } from '../combat/combat-system';
 import type { Aircraft, GroundHeightFn } from '../entities/aircraft';
 import type { HudFrame } from './hud';
+import { createWeaponsFrame } from './hud-weapons';
 
 export function createHudFrame(aircraft: Aircraft): HudFrame {
   return {
@@ -21,10 +22,14 @@ export function createHudFrame(aircraft: Aircraft): HudFrame {
     gunOverheated: false,
     hitMarker: false,
     kills: 0,
+    weapons: createWeaponsFrame(),
   };
 }
 
-/** 機体と射撃の状態を frame に書く。進行方向マーカー（flightPath）は呼び出し側で入れる */
+/**
+ * 機体と射撃の状態を frame に書く。画面座標（進行方向マーカー flightPath、対象のマーカー・予測照準点）は
+ * 呼び出し側で入れる（render/target-projection.ts）
+ */
 export function fillHudFrame(
   frame: HudFrame,
   aircraft: Aircraft,
@@ -47,4 +52,11 @@ export function fillHudFrame(
   frame.gunOverheated = combat.gun.heat.overheated;
   frame.hitMarker = combat.hitMarkerTimer > 0;
   frame.kills = combat.kills;
+  const w = frame.weapons;
+  w.missiles = combat.missileAmmo.count;
+  w.flares = combat.flares.magazine.count;
+  w.flareCooling = combat.flares.magazine.cooldown > 0;
+  w.lockProgress = combat.targeting.lockProgress;
+  w.locked = combat.targeting.locked;
+  w.distance = combat.targeting.selectedDistance;
 }

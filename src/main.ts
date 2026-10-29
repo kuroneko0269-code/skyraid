@@ -18,18 +18,19 @@ import { ACTIONS } from './data/keybinds';
 import { WORLD_CONFIG } from './data/terrain';
 import { Aircraft, type AircraftControls } from './entities/aircraft';
 import { TargetField } from './entities/target-balloon';
-import { CombatSystem } from './combat/combat-system';
+import { CombatSystem, type CombatInput } from './combat/combat-system';
 import { CombatView } from './render/combat-view';
+import { DroneView } from './render/drone-view';
+import { HudLink } from './render/hud-link';
+import { MissileView } from './render/missile-view';
 import { applyInterpolatedPose, createPlaceholderAircraft } from './render/aircraft-mesh';
 import { ChaseCamera } from './render/chase-camera';
 import { DemoCamera } from './render/demo-camera';
-import { projectFlightPath } from './render/hud-projection';
 import { RenderPipeline, getGpuRendererName } from './render/pipeline';
 import { createWorldScene } from './render/scene';
 import { getGroundHeight } from './render/terrain-height';
 import { DebugOverlay } from './ui/debug-overlay';
 import { Hud } from './ui/hud';
-import { createHudFrame, fillHudFrame } from './ui/hud-feed';
 import { createQualitySelect } from './ui/quality-select';
 import {
   createFullscreenButton,
@@ -146,11 +147,24 @@ const controls: AircraftControls = {
   throttleTarget: null,
 };
 let lastCrashCount = aircraft.crashCount;
-// 射撃（2-1）: 島の上空の的を機銃で撃つ。判定は固定ステップ、演出は描画フレーム
+// 射撃（2-1）・ロックオンとミサイル（2-2）: 的と周回ドローンを撃つ。判定は固定ステップ、演出は描画フレーム
 const combat = new CombatSystem(new TargetField(getGroundHeight), getGroundHeight);
 const combatView = new CombatView(scene, aircraftMesh, combat);
-const flightPath = { x: 0, y: 0 };
-const hudFrame = createHudFrame(aircraft);
+const missileView = new MissileView(scene, combat);
+const droneView = new DroneView(scene, combat.drones);
+const combatInput: CombatInput = {
+  trigger: false,
+  missile: false,
+  flare: false,
+  targetNext: false,
+};
+const hudLink = new HudLink(hud, camera, aircraftMesh, aircraft, combat, getGroundHeight);
+// HUD の対象をタップ（クリック）すると選ぶ。スティック・ボタンの上は canvas に届かない
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (game.state !== 'flight') return;
+  const target = hudLink.pick(e.clientX, e.clientY);
+  if (target) combat.targeting.select(target);
+});
 
 const loop = new GameLoop();
 // 固定ステップ更新は飛行中だけ（ポーズ・メニュー中は GameLoop ごと止める）
@@ -180,7 +194,11 @@ loop.onUpdate((dt) => {
   controls.afterburner = input.isDown('afterburner');
   controls.throttleTarget = input.takeThrottleTarget();
   aircraft.step(controls, dt);
-  combat.step(input.isDown('fire'), aircraft.state, dt);
+  combatInput.trigger = input.isDown('fire');
+  combatInput.missile = input.wasPressed('missile');
+  combatInput.flare = input.wasPressed('flare');
+  combatInput.targetNext = input.wasPressed('targetNext');
+  combat.step(combatInput, aircraft.state, dt);
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
   handleCommonKeys();
 });
@@ -192,9 +210,13 @@ loop.onRender((alpha) => {
   if (state !== 'pause') worldTime += frameSeconds;
   if (usesDemoCamera(state)) demoCamera.update(frameSeconds);
   else if (state === 'flight') updateFlightView(alpha, frameSeconds);
-  combatView.update(alpha, state === 'flight' ? frameSeconds : 0, camera.position);
+  const effectSeconds = state === 'flight' ? frameSeconds : 0;
+  combatView.update(alpha, effectSeconds, camera.position);
+  missileView.update(alpha, effectSeconds, camera.position);
+  droneView.update(alpha);
   world.update(camera.position, worldTime);
-  if (state === 'flight' && hud.visible) updateHud();
+  if (state === 'flight' && hud.visible)
+    hudLink.update(alpha, window.innerWidth, window.innerHeight);
   pipeline.render();
   if (lastFrameMs !== null && frameStats.record(frameSeconds)) {
     const { fps, frameMs } = frameStats.latest;
@@ -219,6 +241,7 @@ function startFreeFlight(): void {
   lastCrashCount = aircraft.crashCount;
   combat.reset();
   combatView.reset();
+  missileView.reset();
   chaseCamera.snap();
 }
 
@@ -267,19 +290,4 @@ function updateFlightView(alpha: number, frameSeconds: number): void {
   const groundUnderCamera = getGroundHeight(camera.position.x, camera.position.z);
   chaseCamera.update(aircraftMesh, aircraft.state, groundUnderCamera, frameSeconds);
   touchControls.syncThrottle(aircraft.throttle);
-}
-
-/** HUD に機体の状態を渡す（DOM の書き換えは HUD 側で変化があったときだけ） */
-function updateHud(): void {
-  fillHudFrame(hudFrame, aircraft, combat, getGroundHeight);
-  hudFrame.flightPath = projectFlightPath(
-    camera,
-    aircraftMesh,
-    window.innerWidth,
-    window.innerHeight,
-    flightPath,
-  )
-    ? flightPath
-    : null;
-  hud.update(hudFrame);
 }

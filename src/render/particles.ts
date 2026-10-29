@@ -1,4 +1,4 @@
-// プールで管理する小さなパーティクル（火花・破片）。1 種類につき InstancedMesh 1 つ = 1 draw call
+// プールで管理する小さなパーティクル（火花・破片・起爆の閃光）。1 種類につき InstancedMesh 1 つ = 1 draw call
 import {
   BoxGeometry,
   DynamicDrawUsage,
@@ -7,6 +7,7 @@ import {
   Matrix4,
   Quaternion,
   Vector3,
+  type BufferGeometry,
   type Material,
 } from 'three';
 import { Pool } from '../combat/pool';
@@ -56,9 +57,11 @@ export class ParticleSystem {
     capacity: number,
     material: Material,
     private readonly style: ParticleStyle,
+    /** 1 つ分の形（寸法 1 の箱が既定。起爆の閃光は球） */
+    geometry: BufferGeometry = new BoxGeometry(1, 1, 1),
   ) {
     this.pool = new Pool(capacity, newParticle);
-    this.mesh = new InstancedMesh(new BoxGeometry(1, 1, 1), material, capacity);
+    this.mesh = new InstancedMesh(geometry, material, capacity);
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     // インスタンスが毎フレーム動くので、作成時の境界球での視錐台カリングはしない
     this.mesh.frustumCulled = false;

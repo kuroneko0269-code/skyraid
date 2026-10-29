@@ -44,3 +44,35 @@ export const TARGET_CONFIG = {
     { x: 900, z: 2500, agl: 220 },
   ] satisfies readonly TargetSpawnPoint[],
 } as const;
+
+export interface DroneOrbit {
+  /** 周回の中心（島の中心が原点）と半径（m） */
+  readonly centerX: number;
+  readonly centerZ: number;
+  readonly radius: number;
+  /** 海面からの高度（m）。一定 */
+  readonly altitude: number;
+  /** 開始時の角度（rad）。x = cx + r cos θ、z = cz + r sin θ。π/2 が南（+Z、起動位置の側） */
+  readonly phase: number;
+}
+
+// ロック練習用の周回ドローン（2-2）。ロジックは src/entities/target-drone.ts、描画は src/render/drone-view.ts
+// AI は 2-3 なので固定の円軌道。上から見て反時計回り（θ が増える向き）
+export const DRONE_CONFIG = {
+  /** 速さ（m/s） */
+  speed: 120,
+  maxHp: 100,
+  /** 当たり判定の球の半径（m）。見た目は翼幅 9m・長さ 7m */
+  hitRadius: 7,
+  visualRadius: 4.5,
+  /** 撃墜から再出現までの時間（秒）。再出現は同じ軌道の、その時点の位置 */
+  respawnSeconds: 15,
+  hitFlashSeconds: 0.08,
+  color: 0xe8452c,
+  /** 島の山（最高 約 600m）より上。起動直後に 1 機が正面（約 2km 先）に見える */
+  orbits: [
+    { centerX: 0, centerZ: 0, radius: 2400, altitude: 800, phase: Math.PI / 2 },
+    { centerX: 0, centerZ: 0, radius: 2000, altitude: 700, phase: Math.PI / 2 + (2 * Math.PI) / 3 },
+    { centerX: 0, centerZ: 0, radius: 1700, altitude: 950, phase: Math.PI / 2 + (4 * Math.PI) / 3 },
+  ] satisfies readonly DroneOrbit[],
+} as const;

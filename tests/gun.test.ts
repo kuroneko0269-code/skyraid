@@ -7,6 +7,7 @@ import { TargetField } from '../src/entities/target-balloon';
 
 const DT = 1 / 60;
 const NO_SPREAD: GunSpec = { ...GUN_CONFIG, spreadDeg: 0 };
+const FIRE = { trigger: true, missile: false, flare: false, targetNext: false };
 
 /** 原点で -Z（前方）を向いて静止した機体 */
 function shooter(speed = 0, y = 0): Shooter {
@@ -166,7 +167,7 @@ describe('的と撃墜', () => {
     };
     let sawMarker = false;
     for (let i = 0; i < 60 * 3 && combat.kills === 0; i++) {
-      combat.step(true, s, DT);
+      combat.step(FIRE, s, DT);
       if (combat.hitMarkerTimer > 0) sawMarker = true;
     }
     expect(sawMarker).toBe(true);
@@ -220,7 +221,7 @@ describe('的と撃墜', () => {
     const combat = new CombatSystem(field);
     combat.kills = 3;
     field.balloons[0]?.applyDamage(1000);
-    combat.step(true, shooter(), DT);
+    combat.step(FIRE, shooter(), DT);
     combat.reset();
     expect(combat.kills).toBe(0);
     expect(combat.gun.bullets.count).toBe(0);

@@ -59,3 +59,47 @@ export const DEBRIS_CONFIG = {
   life: 1.5,
   shrinkFraction: 0.35,
 } as const;
+
+// ---- 2-2: ミサイル・フレア・起爆。描画は src/render/missile-view.ts / smoke.ts ----
+
+export const MISSILE_VIEW_CONFIG = {
+  /** ミサイル本体（細長い箱）の長さ・太さ */
+  length: 3.6,
+  width: 0.35,
+  color: 0xeeeeee,
+} as const;
+
+export const SMOKE_CONFIG = {
+  /** 同時に出せる煙の玉の上限（ミサイル 8 発 × 寿命 0.9 秒 × 50 個/秒 = 360 に余裕） */
+  max: 400,
+  /** 燃焼中のミサイルが煙を出す間隔（秒、ゲーム内時間） */
+  interval: 1 / 50,
+  life: 0.9,
+  /** 大きさ（直径）。出た直後 → 寿命の終わりへ広がり、最後の fadeFraction で縮んで消える */
+  startSize: 1.4,
+  endSize: 6,
+  fadeFraction: 0.3,
+  color: 0xdadada,
+  opacity: 0.55,
+} as const;
+
+export const FLARE_VIEW_CONFIG = {
+  /** 光点の大きさ。遠くでも見えるよう、カメラからの距離 × sizePerMeter を下限にする */
+  size: 1.6,
+  sizePerMeter: 0.006,
+  /** 大きさのちらつき（±割合） */
+  flicker: 0.35,
+  color: 0xfff1b8,
+} as const;
+
+export const EXPLOSION_CONFIG = {
+  /** 閃光（球）の同時に出せる上限・寿命・直径。出た瞬間が最大で縮んで消える */
+  flashMax: 16,
+  flashLife: 0.35,
+  flashSize: 16,
+  flashColor: 0xffc45a,
+  /** 起爆で出す火花（2-1 の火花のプールを使う）の数と速さ */
+  sparks: 24,
+  sparkSpeedMin: 40,
+  sparkSpeedMax: 110,
+} as const;

@@ -1,6 +1,7 @@
 import './hud.css';
 import { HUD_CONFIG } from '../data/hud';
 import { applyCssVariables, el, gauge } from './hud-dom';
+import { HudWeapons, type HudWeaponsFrame } from './hud-weapons';
 import type { Quat } from '../flight/math';
 import {
   attitudeFromQuat,
@@ -44,6 +45,8 @@ export interface HudFrame {
   hitMarker: boolean;
   /** 撃墜数 */
   kills: number;
+  /** 索敵・ロック・予測照準・残弾（2-2） */
+  weapons: HudWeaponsFrame;
 }
 
 /**
@@ -63,6 +66,7 @@ export class Hud {
   private readonly heatFill: HTMLDivElement;
   private readonly killsText: HTMLSpanElement;
   private readonly island: HTMLDivElement;
+  private readonly weapons: HudWeapons;
 
   private readonly attitude: Attitude = { pitch: 0, roll: 0, heading: 0 };
   private readonly ladderXf: LadderTransform = { rotateDeg: 0, offsetPx: 0 };
@@ -121,6 +125,8 @@ export class Hud {
     this.abFill = gauge(gauges, 'AB');
     // 機銃の熱ゲージ（オーバーヒートで赤く点滅）
     this.heatFill = gauge(gauges, 'GUN', 'hud-heat');
+    // 索敵マーカー（中央のレイヤー）と残弾（ゲージ列の右）
+    this.weapons = new HudWeapons(root, gauges);
     const speedBox = el('div', 'hud-box', left);
     el('div', 'hud-box-label', speedBox, 'SPD');
     this.speedText = el('span', 'hud-box-value', speedBox);
@@ -258,6 +264,7 @@ export class Hud {
     }
     const kills = String(f.kills);
     if (kills !== last.kills) this.killsText.textContent = last.kills = kills;
+    this.weapons.update(f.weapons);
   }
 
   private updateFlightPath(pos: { x: number; y: number } | null): void {
@@ -281,5 +288,6 @@ export class Hud {
     last.speed = last.alt = last.kills = '';
     last.throttle = last.ab = last.heat = last.pitch = last.roll = NaN;
     last.fpmX = last.fpmY = last.radarX = last.radarY = NaN;
+    this.weapons.invalidate();
   }
 }

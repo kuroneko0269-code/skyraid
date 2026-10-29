@@ -1,0 +1,160 @@
+/* 索敵・ロック・予測照準・残弾（2-2）。位置は hud-weapons.ts が translate で入れる（要素の中心が対象） */
+.hud-targets {
+  position: absolute;
+  inset: 0;
+}
+
+.hud-tgt,
+.hud-sel,
+.hud-arrow,
+.hud-lead {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+
+/* 索敵範囲の対象: 小さな四角 */
+.hud-tgt {
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border: 1.5px solid var(--hud-color);
+  box-sizing: border-box;
+}
+
+/* 選択中の対象: ひし形。ロック完了で赤い枠と LOCK */
+.hud-sel {
+  width: 0;
+  height: 0;
+}
+
+.hud-sel-diamond {
+  position: absolute;
+  left: -11px;
+  top: -11px;
+  width: 22px;
+  height: 22px;
+  border: var(--hud-line) solid var(--hud-color);
+  box-sizing: border-box;
+  transform: rotate(45deg);
+}
+
+.hud-sel-frame,
+.hud-lock-label {
+  display: none;
+}
+
+.hud-sel-frame {
+  position: absolute;
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  border: var(--hud-line) solid var(--hud-red);
+  box-sizing: border-box;
+}
+
+.hud-lock-label {
+  position: absolute;
+  left: 0;
+  bottom: 26px;
+  transform: translateX(-50%);
+  color: var(--hud-red);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.hud-sel.is-locked .hud-sel-frame,
+.hud-sel.is-locked .hud-lock-label {
+  display: block;
+}
+
+.hud-sel.is-locked .hud-sel-diamond {
+  border-color: var(--hud-red);
+}
+
+/* ロック進行中: 円が縮んでひし形に重なる（scale は hud-weapons.ts） */
+.hud-lock-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 34px;
+  height: 34px;
+  border: var(--hud-line) solid var(--hud-color);
+  border-radius: 50%;
+  box-sizing: border-box;
+  transform-origin: 50% 50%;
+}
+
+.hud-sel-dist {
+  position: absolute;
+  left: 0;
+  top: 26px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--hud-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-sel.is-locked .hud-sel-dist {
+  color: var(--hud-red);
+}
+
+/* 画面外の選択対象の方向（右向きの三角を rotate で回す） */
+.hud-arrow {
+  width: 0;
+  height: 0;
+}
+
+.hud-arrow::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: -9px;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-left: 18px solid var(--hud-color);
+}
+
+/* 機銃の予測照準点: 小さな○。進行方向マーカーを重ねて撃つ */
+.hud-lead {
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 1.5px solid var(--hud-color);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+/* 残弾（左のゲージ列の右） */
+.hud-ammo {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  font-family: var(--hud-mono);
+}
+
+.hud-ammo-row {
+  display: flex;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.hud-ammo-label {
+  opacity: 0.8;
+}
+
+.hud-ammo-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-ammo-row.is-cooling {
+  opacity: 0.5;
+}
+
+.hud-ammo-row.is-empty {
+  color: var(--hud-red);
+}

@@ -37,6 +37,17 @@ export const HUD_CONFIG = {
     /** 島の中心（地形は原点中心。src/data/terrain.ts） */
     islandCenter: { x: 0, z: 0 },
   },
+  /** 索敵・ロック・予測照準（2-2）。描画は src/ui/hud-weapons.ts */
+  targets: {
+    /** 索敵範囲の対象の四角の数の上限（DOM 要素はこの数だけ作って使い回す） */
+    maxMarkers: 12,
+    /** 画面外の選択対象を示す矢印を置く、画面端からの距離 */
+    edgeMargin: 40,
+    /** タップした位置からこの距離以内で最も近い対象を選ぶ */
+    tapRadius: 48,
+    /** ロック開始時の円の大きさ（ひし形に対する倍率）。ロック完了で 1 まで縮む */
+    lockRingStartScale: 3,
+  },
   /** 表示を書き換える最小の変化量（毎フレームの DOM 書き込みを避ける） */
   epsilon: {
     /** ピッチラダーの角度（度） */

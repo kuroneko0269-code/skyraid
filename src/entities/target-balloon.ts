@@ -1,5 +1,6 @@
 // 射撃練習用の的（風船）。島の上空でゆっくり上下し、撃墜されると時間をおいて別の地点に再出現する
-import { Health, type Damageable } from '../combat/damage';
+import { Health } from '../combat/damage';
+import type { CombatTarget } from '../combat/target';
 import { TARGET_CONFIG, type TargetSpawnPoint } from '../data/targets';
 import { copyVec3, vec3, type Vec3 } from '../flight/math';
 
@@ -11,11 +12,14 @@ export type Rng = () => number;
 // 的ごとの揺れの位相をずらす（黄金角）。全部が同時に上下しないように
 const PHASE_STEP = 2.399963;
 
-export class TargetBalloon implements Damageable {
+export class TargetBalloon implements CombatTarget {
   readonly position: Vec3 = vec3();
   /** 前ステップの位置（描画の補間用） */
   readonly prevPosition: Vec3 = vec3();
+  /** 速度（上下の揺れだけ） */
+  readonly velocity: Vec3 = vec3();
   readonly hitRadius: number;
+  readonly visualRadius: number;
   /** 今いる出現地点（spawnPoints の番号） */
   spawnIndex = -1;
   /** 再出現までの残り時間（秒）。撃墜されていないときは 0 */
@@ -31,6 +35,7 @@ export class TargetBalloon implements Damageable {
   ) {
     this.health = new Health(config.maxHp);
     this.hitRadius = config.hitRadius;
+    this.visualRadius = config.visualRadius;
   }
 
   get hp(): number {
@@ -68,6 +73,7 @@ export class TargetBalloon implements Damageable {
     this.position.x = point.x;
     this.position.z = point.z;
     this.position.y = this.bobY(time);
+    this.velocity.y = this.bobVelocity(time);
     copyVec3(this.prevPosition, this.position);
   }
 
@@ -75,11 +81,18 @@ export class TargetBalloon implements Damageable {
   move(time: number): void {
     copyVec3(this.prevPosition, this.position);
     this.position.y = this.bobY(time);
+    this.velocity.y = this.bobVelocity(time);
   }
 
   private bobY(time: number): number {
     const b = this.config.bob;
     return this.baseY + b.amplitude * Math.sin((2 * Math.PI * time) / b.period + this.phase);
+  }
+
+  private bobVelocity(time: number): number {
+    const b = this.config.bob;
+    const w = (2 * Math.PI) / b.period;
+    return b.amplitude * w * Math.cos(w * time + this.phase);
   }
 }
 

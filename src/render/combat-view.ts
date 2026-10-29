@@ -1,4 +1,4 @@
-// 射撃（2-1）の描画: 的・曳光弾・マズルフラッシュ・火花・撃墜の破片。
+// 射撃（2-1）の描画: 的・曳光弾・マズルフラッシュ・火花・撃墜の破片（ドローンの破片・ミサイルの起爆の火花も）。
 // 追加の draw call は 的 1 + 弾 1 + 火花 1 + 破片 1 + マズルフラッシュ 1 の最大 5（数によらない）
 import {
   Color,
@@ -15,11 +15,16 @@ import {
   type Scene,
 } from 'three';
 import type { CombatSystem } from '../combat/combat-system';
-import { DEBRIS_CONFIG, MUZZLE_FLASH_CONFIG, SPARK_CONFIG } from '../data/effects';
+import {
+  DEBRIS_CONFIG,
+  EXPLOSION_CONFIG,
+  MUZZLE_FLASH_CONFIG,
+  SPARK_CONFIG,
+} from '../data/effects';
 import { TARGET_CONFIG } from '../data/targets';
 import { GUN_CONFIG } from '../data/weapons';
 import { vec3, type Vec3 } from '../flight/math';
-import type { TargetBalloon } from '../entities/target-balloon';
+import type { CombatTarget } from '../combat/target';
 import { ParticleSystem, randomDirection } from './particles';
 import { TracerRenderer } from './tracers';
 
@@ -88,6 +93,7 @@ export class CombatView {
     scene.add(this.balloons, this.tracers.mesh, this.sparks.mesh, this.debris.mesh);
     combat.onImpact(this.spawnSparks);
     combat.onDestroyed(this.spawnDebris);
+    combat.onExplosion(this.spawnExplosionSparks);
   }
 
   /** 描画フレームごとに呼ぶ。alpha は固定ステップの補間係数、frameSeconds はポーズ中 0 */
@@ -162,11 +168,29 @@ export class CombatView {
     }
   };
 
-  private readonly spawnDebris = (target: TargetBalloon): void => {
+  private readonly spawnExplosionSparks = (x: number, y: number, z: number): void => {
+    const c = SPARK_CONFIG;
+    const e = EXPLOSION_CONFIG;
+    for (let i = 0; i < e.sparks; i++) {
+      const p = this.sparks.spawn(c.lifeMin + Math.random() * (c.lifeMax - c.lifeMin) * 2);
+      if (!p) return;
+      randomDirection(dir);
+      const speed = rand(e.sparkSpeedMin, e.sparkSpeedMax);
+      p.x = x;
+      p.y = y;
+      p.z = z;
+      p.vx = dir.x * speed;
+      p.vy = dir.y * speed;
+      p.vz = dir.z * speed;
+      p.sx = p.sy = p.sz = c.size * 1.5;
+    }
+  };
+
+  private readonly spawnDebris = (target: CombatTarget): void => {
     const c = DEBRIS_CONFIG;
     const n = c.countMin + Math.floor(Math.random() * (c.countMax - c.countMin + 1));
     const t = target.position;
-    const r = TARGET_CONFIG.visualRadius;
+    const r = target.visualRadius;
     for (let i = 0; i < n; i++) {
       const p = this.debris.spawn(c.life);
       if (!p) return;

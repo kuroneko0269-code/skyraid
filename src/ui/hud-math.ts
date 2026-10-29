@@ -128,3 +128,73 @@ export function radarPoint(
 export function changed(prev: number, next: number, epsilon: number): boolean {
   return Number.isNaN(prev) || Math.abs(next - prev) >= epsilon;
 }
+
+/** 画面端の矢印の位置（px、左上原点）と向き（度、右が 0・時計回り。CSS の rotate と同じ） */
+export interface EdgeArrow {
+  x: number;
+  y: number;
+  deg: number;
+}
+
+/**
+ * 画面外の対象の方向を示す矢印。ndcX / ndcY は投影した位置（-1〜+1 が画面内、y は上が正）、
+ * behind はカメラの後ろか（投影で符号が反転するので戻す）。画面中央から対象の方向へ伸ばし、
+ * 端から margin 内側の四角に当たる点に置く
+ */
+export function edgeArrow(
+  out: EdgeArrow,
+  ndcX: number,
+  ndcY: number,
+  behind: boolean,
+  width: number,
+  height: number,
+  margin: number,
+): EdgeArrow {
+  const sign = behind ? -1 : 1;
+  let dx = ndcX * sign * (width / 2);
+  let dy = -ndcY * sign * (height / 2);
+  if (Math.hypot(dx, dy) < 1e-6) {
+    // 真後ろ: 下を指す
+    dx = 0;
+    dy = 1;
+  }
+  const hw = Math.max(1, width / 2 - margin);
+  const hh = Math.max(1, height / 2 - margin);
+  const k = Math.min(
+    dx !== 0 ? hw / Math.abs(dx) : Infinity,
+    dy !== 0 ? hh / Math.abs(dy) : Infinity,
+  );
+  out.x = width / 2 + dx * k;
+  out.y = height / 2 + dy * k;
+  out.deg = Math.atan2(dy, dx) * RAD_TO_DEG;
+  return out;
+}
+
+/** (x, y) から radius 以内で最も近い点の番号。なければ -1 */
+export function pickNearest(
+  points: readonly { readonly x: number; readonly y: number }[],
+  count: number,
+  x: number,
+  y: number,
+  radius: number,
+): number {
+  let best = -1;
+  let bestD = radius;
+  for (let i = 0; i < count; i++) {
+    const p = points[i];
+    if (!p) continue;
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d <= bestD) {
+      best = i;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
+/** 対象までの距離の表示。1000m 未満は m、以上は km（小数 1 桁） */
+export function formatDistance(meters: number): string {
+  const m = Math.max(0, Math.round(meters));
+  if (m < 1000) return `${m} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
+}
