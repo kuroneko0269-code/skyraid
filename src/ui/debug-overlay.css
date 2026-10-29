@@ -18,3 +18,8 @@
   pointer-events: none;
   user-select: none;
 }
+
+/* タッチ操作中は左上のヨーボタン（data/touch.ts の yaw.top 12 + size 56）の下へずらす */
+.touch-active .debug-overlay {
+  top: calc(80px + env(safe-area-inset-top, 0px));
+}

@@ -2,14 +2,14 @@ import './quality-select.css';
 import { QUALITY_LABELS, QUALITY_LEVELS, type QualityLevel } from '../data/quality';
 import { isQualityLevel } from '../core/settings';
 
-/** 画面右上の品質セレクト。選択が変わると onSelect を呼ぶ */
+/** 品質セレクト（設定バーに置く）。選択が変わると onSelect を呼ぶ */
 export function createQualitySelect(
   parent: HTMLElement,
   initial: QualityLevel,
   onSelect: (level: QualityLevel) => void,
 ): HTMLSelectElement {
   const label = document.createElement('label');
-  label.className = 'quality-select';
+  label.className = 'settings-item quality-select';
   label.textContent = '画質 ';
 
   const select = document.createElement('select');

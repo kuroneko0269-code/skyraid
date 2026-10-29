@@ -1,18 +1,4 @@
-.quality-select {
-  position: fixed;
-  top: 8px;
-  right: 8px;
-  z-index: 10;
-  padding: 4px 8px;
-  font:
-    13px/1.4 system-ui,
-    sans-serif;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.45);
-  border-radius: 4px;
-  user-select: none;
-}
-
+/* 位置と見た目は設定バー（mobile.css の .settings-bar / .settings-item）に従う */
 .quality-select select {
   font: inherit;
 }

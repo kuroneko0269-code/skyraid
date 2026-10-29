@@ -46,6 +46,17 @@ describe('スロットル', () => {
     for (let i = 0; i < 600; i++) a.step(controls({ throttle: -1 }), DT);
     expect(a.throttle).toBe(0);
   });
+
+  it('throttleTarget でスロットル位置を直接指定でき、指定がなければ位置を保つ', () => {
+    const a = new Aircraft();
+    a.step(controls({ throttleTarget: 0.2 }), DT);
+    expect(a.throttle).toBeCloseTo(0.2);
+    a.step(controls({ throttleTarget: null }), DT);
+    a.step(controls(), DT);
+    expect(a.throttle).toBeCloseTo(0.2);
+    a.step(controls({ throttleTarget: 3 }), DT);
+    expect(a.throttle).toBe(1);
+  });
 });
 
 describe('固定タイムステップ', () => {

@@ -1,0 +1,172 @@
+/* 仮想コントローラー。寸法の数値は src/data/touch.ts から CSS 変数で入る */
+.touch-controls {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  font:
+    600 13px/1 system-ui,
+    sans-serif;
+  color: #fff;
+  --tc-left: calc(var(--tc-margin) + env(safe-area-inset-left, 0px));
+  --tc-right: calc(var(--tc-margin) + env(safe-area-inset-right, 0px));
+  --tc-bottom: calc(var(--tc-margin) + env(safe-area-inset-bottom, 0px));
+}
+
+.touch-controls[hidden] {
+  display: none;
+}
+
+.touch-controls > * {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* スティックを出せる範囲（透明） */
+.tc-stick-zone {
+  position: absolute;
+  left: 0;
+  top: var(--tc-zone-top);
+  width: var(--tc-zone-width);
+  bottom: 0;
+}
+
+/* 待機中は左下にうっすら表示。触れると指の位置へ移る */
+.touch-controls > .tc-stick-base {
+  position: absolute;
+  left: calc(var(--tc-left) + var(--tc-stick-size) / 2 + 16px);
+  top: calc(100% - var(--tc-bottom) - var(--tc-stick-size) / 2 - 8px);
+  width: var(--tc-stick-size);
+  height: var(--tc-stick-size);
+  margin: calc(var(--tc-stick-size) / -2) 0 0 calc(var(--tc-stick-size) / -2);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.15);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.tc-stick-base.is-active {
+  opacity: 1;
+}
+
+.tc-stick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--tc-knob-size);
+  height: var(--tc-knob-size);
+  margin: calc(var(--tc-knob-size) / -2) 0 0 calc(var(--tc-knob-size) / -2);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  will-change: transform;
+}
+
+.tc-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tc-button-size);
+  height: var(--tc-button-size);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+}
+
+.tc-button.is-pressed {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* ボタン群: スロットルの左隣。右下の機銃が親指の定位置 */
+.tc-buttons {
+  position: absolute;
+  right: calc(var(--tc-right) + var(--tc-throttle-width) + var(--tc-slider-gap));
+  bottom: var(--tc-bottom);
+  display: grid;
+  grid-template-columns: var(--tc-button-size) var(--tc-fire-size);
+  grid-template-rows: var(--tc-button-size) var(--tc-fire-size);
+  gap: var(--tc-gap);
+  align-items: center;
+  justify-items: center;
+  pointer-events: none;
+}
+
+.tc-buttons > .tc-button {
+  pointer-events: auto;
+}
+
+.tc-gun {
+  width: var(--tc-fire-size);
+  height: var(--tc-fire-size);
+  border-color: rgba(255, 200, 120, 0.7);
+}
+
+.tc-yaw {
+  position: absolute;
+  top: calc(var(--tc-yaw-top) + env(safe-area-inset-top, 0px));
+  width: var(--tc-yaw-size);
+  height: var(--tc-yaw-size);
+  border-radius: 12px;
+}
+
+.tc-yaw-left {
+  left: var(--tc-left);
+}
+
+.tc-yaw-right {
+  right: var(--tc-right);
+}
+
+/* スロットル（右端の縦スライダー）。--throttle は 0〜1 */
+.tc-throttle {
+  position: absolute;
+  right: var(--tc-right);
+  bottom: var(--tc-bottom);
+  width: var(--tc-throttle-width);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.tc-throttle-track {
+  position: relative;
+  width: 100%;
+  height: var(--tc-throttle-height);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+  overflow: hidden;
+  pointer-events: auto;
+  touch-action: none;
+  --throttle: 0;
+}
+
+.tc-throttle-fill {
+  position: absolute;
+  inset: 0;
+  background: rgba(120, 200, 255, 0.35);
+  transform-origin: bottom;
+  transform: scaleY(var(--throttle));
+}
+
+.tc-throttle-thumb {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: calc(var(--throttle) * (100% - 12px));
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.tc-throttle-label {
+  opacity: 0.8;
+}

@@ -1,0 +1,54 @@
+.settings-bar {
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.settings-item {
+  padding: 4px 8px;
+  font:
+    13px/1.4 system-ui,
+    sans-serif;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 0;
+  border-radius: 4px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.settings-item select {
+  font: inherit;
+}
+
+.settings-button {
+  cursor: pointer;
+}
+
+.rotate-hint {
+  display: none;
+}
+
+/* タッチ操作中に縦画面なら全面に案内を出す（ゲームは裏で動いたまま） */
+@media (orientation: portrait) {
+  .touch-active .rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    font:
+      600 20px/1.5 system-ui,
+      sans-serif;
+    color: #fff;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.8);
+  }
+}

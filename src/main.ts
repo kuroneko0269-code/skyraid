@@ -1,6 +1,8 @@
 import { WebGLRenderer } from 'three';
 import { GameLoop } from './core/loop';
 import { Input } from './core/input';
+import { GamepadInput, browserGamepads } from './core/gamepad';
+import { loadTouchMode, saveTouchMode, shouldShowTouchControls } from './core/touch-settings';
 import { parseDebugFlags } from './core/debug-flags';
 import { FrameStats } from './core/frame-stats';
 import {
@@ -20,6 +22,14 @@ import { createWorldScene } from './render/scene';
 import { WorldHelpers } from './render/world-helpers';
 import { DebugOverlay } from './ui/debug-overlay';
 import { createQualitySelect } from './ui/quality-select';
+import {
+  createFullscreenButton,
+  createRotateHint,
+  createSettingsBar,
+  createTouchModeSelect,
+  installTouchGuards,
+} from './ui/mobile';
+import { TouchControls } from './ui/touch-controls';
 
 const container = document.getElementById('app');
 if (!container) {
@@ -50,7 +60,9 @@ pipeline.applyQuality(quality.preset);
 quality.onChange((_level, preset) => {
   pipeline.applyQuality(preset);
 });
-createQualitySelect(document.body, quality.level, (level) => {
+installTouchGuards(document);
+const settingsBar = createSettingsBar(document.body);
+createQualitySelect(settingsBar, quality.level, (level) => {
   quality.set(level);
 });
 
@@ -61,6 +73,31 @@ window.addEventListener('resize', () => {
 const input = new Input();
 input.attach(window);
 
+// ゲームパッド: 接続されたら自動で読む
+const gamepad = new GamepadInput(input, browserGamepads);
+gamepad.attach(window);
+
+// タッチ操作: 自動（pointer: coarse のときだけ）/ 強制表示 / 強制非表示。設定は localStorage
+const touchControls = new TouchControls(document.body, input);
+createRotateHint(document.body);
+let touchMode = loadTouchMode(storage);
+const coarsePointer =
+  typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)') : null;
+const refreshTouchVisibility = (): void => {
+  touchControls.setVisible(shouldShowTouchControls(touchMode, coarsePointer?.matches ?? false));
+};
+refreshTouchVisibility();
+coarsePointer?.addEventListener('change', refreshTouchVisibility);
+createTouchModeSelect(settingsBar, touchMode, (mode) => {
+  touchMode = mode;
+  saveTouchMode(storage, mode);
+  refreshTouchVisibility();
+});
+createFullscreenButton(settingsBar);
+window.addEventListener('blur', () => {
+  touchControls.reset();
+});
+
 // ?debug でデバッグ表示を初期表示、?debug=input で押したアクション名をコンソールに出す
 const debugFlags = parseDebugFlags(window.location.search);
 const overlay = new DebugOverlay(document.body, debugFlags.overlay);
@@ -69,16 +106,25 @@ let lastFrameMs: number | null = null;
 
 // 起動直後から巡航速度で飛んでいる。?autolevel=off / ?invert で操作設定を変える
 const aircraft = new Aircraft(undefined, parseFlightOptions(window.location.search));
-const controls: AircraftControls = { pitch: 0, roll: 0, yaw: 0, throttle: 0, afterburner: false };
+const controls: AircraftControls = {
+  pitch: 0,
+  roll: 0,
+  yaw: 0,
+  throttle: 0,
+  afterburner: false,
+  throttleTarget: null,
+};
 let lastCrashCount = aircraft.crashCount;
 
 const loop = new GameLoop();
 loop.onUpdate((dt) => {
+  gamepad.poll();
   controls.pitch = input.axis('pitchDown', 'pitchUp');
   controls.roll = input.axis('rollLeft', 'rollRight');
   controls.yaw = input.axis('yawLeft', 'yawRight');
   controls.throttle = input.axis('throttleDown', 'throttleUp');
   controls.afterburner = input.isDown('afterburner');
+  controls.throttleTarget = input.takeThrottleTarget();
   aircraft.step(controls, dt);
   if (input.wasPressed('debugToggle')) overlay.toggle();
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
@@ -108,6 +154,7 @@ loop.onRender((alpha) => {
   // 地形が入る 1-3 までは地面の高さは一定
   chaseCamera.update(aircraftMesh, aircraft.state, FLIGHT_CONFIG.groundAltitude, frameSeconds);
   worldHelpers.update(aircraftMesh.position);
+  touchControls.syncThrottle(aircraft.throttle);
   pipeline.render();
   if (lastFrameMs !== null && frameStats.record(frameSeconds)) {
     const { fps, frameMs } = frameStats.latest;

@@ -111,3 +111,64 @@ describe('Input', () => {
     expect(input.isDown('yawLeft')).toBe(false);
   });
 });
+
+describe('Input（連続値）', () => {
+  it('タッチの連続値は axis にそのまま出る。キーボードは ±1 のまま', () => {
+    const { input, down, up } = setup();
+    input.setAnalog('touch', 'rollRight', 0.3);
+    expect(input.axis('rollLeft', 'rollRight')).toBeCloseTo(0.3);
+    expect(input.value('rollRight')).toBeCloseTo(0.3);
+    input.setAnalog('touch', 'rollRight', 0);
+    down('KeyA');
+    expect(input.axis('rollLeft', 'rollRight')).toBe(-1);
+    up('KeyA');
+  });
+
+  it('系統をまたいだ合計は ±1 で頭打ち', () => {
+    const { input, down } = setup();
+    down('KeyS');
+    input.setAnalog('gamepad', 'pitchUp', 0.8);
+    expect(input.axis('pitchDown', 'pitchUp')).toBe(1);
+    input.setAnalog('touch', 'pitchDown', 0.5);
+    expect(input.axis('pitchDown', 'pitchUp')).toBeCloseTo(1);
+  });
+
+  it('しきい値で isDown / wasPressed になり、ヒステリシスで離す', () => {
+    const { input } = setup();
+    input.setAnalog('gamepad', 'yawLeft', 0.4);
+    expect(input.isDown('yawLeft')).toBe(false);
+    input.setAnalog('gamepad', 'yawLeft', 0.6);
+    expect(input.isDown('yawLeft')).toBe(true);
+    expect(input.wasPressed('yawLeft')).toBe(true);
+    input.endStep();
+    input.setAnalog('gamepad', 'yawLeft', 0.4);
+    expect(input.isDown('yawLeft')).toBe(true);
+    expect(input.wasPressed('yawLeft')).toBe(false);
+    input.setAnalog('gamepad', 'yawLeft', 0.2);
+    expect(input.isDown('yawLeft')).toBe(false);
+  });
+
+  it('clearAnalog は指定した系統だけ離す', () => {
+    const { input } = setup();
+    input.setAnalog('touch', 'fire', 1);
+    input.setAnalog('gamepad', 'missile', 1);
+    input.clearAnalog('touch');
+    expect(input.isDown('fire')).toBe(false);
+    expect(input.isDown('missile')).toBe(true);
+  });
+
+  it('スロットル位置の直接指定は 1 回だけ受け取れる', () => {
+    const { input } = setup();
+    expect(input.takeThrottleTarget()).toBeNull();
+    input.setThrottleTarget(1.5);
+    expect(input.takeThrottleTarget()).toBe(1);
+    expect(input.takeThrottleTarget()).toBeNull();
+  });
+
+  it('blur で連続値も離される', () => {
+    const { target, input } = setup();
+    input.setAnalog('touch', 'afterburner', 1);
+    target.dispatchEvent(new Event('blur'));
+    expect(input.isDown('afterburner')).toBe(false);
+  });
+});

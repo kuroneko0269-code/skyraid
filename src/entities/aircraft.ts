@@ -26,6 +26,8 @@ export interface AircraftControls {
   yaw: number;
   throttle: number;
   afterburner: boolean;
+  /** スロットル位置（0〜1）の直接指定（タッチのスライダー）。null / 省略なら変えない */
+  throttleTarget?: number | null;
 }
 
 /**
@@ -66,6 +68,8 @@ export class Aircraft {
 
   step(controls: Readonly<AircraftControls>, dt: number): void {
     this.savePrevious();
+    const target = controls.throttleTarget ?? null;
+    if (target !== null) this.throttle = clamp(target, 0, 1);
     this.throttle = clamp(this.throttle + controls.throttle * this.config.throttleRate * dt, 0, 1);
 
     const input = this.flightInput;
