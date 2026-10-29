@@ -12,14 +12,14 @@ import {
   resolveInitialQuality,
 } from './core/settings';
 import { parseFlightOptions } from './core/flight-options';
-import { FLIGHT_CONFIG } from './data/flight';
 import { ACTIONS } from './data/keybinds';
+import { WORLD_CONFIG } from './data/terrain';
 import { Aircraft, type AircraftControls } from './entities/aircraft';
 import { applyInterpolatedPose, createPlaceholderAircraft } from './render/aircraft-mesh';
 import { ChaseCamera } from './render/chase-camera';
 import { RenderPipeline, getGpuRendererName } from './render/pipeline';
 import { createWorldScene } from './render/scene';
-import { WorldHelpers } from './render/world-helpers';
+import { getGroundHeight } from './render/terrain-height';
 import { DebugOverlay } from './ui/debug-overlay';
 import { createQualitySelect } from './ui/quality-select';
 import {
@@ -40,9 +40,8 @@ const renderer = new WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 container.appendChild(renderer.domElement);
 
-const { scene, camera, ground } = createWorldScene(window.innerWidth / window.innerHeight);
+const { scene, camera, world } = createWorldScene(window.innerWidth / window.innerHeight);
 const pipeline = new RenderPipeline(renderer, scene, camera);
-const worldHelpers = new WorldHelpers(scene, ground);
 const aircraftMesh = createPlaceholderAircraft();
 scene.add(aircraftMesh);
 const chaseCamera = new ChaseCamera(camera);
@@ -57,8 +56,10 @@ const quality = new QualitySettings(
   }),
 );
 pipeline.applyQuality(quality.preset);
+world.applyQuality(quality.preset);
 quality.onChange((_level, preset) => {
   pipeline.applyQuality(preset);
+  world.applyQuality(preset);
 });
 installTouchGuards(document);
 const settingsBar = createSettingsBar(document.body);
@@ -104,8 +105,14 @@ const overlay = new DebugOverlay(document.body, debugFlags.overlay);
 const frameStats = new FrameStats();
 let lastFrameMs: number | null = null;
 
-// 起動直後から巡航速度で飛んでいる。?autolevel=off / ?invert で操作設定を変える
-const aircraft = new Aircraft(undefined, parseFlightOptions(window.location.search));
+// 起動直後から島の沖合を巡航速度で島へ向かって飛んでいる。?autolevel=off / ?invert で操作設定を変える
+const aircraft = new Aircraft(
+  undefined,
+  parseFlightOptions(window.location.search),
+  undefined,
+  getGroundHeight,
+);
+aircraft.respawn(WORLD_CONFIG.start);
 const controls: AircraftControls = {
   pitch: 0,
   roll: 0,
@@ -151,15 +158,17 @@ loop.onRender((alpha) => {
     chaseCamera.snap();
     chaseCamera.addImpact();
   }
-  // 地形が入る 1-3 までは地面の高さは一定
-  chaseCamera.update(aircraftMesh, aircraft.state, FLIGHT_CONFIG.groundAltitude, frameSeconds);
-  worldHelpers.update(aircraftMesh.position);
+  // カメラが地面にめり込まないよう、前フレームのカメラ位置の地表の高さを渡す
+  const groundUnderCamera = getGroundHeight(camera.position.x, camera.position.z);
+  chaseCamera.update(aircraftMesh, aircraft.state, groundUnderCamera, frameSeconds);
+  world.update(camera.position, now / 1000);
   touchControls.syncThrottle(aircraft.throttle);
   pipeline.render();
   if (lastFrameMs !== null && frameStats.record(frameSeconds)) {
     const { fps, frameMs } = frameStats.latest;
     const { drawCalls, triangles } = pipeline.lastStats;
-    overlay.update({ fps, frameMs, drawCalls, triangles });
+    const { triangleCount: terrainTriangles, visibleChunks: terrainChunks } = world.terrain;
+    overlay.update({ fps, frameMs, drawCalls, triangles, terrainTriangles, terrainChunks });
   }
   lastFrameMs = now;
 });

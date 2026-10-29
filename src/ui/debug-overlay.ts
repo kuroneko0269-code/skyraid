@@ -5,9 +5,12 @@ export interface DebugOverlayStats {
   frameMs: number;
   drawCalls: number;
   triangles: number;
+  /** 地形の三角形数（視錐台カリング前）と表示中のチャンク数 */
+  terrainTriangles: number;
+  terrainChunks: number;
 }
 
-/** 画面左上のデバッグ表示（fps / frame ms / draw calls / triangles） */
+/** 画面左上のデバッグ表示（fps / frame ms / draw calls / triangles / 地形） */
 export class DebugOverlay {
   private readonly el: HTMLDivElement;
   private shown = false;
@@ -50,6 +53,7 @@ export class DebugOverlay {
       `fps ${stats.fps.toFixed(1)}\n` +
       `frame ${stats.frameMs.toFixed(2)} ms\n` +
       `draw calls ${stats.drawCalls}\n` +
-      `triangles ${stats.triangles.toLocaleString('en-US')}`;
+      `triangles ${stats.triangles.toLocaleString('en-US')}\n` +
+      `terrain ${stats.terrainTriangles.toLocaleString('en-US')} (${stats.terrainChunks} chunks)`;
   }
 }

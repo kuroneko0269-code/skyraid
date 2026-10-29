@@ -30,6 +30,9 @@ export interface AircraftControls {
   throttleTarget?: number | null;
 }
 
+/** (x, z) の地表の高さ（m）。海の上なら海面の高さ */
+export type GroundHeightFn = (x: number, z: number) => number;
+
 /**
  * 機体エンティティ。飛行モデルとスロットル位置を持ち、固定ステップで更新する。
  * 描画補間のため、直前のステップの位置・姿勢も保持する
@@ -56,6 +59,8 @@ export class Aircraft {
     spec: AircraftSpec = STARTER_AIRCRAFT,
     options: Partial<FlightOptions> = {},
     private readonly config: FlightConfig = FLIGHT_CONFIG,
+    // 地形は render/terrain-height.ts の関数を main.ts から渡す（entities/ から render/ を参照しない）
+    private readonly groundHeight: GroundHeightFn = () => config.groundAltitude,
   ) {
     this.flight = new FlightModel(spec, options, config);
     this.throttle = cruiseThrottle(spec);
@@ -80,20 +85,25 @@ export class Aircraft {
     input.afterburner = controls.afterburner;
     this.flight.step(input, dt);
 
-    if (hitsGround(this.state.position, this.config.groundAltitude)) this.crash();
+    const p = this.state.position;
+    if (hitsGround(p, this.groundHeight(p.x, p.z))) this.crash();
   }
 
-  /** 墜落地点の上空に初期姿勢で戻す（演出なし） */
+  /** 指定位置に初期姿勢・巡航速度で置き直す（補間しない） */
+  respawn(position: Readonly<Vec3>): void {
+    this.flight.reset(position);
+    this.throttle = cruiseThrottle(this.flight.spec);
+    this.savePrevious();
+  }
+
+  /** 墜落地点の地表から spawn.position.y 上空に初期姿勢で戻す（演出なし） */
   private crash(): void {
     this.crashCount++;
     const p = this.state.position;
     this.resetPosition.x = p.x;
-    this.resetPosition.y = this.config.spawn.position.y;
+    this.resetPosition.y = this.groundHeight(p.x, p.z) + this.config.spawn.position.y;
     this.resetPosition.z = p.z;
-    this.flight.reset(this.resetPosition);
-    this.throttle = cruiseThrottle(this.flight.spec);
-    // リセット直後は補間せずに瞬間移動させる
-    this.savePrevious();
+    this.respawn(this.resetPosition);
   }
 
   private savePrevious(): void {

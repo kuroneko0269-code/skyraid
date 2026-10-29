@@ -13,12 +13,32 @@ export interface QualityPreset {
   readonly postEffects: boolean;
   /** 描画距離（m）。カメラの far と霧の範囲に使う */
   readonly drawDistance: number;
+  /** 地形の LOD で使う最も細かい段（0 が最も細かい。src/data/terrain.ts の lod.segments） */
+  readonly terrainMinLod: number;
 }
 
 export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
-  low: { shadows: false, maxPixelRatio: 1, postEffects: false, drawDistance: 3000 },
-  medium: { shadows: true, maxPixelRatio: 1.5, postEffects: false, drawDistance: 5000 },
-  high: { shadows: true, maxPixelRatio: 2, postEffects: true, drawDistance: 8000 },
+  low: {
+    shadows: false,
+    maxPixelRatio: 1,
+    postEffects: false,
+    drawDistance: 3000,
+    terrainMinLod: 1,
+  },
+  medium: {
+    shadows: true,
+    maxPixelRatio: 1.5,
+    postEffects: false,
+    drawDistance: 5000,
+    terrainMinLod: 0,
+  },
+  high: {
+    shadows: true,
+    maxPixelRatio: 2,
+    postEffects: true,
+    drawDistance: 8000,
+    terrainMinLod: 0,
+  },
 };
 
 /** UI 表示名 */
