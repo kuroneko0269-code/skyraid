@@ -1,4 +1,7 @@
 import { WebGLRenderer } from 'three';
+import { GameLoop } from './core/loop';
+import { Input } from './core/input';
+import { ACTIONS } from './data/keybinds';
 import { SCENE_CONFIG } from './data/scene';
 import { createWorldScene } from './render/scene';
 
@@ -21,7 +24,23 @@ function onResize(): void {
 }
 window.addEventListener('resize', onResize);
 
-// 固定タイムステップのループは 0-2 で core/loop.ts に実装する。ここでは描画のみ
-renderer.setAnimationLoop(() => {
+const input = new Input();
+input.attach(window);
+
+// URL に ?debug=input を付けると、押したアクション名をコンソールに出す（入力確認用）
+const logInput = new URLSearchParams(window.location.search).get('debug') === 'input';
+
+const loop = new GameLoop();
+loop.onUpdate(() => {
+  // 飛行モデル等の更新は 1-1 以降でここに登録する
+  if (logInput) {
+    for (const action of ACTIONS) {
+      if (input.wasPressed(action)) console.info(`[input] ${action}`);
+    }
+  }
+  input.endStep();
+});
+loop.onRender(() => {
   renderer.render(scene, camera);
 });
+loop.start();

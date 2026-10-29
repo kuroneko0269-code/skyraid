@@ -5,7 +5,7 @@
 
 ## 技術スタック（変更禁止。変更したい場合は提案に留め、実装しない）
 
-- 言語: TypeScript（strict）
+- 言語: TypeScript 6.x（strict）。7 系は typescript-eslint が対応するまで保留（`docs/decisions.md` 参照）
 - ビルド: Vite
 - 3D: Three.js（`three` 本体と `three/examples/jsm` のみ。追加の3Dライブラリは入れない）
 - 物理: 自前の簡易アーケード物理（物理エンジンライブラリは使わない）
@@ -19,9 +19,10 @@
 ```
 npm ci          # 依存インストール
 npm run dev     # 開発サーバー
-npm run build   # 本番ビルド（PR前に必ず通す）
-npm run check   # tsc --noEmit + eslint
+npm run build   # 本番ビルド（push 前に必ず通す）
+npm run check   # tsc --noEmit && eslint .
 npm test        # vitest
+npm run format  # prettier --write .（整形。*.md は対象外）
 ```
 
 ## ディレクトリ構成
@@ -53,7 +54,7 @@ tests/               vitest
 - 数値パラメータ（速度、ダメージ、価格など）はコードに埋めず `src/data/` に置く
 - `any` 禁止。`as` キャストは最小限
 - 日本語コメントOK。関数名・変数名は英語
-- 依存パッケージの追加は理由をPR本文に書く。大きなライブラリは避ける
+- 依存パッケージの追加は理由をコミット本文と完了報告に書く。大きなライブラリは避ける
 
 ## パフォーマンス予算
 
@@ -73,16 +74,18 @@ tests/               vitest
 
 1. 与えられたタスクを `docs/plan.md` のどの項目に当たるか確認し、範囲外の作業はしない
 2. 実装前に変更方針を短く提示し、大きな設計判断は `docs/decisions.md` に追記する
-3. 作業単位は「1セッション＝1機能」。複数機能を1PRに混ぜない
-4. PR前に `npm run check` と `npm run build` と `npm test` を通す
-5. 画面の確認は人間が Cloudflare のプレビューURLで行う。PR本文に「確認してほしい点」と「操作方法」を必ず書く
-6. コミットは Conventional Commits（`feat:` `fix:` `refactor:` `docs:` `chore:`）
-7. ブランチ名: `feat/<topic>` `fix/<topic>`
-8. 不明点は推測で進めず、選択肢を挙げて質問する
+3. 作業単位は「1セッション＝1機能」。複数機能を1コミットに混ぜない
+4. PR は作らない。作業ブランチで実装し、完了したら main に squash マージして push する
+5. push 前に `npm run check` と `npm run build` と `npm test` が通ることを再確認する
+6. 画面の確認は人間が Cloudflare のプレビューURLで行う。完了時にチャットで「変更概要 / 追加パッケージと理由 / 確認してほしい点 / 操作方法」を報告する
+7. `docs/plan.md` の該当項目を `[x]` にし、main のコミットへのリンクを書く
+8. コミットは Conventional Commits（`feat:` `fix:` `refactor:` `docs:` `chore:`）。squash マージのコミットも同様
+9. ブランチ名: `feat/<topic>` `fix/<topic>`。クラウドセッションが自動で付ける `claude/<auto>` も可
+10. 不明点は推測で進めず、選択肢を挙げて質問する
 
 ## やってはいけないこと
 
 - GitHub Actions のワークフロー追加
 - 秘密情報（APIキー等）のコミット。`.env` は `.gitignore` 済み
 - 指示のないフェーズの機能を先回りして実装すること
-- 既存の操作感（飛行モデルの数値）を無断で変えること。変える場合はPR本文に理由と変更前後の値を書く
+- 既存の操作感（飛行モデルの数値）を無断で変えること。変える場合はコミット本文と完了報告に理由と変更前後の値を書く
