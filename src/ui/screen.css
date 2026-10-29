@@ -1,0 +1,121 @@
+/* 画面（タイトル・モード選択・ポーズ・読み込み中）の共通部分。フェード時間は --screen-fade（data/screens.ts） */
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  box-sizing: border-box;
+  color: #fff;
+  font:
+    15px/1.4 system-ui,
+    sans-serif;
+  opacity: 0;
+  visibility: hidden;
+  /* 消えるときは opacity が 0 になってから visibility を切る */
+  transition:
+    opacity var(--screen-fade) ease,
+    visibility 0s linear var(--screen-fade);
+}
+
+.screen.is-shown {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--screen-fade) ease,
+    visibility 0s;
+}
+
+/* カメラの切り替えを隠す暗転幕。is-cut の瞬間だけ黒、外すと --screen-fade で透明に戻る */
+.fade-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--screen-fade) ease;
+}
+
+.fade-curtain.is-cut {
+  opacity: 1;
+  transition: none;
+}
+
+/* HUD は飛行中とポーズ中だけ。タイトル・モード選択ではフェードで隠す */
+.hud {
+  transition: opacity var(--screen-fade) ease;
+}
+
+:root:not([data-screen='flight']):not([data-screen='pause']) .hud {
+  opacity: 0;
+}
+
+/* ---- メニューのボタン（タッチで押しやすい大きさ） ---- */
+.menu-button {
+  min-width: 220px;
+  min-height: 48px;
+  padding: 10px 20px;
+  font:
+    600 17px/1.2 system-ui,
+    sans-serif;
+  color: #fff;
+  background: rgba(10, 30, 50, 0.6);
+  border: 1px solid rgba(160, 230, 255, 0.5);
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.menu-button:hover:not(:disabled),
+.menu-button:focus-visible {
+  background: rgba(40, 110, 160, 0.75);
+  border-color: rgba(200, 245, 255, 0.9);
+  outline: none;
+}
+
+.menu-button:active:not(:disabled) {
+  background: rgba(80, 160, 210, 0.85);
+}
+
+.menu-button:disabled {
+  cursor: default;
+  color: rgba(255, 255, 255, 0.45);
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ---- 読み込み中 ---- */
+.loading-screen {
+  z-index: 70;
+  gap: 14px;
+  background: #050a12;
+}
+
+.loading-text {
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+}
+
+.loading-track {
+  width: 200px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.loading-bar {
+  height: 100%;
+  background: rgba(150, 230, 255, 0.9);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease;
+}

@@ -18,6 +18,7 @@ export const ACTIONS = [
   'flare',
   'debugToggle',
   'hudToggle',
+  'pause',
 ] as const;
 
 export type Action = (typeof ACTIONS)[number];
@@ -41,4 +42,5 @@ export const DEFAULT_KEYBINDS: KeyBindings = {
   flare: ['KeyX'],
   debugToggle: ['F3'],
   hudToggle: ['KeyH'],
+  pause: ['Escape'],
 };

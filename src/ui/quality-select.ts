@@ -2,7 +2,7 @@ import './quality-select.css';
 import { QUALITY_LABELS, QUALITY_LEVELS, type QualityLevel } from '../data/quality';
 import { isQualityLevel } from '../core/settings';
 
-/** 品質セレクト（設定バーに置く）。選択が変わると onSelect を呼ぶ */
+/** 品質セレクト（ポーズメニューの設定に置く）。選択が変わると onSelect を呼ぶ */
 export function createQualitySelect(
   parent: HTMLElement,
   initial: QualityLevel,

@@ -1,0 +1,80 @@
+/* タイトル画面。背景はゲームのシーンが見えるよう、上下だけ少し暗くする */
+.title-screen {
+  gap: clamp(24px, 9vh, 72px);
+  cursor: pointer;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 10, 25, 0.35) 0%,
+    rgba(0, 10, 25, 0) 40%,
+    rgba(0, 10, 25, 0) 60%,
+    rgba(0, 10, 25, 0.45) 100%
+  );
+}
+
+.title-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* 文字のグラデーションに影を付けるため text-shadow ではなく filter */
+  filter: drop-shadow(0 2px 6px rgba(0, 20, 50, 0.55));
+}
+
+.title-logo-main {
+  font:
+    italic 900 clamp(56px, 14vw, 132px) / 1 system-ui,
+    sans-serif;
+  letter-spacing: -0.02em;
+  padding: 0 0.12em;
+  color: #fff;
+  background: linear-gradient(180deg, #ffffff 0%, #dff6ff 45%, #6fd4ff 55%, #2b7fc4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 副題の両脇に伸びる線（飛行機雲のイメージ） */
+.title-logo-sub {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  margin-top: 0.5em;
+  font:
+    700 clamp(12px, 2.4vw, 20px) / 1 system-ui,
+    sans-serif;
+  letter-spacing: 0.6em;
+  /* letter-spacing の分だけ右にずれるのを戻す */
+  margin-right: -0.6em;
+  color: #ffd27a;
+}
+
+.title-logo-sub::before,
+.title-logo-sub::after {
+  content: '';
+  width: clamp(28px, 8vw, 80px);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ffd27a);
+}
+
+.title-logo-sub::after {
+  margin-left: -0.6em;
+  background: linear-gradient(90deg, #ffd27a, transparent);
+}
+
+.title-prompt {
+  font:
+    600 clamp(15px, 2.6vw, 20px) / 1 system-ui,
+    sans-serif;
+  letter-spacing: 0.12em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  animation: title-blink 1.6s ease-in-out infinite;
+}
+
+@keyframes title-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}

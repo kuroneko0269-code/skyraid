@@ -1,14 +1,4 @@
-.settings-bar {
-  position: fixed;
-  top: calc(8px + env(safe-area-inset-top, 0px));
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 30;
-  display: flex;
-  gap: 6px;
-  white-space: nowrap;
-}
-
+/* 設定の部品（ポーズメニューの中に置く。配置・大きさは pause.css） */
 .settings-item {
   padding: 4px 8px;
   font:

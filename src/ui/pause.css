@@ -1,0 +1,90 @@
+.pause-screen {
+  z-index: 55;
+  background: rgba(0, 8, 20, 0.55);
+}
+
+.pause-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  max-height: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.pause-heading {
+  margin: 0 0 4px;
+  text-align: center;
+  font:
+    700 20px/1 system-ui,
+    sans-serif;
+  letter-spacing: 0.3em;
+  margin-right: -0.3em;
+}
+
+/* 設定（画質・タッチ・HUD・全画面）。部品は mobile.ts / quality-select.ts のものを流用 */
+.pause-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pause-settings[hidden] {
+  display: none;
+}
+
+.pause-settings .settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  font-size: 15px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.pause-settings select {
+  min-height: 32px;
+  font-size: 15px;
+}
+
+.pause-title {
+  background: rgba(60, 20, 20, 0.55);
+  border-color: rgba(255, 170, 150, 0.45);
+}
+
+/* ⏸ ボタン。飛行中だけ表示 */
+.pause-button {
+  position: fixed;
+  top: calc(var(--pause-top) + env(safe-area-inset-top, 0px));
+  right: calc(var(--pause-margin) + env(safe-area-inset-right, 0px));
+  z-index: 25;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--pause-size);
+  height: var(--pause-size);
+  padding: 0;
+  font:
+    18px/1 system-ui,
+    sans-serif;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+:root[data-screen='flight'] .pause-button {
+  display: flex;
+}
+
+.touch-active .pause-button {
+  right: calc(var(--pause-touch-right) + env(safe-area-inset-right, 0px));
+}

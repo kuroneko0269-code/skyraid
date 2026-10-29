@@ -1,4 +1,4 @@
-/* 位置と見た目は設定バー（mobile.css の .settings-bar / .settings-item）に従う */
+/* 見た目は mobile.css の .settings-item と pause.css の .pause-settings に従う */
 .quality-select select {
   font: inherit;
 }

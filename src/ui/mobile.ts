@@ -2,14 +2,6 @@ import './mobile.css';
 import { TOUCH_MODES, TOUCH_MODE_LABELS, type TouchMode } from '../data/touch';
 import { isTouchMode } from '../core/touch-settings';
 
-/** 上中央の設定バー（画質・タッチ操作・全画面）。右上・左上はヨーボタンに空ける */
-export function createSettingsBar(parent: HTMLElement): HTMLDivElement {
-  const bar = document.createElement('div');
-  bar.className = 'settings-bar';
-  parent.appendChild(bar);
-  return bar;
-}
-
 /** タッチ操作の表示設定（自動 / 表示 / 非表示） */
 export function createTouchModeSelect(
   parent: HTMLElement,
@@ -36,7 +28,7 @@ export function createTouchModeSelect(
   return select;
 }
 
-/** 設定バーの ON/OFF ボタン（HUD 表示など）。押すたびに onToggle を呼び、返り値の状態を表示する */
+/** 設定の ON/OFF ボタン（HUD 表示など）。押すたびに onToggle を呼び、返り値の状態を表示する */
 export function createToggleButton(
   parent: HTMLElement,
   label: string,

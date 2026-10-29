@@ -13,3 +13,9 @@ export function parseDebugFlags(search: string): DebugFlags {
     logInput: params.getAll('debug').includes('input'),
   };
 }
+
+/** ?skipTitle（開発用）: タイトルとモード選択を飛ばして、起動後すぐフリーフライトに入る */
+export function parseSkipTitle(search: string): boolean {
+  const params = new URLSearchParams(search);
+  return params.has('skipTitle') || params.has('skiptitle');
+}

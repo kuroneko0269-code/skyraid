@@ -39,6 +39,7 @@ export class GameLoop {
   private lastTimeMs: number | null = null;
   private frameId: number | null = null;
   private scheduler: FrameScheduler | null = null;
+  private pausedFlag = false;
 
   constructor(options: LoopOptions = {}) {
     const hz = options.updateHz ?? LOOP_CONFIG.updateHz;
@@ -61,6 +62,18 @@ export class GameLoop {
     return this.frameId !== null;
   }
 
+  get paused(): boolean {
+    return this.pausedFlag;
+  }
+
+  /**
+   * 一時停止中は固定更新を呼ばず、時間も貯めない（描画だけ続ける）。
+   * 補間係数は止めた時点の値のままなので、描画も止まって見える
+   */
+  setPaused(paused: boolean): void {
+    this.pausedFlag = paused;
+  }
+
   /**
    * 実時間 frameSeconds だけ進める。固定更新を必要回数実行したあと描画を1回呼ぶ。
    * 戻り値は実行した固定更新の回数。
@@ -70,12 +83,13 @@ export class GameLoop {
     const dt = Number.isFinite(frameSeconds)
       ? Math.min(Math.max(frameSeconds, 0), this.maxFrameSeconds)
       : 0;
-    this.accumulator += dt;
+    if (!this.pausedFlag) this.accumulator += dt;
 
     // 浮動小数の誤差で 1/60 ちょうどが 0 回になるのを防ぐ許容値
     const epsilon = this.stepSeconds * 1e-6;
     let steps = 0;
-    while (this.accumulator + epsilon >= this.stepSeconds) {
+    // update の中で一時停止されたら、そのフレームの残りの更新も行わない
+    while (!this.pausedFlag && this.accumulator + epsilon >= this.stepSeconds) {
       for (const fn of this.updates) fn(this.stepSeconds);
       this.accumulator -= this.stepSeconds;
       steps++;

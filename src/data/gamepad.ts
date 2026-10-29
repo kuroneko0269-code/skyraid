@@ -43,5 +43,6 @@ export const DEFAULT_GAMEPAD_MAPPING: GamepadMapping = {
     6: 'yawLeft',
     7: 'yawRight',
     8: 'cameraToggle',
+    9: 'pause',
   },
 };
