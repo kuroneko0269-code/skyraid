@@ -14,6 +14,9 @@ export const ACTIONS = [
   'missile',
   'targetNext',
   'cameraToggle',
+  'afterburner',
+  'flare',
+  'debugToggle',
 ] as const;
 
 export type Action = (typeof ACTIONS)[number];
@@ -33,4 +36,7 @@ export const DEFAULT_KEYBINDS: KeyBindings = {
   missile: ['KeyF'],
   targetNext: ['Tab'],
   cameraToggle: ['KeyC'],
+  afterburner: ['KeyR'],
+  flare: ['KeyX'],
+  debugToggle: ['F3'],
 };

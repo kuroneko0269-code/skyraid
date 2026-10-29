@@ -5,7 +5,7 @@
 
 ## フェーズ0: 土台
 
-- [ ] 0-1 Vite + TypeScript + Three.js の雛形。`npm run dev/build/check/test` が通る。空のシーン（空の色と地面の板）を表示
+- [x] 0-1 Vite + TypeScript + Three.js の雛形。`npm run dev/build/check/test` が通る。空のシーン（空の色と地面の板）を表示 — main マージ（PR #1）: https://github.com/kuroneko0269-code/skyraid/commit/0653e0a9e6819f9136d3122b22a7629bd5c5aaec
 - [x] 0-2 ESLint / Prettier / Vitest 設定。`core/loop.ts`（固定タイムステップ）と `core/input.ts`（キーボード抽象化） — main 直接マージ: https://github.com/kuroneko0269-code/skyraid/commit/8cb36b11ba41a2149a3e65ae61a3dec4415ab192
 - [ ] 0-3 品質設定（低/中/高）とデバッグ表示（fps, draw calls）。スマホ判定で「低」を初期値に
 

@@ -72,16 +72,17 @@ tests/               vitest
 
 ## 作業の進め方（クラウドセッション）
 
-1. 与えられたタスクを `docs/plan.md` のどの項目に当たるか確認し、範囲外の作業はしない
-2. 実装前に変更方針を短く提示し、大きな設計判断は `docs/decisions.md` に追記する
-3. 作業単位は「1セッション＝1機能」。複数機能を1コミットに混ぜない
-4. PR は作らない。作業ブランチで実装し、完了したら main に squash マージして push する
-5. push 前に `npm run check` と `npm run build` と `npm test` が通ることを再確認する
-6. 画面の確認は人間が Cloudflare のプレビューURLで行う。完了時にチャットで「変更概要 / 追加パッケージと理由 / 確認してほしい点 / 操作方法」を報告する
-7. `docs/plan.md` の該当項目を `[x]` にし、main のコミットへのリンクを書く
-8. コミットは Conventional Commits（`feat:` `fix:` `refactor:` `docs:` `chore:`）。squash マージのコミットも同様
-9. ブランチ名: `feat/<topic>` `fix/<topic>`。クラウドセッションが自動で付ける `claude/<auto>` も可
-10. 不明点は推測で進めず、選択肢を挙げて質問する
+1. セッション開始時に必ず `npm ci` を実行する（セットアップスクリプトは使わない）
+2. 与えられたタスクを `docs/plan.md` のどの項目に当たるか確認し、範囲外の作業はしない
+3. 実装前に変更方針を短く提示し、大きな設計判断は `docs/decisions.md` に追記する
+4. 作業単位は「1セッション＝1機能」。複数機能を1コミットに混ぜない
+5. PR は作らない。作業ブランチで実装し、完了したら main に squash マージして push する
+6. push 前に `npm run check` と `npm run build` と `npm test` が通ることを再確認する
+7. 画面の確認は人間が Cloudflare のプレビューURLで行う。完了時にチャットで「変更概要 / 追加パッケージと理由 / 確認してほしい点 / 操作方法」を報告する
+8. `docs/plan.md` の該当項目を `[x]` にし、main のコミットへのリンクを書く
+9. コミットは Conventional Commits（`feat:` `fix:` `refactor:` `docs:` `chore:`）。squash マージのコミットも同様
+10. ブランチ名: `feat/<topic>` `fix/<topic>`。クラウドセッションが自動で付ける `claude/<auto>` も可
+11. 不明点は推測で進めず、選択肢を挙げて質問する
 
 ## やってはいけないこと
 
