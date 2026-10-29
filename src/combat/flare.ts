@@ -34,11 +34,15 @@ export class FlareField {
   private readonly up = vec3();
   private readonly offset = vec3();
 
-  constructor(readonly spec: FlareSpec = FLARE_CONFIG) {
+  /** dispensers: 同時に撒く機体の数（自機 + 敵機）。プールの大きさに使う */
+  constructor(
+    readonly spec: FlareSpec = FLARE_CONFIG,
+    dispensers = 2,
+  ) {
     this.magazine = new Magazine(spec.charges, spec.cooldownSeconds);
-    // 寿命の間にクールダウンで撒ける回数 + 1 回分（敵機の分は 2-3 で見直す）
+    // 1 機あたり、寿命の間にクールダウンで撒ける回数 + 1 回分
     const bursts = Math.ceil(spec.lifeSeconds / spec.cooldownSeconds) + 1;
-    this.flares = new Pool(spec.perBurst * bursts * 2, newFlare);
+    this.flares = new Pool(spec.perBurst * bursts * Math.max(2, dispensers), newFlare);
   }
 
   /** 回数が残っていてクールダウン中でなければ放出する。放出したら true */

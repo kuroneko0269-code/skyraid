@@ -2,6 +2,7 @@ import { STARTER_AIRCRAFT, type AircraftSpec } from '../data/aircraft';
 import { FLIGHT_CONFIG } from '../data/flight';
 import {
   FlightModel,
+  LOCAL_FORWARD,
   cruiseThrottle,
   hitsGround,
   type FlightConfig,
@@ -14,6 +15,7 @@ import {
   copyQuat,
   copyVec3,
   quatIdentity,
+  rotateVec3,
   vec3,
   type Quat,
   type Vec3,
@@ -28,6 +30,11 @@ export interface AircraftControls {
   afterburner: boolean;
   /** スロットル位置（0〜1）の直接指定（タッチのスライダー）。null / 省略なら変えない */
   throttleTarget?: number | null;
+}
+
+/** 何も操作していない操作（毎ステップ書き換えて使う入れ物） */
+export function createControls(): AircraftControls {
+  return { pitch: 0, roll: 0, yaw: 0, throttle: 0, afterburner: false, throttleTarget: null };
 }
 
 /** (x, z) の地表の高さ（m）。海の上なら海面の高さ */
@@ -71,6 +78,16 @@ export class Aircraft {
     return this.flight.state;
   }
 
+  /** 速度ベクトル（m/s）を out に書く。機首方向 × 速さ + 失速の沈下（横滑りなし） */
+  velocity(out: Vec3): Vec3 {
+    const s = this.state;
+    rotateVec3(out, s.orientation, LOCAL_FORWARD);
+    out.x *= s.speed;
+    out.y = out.y * s.speed - this.config.stall.sinkSpeed * s.stall;
+    out.z *= s.speed;
+    return out;
+  }
+
   step(controls: Readonly<AircraftControls>, dt: number): void {
     this.savePrevious();
     const target = controls.throttleTarget ?? null;
@@ -89,9 +106,10 @@ export class Aircraft {
     if (hitsGround(p, this.groundHeight(p.x, p.z))) this.crash();
   }
 
-  /** 指定位置に初期姿勢・巡航速度で置き直す（補間しない） */
-  respawn(position: Readonly<Vec3>): void {
+  /** 指定位置に初期姿勢（または orientation）・巡航速度で置き直す（補間しない） */
+  respawn(position: Readonly<Vec3>, orientation: Readonly<Quat> | null = null): void {
     this.flight.reset(position);
+    if (orientation) copyQuat(this.flight.state.orientation, orientation);
     this.throttle = cruiseThrottle(this.flight.spec);
     this.savePrevious();
   }

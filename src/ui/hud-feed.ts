@@ -1,7 +1,9 @@
 // ゲームの状態から HUD に渡す 1 フレーム分の値を作る（毎フレーム同じオブジェクトに書き込む）
-import type { CombatSystem } from '../combat/combat-system';
+import { TEAM_PLAYER } from '../combat/target';
 import type { Aircraft, GroundHeightFn } from '../entities/aircraft';
-import type { HudFrame } from './hud';
+import type { FreeFlight } from '../missions/free-flight';
+import type { HudFrame } from './hud-frame';
+import { createRadarFrame, type HudRadarFrame } from './hud-radar';
 import { createWeaponsFrame } from './hud-weapons';
 
 export function createHudFrame(aircraft: Aircraft): HudFrame {
@@ -23,6 +25,10 @@ export function createHudFrame(aircraft: Aircraft): HudFrame {
     hitMarker: false,
     kills: 0,
     weapons: createWeaponsFrame(),
+    hp: 0,
+    maxHp: 1,
+    missileWarning: false,
+    radar: createRadarFrame(),
   };
 }
 
@@ -30,12 +36,8 @@ export function createHudFrame(aircraft: Aircraft): HudFrame {
  * 機体と射撃の状態を frame に書く。画面座標（進行方向マーカー flightPath、対象のマーカー・予測照準点）は
  * 呼び出し側で入れる（render/target-projection.ts）
  */
-export function fillHudFrame(
-  frame: HudFrame,
-  aircraft: Aircraft,
-  combat: CombatSystem,
-  groundHeight: GroundHeightFn,
-): void {
+export function fillHudFrame(frame: HudFrame, ff: FreeFlight, groundHeight: GroundHeightFn): void {
+  const { aircraft, combat, player } = ff;
   const state = aircraft.state;
   const p = state.position;
   frame.speed = state.speed;
@@ -59,4 +61,33 @@ export function fillHudFrame(
   w.lockProgress = combat.targeting.lockProgress;
   w.locked = combat.targeting.locked;
   w.distance = combat.targeting.selectedDistance;
+  frame.hp = player.hp;
+  frame.maxHp = player.maxHp;
+  frame.missileWarning = ff.incomingMissiles > 0;
+  fillRadar(frame.radar, ff);
+}
+
+/** レーダーの点: 出撃中の敵機と、自機を追っている敵のミサイル */
+export function fillRadar(r: HudRadarFrame, ff: FreeFlight): void {
+  let n = 0;
+  const max = r.contacts.length;
+  for (const e of ff.enemies) {
+    const c = r.contacts[n];
+    if (!e.active || !c || n >= max) continue;
+    c.x = e.position.x;
+    c.z = e.position.z;
+    c.kind = 'enemy';
+    n++;
+  }
+  const pool = ff.combat.missiles.missiles;
+  for (let i = 0; i < pool.count && n < max; i++) {
+    const m = pool.get(i);
+    const c = r.contacts[n];
+    if (!c || m.owner === TEAM_PLAYER || m.target !== ff.player) continue;
+    c.x = m.position.x;
+    c.z = m.position.z;
+    c.kind = 'missile';
+    n++;
+  }
+  r.count = n;
 }

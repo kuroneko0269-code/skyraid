@@ -7,6 +7,7 @@ import { findDecoy, type Flare } from './flare';
 import { closestOnSegment, proportionalNavigation } from './guidance';
 import type { GroundHeightFn, Rng, Shooter } from './gun';
 import { Pool } from './pool';
+import { teamOf } from './target';
 
 /** ミサイルが追えるもの（対象・フレア） */
 export interface HomingTarget {
@@ -15,9 +16,10 @@ export interface HomingTarget {
   readonly active: boolean;
 }
 
-/** 近接信管が反応するもの */
+/** 近接信管が反応するもの。team が撃った陣営（owner）と同じなら反応しない（省略は敵側 = 1） */
 export interface FuseTarget extends HomingTarget {
   readonly hitRadius: number;
+  readonly team?: number;
 }
 
 export interface Missile {
@@ -42,6 +44,8 @@ export interface Detonation<T> {
   y: number;
   z: number;
   target: T | null;
+  /** 撃った機体の陣営 */
+  owner: number;
 }
 
 const DEG = Math.PI / 180;
@@ -62,7 +66,7 @@ export class MissileSystem<T extends FuseTarget> {
   readonly missiles: Pool<Missile>;
   private serial = 0;
   private side = 1;
-  private readonly detonation: Detonation<T> = { x: 0, y: 0, z: 0, target: null };
+  private readonly detonation: Detonation<T> = { x: 0, y: 0, z: 0, target: null, owner: 0 };
   private readonly dir = vec3();
   private readonly offset = vec3();
   private readonly hardpoint = vec3();
@@ -170,7 +174,7 @@ export class MissileSystem<T extends FuseTarget> {
 
     if (m.age >= s.armSeconds && this.fuse(m, targets)) return true;
     if (this.groundHeight && p.y <= this.groundHeight(p.x, p.z)) {
-      this.report(p.x, p.y, p.z, null);
+      this.report(p.x, p.y, p.z, null, m.owner);
       return true;
     }
     return false;
@@ -216,14 +220,14 @@ export class MissileSystem<T extends FuseTarget> {
     proportionalNavigation(dir, dir, m.velocity, m.position, t, s.navConstant, this.maxTurn, dt);
   }
 
-  /** このステップの移動の線分が、対象の半径 + fuseMargin の球にかかったら起爆。最も手前の対象 */
+  /** このステップの移動の線分が、対象の半径 + fuseMargin の球にかかったら起爆。最も手前の対象。味方には反応しない */
   private fuse(m: Missile, targets: readonly T[]): boolean {
     const a = m.prevPosition;
     const b = m.position;
     let best = 2;
     let hit: T | null = null;
     for (const t of targets) {
-      if (!t.active) continue;
+      if (!t.active || teamOf(t) === m.owner) continue;
       const c = t.position;
       const r = t.hitRadius + this.spec.fuseMargin;
       const s = segmentSphere(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z, r);
@@ -235,16 +239,17 @@ export class MissileSystem<T extends FuseTarget> {
     if (!hit) return false;
     // 起爆点は球にかかった位置ではなく、線分上で対象に最も近い点（爆心が対象に近いほど大きい）
     const k = closestOnSegment(a, b, hit.position);
-    this.report(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k, a.z + (b.z - a.z) * k, hit);
+    this.report(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k, a.z + (b.z - a.z) * k, hit, m.owner);
     return true;
   }
 
-  private report(x: number, y: number, z: number, target: T | null): void {
+  private report(x: number, y: number, z: number, target: T | null, owner: number): void {
     const d = this.detonation;
     d.x = x;
     d.y = y;
     d.z = z;
     d.target = target;
+    d.owner = owner;
     this.onDetonate(d);
   }
 }

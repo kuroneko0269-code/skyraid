@@ -1,0 +1,53 @@
+/* 被弾の赤いフラッシュと撃墜の表示（2-3）。HUD を隠していても出す */
+.damage-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 14;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 0, 0, 0.35) 30%,
+    rgba(255, 0, 0, 1) 100%
+  );
+  opacity: 0;
+  will-change: opacity;
+}
+
+.down-message {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  z-index: 16;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  text-align: center;
+  color: rgba(255, 90, 80, 0.95);
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+  font:
+    700 28px/1.3 system-ui,
+    sans-serif;
+  letter-spacing: 0.15em;
+}
+
+.down-message[hidden] {
+  display: none;
+}
+
+.down-message-sub {
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* 撃墜されている間は画面を少し暗く赤く */
+.down-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 13;
+  pointer-events: none;
+  background: rgba(40, 0, 0, 0.35);
+}
+
+.down-shade[hidden] {
+  display: none;
+}

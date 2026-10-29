@@ -36,6 +36,15 @@ export const HUD_CONFIG = {
     compactSize: 88,
     /** 島の中心（地形は原点中心。src/data/terrain.ts） */
     islandCenter: { x: 0, z: 0 },
+    /** 敵機（赤い点）と自機を追うミサイル（赤い ×）の点の数の上限（2-3）。DOM はこの数だけ作って使い回す */
+    maxContacts: 12,
+  },
+  /** 被弾・撃墜（2-3）。描画は src/ui/damage-overlay.ts、HP ゲージは src/ui/hud.ts */
+  damage: {
+    /** 被弾したときの画面の赤の濃さ（不透明度の最大）。AIRCRAFT_COMBAT.playerHitFlashSeconds で消える */
+    flashOpacity: 0.28,
+    /** HP の割合がこれ未満でゲージを赤く点滅させる */
+    lowHpRatio: 0.3,
   },
   /** 索敵・ロック・予測照準（2-2）。描画は src/ui/hud-weapons.ts */
   targets: {

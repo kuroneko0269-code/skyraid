@@ -187,3 +187,19 @@ export const FLARE_CONFIG: FlareSpec = {
   decoyRange: 2000,
   decoyChance: 0.6,
 };
+
+// ---- 2-3: 敵機の武装。ミサイル・フレアは初期機と同じ仕様（MISSILE_CONFIG / FLARE_CONFIG）で、搭載数は難易度（src/data/ai.ts） ----
+
+/**
+ * 敵機の機銃。初期機と同じ弾道で、ばらつきを 0.5° に広げ、1 発 5（プレイヤーの HP 200 を 40 発）。
+ * 同時に飛ぶ弾は 1 機 64 発まで（バースト 1 秒 = 15 発なので十分）
+ */
+export const ENEMY_GUN_CONFIG: GunSpec = {
+  ...GUN_CONFIG,
+  damage: 5,
+  spreadDeg: 0.5,
+  maxBullets: 64,
+};
+
+/** 同時に飛べるミサイルの数（自機と敵機で共有のプール）。自機 4 発 + 敵 4 機 × 2 発に余裕 */
+export const MISSILE_POOL_SIZE = 16;

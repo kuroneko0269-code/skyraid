@@ -10,6 +10,8 @@ export const TRACER_CONFIG = {
   widthPerMeter: 0.0025,
   /** 光の影響を受けない単色（明るい空でも白飛びしないよう加算合成はしない） */
   color: 0xffb21e,
+  /** 敵機の曳光弾の色（2-3）。自機の弾と見分ける */
+  enemyColor: 0xff4a3a,
 } as const;
 
 export const MUZZLE_FLASH_CONFIG = {
@@ -70,8 +72,8 @@ export const MISSILE_VIEW_CONFIG = {
 } as const;
 
 export const SMOKE_CONFIG = {
-  /** 同時に出せる煙の玉の上限（ミサイル 8 発 × 寿命 0.9 秒 × 50 個/秒 = 360 に余裕） */
-  max: 400,
+  /** 同時に出せる煙の玉の上限（ミサイル 16 発（自機 + 敵機、2-3）× 寿命 0.9 秒 × 50 個/秒 = 720 に余裕） */
+  max: 800,
   /** 燃焼中のミサイルが煙を出す間隔（秒、ゲーム内時間） */
   interval: 1 / 50,
   life: 0.9,

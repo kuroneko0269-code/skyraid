@@ -1,5 +1,8 @@
 // シード付き 2D simplex ノイズと fBm（Three.js 非依存）。
 // Stefan Gustavson の simplex ノイズの実装方針に沿った自前実装
+import { createRandom } from '../core/random';
+
+export { createRandom };
 
 const F2 = 0.5 * (Math.sqrt(3) - 1);
 const G2 = (3 - Math.sqrt(3)) / 6;
@@ -7,18 +10,6 @@ const G2 = (3 - Math.sqrt(3)) / 6;
 // 12 方向の勾配（3D 版の勾配の xy 成分）
 const GRAD_X = [1, -1, 1, -1, 1, -1, 1, -1, 0, 0, 0, 0];
 const GRAD_Y = [1, 1, -1, -1, 0, 0, 0, 0, 1, -1, 1, -1];
-
-/** 32bit のシードから [0, 1) の乱数列を作る（mulberry32） */
-export function createRandom(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 export class SimplexNoise2D {
   // 512 要素（256 を 2 回）にして & 255 を減らす

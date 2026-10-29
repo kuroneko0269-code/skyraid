@@ -1,0 +1,36 @@
+// フリーフライトの戦闘まわりの描画をまとめる（的・弾・ミサイル・ドローン・敵機）。main.ts は update / reset を呼ぶだけ
+import type { Object3D, Scene } from 'three';
+import type { Vec3 } from '../flight/math';
+import type { FreeFlight } from '../missions/free-flight';
+import { CombatView } from './combat-view';
+import { DroneView } from './drone-view';
+import { EnemyView } from './enemy-view';
+import { MissileView } from './missile-view';
+
+export class FlightViews {
+  private readonly combat: CombatView;
+  private readonly missiles: MissileView;
+  private readonly drones: DroneView;
+  private readonly enemies: EnemyView;
+
+  constructor(scene: Scene, aircraftMesh: Object3D, ff: FreeFlight) {
+    this.combat = new CombatView(scene, aircraftMesh, ff.combat);
+    this.missiles = new MissileView(scene, ff.combat);
+    this.drones = new DroneView(scene, ff.combat.drones);
+    this.enemies = new EnemyView(scene, ff.enemies, ff.squadron.bulletPools);
+  }
+
+  /** 描画フレームごとに呼ぶ。frameSeconds は演出を進める時間（飛行中以外は 0） */
+  update(alpha: number, frameSeconds: number, camera: Readonly<Vec3>): void {
+    this.combat.update(alpha, frameSeconds, camera);
+    this.missiles.update(alpha, frameSeconds, camera);
+    this.drones.update(alpha);
+    this.enemies.update(alpha, camera);
+  }
+
+  /** 演出を全部消す（フリーフライトのやり直し） */
+  reset(): void {
+    this.combat.reset();
+    this.missiles.reset();
+  }
+}

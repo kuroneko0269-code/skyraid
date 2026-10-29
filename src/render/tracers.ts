@@ -23,9 +23,9 @@ const matrix = new Matrix4();
 export class TracerRenderer {
   readonly mesh: InstancedMesh;
 
-  constructor(capacity: number) {
+  constructor(capacity: number, color: number = TRACER_CONFIG.color) {
     const material = new MeshBasicMaterial({
-      color: TRACER_CONFIG.color,
+      color,
       fog: false,
       toneMapped: false,
     });
@@ -36,27 +36,33 @@ export class TracerRenderer {
     this.mesh.visible = false;
   }
 
-  /** 弾を前ステップ位置と現在位置の間（alpha）に描く。棒の先端が弾の位置 */
-  update(bullets: Pool<Bullet>, alpha: number, camera: Readonly<Vec3>): void {
-    const c = TRACER_CONFIG;
-    const n = Math.min(bullets.count, this.mesh.instanceMatrix.count);
-    for (let i = 0; i < n; i++) {
-      const b = bullets.get(i);
-      const hx = b.px + (b.x - b.px) * alpha;
-      const hy = b.py + (b.y - b.py) * alpha;
-      const hz = b.pz + (b.z - b.pz) * alpha;
-      dir.set(b.vx, b.vy, b.vz).normalize();
-      // 撃った直後は機体にめり込まないよう、飛んだ距離までの長さにする
-      const len = Math.max(0.5, Math.min(c.length, b.traveled));
-      pos.set(hx - (dir.x * len) / 2, hy - (dir.y * len) / 2, hz - (dir.z * len) / 2);
-      const d = Math.hypot(hx - camera.x, hy - camera.y, hz - camera.z);
-      const w = Math.max(c.width, d * c.widthPerMeter);
-      quat.setFromUnitVectors(AXIS_Z, dir);
-      scale.set(w, w, len);
-      this.mesh.setMatrixAt(i, matrix.compose(pos, quat, scale));
+  /** 弾を前ステップ位置と現在位置の間（alpha）に描く。棒の先端が弾の位置。複数のプールをまとめて 1 つで描ける */
+  update(pools: readonly Pool<Bullet>[], alpha: number, camera: Readonly<Vec3>): void {
+    const capacity = this.mesh.instanceMatrix.count;
+    let n = 0;
+    for (const bullets of pools) {
+      for (let i = 0; i < bullets.count && n < capacity; i++) {
+        this.place(n++, bullets.get(i), alpha, camera);
+      }
     }
     this.mesh.count = n;
     this.mesh.visible = n > 0;
     if (n > 0) this.mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  private place(index: number, b: Bullet, alpha: number, camera: Readonly<Vec3>): void {
+    const c = TRACER_CONFIG;
+    const hx = b.px + (b.x - b.px) * alpha;
+    const hy = b.py + (b.y - b.py) * alpha;
+    const hz = b.pz + (b.z - b.pz) * alpha;
+    dir.set(b.vx, b.vy, b.vz).normalize();
+    // 撃った直後は機体にめり込まないよう、飛んだ距離までの長さにする
+    const len = Math.max(0.5, Math.min(c.length, b.traveled));
+    pos.set(hx - (dir.x * len) / 2, hy - (dir.y * len) / 2, hz - (dir.z * len) / 2);
+    const d = Math.hypot(hx - camera.x, hy - camera.y, hz - camera.z);
+    const w = Math.max(c.width, d * c.widthPerMeter);
+    quat.setFromUnitVectors(AXIS_Z, dir);
+    scale.set(w, w, len);
+    this.mesh.setMatrixAt(index, matrix.compose(pos, quat, scale));
   }
 }

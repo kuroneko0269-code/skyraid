@@ -45,6 +45,14 @@ export interface AircraftSpec {
     readonly rollSpeedSensitivity: number;
   };
   readonly turnCurve: readonly TurnCurvePoint[];
+  /** 機体の耐久と当たり判定（2-3）。プレイヤー・敵機で共通 */
+  readonly hull: {
+    readonly maxHp: number;
+    /** 当たり判定の球の半径（m） */
+    readonly hitRadius: number;
+    /** 見た目の大きさ（撃墜の破片を散らす半径、m） */
+    readonly visualRadius: number;
+  };
   readonly afterburner: {
     /** 満タンから空になるまでの秒数 */
     readonly durationSeconds: number;
@@ -89,6 +97,8 @@ export const STARTER_AIRCRAFT: AircraftSpec = {
     { speed: 400, factor: 0.7 },
     { speed: 460, factor: 0.55 },
   ],
+  // 敵の機銃（5/発）で 40 発、敵のミサイル（直撃 約 125〜150）なら 2 発で落ちる
+  hull: { maxHp: 200, hitRadius: 6, visualRadius: 5 },
   afterburner: {
     durationSeconds: 6,
     rechargeSeconds: 10,
@@ -96,3 +106,49 @@ export const STARTER_AIRCRAFT: AircraftSpec = {
     restartThreshold: 0.15,
   },
 };
+
+/**
+ * 敵戦闘機（2-3）。初期機より少し遅く、曲がりにくい（AI が最大 G でさらに抑える）。
+ * HP 120: 初期機の機銃（10/発）で 12 発、ミサイルは信管が近くで働けば 1 発
+ */
+export const ENEMY_FIGHTER: AircraftSpec = {
+  id: 'enemy-fighter',
+  name: 'XF-7 Hornet',
+  speed: {
+    stall: 80,
+    cruise: 240,
+    idle: 60,
+    military: 320,
+    afterburner: 385,
+    limit: 450,
+    response: 0.45,
+    afterburnerResponse: 0.85,
+    maxAccel: 14,
+    afterburnerMaxAccel: 32,
+    maxDecel: 20,
+  },
+  rates: {
+    pitch: 70,
+    roll: 180,
+    yaw: 20,
+    rollSpeedSensitivity: 0.5,
+  },
+  turnCurve: STARTER_AIRCRAFT.turnCurve,
+  hull: { maxHp: 120, hitRadius: 6, visualRadius: 5 },
+  afterburner: {
+    durationSeconds: 5,
+    rechargeSeconds: 12,
+    rechargeDelaySeconds: 1,
+    restartThreshold: 0.2,
+  },
+};
+
+/** 被弾・撃墜まわり（2-3）。HP と当たり判定は各機体の hull */
+export const AIRCRAFT_COMBAT = {
+  /** プレイヤーが撃墜されてから初期位置へ戻るまでの時間（フリーフライトでは何度でも） */
+  playerRespawnSeconds: 3,
+  /** プレイヤーの被弾で画面を赤く光らせる時間（濃さは src/data/hud.ts） */
+  playerHitFlashSeconds: 0.35,
+  /** 敵機が被弾で白く光る時間 */
+  enemyHitFlashSeconds: 0.08,
+} as const;

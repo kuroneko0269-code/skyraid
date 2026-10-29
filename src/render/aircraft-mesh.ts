@@ -1,12 +1,15 @@
 import {
   BoxGeometry,
+  BufferAttribute,
   ConeGeometry,
   Group,
   Mesh,
   MeshStandardMaterial,
   Quaternion,
   Vector3,
+  type BufferGeometry,
 } from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Quat, Vec3 } from '../flight/math';
 import { PLACEHOLDER_AIRCRAFT_CONFIG } from '../data/scene';
 
@@ -44,6 +47,45 @@ export function createPlaceholderAircraft(): Group {
   group.add(fin);
 
   return group;
+}
+
+/**
+ * 同じ形を 1 つのジオメトリにまとめたもの（敵機の InstancedMesh 用）。色は頂点カラーで、
+ * 胴体・翼は bodyShade、機首・垂直尾翼は accentShade の明るさ（インスタンスの色を掛ける）
+ */
+export function createPlaceholderAircraftGeometry(
+  bodyShade = 1,
+  accentShade = 0.45,
+): BufferGeometry {
+  const cfg = PLACEHOLDER_AIRCRAFT_CONFIG;
+  const f = cfg.fuselage;
+  const n = cfg.nose;
+  const w = cfg.wing;
+  const t = cfg.tailplane;
+  const v = cfg.fin;
+  const parts: [BufferGeometry, number][] = [
+    [new BoxGeometry(f.width, f.height, f.length), bodyShade],
+    [
+      new ConeGeometry(n.radius, n.length, 12)
+        .rotateX(-Math.PI / 2)
+        .translate(0, 0, -(f.length + n.length) / 2),
+      accentShade,
+    ],
+    [new BoxGeometry(w.span, w.thickness, w.chord).translate(0, 0, w.z), bodyShade],
+    [new BoxGeometry(t.span, t.thickness, t.chord).translate(0, 0, t.z), bodyShade],
+    [
+      new BoxGeometry(v.thickness, v.height, v.chord).translate(0, (f.height + v.height) / 2, v.z),
+      accentShade,
+    ],
+  ];
+  for (const [g, shade] of parts) {
+    const count = g.getAttribute('position').count;
+    g.setAttribute('color', new BufferAttribute(new Float32Array(count * 3).fill(shade), 3));
+  }
+  // Cone は index 付き・Box も index 付きなのでそのまま結合できる
+  const merged = mergeGeometries(parts.map(([g]) => g));
+  for (const [g] of parts) g.dispose();
+  return merged;
 }
 
 const prevPos = new Vector3();

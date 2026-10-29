@@ -397,3 +397,66 @@
   font: 700 calc(var(--hud-value-size) * 0.8) / 1.1 var(--hud-mono);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- 被弾・警告（2-3） ---- */
+/* HP ゲージ。残りが少ないと赤く点滅 */
+.hud.is-low-hp .hud-hp .hud-gauge-track {
+  border-color: var(--hud-red);
+}
+
+.hud.is-low-hp .hud-hp .hud-gauge-fill {
+  background: var(--hud-red);
+  animation: hud-blink 0.8s steps(1, end) infinite;
+}
+
+.hud.is-low-hp .hud-hp .hud-gauge-label {
+  color: var(--hud-red);
+}
+
+/* 敵のミサイルに追われている: ラダーの窓の下端に速い点滅 */
+.hud-missile {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + var(--hud-ladder-h) / 2);
+  transform: translate(-50%, -100%);
+  padding: 2px 10px;
+  border: var(--hud-line) solid var(--hud-red);
+  animation-duration: 0.4s;
+}
+
+.hud.is-missile .hud-missile {
+  display: block;
+}
+
+/* レーダーの敵機（赤い点）と自機を追うミサイル（赤い ×）。範囲外は縁に中抜き */
+.hud-radar-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  will-change: transform;
+}
+
+.hud-radar-dot.is-enemy {
+  background: var(--hud-red);
+  border: 1px solid var(--hud-red);
+}
+
+.hud-radar-dot.is-enemy.is-edge {
+  background: transparent;
+}
+
+.hud-radar-dot.is-missile {
+  border-radius: 0;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  background:
+    linear-gradient(45deg, transparent 40%, var(--hud-red) 40% 60%, transparent 60%),
+    linear-gradient(-45deg, transparent 40%, var(--hud-red) 40% 60%, transparent 60%);
+  animation: hud-blink 0.4s steps(1, end) infinite;
+}

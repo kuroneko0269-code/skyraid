@@ -25,6 +25,8 @@ import { TARGET_CONFIG } from '../data/targets';
 import { GUN_CONFIG } from '../data/weapons';
 import { vec3, type Vec3 } from '../flight/math';
 import type { CombatTarget } from '../combat/target';
+import type { Bullet } from '../combat/gun';
+import type { Pool } from '../combat/pool';
 import { ParticleSystem, randomDirection } from './particles';
 import { TracerRenderer } from './tracers';
 
@@ -43,6 +45,7 @@ export class CombatView {
   private readonly balloons: InstancedMesh;
   private readonly flash: Mesh;
   private readonly baseColor = new Color(TARGET_CONFIG.color);
+  private readonly bulletPools: readonly Pool<Bullet>[];
   private flashFrames = 0;
   private lastShotCount = 0;
 
@@ -52,6 +55,7 @@ export class CombatView {
     private readonly combat: CombatSystem,
   ) {
     this.tracers = new TracerRenderer(combat.gun.bullets.capacity);
+    this.bulletPools = [combat.gun.bullets];
     const sparkMaterial = new MeshBasicMaterial({
       color: SPARK_CONFIG.color,
       fog: false,
@@ -99,7 +103,7 @@ export class CombatView {
   /** 描画フレームごとに呼ぶ。alpha は固定ステップの補間係数、frameSeconds はポーズ中 0 */
   update(alpha: number, frameSeconds: number, camera: Readonly<Vec3>): void {
     this.updateBalloons(alpha);
-    this.tracers.update(this.combat.gun.bullets, alpha, camera);
+    this.tracers.update(this.bulletPools, alpha, camera);
     this.sparks.update(frameSeconds, camera);
     this.debris.update(frameSeconds, camera);
     this.updateFlash();

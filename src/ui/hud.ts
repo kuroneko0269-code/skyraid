@@ -1,8 +1,9 @@
 import './hud.css';
 import { HUD_CONFIG } from '../data/hud';
 import { applyCssVariables, el, gauge } from './hud-dom';
-import { HudWeapons, type HudWeaponsFrame } from './hud-weapons';
-import type { Quat } from '../flight/math';
+import type { HudFrame } from './hud-frame';
+import { HudRadar } from './hud-radar';
+import { HudWeapons } from './hud-weapons';
 import {
   attitudeFromQuat,
   changed,
@@ -12,42 +13,11 @@ import {
   isStallWarning,
   ladderRungs,
   ladderTransform,
-  radarPoint,
   type Attitude,
   type LadderTransform,
-  type RadarPoint,
 } from './hud-math';
 
-/** HUD に渡す 1 フレーム分の値 */
-export interface HudFrame {
-  /** 速度（m/s 相当） */
-  speed: number;
-  /** スロットル位置（0〜1） */
-  throttle: number;
-  afterburnerGauge: number;
-  afterburnerActive: boolean;
-  afterburnerLocked: boolean;
-  /** 位置（m）。y は海面基準の高度 */
-  x: number;
-  y: number;
-  z: number;
-  /** 地表（海の上は海面）からの高さ（m） */
-  altitudeAboveGround: number;
-  /** 失速の度合い（0〜1） */
-  stall: number;
-  orientation: Readonly<Quat>;
-  /** 進行方向マーカーの画面座標（px、左上原点）。null なら隠す（カメラの後ろ） */
-  flightPath: { x: number; y: number } | null;
-  /** 機銃の熱（0〜1）とオーバーヒート中か（2-1） */
-  gunHeat: number;
-  gunOverheated: boolean;
-  /** 命中直後でヒットマーカーを出すか */
-  hitMarker: boolean;
-  /** 撃墜数 */
-  kills: number;
-  /** 索敵・ロック・予測照準・残弾（2-2） */
-  weapons: HudWeaponsFrame;
-}
+export type { HudFrame } from './hud-frame';
 
 /**
  * 戦闘機風の HUD（DOM + CSS）。update() は毎フレーム呼んでよいが、
@@ -65,12 +35,12 @@ export class Hud {
   private readonly abFill: HTMLDivElement;
   private readonly heatFill: HTMLDivElement;
   private readonly killsText: HTMLSpanElement;
-  private readonly island: HTMLDivElement;
+  private readonly hpFill: HTMLDivElement;
+  private readonly radar: HudRadar;
   private readonly weapons: HudWeapons;
 
   private readonly attitude: Attitude = { pitch: 0, roll: 0, heading: 0 };
   private readonly ladderXf: LadderTransform = { rotateDeg: 0, offsetPx: 0 };
-  private readonly radar: RadarPoint = { x: 0, y: 0, clamped: false };
   // 前回書いた値。NaN / '' は「未表示」で、次の update() で必ず書く
   private last = {
     speed: '',
@@ -85,10 +55,10 @@ export class Hud {
     fpmX: NaN,
     fpmY: NaN,
     fpmShown: true,
-    radarX: NaN,
-    radarY: NaN,
-    radarEdge: false,
     heat: NaN,
+    hp: NaN,
+    lowHp: false,
+    missile: false,
     overheat: false,
     hit: false,
     kills: '',
@@ -117,10 +87,13 @@ export class Hud {
     this.fpm = el('div', 'hud-fpm', root);
     el('div', 'hud-hitmarker', root);
     el('div', 'hud-warn hud-stall', root, 'STALL');
+    el('div', 'hud-warn hud-missile', root, 'MISSILE');
 
     // 左: スロットル・AB ゲージと速度
     const left = el('div', 'hud-side hud-left', root);
     const gauges = el('div', 'hud-gauges', left);
+    // HP（2-3。残りが少ないと赤く点滅）
+    this.hpFill = gauge(gauges, 'HP', 'hud-hp');
     this.throttleFill = gauge(gauges, 'THR');
     this.abFill = gauge(gauges, 'AB');
     // 機銃の熱ゲージ（オーバーヒートで赤く点滅）
@@ -143,11 +116,8 @@ export class Hud {
     el('span', 'hud-kills-label', kills, 'KILL');
     this.killsText = el('span', 'hud-kills-value', kills);
 
-    // 下: レーダー（機首方向が上）。今は自機と島の中心だけ
-    const radar = el('div', 'hud-radar', root);
-    el('div', 'hud-radar-ring', radar);
-    el('div', 'hud-radar-self', radar);
-    this.island = el('div', 'hud-radar-island', radar);
+    // 下: レーダー（機首方向が上）。島の中心・敵機・自機を追うミサイル
+    this.radar = new HudRadar(root);
 
     parent.appendChild(root);
 
@@ -234,18 +204,7 @@ export class Hud {
     }
 
     this.updateFlightPath(f.flightPath);
-
-    const c = HUD_CONFIG.radar.islandCenter;
-    const p = radarPoint(this.radar, f.x, f.z, att.heading, c.x, c.z, HUD_CONFIG.radar.rangeM);
-    if (changed(last.radarX, p.x, eps.radar) || changed(last.radarY, p.y, eps.radar)) {
-      last.radarX = p.x;
-      last.radarY = p.y;
-      this.island.style.transform = `translate(calc(${p.x.toFixed(3)} * var(--hud-radar-r)), calc(${p.y.toFixed(3)} * var(--hud-radar-r)))`;
-    }
-    if (p.clamped !== last.radarEdge) {
-      last.radarEdge = p.clamped;
-      this.island.classList.toggle('is-edge', p.clamped);
-    }
+    this.radar.update(f.x, f.z, att.heading, f.radar);
   }
 
   private updateCombat(f: Readonly<HudFrame>): void {
@@ -264,6 +223,20 @@ export class Hud {
     }
     const kills = String(f.kills);
     if (kills !== last.kills) this.killsText.textContent = last.kills = kills;
+    const hp = f.maxHp > 0 ? f.hp / f.maxHp : 0;
+    if (changed(last.hp, hp, HUD_CONFIG.epsilon.gauge)) {
+      last.hp = hp;
+      this.hpFill.style.transform = `scaleY(${hp.toFixed(3)})`;
+    }
+    const lowHp = hp < HUD_CONFIG.damage.lowHpRatio;
+    if (lowHp !== last.lowHp) {
+      last.lowHp = lowHp;
+      this.root.classList.toggle('is-low-hp', lowHp);
+    }
+    if (f.missileWarning !== last.missile) {
+      last.missile = f.missileWarning;
+      this.root.classList.toggle('is-missile', f.missileWarning);
+    }
     this.weapons.update(f.weapons);
   }
 
@@ -286,8 +259,9 @@ export class Hud {
   private invalidate(): void {
     const last = this.last;
     last.speed = last.alt = last.kills = '';
-    last.throttle = last.ab = last.heat = last.pitch = last.roll = NaN;
-    last.fpmX = last.fpmY = last.radarX = last.radarY = NaN;
+    last.throttle = last.ab = last.heat = last.hp = last.pitch = last.roll = NaN;
+    last.fpmX = last.fpmY = NaN;
+    this.radar.invalidate();
     this.weapons.invalidate();
   }
 }

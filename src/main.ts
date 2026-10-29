@@ -16,20 +16,20 @@ import {
 import { parseFlightOptions } from './core/flight-options';
 import { ACTIONS } from './data/keybinds';
 import { WORLD_CONFIG } from './data/terrain';
-import { Aircraft, type AircraftControls } from './entities/aircraft';
-import { TargetField } from './entities/target-balloon';
-import { CombatSystem, type CombatInput } from './combat/combat-system';
-import { CombatView } from './render/combat-view';
-import { DroneView } from './render/drone-view';
+import { createControls } from './entities/aircraft';
+import { createCombatInput } from './combat/combat-system';
+import { FreeFlight } from './missions/free-flight';
+import { FlightViews } from './render/flight-views';
 import { HudLink } from './render/hud-link';
-import { MissileView } from './render/missile-view';
 import { applyInterpolatedPose, createPlaceholderAircraft } from './render/aircraft-mesh';
 import { ChaseCamera } from './render/chase-camera';
 import { DemoCamera } from './render/demo-camera';
 import { RenderPipeline, getGpuRendererName } from './render/pipeline';
 import { createWorldScene } from './render/scene';
 import { getGroundHeight } from './render/terrain-height';
+import { DamageOverlay } from './ui/damage-overlay';
 import { DebugOverlay } from './ui/debug-overlay';
+import { createEnemySettings } from './ui/enemy-settings';
 import { Hud } from './ui/hud';
 import { createQualitySelect } from './ui/quality-select';
 import {
@@ -130,35 +130,31 @@ const overlay = new DebugOverlay(document.body, debugFlags.overlay);
 const frameStats = new FrameStats();
 let lastFrameMs: number | null = null;
 
-// フリーフライト開始時に島の沖合から巡航速度で島へ向かう。?autolevel=off / ?invert で操作設定を変える
-const aircraft = new Aircraft(
-  undefined,
-  parseFlightOptions(window.location.search),
-  undefined,
-  getGroundHeight,
-);
-aircraft.respawn(WORLD_CONFIG.start);
-const controls: AircraftControls = {
-  pitch: 0,
-  roll: 0,
-  yaw: 0,
-  throttle: 0,
-  afterburner: false,
-  throttleTarget: null,
-};
+// フリーフライト: 島の沖合から巡航速度で島へ向かう。?autolevel=off / ?invert で操作設定を変える。
+// 射撃（2-1）・ロックオンとミサイル（2-2）・敵機（2-3）。判定は固定ステップ、演出は描画フレーム
+const freeFlight = new FreeFlight({
+  groundHeight: getGroundHeight,
+  flightOptions: parseFlightOptions(window.location.search),
+  start: WORLD_CONFIG.start,
+});
+const { aircraft, combat } = freeFlight;
+// 敵の有無・難易度（ポーズメニューの設定。localStorage に保存）
+createEnemySettings(settingsPanel, storage, (enabled, difficulty) => {
+  freeFlight.configureEnemies(enabled, difficulty);
+});
+const damageOverlay = new DamageOverlay(document.body);
+const controls = createControls();
 let lastCrashCount = aircraft.crashCount;
-// 射撃（2-1）・ロックオンとミサイル（2-2）: 的と周回ドローンを撃つ。判定は固定ステップ、演出は描画フレーム
-const combat = new CombatSystem(new TargetField(getGroundHeight), getGroundHeight);
-const combatView = new CombatView(scene, aircraftMesh, combat);
-const missileView = new MissileView(scene, combat);
-const droneView = new DroneView(scene, combat.drones);
-const combatInput: CombatInput = {
-  trigger: false,
-  missile: false,
-  flare: false,
-  targetNext: false,
-};
-const hudLink = new HudLink(hud, camera, aircraftMesh, aircraft, combat, getGroundHeight);
+const views = new FlightViews(scene, aircraftMesh, freeFlight);
+// 撃墜されたら揺らし、リスポーンしたらカメラを寄せ直す
+freeFlight.onPlayerDown(() => {
+  chaseCamera.addImpact();
+});
+freeFlight.onRespawn(() => {
+  chaseCamera.snap();
+});
+const combatInput = createCombatInput();
+const hudLink = new HudLink(hud, camera, aircraftMesh, freeFlight, getGroundHeight);
 // HUD の対象をタップ（クリック）すると選ぶ。スティック・ボタンの上は canvas に届かない
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (game.state !== 'flight') return;
@@ -193,12 +189,11 @@ loop.onUpdate((dt) => {
   controls.throttle = input.axis('throttleDown', 'throttleUp');
   controls.afterburner = input.isDown('afterburner');
   controls.throttleTarget = input.takeThrottleTarget();
-  aircraft.step(controls, dt);
   combatInput.trigger = input.isDown('fire');
   combatInput.missile = input.wasPressed('missile');
   combatInput.flare = input.wasPressed('flare');
   combatInput.targetNext = input.wasPressed('targetNext');
-  combat.step(combatInput, aircraft.state, dt);
+  freeFlight.step(controls, combatInput, dt);
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
   handleCommonKeys();
 });
@@ -210,10 +205,14 @@ loop.onRender((alpha) => {
   if (state !== 'pause') worldTime += frameSeconds;
   if (usesDemoCamera(state)) demoCamera.update(frameSeconds);
   else if (state === 'flight') updateFlightView(alpha, frameSeconds);
-  const effectSeconds = state === 'flight' ? frameSeconds : 0;
-  combatView.update(alpha, effectSeconds, camera.position);
-  missileView.update(alpha, effectSeconds, camera.position);
-  droneView.update(alpha);
+  views.update(alpha, state === 'flight' ? frameSeconds : 0, camera.position);
+  const p = freeFlight.player;
+  damageOverlay.update(
+    p.flashTimer,
+    p.isDestroyed,
+    p.respawnTimer,
+    isSimulating(state) || state === 'pause',
+  );
   world.update(camera.position, worldTime);
   if (state === 'flight' && hud.visible)
     hudLink.update(alpha, window.innerWidth, window.innerHeight);
@@ -237,11 +236,9 @@ void runBoot(BOOT_TASKS, (progress) => {
 
 /** フリーフライトを始める（モード選択から入るたび、起動位置・巡航速度から） */
 function startFreeFlight(): void {
-  aircraft.respawn(WORLD_CONFIG.start);
+  freeFlight.reset();
   lastCrashCount = aircraft.crashCount;
-  combat.reset();
-  combatView.reset();
-  missileView.reset();
+  views.reset();
   chaseCamera.snap();
 }
 
@@ -273,6 +270,8 @@ function menuTick(): void {
 
 /** 追従カメラと機体の描画位置を更新する（飛行中だけ。ポーズ中はカメラも止める） */
 function updateFlightView(alpha: number, frameSeconds: number): void {
+  // 撃墜されている間は機体を隠す（破片は combat の撃墜の演出）
+  aircraftMesh.visible = freeFlight.player.active;
   applyInterpolatedPose(
     aircraftMesh,
     aircraft.prevPosition,
