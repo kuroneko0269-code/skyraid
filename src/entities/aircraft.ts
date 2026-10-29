@@ -1,0 +1,99 @@
+import { STARTER_AIRCRAFT, type AircraftSpec } from '../data/aircraft';
+import { FLIGHT_CONFIG } from '../data/flight';
+import {
+  FlightModel,
+  cruiseThrottle,
+  hitsGround,
+  type FlightConfig,
+  type FlightInput,
+  type FlightOptions,
+  type FlightState,
+} from '../flight/flight-model';
+import {
+  clamp,
+  copyQuat,
+  copyVec3,
+  quatIdentity,
+  vec3,
+  type Quat,
+  type Vec3,
+} from '../flight/math';
+
+/** プレイヤーの操作（キーボード等から作る）。throttle はスロットルを上げ下げする向き（-1〜+1） */
+export interface AircraftControls {
+  pitch: number;
+  roll: number;
+  yaw: number;
+  throttle: number;
+  afterburner: boolean;
+}
+
+/**
+ * 機体エンティティ。飛行モデルとスロットル位置を持ち、固定ステップで更新する。
+ * 描画補間のため、直前のステップの位置・姿勢も保持する
+ */
+export class Aircraft {
+  readonly flight: FlightModel;
+  /** スロットル位置（0〜1） */
+  throttle: number;
+  /** 地面に衝突してリセットした回数 */
+  crashCount = 0;
+  readonly prevPosition: Vec3 = vec3();
+  readonly prevOrientation: Quat = quatIdentity();
+
+  private readonly flightInput: FlightInput = {
+    pitch: 0,
+    roll: 0,
+    yaw: 0,
+    throttle: 0,
+    afterburner: false,
+  };
+  private readonly resetPosition: Vec3 = vec3();
+
+  constructor(
+    spec: AircraftSpec = STARTER_AIRCRAFT,
+    options: Partial<FlightOptions> = {},
+    private readonly config: FlightConfig = FLIGHT_CONFIG,
+  ) {
+    this.flight = new FlightModel(spec, options, config);
+    this.throttle = cruiseThrottle(spec);
+    this.savePrevious();
+  }
+
+  get state(): FlightState {
+    return this.flight.state;
+  }
+
+  step(controls: Readonly<AircraftControls>, dt: number): void {
+    this.savePrevious();
+    this.throttle = clamp(this.throttle + controls.throttle * this.config.throttleRate * dt, 0, 1);
+
+    const input = this.flightInput;
+    input.pitch = controls.pitch;
+    input.roll = controls.roll;
+    input.yaw = controls.yaw;
+    input.throttle = this.throttle;
+    input.afterburner = controls.afterburner;
+    this.flight.step(input, dt);
+
+    if (hitsGround(this.state.position, this.config.groundAltitude)) this.crash();
+  }
+
+  /** 墜落地点の上空に初期姿勢で戻す（演出なし） */
+  private crash(): void {
+    this.crashCount++;
+    const p = this.state.position;
+    this.resetPosition.x = p.x;
+    this.resetPosition.y = this.config.spawn.position.y;
+    this.resetPosition.z = p.z;
+    this.flight.reset(this.resetPosition);
+    this.throttle = cruiseThrottle(this.flight.spec);
+    // リセット直後は補間せずに瞬間移動させる
+    this.savePrevious();
+  }
+
+  private savePrevious(): void {
+    copyVec3(this.prevPosition, this.state.position);
+    copyQuat(this.prevOrientation, this.state.orientation);
+  }
+}

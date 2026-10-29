@@ -14,6 +14,8 @@ import { SCENE_CONFIG } from '../data/scene';
 export interface WorldScene {
   scene: Scene;
   camera: PerspectiveCamera;
+  /** 地面の板（高度 0）。機体に追従して動かす */
+  ground: Mesh;
 }
 
 /** 空の色と地面の板だけの最小シーンを作る */
@@ -45,5 +47,5 @@ export function createWorldScene(aspect: number): WorldScene {
   camera.position.set(cfg.camera.position.x, cfg.camera.position.y, cfg.camera.position.z);
   camera.lookAt(cfg.camera.lookAt.x, cfg.camera.lookAt.y, cfg.camera.lookAt.z);
 
-  return { scene, camera };
+  return { scene, camera, ground };
 }

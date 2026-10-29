@@ -34,6 +34,34 @@
 - 機体ごとに「速度 / 旋回 / 耐久 / 積載」の4パラメータで差をつける
 - オートレベル（手を離すと水平に戻る）を初期ONにし、設定でOFF可能
 
+#### 決めた数値の意味（1-1。値は `src/data/aircraft.ts` 初期機 / `src/data/flight.ts`）
+
+- 速度は進行方向のスカラー。横滑りなし。姿勢はクォータニオン（前方 -Z・上 +Y・右 +X）
+- `speed.stall` 80: これを下回ると失速。`stall.range` 30 下（50）で失速の効果が最大
+- `speed.cruise` 250: 起動・リセット時の速度。スロットル初期値はこれを水平で保つ値（約 0.70）
+- `speed.idle` 60: スロットル 0 で落ち着く速度。失速より低いので、絞り続けると失速する
+- `speed.military` 330: スロットル 1 で落ち着く速度
+- `speed.afterburner` 400: アフターバーナー中に落ち着く速度（最高速度）
+- `speed.limit` 460: 降下で到達できる絶対上限
+- `speed.response` 0.45 / `afterburnerResponse` 0.9: 目標速度へ近づく速さ（1/秒）
+- `speed.maxAccel` 15 / `afterburnerMaxAccel` 35 / `maxDecel` 20: エンジンによる加減速の上限（m/s²）。加速上限が重力の効き（約 34）より小さいので、垂直上昇は必ず減速して失速に至る
+- `gravitySpeedScale` 3.5: 重力（9.8）が速度に効く倍率。上昇で減速・降下で加速を誇張する（巡航から 30° 上昇 2 秒で約 −23 m/s）
+- `rates.pitch` 75 / `roll` 200 / `yaw` 22: 旋回係数 1.0 のときの最大角速度（度/秒）。巡航で宙返り 1 周が約 5 秒
+- `turnCurve`: 速度→旋回係数の折れ線。0:0.2 / 80:0.35 / 180:0.9 / 220〜300:1.0 / 400:0.7 / 460:0.55（低速で鈍く、巡航付近で最大、超高速で再び鈍る）
+- `rates.rollSpeedSensitivity` 0.5: ロールが速度の影響を受ける割合（ピッチの半分）
+- `rateResponse` 9: 入力から角速度が立ち上がる速さ（1/秒）。約 0.1 秒の「重さ」
+- `stall.minAuthority` 0.3: 失速最大時の操舵の効き
+- `stall.noseDropRate` 55: 失速最大時に機首が真下へ向く角速度（度/秒）
+- `stall.sinkSpeed` 18: 失速最大時の沈下速度（m/s）
+- `autoLevel.gain` 1.2 / `maxRate` 50: ピッチ・ロール入力がないとき、バンク角×1.2（最大 50 度/秒）で水平に戻す。45° からおよそ 3 秒
+- `autoLevel.maxNoseVertical` 0.85: 機首が真上・真下に近い（約 58° 以上）ときはオートレベルを効かせない
+- `bankTurnRate` 12: バンク 90° で機首が自然に横へ向く角速度（度/秒）
+- `afterburner.durationSeconds` 6 / `rechargeSeconds` 10 / `rechargeDelaySeconds` 1 / `restartThreshold` 0.15: 満タンで 6 秒使える。離して 1 秒後から 10 秒で満タン。空にしたら 15% まで回復するまで再点火できない
+- `ceiling.start` 3000 / `end` 3500 / `pushRate` 60: 3000m から機首を押し下げ始め、3500m で最大・それ以上は上がれない
+- `groundAltitude` 0 / `spawn.position.y` 300: 高度 0 以下で衝突し、墜落地点の高度 300m に初期姿勢でリセット
+- `throttleRate` 0.6: Shift / Ctrl でスロットルが 1 秒に変わる量
+- 操作設定の切替（設定画面ができるまでの暫定）: URL に `?autolevel=off` でオートレベル OFF、`?invert` でピッチ反転（W = 機首上げ）
+
 ### 操作
 
 | 動作 | キーボード | ゲームパッド | タッチ |
