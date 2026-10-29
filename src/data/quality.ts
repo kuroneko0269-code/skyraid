@@ -15,6 +15,8 @@ export interface QualityPreset {
   readonly drawDistance: number;
   /** 地形の LOD で使う最も細かい段（0 が最も細かい。src/data/terrain.ts の lod.segments） */
   readonly terrainMinLod: number;
+  /** 海面を簡略シェーダー（波 1 本・さざ波なし・頂点でフレネル）で描くか */
+  readonly oceanSimple: boolean;
 }
 
 export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
@@ -24,6 +26,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     postEffects: false,
     drawDistance: 3000,
     terrainMinLod: 1,
+    oceanSimple: true,
   },
   medium: {
     shadows: true,
@@ -31,6 +34,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     postEffects: false,
     drawDistance: 5000,
     terrainMinLod: 0,
+    oceanSimple: false,
   },
   high: {
     shadows: true,
@@ -38,6 +42,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     postEffects: true,
     drawDistance: 8000,
     terrainMinLod: 0,
+    oceanSimple: false,
   },
 };
 

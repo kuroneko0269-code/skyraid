@@ -88,6 +88,11 @@ export const OCEAN_CONFIG = {
   /** 太陽の照り返しの鋭さと強さ */
   sunShininess: 500,
   sunSpecular: 1.0,
+  /**
+   * 画質「低」（QualityPreset.oceanSimple）の簡略版: 頂点の波は waves の先頭 waveCount 本だけ、
+   * さざ波なし、水の色とフレネルは頂点で計算（太陽の照り返しだけ画素ごと）
+   */
+  simple: { waveCount: 1 },
 } as const;
 
 export const SKY_CONFIG = {

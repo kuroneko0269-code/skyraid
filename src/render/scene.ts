@@ -23,6 +23,7 @@ export class World {
 
   applyQuality(preset: QualityPreset): void {
     this.ocean.setDrawDistance(preset.drawDistance);
+    this.ocean.setSimple(preset.oceanSimple);
     this.terrain.setQuality(preset.drawDistance, preset.terrainMinLod);
   }
 

@@ -14,8 +14,43 @@ import type { Vec3 } from '../flight/math';
 // 平面の一辺 = 描画距離 × この値。画面の端（視線から斜め）でも縁が霧の外に出るように
 const SIZE_PER_DRAW_DISTANCE = 2.5;
 
+// 頂点・フラグメントの両方で使う色の計算（水の色 + フレネルで空の反射）
+const shadeChunk = /* glsl */ `
+  uniform vec3 uDeepColor;
+  uniform vec3 uShallowColor;
+  uniform vec3 uZenithColor;
+  uniform vec3 uHorizonColor;
+  uniform float uSkyExponent;
+  uniform float uReflectivity;
+
+  // sky.ts と同じグラデーション（反射に使う）
+  vec3 skyColor(vec3 dir) {
+    float t = pow(clamp(dir.y, 0.0, 1.0), uSkyExponent);
+    return mix(uHorizonColor, uZenithColor, t);
+  }
+
+  // n: 法線、toEye: 目への向き（どちらも単位ベクトル）
+  vec3 waterShade(vec3 n, vec3 toEye) {
+    float facing = clamp(dot(n, toEye), 0.0, 1.0);
+    // Schlick 近似のフレネル: 浅い角度ほど空を映す
+    float f = 1.0 - facing;
+    float f2 = f * f;
+    float fresnel = 0.02 + 0.98 * f2 * f2 * f;
+    vec3 r = reflect(-toEye, n);
+    r.y = abs(r.y);
+    vec3 water = mix(uShallowColor, uDeepColor, facing);
+    return mix(water, skyColor(r), fresnel * uReflectivity);
+  }
+`;
+
+// OCEAN_SIMPLE（画質「低」）: 頂点の波を減らし、さざ波なし・水の色とフレネルを頂点で計算する
 const vertexShader = /* glsl */ `
   #define WAVE_COUNT ${OCEAN_CONFIG.waves.length}
+  #ifdef OCEAN_SIMPLE
+    #define ACTIVE_WAVES ${OCEAN_CONFIG.simple.waveCount}
+  #else
+    #define ACTIVE_WAVES WAVE_COUNT
+  #endif
   uniform float uTime;
   // xy = 進行方向（単位ベクトル）、z = 波数 2π/波長、w = 振幅
   uniform vec4 uWaves[WAVE_COUNT];
@@ -23,13 +58,17 @@ const vertexShader = /* glsl */ `
   uniform float uOmega[WAVE_COUNT];
   varying vec3 vWorldPos;
   varying vec3 vNormal;
+  #ifdef OCEAN_SIMPLE
+    varying vec3 vShade;
+    ${shadeChunk}
+  #endif
   #include <common>
   #include <fog_pars_vertex>
   void main() {
     vec4 wp = modelMatrix * vec4(position, 1.0);
     float h = 0.0;
     vec2 grad = vec2(0.0);
-    for (int i = 0; i < WAVE_COUNT; i++) {
+    for (int i = 0; i < ACTIVE_WAVES; i++) {
       vec4 w = uWaves[i];
       float phase = dot(w.xy, wp.xz) * w.z - uTime * uOmega[i];
       h += w.w * sin(phase);
@@ -38,6 +77,9 @@ const vertexShader = /* glsl */ `
     wp.y += h;
     vWorldPos = wp.xyz;
     vNormal = normalize(vec3(-grad.x, 1.0, -grad.y));
+    #ifdef OCEAN_SIMPLE
+      vShade = waterShade(vNormal, normalize(cameraPosition - wp.xyz));
+    #endif
     vec4 mvPosition = viewMatrix * wp;
     gl_Position = projectionMatrix * mvPosition;
     #include <fog_vertex>
@@ -51,48 +93,41 @@ const fragmentShader = /* glsl */ `
   uniform float uRippleStrength;
   uniform float uRippleFadeStart;
   uniform float uRippleFadeEnd;
-  uniform vec3 uDeepColor;
-  uniform vec3 uShallowColor;
-  uniform vec3 uZenithColor;
-  uniform vec3 uHorizonColor;
-  uniform float uSkyExponent;
-  uniform float uReflectivity;
   uniform vec3 uSunDirection;
   uniform vec3 uSunColor;
   uniform float uSunShininess;
   uniform float uSunSpecular;
   varying vec3 vWorldPos;
   varying vec3 vNormal;
+  #ifdef OCEAN_SIMPLE
+    varying vec3 vShade;
+  #else
+    ${shadeChunk}
+  #endif
   #include <common>
   #include <fog_pars_fragment>
 
-  // sky.ts と同じグラデーション（反射に使う）
-  vec3 skyColor(vec3 dir) {
-    float t = pow(clamp(dir.y, 0.0, 1.0), uSkyExponent);
-    return mix(uHorizonColor, uZenithColor, t);
-  }
-
   void main() {
-    // さざ波: 頂点は動かさず、向きの違う細かい波で法線だけ揺らす
-    vec2 g = vec2(0.0);
-    for (int i = 0; i < RIPPLE_COUNT; i++) {
-      float a = float(i) * 2.1 + 0.4;
-      vec2 dir = vec2(cos(a), sin(a));
-      float k = uRippleK[i];
-      g += cos(dot(dir, vWorldPos.xz) * k - uTime * k * 1.5) * dir;
-    }
-    // 遠くのさざ波は画素より細かくなってちらつく（モアレ）ので、距離で消す
     vec3 eyeVec = cameraPosition - vWorldPos;
-    float fade = 1.0 - smoothstep(uRippleFadeStart, uRippleFadeEnd, length(eyeVec));
-    vec3 n = normalize(vNormal + vec3(-g.x, 0.0, -g.y) * uRippleStrength * fade);
     vec3 toEye = normalize(eyeVec);
-    float facing = clamp(dot(n, toEye), 0.0, 1.0);
-    // Schlick 近似のフレネル: 浅い角度ほど空を映す
-    float fresnel = 0.02 + 0.98 * pow(1.0 - facing, 5.0);
+    #ifdef OCEAN_SIMPLE
+      vec3 n = normalize(vNormal);
+      vec3 color = vShade;
+    #else
+      // さざ波: 頂点は動かさず、向きの違う細かい波で法線だけ揺らす
+      vec2 g = vec2(0.0);
+      for (int i = 0; i < RIPPLE_COUNT; i++) {
+        float a = float(i) * 2.1 + 0.4;
+        vec2 dir = vec2(cos(a), sin(a));
+        float k = uRippleK[i];
+        g += cos(dot(dir, vWorldPos.xz) * k - uTime * k * 1.5) * dir;
+      }
+      // 遠くのさざ波は画素より細かくなってちらつく（モアレ）ので、距離で消す
+      float fade = 1.0 - smoothstep(uRippleFadeStart, uRippleFadeEnd, length(eyeVec));
+      vec3 n = normalize(vNormal + vec3(-g.x, 0.0, -g.y) * uRippleStrength * fade);
+      vec3 color = waterShade(n, toEye);
+    #endif
     vec3 r = reflect(-toEye, n);
-    r.y = abs(r.y);
-    vec3 water = mix(uShallowColor, uDeepColor, facing);
-    vec3 color = mix(water, skyColor(r), fresnel * uReflectivity);
     color += uSunColor * pow(max(dot(r, uSunDirection), 0.0), uSunShininess) * uSunSpecular;
     gl_FragColor = vec4(color, 1.0);
     #include <tonemapping_fragment>
@@ -108,6 +143,8 @@ const fragmentShader = /* glsl */ `
 export class Ocean {
   readonly mesh: Mesh<PlaneGeometry, ShaderMaterial>;
   private spacing = 1;
+
+  private simple = false;
 
   constructor(sunDirection: Readonly<Vec3>, drawDistance: number) {
     const cfg = OCEAN_CONFIG;
@@ -159,6 +196,16 @@ export class Ocean {
     this.mesh.geometry.dispose();
     this.mesh.geometry = geometry;
     this.spacing = size / segments;
+  }
+
+  /** 画質「低」用の簡略シェーダーに切り替える（切り替えたときだけ再コンパイル） */
+  setSimple(simple: boolean): void {
+    if (simple === this.simple) return;
+    this.simple = simple;
+    const material = this.mesh.material;
+    if (simple) material.defines.OCEAN_SIMPLE = '';
+    else delete material.defines.OCEAN_SIMPLE;
+    material.needsUpdate = true;
   }
 
   /** time は秒。カメラの真下へ格子間隔単位で動かす（頂点の位置がずれて波が揺れないように） */
