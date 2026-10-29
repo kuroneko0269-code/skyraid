@@ -56,13 +56,16 @@ export const QUALITY_LABELS: Readonly<Record<QualityLevel, string>> = {
 export const QUALITY_CONFIG = {
   /** localStorage のキー。値は QualityLevel の文字列 */
   storageKey: 'skyraid.quality',
-  /** 自動判定で「低」以外にする場合の既定 */
-  defaultLevel: 'medium',
-  /** タッチ端末の既定 */
-  touchLevel: 'low',
   /**
-   * GPU 名（WebGL の RENDERER）がこれに当たれば「低」にする。
-   * ソフトウェアレンダラーとモバイル GPU
+   * 自動判定で低性能 GPU に当たらないときの既定（タッチ端末も含む。iPhone 17 で「高」でも
+   * 60fps だったため、タッチ端末を「低」にするのをやめた）
+   */
+  defaultLevel: 'medium',
+  /** 低性能 GPU のときの既定 */
+  lowLevel: 'low',
+  /**
+   * GPU 名（WebGL の RENDERER）がこれに当たれば「低」にする。明らかに遅いソフトウェアレンダラーだけ。
+   * モバイル GPU（Mali / Adreno / PowerVR）は性能の幅が広いので名前では決めず、自動ダウングレードに任せる
    */
   lowGpuPatterns: [
     /swiftshader/i,
@@ -70,18 +73,33 @@ export const QUALITY_CONFIG = {
     /softpipe/i,
     /software/i,
     /microsoft basic render/i,
-    /mali/i,
-    /adreno/i,
-    /powervr/i,
   ],
+  /**
+   * 自動ダウングレード: 飛行開始から sampleSeconds 秒間の平均 fps が minFps 未満なら一段下げて
+   * storageKey に保存し、HUD に noticeSeconds 秒間 notice を出す。手動設定（上の storageKey）があれば行わない
+   */
+  autoDowngrade: {
+    storageKey: 'skyraid.qualityAuto',
+    sampleSeconds: 5,
+    minFps: 30,
+    noticeSeconds: 2,
+    notice: '画質を下げました',
+  },
   /** 霧の開始/終了を描画距離に対する比で決める */
   fogNearRatio: 0.1,
   fogFarRatio: 0.7,
 } as const satisfies {
   storageKey: string;
   defaultLevel: QualityLevel;
-  touchLevel: QualityLevel;
+  lowLevel: QualityLevel;
   lowGpuPatterns: readonly RegExp[];
+  autoDowngrade: {
+    storageKey: string;
+    sampleSeconds: number;
+    minFps: number;
+    noticeSeconds: number;
+    notice: string;
+  };
   fogNearRatio: number;
   fogFarRatio: number;
 };

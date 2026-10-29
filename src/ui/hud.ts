@@ -38,6 +38,8 @@ export class Hud {
   private readonly hpFill: HTMLDivElement;
   private readonly radar: HudRadar;
   private readonly weapons: HudWeapons;
+  private readonly notice: HTMLDivElement;
+  private noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly attitude: Attitude = { pitch: 0, roll: 0, heading: 0 };
   private readonly ladderXf: LadderTransform = { rotateDeg: 0, offsetPx: 0 };
@@ -88,6 +90,9 @@ export class Hud {
     el('div', 'hud-hitmarker', root);
     el('div', 'hud-warn hud-stall', root, 'STALL');
     el('div', 'hud-warn hud-missile', root, 'MISSILE');
+    // お知らせ（自動ダウングレードなど）。画面上端の中央に数秒だけ出す
+    this.notice = el('div', 'hud-notice', root);
+    this.notice.hidden = true;
 
     // 左: スロットル・AB ゲージと速度
     const left = el('div', 'hud-side hud-left', root);
@@ -151,6 +156,17 @@ export class Hud {
 
   toggle(): void {
     this.setVisible(!this.shown);
+  }
+
+  /** 画面上端にお知らせを seconds 秒間出す（HUD を隠していると見えない） */
+  showNotice(text: string, seconds: number): void {
+    this.notice.textContent = text;
+    this.notice.hidden = false;
+    if (this.noticeTimer !== null) clearTimeout(this.noticeTimer);
+    this.noticeTimer = setTimeout(() => {
+      this.notice.hidden = true;
+      this.noticeTimer = null;
+    }, seconds * 1000);
   }
 
   update(f: Readonly<HudFrame>): void {

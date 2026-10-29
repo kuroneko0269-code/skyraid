@@ -4,10 +4,12 @@ import {
   detectQuality,
   isQualityLevel,
   loadSavedQuality,
+  lowerQuality,
   resolveInitialQuality,
   saveQuality,
   type StorageLike,
 } from '../src/core/settings';
+import { FpsWatch } from '../src/core/fps-watch';
 import { QUALITY_CONFIG, QUALITY_LEVELS, QUALITY_PRESETS } from '../src/data/quality';
 
 function memoryStorage(initial: Record<string, string> = {}): StorageLike & {
@@ -34,23 +36,27 @@ const throwingStorage: StorageLike = {
 };
 
 const KEY = QUALITY_CONFIG.storageKey;
+const AUTO = QUALITY_CONFIG.autoDowngrade.storageKey;
 const desktop = { touch: false, gpuRenderer: 'ANGLE (NVIDIA GeForce RTX 3060 Direct3D11)' };
 
 describe('detectQuality', () => {
-  it('タッチ端末は low', () => {
-    expect(detectQuality({ touch: true, gpuRenderer: null })).toBe('low');
-    expect(detectQuality({ ...desktop, touch: true })).toBe('low');
+  it('タッチ端末は medium（ソフトウェア GPU でなければ）', () => {
+    expect(detectQuality({ touch: true, gpuRenderer: null })).toBe('medium');
+    expect(detectQuality({ touch: true, gpuRenderer: 'Apple GPU' })).toBe('medium');
+    expect(detectQuality({ touch: true, gpuRenderer: 'Google SwiftShader' })).toBe('low');
   });
 
-  it('ソフトウェアレンダラー・モバイル GPU は low', () => {
+  it('ソフトウェアレンダラーだけ low。モバイル GPU は名前では下げない', () => {
     for (const gpu of [
       'Google SwiftShader',
+      'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)',
       'llvmpipe (LLVM 15.0.7, 256 bits)',
-      'Mali-G78',
-      'Adreno (TM) 640',
-      'PowerVR Rogue GE8320',
+      'Microsoft Basic Render Driver',
     ]) {
       expect(detectQuality({ touch: false, gpuRenderer: gpu })).toBe('low');
+    }
+    for (const gpu of ['Mali-G78', 'Adreno (TM) 740', 'PowerVR Rogue GE8320']) {
+      expect(detectQuality({ touch: true, gpuRenderer: gpu })).toBe('medium');
     }
   });
 
@@ -99,13 +105,78 @@ describe('resolveInitialQuality', () => {
 
   it('不正な保存値は自動判定にフォールバックする', () => {
     const storage = memoryStorage({ [KEY]: 'ultra' });
-    expect(resolveInitialQuality(storage, { touch: true, gpuRenderer: null })).toBe('low');
+    expect(resolveInitialQuality(storage, { touch: false, gpuRenderer: 'llvmpipe' })).toBe('low');
     expect(resolveInitialQuality(storage, desktop)).toBe('medium');
   });
 
   it('ストレージが使えなければ自動判定', () => {
     expect(resolveInitialQuality(throwingStorage, desktop)).toBe('medium');
-    expect(resolveInitialQuality(null, { touch: true, gpuRenderer: null })).toBe('low');
+    expect(resolveInitialQuality(null, { touch: true, gpuRenderer: null })).toBe('medium');
+  });
+
+  it('手動設定 > 自動ダウングレードの保存値 > 自動判定', () => {
+    expect(resolveInitialQuality(memoryStorage({ [AUTO]: 'low' }), desktop)).toBe('low');
+    expect(resolveInitialQuality(memoryStorage({ [AUTO]: 'low', [KEY]: 'high' }), desktop)).toBe(
+      'high',
+    );
+  });
+});
+
+describe('自動ダウングレード', () => {
+  it('lowerQuality は一段下げ、最低なら null', () => {
+    expect(lowerQuality('high')).toBe('medium');
+    expect(lowerQuality('medium')).toBe('low');
+    expect(lowerQuality('low')).toBeNull();
+  });
+
+  it('手動設定がなければ一段下げて自動用のキーに保存し、通知する', () => {
+    const storage = memoryStorage();
+    const settings = new QualitySettings(storage, 'high');
+    const listener = vi.fn();
+    settings.onChange(listener);
+    expect(settings.downgrade()).toBe('medium');
+    expect(settings.level).toBe('medium');
+    expect(storage.data.get(AUTO)).toBe('medium');
+    expect(storage.data.has(KEY)).toBe(false);
+    expect(listener).toHaveBeenCalledWith('medium', QUALITY_PRESETS.medium);
+    // 自動で下げても手動設定にはならない（次の飛行でもう一段下げられる）
+    expect(settings.hasManual).toBe(false);
+    expect(settings.downgrade()).toBe('low');
+    expect(settings.downgrade()).toBeNull();
+  });
+
+  it('手動設定があれば下げない', () => {
+    const storage = memoryStorage({ [KEY]: 'high' });
+    const settings = new QualitySettings(storage, 'high');
+    expect(settings.downgrade()).toBeNull();
+    expect(settings.level).toBe('high');
+    expect(storage.data.has(AUTO)).toBe(false);
+  });
+
+  it('FpsWatch: 5 秒間の平均が 30fps 未満のときだけ 1 回 true', () => {
+    const slow = new FpsWatch(5, 30);
+    expect(slow.record(1 / 20)).toBe(false); // start 前は測らない
+    slow.start();
+    let fired = 0;
+    for (let i = 0; i < 200; i++) if (slow.record(1 / 25)) fired++;
+    expect(fired).toBe(1);
+    expect(slow.measuring).toBe(false);
+
+    const fast = new FpsWatch(5, 30);
+    fast.start();
+    let fastFired = false;
+    for (let i = 0; i < 400; i++) fastFired ||= fast.record(1 / 45);
+    expect(fastFired).toBe(false);
+    expect(fast.measuring).toBe(false);
+  });
+
+  it('FpsWatch: 起動時の 1 回のカクつきだけでは下げない', () => {
+    const watch = new FpsWatch(5, 30);
+    watch.start();
+    let fired = false;
+    fired ||= watch.record(0.5);
+    for (let i = 0; i < 300; i++) fired ||= watch.record(1 / 60);
+    expect(fired).toBe(false);
   });
 });
 
