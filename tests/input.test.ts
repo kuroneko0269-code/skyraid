@@ -73,7 +73,7 @@ describe('Input', () => {
     expect(input.axis('throttleDown', 'throttleUp')).toBe(0);
     down('ShiftLeft');
     expect(input.axis('throttleDown', 'throttleUp')).toBe(1);
-    down('ControlLeft');
+    down('KeyZ');
     expect(input.axis('throttleDown', 'throttleUp')).toBe(0);
     up('ShiftLeft');
     expect(input.axis('throttleDown', 'throttleUp')).toBe(-1);
@@ -84,7 +84,7 @@ describe('Input', () => {
     const tab = keyEvent('keydown', 'Tab');
     target.dispatchEvent(tab);
     expect(tab.defaultPrevented).toBe(true);
-    const other = keyEvent('keydown', 'KeyZ');
+    const other = keyEvent('keydown', 'KeyP');
     target.dispatchEvent(other);
     expect(other.defaultPrevented).toBe(false);
   });

@@ -55,15 +55,3 @@ export const PLACEHOLDER_AIRCRAFT_CONFIG = {
   tailplane: { span: 4.4, chord: 1.6, thickness: 0.12, z: 3.8 },
   fin: { height: 2.6, chord: 2, thickness: 0.12, z: 3.7 },
 } as const;
-
-// 追従カメラ（最小版。速度で画角・距離を変える本格版は 1-2）
-export const CHASE_CAMERA_CONFIG = {
-  /** 機体ローカル座標でのカメラ位置（m）。+Z が後方 */
-  offset: { x: 0, y: 6, z: 24 },
-  /** 注視点（機体の前方 m） */
-  lookAhead: 30,
-  /** 位置が追いつく速さ（1/秒） */
-  positionRate: 10,
-  /** カメラの上方向が機体の上方向に追いつく速さ（1/秒） */
-  upRate: 5,
-} as const;

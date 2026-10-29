@@ -1,41 +1,73 @@
-import { Vector3, type Object3D, type PerspectiveCamera } from 'three';
-import { CHASE_CAMERA_CONFIG } from '../data/scene';
+import type { Object3D, PerspectiveCamera } from 'three';
+import { CAMERA_CONFIG, type CameraConfig } from '../data/camera';
+import type { Vec3 } from '../flight/math';
+import { CameraRig, type CameraMode, type CameraTarget } from './camera-rig';
+
+/** 機体メッシュ（補間済みの姿勢）以外にカメラが使う飛行状態 */
+export interface CameraFlightState {
+  readonly speed: number;
+  readonly afterburnerActive: boolean;
+  readonly stall: number;
+  readonly angularRate: Readonly<Vec3>;
+}
 
 /**
- * 機体の後方上空から lerp で追う最小限のカメラ。
- * 上方向も機体に合わせて追従させるので、宙返りで画面が反転しない
+ * 三人称カメラ。計算は CameraRig（Three.js 非依存）に任せ、結果を PerspectiveCamera に反映する
  */
 export class ChaseCamera {
-  private readonly desired = new Vector3();
-  private readonly lookTarget = new Vector3();
-  private readonly targetUp = new Vector3();
-  private initialized = false;
+  private readonly rig: CameraRig;
+  private readonly target: { -readonly [K in keyof CameraTarget]: CameraTarget[K] } = {
+    position: { x: 0, y: 0, z: 0 },
+    orientation: { x: 0, y: 0, z: 0, w: 1 },
+    speed: 0,
+    afterburnerActive: false,
+    stall: 0,
+    angularRate: { x: 0, y: 0, z: 0 },
+  };
 
-  constructor(private readonly camera: PerspectiveCamera) {}
+  constructor(
+    private readonly camera: PerspectiveCamera,
+    config: CameraConfig = CAMERA_CONFIG,
+  ) {
+    this.rig = new CameraRig(config);
+  }
 
-  /** dt は実時間（秒）。描画フレームごとに呼ぶ */
-  update(target: Object3D, dt: number): void {
-    const cfg = CHASE_CAMERA_CONFIG;
-    this.desired.set(cfg.offset.x, cfg.offset.y, cfg.offset.z).applyQuaternion(target.quaternion);
-    this.desired.add(target.position);
-    this.targetUp.set(0, 1, 0).applyQuaternion(target.quaternion);
+  get mode(): CameraMode {
+    return this.rig.mode;
+  }
 
-    if (!this.initialized) {
-      this.camera.position.copy(this.desired);
-      this.camera.up.copy(this.targetUp);
-      this.initialized = true;
-    } else {
-      this.camera.position.lerp(this.desired, 1 - Math.exp(-cfg.positionRate * dt));
-      this.camera.up.lerp(this.targetUp, 1 - Math.exp(-cfg.upRate * dt)).normalize();
+  /** dt は実時間（秒）。描画フレームごとに呼ぶ。groundHeight はカメラ直下の地面の高さ */
+  update(mesh: Object3D, flight: CameraFlightState, groundHeight: number, dt: number): void {
+    const t = this.target;
+    t.position = mesh.position;
+    t.orientation = mesh.quaternion;
+    t.speed = flight.speed;
+    t.afterburnerActive = flight.afterburnerActive;
+    t.stall = flight.stall;
+    t.angularRate = flight.angularRate;
+
+    const pose = this.rig.update(t, groundHeight, dt);
+    const camera = this.camera;
+    camera.position.set(pose.position.x, pose.position.y, pose.position.z);
+    camera.up.set(pose.up.x, pose.up.y, pose.up.z);
+    camera.lookAt(pose.lookAt.x, pose.lookAt.y, pose.lookAt.z);
+    if (Math.abs(camera.fov - pose.fov) > 1e-3) {
+      camera.fov = pose.fov;
+      camera.updateProjectionMatrix();
     }
+  }
 
-    this.lookTarget.set(0, 0, -cfg.lookAhead).applyQuaternion(target.quaternion);
-    this.lookTarget.add(target.position);
-    this.camera.lookAt(this.lookTarget);
+  toggleMode(): CameraMode {
+    return this.rig.toggleMode();
+  }
+
+  /** 地面衝突などの揺れを加える */
+  addImpact(strength = 1): void {
+    this.rig.addImpact(strength);
   }
 
   /** 次の update で補間せずに目標位置へ移す（リセット時） */
   snap(): void {
-    this.initialized = false;
+    this.rig.snap();
   }
 }

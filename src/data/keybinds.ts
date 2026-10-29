@@ -31,7 +31,7 @@ export const DEFAULT_KEYBINDS: KeyBindings = {
   yawLeft: ['KeyQ'],
   yawRight: ['KeyE'],
   throttleUp: ['ShiftLeft', 'ShiftRight'],
-  throttleDown: ['ControlLeft', 'ControlRight'],
+  throttleDown: ['KeyZ'],
   fire: ['Space'],
   missile: ['KeyF'],
   targetNext: ['Tab'],

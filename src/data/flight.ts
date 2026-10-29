@@ -42,7 +42,7 @@ export const FLIGHT_CONFIG = {
     /** 起動時・リセット時の位置（m）。リセット時は x/z は墜落地点を使う */
     position: { x: 0, y: 300, z: 0 },
   },
-  /** Shift / Ctrl でスロットルが変わる速さ（1/秒） */
+  /** Shift / Z でスロットルが変わる速さ（1/秒） */
   throttleRate: 0.6,
   /** 操作設定の既定値 */
   defaults: {

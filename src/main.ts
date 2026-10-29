@@ -10,6 +10,7 @@ import {
   resolveInitialQuality,
 } from './core/settings';
 import { parseFlightOptions } from './core/flight-options';
+import { FLIGHT_CONFIG } from './data/flight';
 import { ACTIONS } from './data/keybinds';
 import { Aircraft, type AircraftControls } from './entities/aircraft';
 import { applyInterpolatedPose, createPlaceholderAircraft } from './render/aircraft-mesh';
@@ -80,6 +81,7 @@ loop.onUpdate((dt) => {
   controls.afterburner = input.isDown('afterburner');
   aircraft.step(controls, dt);
   if (input.wasPressed('debugToggle')) overlay.toggle();
+  if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
   if (debugFlags.logInput) {
     for (const action of ACTIONS) {
       if (input.wasPressed(action)) console.info(`[input] ${action}`);
@@ -101,8 +103,10 @@ loop.onRender((alpha) => {
   if (aircraft.crashCount !== lastCrashCount) {
     lastCrashCount = aircraft.crashCount;
     chaseCamera.snap();
+    chaseCamera.addImpact();
   }
-  chaseCamera.update(aircraftMesh, frameSeconds);
+  // 地形が入る 1-3 までは地面の高さは一定
+  chaseCamera.update(aircraftMesh, aircraft.state, FLIGHT_CONFIG.groundAltitude, frameSeconds);
   worldHelpers.update(aircraftMesh.position);
   pipeline.render();
   if (lastFrameMs !== null && frameStats.record(frameSeconds)) {
