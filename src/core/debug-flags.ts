@@ -1,0 +1,15 @@
+export interface DebugFlags {
+  /** デバッグ表示（fps 等）を初期表示するか。?debug（値は問わない）で true */
+  overlay: boolean;
+  /** 押したアクション名をコンソールに出すか。?debug=input で true */
+  logInput: boolean;
+}
+
+/** URL のクエリ文字列からデバッグ用フラグを読む */
+export function parseDebugFlags(search: string): DebugFlags {
+  const params = new URLSearchParams(search);
+  return {
+    overlay: params.has('debug'),
+    logInput: params.getAll('debug').includes('input'),
+  };
+}

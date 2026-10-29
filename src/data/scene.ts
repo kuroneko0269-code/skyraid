@@ -3,6 +3,7 @@ export const SCENE_CONFIG = {
   skyColor: 0x87b8e8,
   groundColor: 0x4a7a3a,
   groundSize: 4000,
+  // 霧の範囲と camera.far は品質設定の描画距離で上書きされる（src/data/quality.ts）
   fogNear: 500,
   fogFar: 3500,
   camera: {
@@ -14,5 +15,4 @@ export const SCENE_CONFIG = {
   },
   hemiLight: { skyColor: 0xcfe6ff, groundColor: 0x3a4a2a, intensity: 1.2 },
   sunLight: { color: 0xffffff, intensity: 2.0, position: { x: 300, y: 500, z: 200 } },
-  maxPixelRatio: 2,
 } as const;
