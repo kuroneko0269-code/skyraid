@@ -17,6 +17,7 @@ export const ACTIONS = [
   'afterburner',
   'flare',
   'debugToggle',
+  'hudToggle',
 ] as const;
 
 export type Action = (typeof ACTIONS)[number];
@@ -39,4 +40,5 @@ export const DEFAULT_KEYBINDS: KeyBindings = {
   afterburner: ['KeyR'],
   flare: ['KeyX'],
   debugToggle: ['F3'],
+  hudToggle: ['KeyH'],
 };

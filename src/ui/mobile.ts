@@ -36,6 +36,29 @@ export function createTouchModeSelect(
   return select;
 }
 
+/** 設定バーの ON/OFF ボタン（HUD 表示など）。押すたびに onToggle を呼び、返り値の状態を表示する */
+export function createToggleButton(
+  parent: HTMLElement,
+  label: string,
+  initial: boolean,
+  onToggle: () => boolean,
+): { button: HTMLButtonElement; sync: (on: boolean) => void } {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'settings-item settings-button';
+  const sync = (on: boolean): void => {
+    button.textContent = `${label} ${on ? 'ON' : 'OFF'}`;
+    button.setAttribute('aria-pressed', String(on));
+  };
+  sync(initial);
+  button.addEventListener('click', () => {
+    button.blur();
+    sync(onToggle());
+  });
+  parent.appendChild(button);
+  return { button, sync };
+}
+
 // iPad の Safari は webkit 接頭辞つきの API だけを持つ
 interface WebkitDocument {
   webkitFullscreenEnabled?: boolean;

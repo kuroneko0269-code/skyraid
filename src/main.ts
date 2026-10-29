@@ -17,15 +17,18 @@ import { WORLD_CONFIG } from './data/terrain';
 import { Aircraft, type AircraftControls } from './entities/aircraft';
 import { applyInterpolatedPose, createPlaceholderAircraft } from './render/aircraft-mesh';
 import { ChaseCamera } from './render/chase-camera';
+import { projectFlightPath } from './render/hud-projection';
 import { RenderPipeline, getGpuRendererName } from './render/pipeline';
 import { createWorldScene } from './render/scene';
 import { getGroundHeight } from './render/terrain-height';
 import { DebugOverlay } from './ui/debug-overlay';
+import { Hud, type HudFrame } from './ui/hud';
 import { createQualitySelect } from './ui/quality-select';
 import {
   createFullscreenButton,
   createRotateHint,
   createSettingsBar,
+  createToggleButton,
   createTouchModeSelect,
   installTouchGuards,
 } from './ui/mobile';
@@ -94,6 +97,12 @@ createTouchModeSelect(settingsBar, touchMode, (mode) => {
   saveTouchMode(storage, mode);
   refreshTouchVisibility();
 });
+// HUD: H キー / 設定バーのボタンで表示切替
+const hud = new Hud(document.body);
+const hudButton = createToggleButton(settingsBar, 'HUD', hud.visible, () => {
+  hud.toggle();
+  return hud.visible;
+});
 createFullscreenButton(settingsBar);
 window.addEventListener('blur', () => {
   touchControls.reset();
@@ -122,6 +131,21 @@ const controls: AircraftControls = {
   throttleTarget: null,
 };
 let lastCrashCount = aircraft.crashCount;
+const flightPath = { x: 0, y: 0 };
+const hudFrame: HudFrame = {
+  speed: 0,
+  throttle: 0,
+  afterburnerGauge: 0,
+  afterburnerActive: false,
+  afterburnerLocked: false,
+  x: 0,
+  y: 0,
+  z: 0,
+  altitudeAboveGround: 0,
+  stall: 0,
+  orientation: aircraft.state.orientation,
+  flightPath: null,
+};
 
 const loop = new GameLoop();
 loop.onUpdate((dt) => {
@@ -135,6 +159,10 @@ loop.onUpdate((dt) => {
   aircraft.step(controls, dt);
   if (input.wasPressed('debugToggle')) overlay.toggle();
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
+  if (input.wasPressed('hudToggle')) {
+    hud.toggle();
+    hudButton.sync(hud.visible);
+  }
   if (debugFlags.logInput) {
     for (const action of ACTIONS) {
       if (input.wasPressed(action)) console.info(`[input] ${action}`);
@@ -163,6 +191,7 @@ loop.onRender((alpha) => {
   chaseCamera.update(aircraftMesh, aircraft.state, groundUnderCamera, frameSeconds);
   world.update(camera.position, now / 1000);
   touchControls.syncThrottle(aircraft.throttle);
+  if (hud.visible) updateHud();
   pipeline.render();
   if (lastFrameMs !== null && frameStats.record(frameSeconds)) {
     const { fps, frameMs } = frameStats.latest;
@@ -173,3 +202,29 @@ loop.onRender((alpha) => {
   lastFrameMs = now;
 });
 loop.start();
+
+/** HUD に機体の状態を渡す（DOM の書き換えは HUD 側で変化があったときだけ） */
+function updateHud(): void {
+  const state = aircraft.state;
+  const p = state.position;
+  hudFrame.speed = state.speed;
+  hudFrame.throttle = aircraft.throttle;
+  hudFrame.afterburnerGauge = state.afterburnerGauge;
+  hudFrame.afterburnerActive = state.afterburnerActive;
+  hudFrame.afterburnerLocked = state.afterburnerLocked;
+  hudFrame.x = p.x;
+  hudFrame.y = p.y;
+  hudFrame.z = p.z;
+  hudFrame.altitudeAboveGround = p.y - getGroundHeight(p.x, p.z);
+  hudFrame.stall = state.stall;
+  hudFrame.flightPath = projectFlightPath(
+    camera,
+    aircraftMesh,
+    window.innerWidth,
+    window.innerHeight,
+    flightPath,
+  )
+    ? flightPath
+    : null;
+  hud.update(hudFrame);
+}

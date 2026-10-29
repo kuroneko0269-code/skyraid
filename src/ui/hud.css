@@ -1,0 +1,336 @@
+/* HUD。寸法の数値は src/data/hud.ts から CSS 変数（*-normal / *-compact）で入る */
+.hud {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  color: var(--hud-color);
+  font:
+    600 12px/1.2 system-ui,
+    sans-serif;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
+  --hud-color: rgba(110, 240, 255, 0.85);
+  --hud-dim: rgba(110, 240, 255, 0.35);
+  --hud-red: rgba(255, 60, 60, 0.95);
+  --hud-line: 2px;
+  --hud-ppd: var(--hud-ppd-normal);
+  --hud-ladder-w: calc(var(--hud-ladder-w-normal) * 1px);
+  --hud-ladder-h: calc(var(--hud-ladder-h-normal) * 1px);
+  --hud-rung-w: calc(var(--hud-rung-w-normal) * 1px);
+  --hud-horizon-w: calc(var(--hud-horizon-w-normal) * 1px);
+  --hud-radar-size: calc(var(--hud-radar-normal) * 1px);
+  --hud-value-size: 22px;
+  --hud-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* スマホ横画面など狭い画面（hud.ts が matchMedia で付ける） */
+.hud.hud-compact {
+  font-size: 10px;
+  --hud-ppd: var(--hud-ppd-compact);
+  --hud-ladder-w: calc(var(--hud-ladder-w-compact) * 1px);
+  --hud-ladder-h: calc(var(--hud-ladder-h-compact) * 1px);
+  --hud-rung-w: calc(var(--hud-rung-w-compact) * 1px);
+  --hud-horizon-w: calc(var(--hud-horizon-w-compact) * 1px);
+  --hud-radar-size: calc(var(--hud-radar-compact) * 1px);
+  --hud-value-size: 17px;
+}
+
+.hud[hidden],
+.hud [hidden] {
+  display: none;
+}
+
+/* ---- 中央: ピッチラダー ---- */
+.hud-ladder-window {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--hud-ladder-w);
+  height: var(--hud-ladder-h);
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+/* 高さ 0 の帯を窓の中央に置き、その中心で回す */
+.hud-ladder {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 0;
+  transform-origin: 50% 0;
+  will-change: transform;
+}
+
+.hud-rung {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--deg) * var(--hud-ppd) * -1px);
+  width: var(--hud-rung-w);
+  height: 0;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+}
+
+.hud-rung.is-horizon {
+  width: var(--hud-horizon-w);
+}
+
+.hud-rung-line {
+  flex: 1;
+  height: 6px;
+  box-sizing: border-box;
+}
+
+.hud-rung-gap {
+  flex: 0 0 34%;
+}
+
+.hud-rung.is-horizon .hud-rung-gap {
+  flex-basis: 24%;
+}
+
+/* 機首上げ側: 実線、端のひげは下（水平線側）向き */
+.hud-rung.is-up .hud-rung-line,
+.hud-rung.is-horizon .hud-rung-line {
+  border-top: var(--hud-line) solid var(--hud-color);
+  transform: translateY(3px);
+}
+
+/* 機首下げ側: 破線、ひげは上向き */
+.hud-rung.is-down .hud-rung-line {
+  border-bottom: var(--hud-line) dashed var(--hud-color);
+  transform: translateY(-3px);
+}
+
+.hud-rung.is-up .hud-rung-left,
+.hud-rung.is-down .hud-rung-left {
+  border-left: var(--hud-line) solid var(--hud-color);
+}
+
+.hud-rung.is-up .hud-rung-right,
+.hud-rung.is-down .hud-rung-right {
+  border-right: var(--hud-line) solid var(--hud-color);
+}
+
+.hud-rung-label {
+  flex: 0 0 2.2em;
+  text-align: center;
+  font-family: var(--hud-mono);
+}
+
+/* 進行方向マーカー（円 + 左右の翼 + 上のひげ）。位置は hud.ts が translate で入れる */
+.hud-fpm {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: var(--hud-line) solid var(--hud-color);
+  border-radius: 50%;
+  box-sizing: border-box;
+  will-change: transform;
+}
+
+.hud-fpm::before,
+.hud-fpm::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  border-top: var(--hud-line) solid var(--hud-color);
+  transform: translateY(-50%);
+}
+
+.hud-fpm::before {
+  right: 100%;
+}
+
+.hud-fpm::after {
+  left: 100%;
+}
+
+/* ---- 警告（赤の点滅） ---- */
+.hud-warn {
+  display: none;
+  color: var(--hud-red);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  animation: hud-blink 0.8s steps(1, end) infinite;
+}
+
+@keyframes hud-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ラダーの窓の上端（左右の箱の間）。下はレーダーとタッチのボタンがあるので避ける */
+.hud-stall {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - var(--hud-ladder-h) / 2);
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border: var(--hud-line) solid var(--hud-red);
+}
+
+.hud.is-stall .hud-stall,
+.hud.is-ground-warning .hud-ground {
+  display: block;
+}
+
+/* ---- 左右: ラダーの両脇に寄せる（画面端のタッチ操作から離す） ---- */
+.hud-side {
+  position: absolute;
+  top: calc(50% - var(--hud-ladder-h) / 2);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.hud-left {
+  right: calc(50% + var(--hud-ladder-w) / 2 + 8px);
+}
+
+.hud-right {
+  left: calc(50% + var(--hud-ladder-w) / 2 + 8px);
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.hud-box {
+  min-width: 4.6em;
+  padding: 3px 6px;
+  border: var(--hud-line) solid var(--hud-color);
+  background: rgba(0, 20, 30, 0.18);
+  text-align: right;
+}
+
+.hud-box-label,
+.hud-box-unit {
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.hud-box-label {
+  text-align: left;
+}
+
+.hud-box-value {
+  display: block;
+  font: 700 var(--hud-value-size) / 1.1 var(--hud-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud.is-ground-warning .hud-right .hud-box {
+  color: var(--hud-red);
+  border-color: var(--hud-red);
+  animation: hud-blink 0.8s steps(1, end) infinite;
+}
+
+.hud-gauges {
+  display: flex;
+  gap: 6px;
+}
+
+.hud-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.hud-gauge-track {
+  position: relative;
+  width: 8px;
+  height: calc(var(--hud-value-size) * 2.6);
+  border: 1px solid var(--hud-color);
+  overflow: hidden;
+}
+
+.hud-gauge-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--hud-dim);
+  transform-origin: bottom;
+  transform: scaleY(0);
+  will-change: transform;
+}
+
+.hud-gauge-fill.is-active {
+  background: var(--hud-color);
+}
+
+.hud-gauge-fill.is-locked {
+  background: rgba(110, 240, 255, 0.15);
+}
+
+.hud-gauge-label {
+  font-size: 0.85em;
+}
+
+/* ---- 下: レーダー ---- */
+.hud-radar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  width: var(--hud-radar-size);
+  height: var(--hud-radar-size);
+  transform: translateX(-50%);
+  border: var(--hud-line) solid var(--hud-color);
+  border-radius: 50%;
+  background: rgba(0, 20, 30, 0.22);
+  box-sizing: border-box;
+  --hud-radar-r: calc(var(--hud-radar-size) / 2 - 4px);
+}
+
+/* タッチ操作中は左下のスティックと右下のボタン群の間の中央に寄せる（hud.ts が値を入れる） */
+.touch-active .hud-radar {
+  left: calc(50% + var(--hud-touch-shift));
+}
+
+.hud-radar-ring {
+  position: absolute;
+  inset: 25%;
+  border: 1px solid var(--hud-dim);
+  border-radius: 50%;
+}
+
+/* 自機（中央の上向き三角） */
+.hud-radar-self {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  margin: -6px 0 0 -5px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 10px solid var(--hud-color);
+}
+
+/* 島の中心。範囲外は縁に置いて中抜きにする */
+.hud-radar-island {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border: var(--hud-line) solid var(--hud-color);
+  border-radius: 2px;
+  background: var(--hud-color);
+  box-sizing: border-box;
+  will-change: transform;
+}
+
+.hud-radar-island.is-edge {
+  background: transparent;
+}
