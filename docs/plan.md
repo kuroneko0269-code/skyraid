@@ -22,7 +22,7 @@
 ## フェーズ2: 戦闘
 
 - [x] 2-1 機銃とヒット判定、ダメージ、撃墜演出（プリミティブ） — main 直接マージ: https://github.com/kuroneko0269-code/skyraid/commit/ccd4e1312d419074176d549eb9a10031b6793efb
-- [ ] 2-2 ロックオンとミサイル、フレア
+- [x] 2-2 ロックオンとミサイル、フレア — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/dd55dfaf45e0e1483b803832396f7cab51ec6482
 - [ ] 2-3 敵機AI（巡航→追尾→攻撃→回避）
 - [ ] 2-4 ミッション定義とランナー。目標・成功失敗判定・リザルト画面
 - [ ] 2-5 初期ミッション 1〜4 のデータ
