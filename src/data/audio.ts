@@ -18,6 +18,11 @@ export const AUDIO_CONFIG = {
   smoothing: 0.06,
   /** 共有するホワイトノイズの長さ（ループして使う） */
   noiseSeconds: 2,
+  /**
+   * 効果音のバスの末尾のリミッター（4-11）: DynamicsCompressor。knee 0（しきい値より下は素通し）。
+   * Web Audio のコンプは自動でメイクアップゲインを足すので、後ろのゲインで打ち消す（src/audio/params.ts の limiterMakeupCompensation）
+   */
+  limiter: { thresholdDb: -3, ratio: 20, attackSeconds: 0.002, releaseSeconds: 0.08, kneeDb: 0 },
 } as const;
 
 /** エンジン: ノイズ（ローパス）+ 低域の鋸波（ローパス）。スロットルでピッチと音量、アフターバーナーで高域のノイズ */

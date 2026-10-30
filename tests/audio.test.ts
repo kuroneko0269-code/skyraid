@@ -9,6 +9,7 @@ import {
 } from '../src/data/audio';
 import { EXPLOSION_SCALES } from '../src/data/fx';
 import { AudioEngine } from '../src/audio/engine';
+import { limiterMakeupCompensation } from '../src/audio/params';
 import { BgmPlayer } from '../src/audio/bgm';
 import {
   beepOn,
@@ -24,7 +25,7 @@ import {
 } from '../src/audio/params';
 import { OneShots } from '../src/audio/sfx/oneshots';
 import { FlightLoops } from '../src/audio/sfx/loops';
-import { asContext, MockAudioContext } from './audio-mock';
+import { asContext, MockAudioContext, type MockNode } from './audio-mock';
 
 function readyEngine(): { engine: AudioEngine; ctx: MockAudioContext } {
   const ctx = new MockAudioContext();
@@ -195,6 +196,28 @@ describe('AudioEngine（モックの AudioContext）', () => {
     expect(made).toBe(1);
     expect(ctx.resumed).toBeGreaterThanOrEqual(1);
     expect(ctx.sources.some((s) => s.started)).toBe(true);
+  });
+
+  it('効果音のバスの末尾にリミッター（-3dB・20:1・2ms・80ms・knee 0）と、メイクアップを打ち消すゲイン（4-11）', () => {
+    const { engine } = readyEngine();
+    // モックのノード（connections で配線をたどる）
+    const sfx = engine.sfx as unknown as MockNode;
+    const l = sfx.connections[0] as Record<
+      'threshold' | 'ratio' | 'attack' | 'release' | 'knee',
+      { value: number }
+    > & { connections: { gain: { value: number }; connections: unknown[] }[] };
+    expect([
+      l.threshold.value,
+      l.ratio.value,
+      l.attack.value,
+      l.release.value,
+      l.knee.value,
+    ]).toEqual([-3, 20, 0.002, 0.08, 0]);
+    const makeup = l.connections[0];
+    expect(makeup?.connections[0]).toBe(engine.master);
+    // -3dB・20:1 の自動メイクアップは +1.71dB（Chromium で実測）。打ち消すので 0.821 倍
+    expect(20 * Math.log10(makeup?.gain.value ?? 1)).toBeCloseTo(-1.71, 2);
+    expect(limiterMakeupCompensation(-3, 20)).toBeCloseTo(0.821, 3);
   });
 
   it('マスター / 効果音 / BGM の 3 本のゲイン。ポーズで 30%、裏に回ると suspend', () => {

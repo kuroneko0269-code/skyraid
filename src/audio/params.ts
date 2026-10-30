@@ -127,6 +127,16 @@ export function sanitizeVolume(v: unknown, fallback: number): number {
 }
 
 /** マスターの実際の音量（ポーズ中は pausedVolume 倍。ミュートにはしない） */
+/**
+ * リミッターのメイクアップゲインを打ち消す倍率（4-11）。Web Audio の DynamicsCompressor は
+ * 0dB 入力のときの出力（しきい値 + (0 − しきい値) / 比、knee 0）の逆数の 0.6 乗を全体に掛ける
+ * （-3dB・20:1 で +1.71dB。Chromium の OfflineAudioContext で確認）ので、その逆数
+ */
+export function limiterMakeupCompensation(thresholdDb: number, ratio: number): number {
+  const fullRangeDb = thresholdDb - thresholdDb / ratio;
+  return Math.pow(10, (0.6 * fullRangeDb) / 20);
+}
+
 export function masterGain(master: number, paused: boolean): number {
   return clamp01(master) * (paused ? AUDIO_CONFIG.pausedVolume : 1);
 }

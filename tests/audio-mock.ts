@@ -42,6 +42,14 @@ class MockGain extends MockNode {
   readonly gain = new MockParam();
 }
 
+class MockCompressor extends MockNode {
+  readonly threshold = new MockParam();
+  readonly ratio = new MockParam();
+  readonly attack = new MockParam();
+  readonly release = new MockParam();
+  readonly knee = new MockParam();
+}
+
 class MockFilter extends MockNode {
   type = 'lowpass';
   readonly frequency = new MockParam();
@@ -116,6 +124,9 @@ export class MockAudioContext {
   readonly sources: MockSource[] = [];
   resumed = 0;
   suspended = 0;
+  createDynamicsCompressor(): MockCompressor {
+    return new MockCompressor();
+  }
   createGain(): MockGain {
     return new MockGain();
   }

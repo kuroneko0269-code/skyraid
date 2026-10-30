@@ -2,7 +2,7 @@
 // 無音を 1 回鳴らすまで音が出ない）。マスター / 効果音 / BGM の 3 本のゲイン。ポーズ中はミュートせずマスターを 30% に。
 // タブが裏に回ったら suspend して止め、戻ったら resume する。単発の効果音は VoicePool（同時発音の上限つき）
 import { AUDIO_CONFIG } from '../data/audio';
-import { masterGain, sanitizeVolume } from './params';
+import { limiterMakeupCompensation, masterGain, sanitizeVolume } from './params';
 import { VoicePool } from './voices';
 
 export interface Volumes {
@@ -160,7 +160,19 @@ export class AudioEngine {
     this.master = ctx.createGain();
     this.sfx = ctx.createGain();
     this.bgm = ctx.createGain();
-    this.sfx.connect(this.master);
+    // 効果音のバスの末尾にリミッター（4-11）。重なって 0dBFS を超えても割れない。しきい値より下の音量は変えない
+    const l = AUDIO_CONFIG.limiter;
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = l.thresholdDb;
+    limiter.ratio.value = l.ratio;
+    limiter.attack.value = l.attackSeconds;
+    limiter.release.value = l.releaseSeconds;
+    limiter.knee.value = l.kneeDb;
+    const makeup = ctx.createGain();
+    makeup.gain.value = limiterMakeupCompensation(l.thresholdDb, l.ratio);
+    this.sfx.connect(limiter);
+    limiter.connect(makeup);
+    makeup.connect(this.master);
     this.bgm.connect(this.master);
     this.master.connect(ctx.destination);
     this.applyGains(true);
