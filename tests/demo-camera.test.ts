@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SCREEN_CONFIG } from '../src/data/screens';
+import { getGroundHeight } from '../src/render/terrain-height';
 import { demoOrbitPose, type DemoCameraPose } from '../src/render/demo-camera';
 
 const cfg = SCREEN_CONFIG.demoCamera;
@@ -28,8 +29,20 @@ describe('デモカメラの周回', () => {
     expect(lap.z).toBeCloseTo(cfg.radius, 6);
   });
 
-  it('カメラは海岸線（平均 2900m）より外、山（500m 前後）より高い', () => {
+  it('カメラは海岸線（平均 2900m）より外で、経路の真下の地表から 300m 以上', () => {
     expect(cfg.radius).toBeGreaterThan(2900);
-    expect(cfg.height).toBeGreaterThan(500);
+    for (let t = 0; t < cfg.periodSeconds; t += 1) {
+      const p = demoOrbitPose(cfg, t, pose()).position;
+      expect(p.y - Math.max(0, getGroundHeight(p.x, p.z))).toBeGreaterThan(300);
+    }
+  });
+
+  it('山頂（島の中心の最高点）は画面の中央より下（山が画面の下半分に入る。2-5 の事前修正）', () => {
+    const peak = getGroundHeight(0, 0);
+    const aimDeg = (Math.atan2(cfg.lookAtHeight - cfg.height, cfg.radius) * 180) / Math.PI;
+    const peakDeg = (Math.atan2(peak - cfg.height, cfg.radius) * 180) / Math.PI;
+    expect(peakDeg).toBeLessThan(aimDeg - 2);
+    // 見上げすぎない（視線は水平から 10° 以内）
+    expect(aimDeg).toBeLessThan(10);
   });
 });
