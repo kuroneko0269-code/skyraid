@@ -38,7 +38,10 @@ function treeColor(hex: number): Color {
   return new Color(r, g, b);
 }
 
-/** 高さ 1・幅 1（半径 0.5）の木。y = 0 が根元。頂点カラーで幹と葉（下ほど暗い）を塗る */
+/**
+ * 高さ 1・幅 1（半径 0.5）の木。y = 0 が根元。頂点カラーで幹と葉（下ほど暗い）を塗る。
+ * treePart は幹 1・葉 0（幹と葉で別の個体差の色を掛けるため。4-8）
+ */
 function createTreeGeometry(): BufferGeometry {
   const c = VEGETATION_CONFIG.colors;
   const trunk = new CylinderGeometry(0.05, 0.07, 0.3, 5, 1, true).translate(0, 0.15, 0);
@@ -60,10 +63,53 @@ function createTreeGeometry(): BufferGeometry {
       colors[v * 3 + 2] = col.b * shade;
     }
     g.setAttribute('color', new BufferAttribute(colors, 3));
+    g.setAttribute(
+      'treePart',
+      new BufferAttribute(new Float32Array(pos.count).fill(index === 0 ? 1 : 0), 1),
+    );
   });
   const merged = mergeGeometries(parts);
   for (const g of parts) g.dispose();
   return merged;
+}
+
+/** seed（0〜1）と番号 k から 0〜1 の擬似乱数（木ごとの個体差用。葉と幹で別の値を取る） */
+function seedHash(seed: number, k: number): number {
+  const h = Math.imul((seed * 16777216) | 0, 374761393) ^ Math.imul(k + 1, 668265263);
+  const m = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((m ^ (m >>> 16)) >>> 0) / 4294967296;
+}
+
+/**
+ * 木ごとの葉・幹の色の倍率（4-8）。基準の色を色相 ±hueDeg 度・明るさ ±lightness ずらした色 ÷ 基準の色。
+ * 戻り値はどちらも木 1 本につき RGB の 3 つ
+ */
+export function treeTints(
+  seeds: Readonly<Float32Array>,
+  count: number,
+): {
+  foliage: Float32Array;
+  trunk: Float32Array;
+} {
+  const c = VEGETATION_CONFIG.colors;
+  const variation = c.nearVariation;
+  const bases = [treeColor(c.foliage), treeColor(c.trunk)];
+  const out = [new Float32Array(count * 3), new Float32Array(count * 3)];
+  const varied = new Color();
+  for (let t = 0; t < count; t++) {
+    const seed = seeds[t] ?? 0;
+    for (let part = 0; part < 2; part++) {
+      const base = bases[part] ?? varied;
+      const target = out[part] ?? new Float32Array(0);
+      const hue = ((seedHash(seed, part * 2) * 2 - 1) * variation.hueDeg) / 360;
+      const light = 1 + (seedHash(seed, part * 2 + 1) * 2 - 1) * variation.lightness;
+      varied.copy(base).offsetHSL(hue, 0, 0);
+      target[t * 3] = (varied.r / Math.max(base.r, 1e-4)) * light;
+      target[t * 3 + 1] = (varied.g / Math.max(base.g, 1e-4)) * light;
+      target[t * 3 + 2] = (varied.b / Math.max(base.b, 1e-4)) * light;
+    }
+  }
+  return { foliage: out[0] ?? new Float32Array(0), trunk: out[1] ?? new Float32Array(0) };
 }
 
 function createNearMaterial(time: { value: number }): MeshLambertMaterial {
@@ -73,7 +119,18 @@ function createNearMaterial(time: { value: number }): MeshLambertMaterial {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uTreeTime = time;
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nuniform float uTreeTime;')
+      .replace(
+        '#include <common>',
+        '#include <common>\nuniform float uTreeTime;\nattribute float treePart;\nattribute vec3 instanceTrunkColor;',
+      )
+      .replace(
+        '#include <color_vertex>',
+        `#include <color_vertex>
+        #ifdef USE_INSTANCING_COLOR
+          // 個体差（4-8）: 葉は instanceColor、幹は instanceTrunkColor
+          vColor.xyz = color.xyz * mix(instanceColor.xyz, instanceTrunkColor, treePart);
+        #endif`,
+      )
       .replace(
         '#include <begin_vertex>',
         `#include <begin_vertex>
@@ -100,6 +157,8 @@ export class Vegetation {
   private readonly billboardMaterial = createBillboardMaterial();
   private readonly treeGeometry = createTreeGeometry();
   private trees: TreePlacement | null = null;
+  private tints: { foliage: Float32Array; trunk: Float32Array } | null = null;
+  private trunkColors: InstancedBufferAttribute | null = null;
   private requested = 0;
   private clumped = false;
   private near: InstancedMesh | null = null;
@@ -139,17 +198,21 @@ export class Vegetation {
   private rebuild(trees: TreePlacement): void {
     if (this.near) {
       this.object.remove(this.near);
+      this.near.geometry.dispose();
       this.near.dispose();
     }
     if (this.far) {
       this.object.remove(this.far);
       this.far.geometry.dispose();
     }
-    const near = new InstancedMesh(this.treeGeometry, this.nearMaterial, Math.max(1, trees.count));
-    near.instanceColor = new InstancedBufferAttribute(
-      new Float32Array(Math.max(1, trees.count) * 3),
-      3,
-    );
+    // 幹の個体差の色はインスタンスの属性を足すので、木の形のジオメトリは撒き直しごとに複製する
+    const capacity = Math.max(1, trees.count);
+    const geometry = this.treeGeometry.clone();
+    this.trunkColors = new InstancedBufferAttribute(new Float32Array(capacity * 3), 3);
+    geometry.setAttribute('instanceTrunkColor', this.trunkColors);
+    this.tints = treeTints(trees.seeds, trees.count);
+    const near = new InstancedMesh(geometry, this.nearMaterial, capacity);
+    near.instanceColor = new InstancedBufferAttribute(new Float32Array(capacity * 3), 3);
     near.count = 0;
     near.frustumCulled = false;
     const far = new Mesh(createBillboardGeometry(trees), this.billboardMaterial);
@@ -165,7 +228,9 @@ export class Vegetation {
   private refreshNear(camera: Readonly<Vec3>): void {
     const near = this.near;
     const trees = this.trees;
-    if (!near || !trees) return;
+    const tints = this.tints;
+    const trunkColors = this.trunkColors;
+    if (!near || !trees || !tints || !trunkColors) return;
     const v = VEGETATION_CONFIG;
     const range = v.nearDistance + v.nearRefresh;
     const r2 = range * range;
@@ -182,11 +247,15 @@ export class Vegetation {
       const h = shape.height + v.sink;
       this.matrix.makeScale(w, h, w).setPosition(x, (trees.positions[t * 3 + 1] ?? 0) - v.sink, z);
       near.setMatrixAt(k, this.matrix);
-      colors?.setXYZ(k, shape.tint, shape.tint * (0.97 + 0.06 * ((t * 0.618) % 1)), shape.tint);
+      const f3 = tints.foliage;
+      const t3 = tints.trunk;
+      colors?.setXYZ(k, f3[t * 3] ?? 1, f3[t * 3 + 1] ?? 1, f3[t * 3 + 2] ?? 1);
+      trunkColors.setXYZ(k, t3[t * 3] ?? 1, t3[t * 3 + 1] ?? 1, t3[t * 3 + 2] ?? 1);
       k++;
     }
     near.count = k;
     near.instanceMatrix.needsUpdate = true;
     if (colors) colors.needsUpdate = true;
+    trunkColors.needsUpdate = true;
   }
 }

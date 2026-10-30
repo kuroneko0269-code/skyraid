@@ -32,11 +32,39 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
-/** Catmull-Rom の 1 次元の重み（p0..p3 の間、p1〜p2 を t で補間） */
-function catmull(p0: number, p1: number, p2: number, p3: number, t: number): number {
+/**
+ * 一様 3 次 B スプラインの 1 次元の補間（p0..p3 の間、p1〜p2 を t で）。Catmull-Rom と違い格子点を通らないが
+ * 行き過ぎがなく 2 階微分まで連続で、格子の段が斜面の陰影に出にくい（4-8）
+ */
+function bspline(p0: number, p1: number, p2: number, p3: number, t: number): number {
+  const u = 1 - t;
+  const t2 = t * t;
+  const t3 = t2 * t;
   return (
-    p1 + 0.5 * t * (p2 - p0 + t * (2 * p0 - 5 * p1 + 4 * p2 - p3 + t * (3 * (p1 - p2) + p3 - p0)))
+    (u * u * u * p0 + (3 * t3 - 6 * t2 + 4) * p1 + (-3 * t3 + 3 * t2 + 3 * t + 1) * p2 + t3 * p3) /
+    6
   );
+}
+
+/** 格子を [1, 2, 1] / 4 の二項フィルタで縦横に passes 回ならす（端の 1 列はそのまま） */
+export function smoothGrid(grid: Float32Array, res: number, passes: number): void {
+  const tmp = new Float32Array(grid.length);
+  for (let p = 0; p < passes; p++) {
+    tmp.set(grid);
+    for (let j = 0; j < res; j++) {
+      for (let i = 1; i < res - 1; i++) {
+        const k = i + j * res;
+        grid[k] = ((tmp[k - 1] ?? 0) + 2 * (tmp[k] ?? 0) + (tmp[k + 1] ?? 0)) / 4;
+      }
+    }
+    tmp.set(grid);
+    for (let j = 1; j < res - 1; j++) {
+      for (let i = 0; i < res; i++) {
+        const k = i + j * res;
+        grid[k] = ((tmp[k - res] ?? 0) + 2 * (tmp[k] ?? 0) + (tmp[k + res] ?? 0)) / 4;
+      }
+    }
+  }
 }
 
 /**
@@ -115,7 +143,7 @@ export function createHeightField(
 
   const getBaseHeight = (x: number, z: number): number => shapeHeight(x, z) + cliff;
 
-  // ---- 浸食（起動時に 1 回。格子の差分を Catmull-Rom で補間して足す） ----
+  // ---- 浸食（起動時に 1 回。格子の差分をならして 3 次 B スプラインで補間して足す。4-8） ----
   const e = config.erosion;
   const useErosion = options.erosion ?? e.enabled;
   const res = e.resolution;
@@ -150,6 +178,8 @@ export function createHeightField(
     erode({ resolution: res, heights, mask, depositScale }, e, config.seed + e.seedOffset);
     delta = new Float32Array(res * res);
     for (let k = 0; k < delta.length; k++) delta[k] = (heights[k] ?? 0) - (before[k] ?? 0);
+    // 1〜2 マス（約 29〜58m）の凸凹（堆積の段）を消す。谷の溝はもっと幅が広いので残る
+    smoothGrid(delta, res, e.smoothPasses);
     erosionMs = performance.now() - t0;
   }
 
@@ -165,9 +195,9 @@ export function createHeightField(
     const d = delta;
     const row = (jj: number): number => {
       const k = i + jj * res;
-      return catmull(d[k - 1] ?? 0, d[k] ?? 0, d[k + 1] ?? 0, d[k + 2] ?? 0, fx);
+      return bspline(d[k - 1] ?? 0, d[k] ?? 0, d[k + 1] ?? 0, d[k + 2] ?? 0, fx);
     };
-    return catmull(row(j - 1), row(j), row(j + 1), row(j + 2), fz);
+    return bspline(row(j - 1), row(j), row(j + 1), row(j + 2), fz);
   };
 
   const getHeight = (x: number, z: number): number => {

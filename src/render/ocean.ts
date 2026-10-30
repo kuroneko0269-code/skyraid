@@ -3,12 +3,7 @@
 // 見た目だけ波打たせ、衝突判定は「海面 = 高度 0」のまま
 import {
   Color,
-  DataTexture,
-  DataUtils,
-  HalfFloatType,
-  LinearFilter,
   Mesh,
-  RedFormat,
   ShaderMaterial,
   UniformsLib,
   UniformsUtils,
@@ -26,8 +21,8 @@ import { WIND_CONFIG } from '../data/wind';
 import type { Vec3 } from '../flight/math';
 import type { Atmosphere } from './atmosphere';
 import type { CloudField } from './cloud-field';
+import { createDepthTexture } from './coast-textures';
 import { buildGerstnerWaves, maxWaveHeight } from './gerstner';
-import { bakeDepthField } from './ocean-depth';
 import {
   detailedFragmentShader,
   detailedVertexShader,
@@ -35,22 +30,8 @@ import {
   simpleVertexShader,
 } from './ocean-glsl';
 import { createPlaneGeometry, createRingGeometry } from './ocean-mesh';
-import { getHeight } from './terrain-height';
 
 const DEG = Math.PI / 180;
-
-/** 地形の高さを水深の格子に焼いて、浮動小数点のテクスチャ（線形補間）にする */
-function createDepthTexture(): DataTexture {
-  const res = OCEAN_CONFIG.depthMap.resolution;
-  const field = bakeDepthField(getHeight, TERRAIN_CONFIG.size, res, TERRAIN_CONFIG.seaLevel);
-  const half = new Uint16Array(field.data.length);
-  for (let i = 0; i < half.length; i++) half[i] = DataUtils.toHalfFloat(field.data[i] ?? 0);
-  const texture = new DataTexture(half, res, res, RedFormat, HalfFloatType);
-  texture.minFilter = LinearFilter;
-  texture.magFilter = LinearFilter;
-  texture.needsUpdate = true;
-  return texture;
-}
 
 /** さざ波の層の uniform（流れる速度・1 / 大きさ・傾き、消える距離） */
 function normalLayerUniforms(): { layers: Vector4[]; fades: Vector2[] } {

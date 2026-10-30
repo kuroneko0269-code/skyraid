@@ -76,6 +76,11 @@ export const TERRAIN_CONFIG = {
     gravity: 4,
     radius: 1,
     heightScale: 600,
+    /**
+     * 浸食の差分を [1, 2, 1] / 4 で縦横にならす回数（4-8）。0 だと格子 1〜2 マスの堆積の段が山腹に
+     * 等高線のような縞として見えた。補間は 3 次 B スプライン（4-6 までは Catmull-Rom）
+     */
+    smoothPasses: 1,
     /** 風下の堆積を (1 + leeDeposit)、風上を (1 − windwardLoss) 倍に（波が土を運び去る / 浜に寄せる） */
     leeDeposit: 0.6,
     windwardLoss: 0.6,
@@ -192,8 +197,17 @@ export const TERRAIN_DETAIL_CONFIG = {
     fadeStart: 150,
     fadeEnd: 400,
   },
-  /** 砂浜の上端の高さ。風上（崖の海岸）は低く、風下（遠浅の浜）は高い */
+  /**
+   * 砂浜の上端の高さ（上限）。風上（崖の海岸）は低く、風下（遠浅の浜）は高い。
+   * 4-8 から砂浜の幅は下の sandBand（海岸線からの距離）で決め、これは崖の上・低地に砂を出さないための上限
+   */
   sandTop: { windward: 2.5, leeward: 8 },
+  /**
+   * 砂浜の幅（4-8）: 海岸線（水深 0。4-2c の水深の格子から焼いた距離）から風上 windward m・風下 leeward m までを
+   * 砂にし、その先 transition m で草地へ。境目はノイズで ±jitter m ずらす。
+   * 4-7 までは高さ（風下 8m）だけで決めていて、風下の遠浅の浜（4-6 で 55% 低くした）で砂が 150〜200m 内陸まで広がった
+   */
+  sandBand: { windward: 30, leeward: 80, transition: 50, jitter: 10 },
   /** 森の層の色を出す範囲（木の配置 VEGETATION_CONFIG と同じ条件 + 境目のぼかし m・度） */
   forestBlend: { height: 15, slopeDeg: 4 },
   /** 高原（alpine）が始まる高さ・岩が始まる高さ */

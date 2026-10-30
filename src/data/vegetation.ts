@@ -44,6 +44,12 @@ export const VEGETATION_CONFIG = {
      */
     billboard: 0x34502a,
     lightness: 0.18,
+    /**
+     * 近くの木の個体差（4-8）: 葉と幹を別々に、明るさ ±lightness（割合）・色相 ±hueDeg 度ずらす。
+     * 4-7 までは近くの木も葉と幹まとめて明るさ ±lightness（上の 0.18）だけで、色相が同じ木が並んで見えた。
+     * 遠くのビルボードは上の lightness のまま
+     */
+    nearVariation: { lightness: 0.1, hueDeg: 10 },
   },
   /** 風の揺れ（近くの木だけ）: 梢の振れ幅（m）と速さ（rad/s）。向きは src/data/wind.ts */
   sway: { amplitude: 0.35, speed: 1.4 },

@@ -1,8 +1,9 @@
 // 地形のマテリアル（4-1 → 4-6）。画質「中」以上は PBR + シェーダーの中の層（傾斜と高さで砂浜 / 草地 / 森 /
-// 岩 / 崖 / 雪。terrain-layers-glsl.ts）、「低」は従来どおり Lambert（頂点カラーだけ）
+// 岩 / 崖 / 雪。砂浜は海岸線からの距離で。terrain-layers-glsl.ts）、「低」は従来どおり Lambert（頂点カラーだけ）
 import { MeshLambertMaterial, MeshStandardMaterial, type Material } from 'three';
-import { TERRAIN_DETAIL_CONFIG } from '../data/terrain';
+import { TERRAIN_CONFIG, TERRAIN_DETAIL_CONFIG } from '../data/terrain';
 import { CLOUD_GLSL, type CloudUniforms } from './cloud-field';
+import { createCoastDistanceTexture } from './coast-textures';
 import { terrainLayersGlsl } from './terrain-layers-glsl';
 
 /** シェーダーの切り替え（define）。変えると再コンパイルする */
@@ -31,7 +32,13 @@ export function createDetailedTerrainMaterial(cloud?: CloudUniforms): MeshStanda
     roughness: TERRAIN_DETAIL_CONFIG.roughness,
     metalness: 0,
   });
+  // 海岸線からの距離（砂浜の幅。4-8）
+  const coast = {
+    uCoastDist: { value: createCoastDistanceTexture() },
+    uCoastSize: { value: TERRAIN_CONFIG.size },
+  };
   material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, coast);
     if (cloud) Object.assign(shader.uniforms, cloud);
     shader.vertexShader = shader.vertexShader
       .replace(

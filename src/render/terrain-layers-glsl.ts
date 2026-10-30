@@ -40,9 +40,12 @@ export function terrainLayersGlsl(): string {
   const pa = c.patches;
   const gr = c.grassRough;
   const sn = c.snow;
+  const band = c.sandBand;
   return /* glsl */ `
   varying vec3 vDetailPos;
   varying vec3 vDetailNormal;
+  uniform sampler2D uCoastDist;
+  uniform float uCoastSize;
   ${forestGlsl()}
   // 正弦を使わないハッシュ（大きな座標でも精度が落ちにくい。Dave Hoskins の hash12）
   float detailHash(vec2 p) {
@@ -110,17 +113,22 @@ export function terrainLayersGlsl(): string {
     float slope = degrees(acos(clamp(n.y, 0.0, 1.0)));
     float sj = slope + bn * ${f(c.boundaryNoise.slopeJitter)};
 
-    // 風下ほど砂浜が高くまで（高さ関数の coastSide と同じ向き。ノイズは境目用で代用）
+    // 砂浜（4-8）: 海岸線からの距離で決める。風上は幅 sandBand.windward m、風下は leeward m まで砂で、
+    // その先 transition m で草地へ。風下の向きは高さ関数の coastSide と同じ（ノイズは境目用で代用）。
+    // 高さの上限 sandTop も残す（風上の崖の上・内陸の低地に砂を出さない）
     vec2 dir = p.xz / max(length(p.xz), 1.0);
     float along = dot(dir, vec2(${f(Math.cos(wind))}, ${f(Math.sin(wind))})) + bn * 0.15;
     float lee = smoothstep(${f(coast.sideFrom)}, ${f(coast.sideTo)}, along);
     float sandTop = mix(${f(c.sandTop.windward)}, ${f(c.sandTop.leeward)}, lee);
+    float sandWidth = mix(${f(band.windward)}, ${f(band.leeward)}, lee);
+    float coastDist = texture(uCoastDist, p.xz / uCoastSize + 0.5).r + bn * ${f(band.jitter)};
 
     vec3 albedo = ${rgb(col.seabed)};
     vec3 amp = ${vec3Of(g.sand)};
     float wSand = smoothstep(-8.0, -1.0, h);
     albedo = mix(albedo, ${rgb(col.sand)}, wSand);
-    float wGrass = smoothstep(sandTop - 1.0, sandTop + 2.5, h + bn * 1.5);
+    float wGrass = max(smoothstep(sandWidth, sandWidth + ${f(band.transition)}, coastDist),
+      smoothstep(sandTop - 1.0, sandTop + 2.5, h + bn * 1.5));
     // 草地の大きなむら（4-7）: 乾いた草 ⇄ 湿った草、斜面に土
     float dryWet = detailNoise(p.xz / ${f(pa.cellLarge)}) * 0.6 + detailNoise(p.xz / ${f(pa.cellSmall)} + 11.0) * 0.4;
     vec3 grassColor = mix(${rgb(col.grassWet)}, ${rgb(col.grass)}, smoothstep(${f(pa.dryFrom)}, 0.5, dryWet));
