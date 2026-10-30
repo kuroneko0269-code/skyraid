@@ -4,10 +4,9 @@ import { Input } from './core/input';
 import { GamepadInput, browserGamepads } from './core/gamepad';
 import { parseDebugFlags, parseSkipTitle } from './core/debug-flags';
 import { BOOT_TASKS, runBoot } from './core/boot';
-import { GameState, isSimulating, syncLoopWithState, usesDemoCamera } from './core/game-state';
+import { GameState, syncLoopWithState, usesDemoCamera } from './core/game-state';
 import { parseFlightOptions } from './core/flight-options';
 import { ACTIONS } from './data/keybinds';
-import { QUALITY_CONFIG } from './data/quality';
 import { WORLD_CONFIG } from './data/terrain';
 import { MISSIONS } from './data/missions';
 import { createControls } from './entities/aircraft';
@@ -31,16 +30,13 @@ import { QualityLink } from './render/quality-link';
 import { createWorldScene } from './render/scene';
 import { getGroundHeight } from './render/terrain-height';
 import { DamageOverlay } from './ui/damage-overlay';
-import { createEnemySettings } from './ui/enemy-settings';
-import { createAssistSettings } from './ui/assist-settings';
 import { AssistControl } from './core/assist-control';
 import { Hud } from './ui/hud';
-import { createHudToggle } from './ui/hud-toggle';
 import { MissionHud } from './ui/mission-hud';
-import { createFullscreenButton, installTouchGuards } from './ui/mobile';
-import { createSaveSettings } from './ui/save-settings';
+import { installTouchGuards } from './ui/mobile';
+import { createDisplaySettings, createGameSettings } from './ui/settings-link';
+import { FlightFrame } from './render/flight-frame';
 import { openBrowserSave } from './ui/save-link';
-import { createTouchLink } from './ui/touch-link';
 import { Screens } from './ui/screens';
 import { installAppShell } from './ui/app-shell';
 import { createGameAudio } from './audio/setup';
@@ -97,24 +93,24 @@ input.attach(window);
 const gamepad = new GamepadInput(input, browserGamepads);
 gamepad.attach(window);
 
-// タッチ操作（自動 / 強制表示 / 強制非表示）。飛行中だけ出す
-const touch = createTouchLink(
-  document.body,
-  input,
-  storage,
-  settingsPanel,
-  () => game.state === 'flight',
-);
-// HUD: H キー / ポーズメニューの設定のボタンで表示切替（3-1 から保存）。ミッションの HUD（2-4）も合わせる
 const hud = new Hud(document.body);
 const missionHud = new MissionHud(document.body);
-const hudToggle = createHudToggle(settingsPanel, hud, missionHud, save);
-createFullscreenButton(settingsPanel);
+// ポーズメニューの設定: タッチ・HUD・全画面（ここ）→ 敵・操作補助・セーブデータ（セッションの後）
+const settingsParts = {
+  panel: settingsPanel,
+  input,
+  storage,
+  save,
+  hud,
+  missionHud,
+  modeSelect: screens.modeSelect,
+  inFlight: () => game.state === 'flight',
+};
+const { touch, hudToggle } = createDisplaySettings(settingsParts);
 
 // ?debug でデバッグ表示を初期表示、?debug=input で押したアクション名をコンソールに出す
 const debugFlags = parseDebugFlags(window.location.search);
 const debug = new DebugLink(document.body, debugFlags.overlay, pipeline, world);
-let lastFrameMs: number | null = null;
 
 // 飛行: フリーフライトは島の沖合から、ミッション（2-4）は定義の開始位置から。?autolevel=off / ?invert で操作設定を変える。
 // 射撃（2-1）・ロックオンとミサイル（2-2）・敵機（2-3）。判定は固定ステップ、演出は描画フレーム
@@ -125,16 +121,8 @@ const session = new FlightSession({
 });
 const play = new GamePlay(session);
 const { aircraft } = session;
-// 敵の有無・難易度（ポーズメニューの設定。localStorage に保存）
-createEnemySettings(settingsPanel, storage, (enabled, difficulty) => {
-  session.configureEnemies(enabled, difficulty);
-  screens.modeSelect.setEnemiesEnabled(enabled);
-});
-// 操作補助（4-12）: エイムアシスト（タッチ・パッドだけ）・ターゲットカメラ・HUD 補助。ポーズメニューの設定で OFF にできる
-const assistFlags = createAssistSettings(settingsPanel, storage);
+const assistFlags = createGameSettings(settingsParts, session);
 const assist = new AssistControl(session, assistFlags, () => input.lastDevice);
-// 設定の最下部: セーブデータのコピー / 復元 / 削除。復元・削除の後は読み込み直して新しいセーブで始める
-createSaveSettings(settingsPanel, save);
 const damageOverlay = new DamageOverlay(document.body);
 const controls = createControls();
 // エフェクトと音のきっかけ（4-4）。被弾・近くの爆発でカメラを揺らす
@@ -200,8 +188,31 @@ game.onChange(({ from, to }) => {
   touch.refresh();
 });
 aircraftMesh.visible = false;
-// 島の周りを回る時間。海の波もこれで動かし、ポーズ中は止める
-let worldTime = 0;
+const frame = new FlightFrame({
+  pipeline,
+  world,
+  camera,
+  playerView,
+  chaseCamera,
+  demoCamera,
+  hangarStage,
+  views,
+  ringView,
+  damageOverlay,
+  hud,
+  hudLink,
+  missionLink,
+  frameFx,
+  quality,
+  debug,
+  session,
+  play,
+  controls,
+  touch: touch.controls,
+  weaponInput,
+  assistFlags,
+  groundHeight: getGroundHeight,
+});
 
 loop.onUpdate((dt) => {
   gamepad.poll();
@@ -224,44 +235,7 @@ loop.onUpdate((dt) => {
   }
 });
 loop.onRender((alpha) => {
-  const now = performance.now();
-  const frameSeconds = lastFrameMs === null ? 0 : (now - lastFrameMs) / 1000;
-  const state = game.state;
-  if (!isSimulating(state)) menuTick();
-  if (state !== 'pause') worldTime += frameSeconds;
-  if (usesDemoCamera(state)) demoCamera.update(frameSeconds);
-  else if (state === 'hangar') hangarStage.update(frameSeconds);
-  else if (state === 'flight') updateFlightView(alpha, frameSeconds);
-  views.update(alpha, state === 'flight' ? frameSeconds : 0, camera.position);
-  ringView.update(play.runner?.running ? play.runner.activeRings : null);
-  const p = session.player;
-  damageOverlay.update(
-    p.flashTimer,
-    p.isDestroyed,
-    p.respawnTimer,
-    isSimulating(state) || state === 'pause',
-  );
-  // 影は機体のまわり（タイトル・モード選択ではカメラのまわり）
-  world.update(
-    camera.position,
-    worldTime,
-    state === 'hangar'
-      ? hangarStage.mesh.position
-      : aircraftMesh.visible
-        ? aircraftMesh.position
-        : camera.position,
-  );
-  if (state === 'flight' && hud.visible)
-    hudLink.update(alpha, window.innerWidth, window.innerHeight);
-  if (state === 'flight') missionLink.update(window.innerWidth, window.innerHeight);
-  frameFx.update(state, worldTime);
-  pipeline.render();
-  if (state === 'flight' && lastFrameMs !== null && quality.recordFlightFrame(frameSeconds)) {
-    const { notice, noticeSeconds } = QUALITY_CONFIG.autoDowngrade;
-    hud.showNotice(notice, noticeSeconds);
-  }
-  if (lastFrameMs !== null) debug.record(frameSeconds);
-  lastFrameMs = now;
+  frame.render(game.state, alpha, menuTick);
 });
 loop.start();
 
@@ -312,17 +286,4 @@ function menuTick(): void {
   // Esc / Start: ポーズ → 再開、モード選択 → タイトルなど 1 つ前の画面へ
   if (input.wasPressed('pause')) screens.navigateBack(game);
   handleCommonKeys();
-}
-
-/** 追従カメラと機体の描画位置を更新する（飛行中だけ。ポーズ中はカメラも止める） */
-function updateFlightView(alpha: number, frameSeconds: number): void {
-  // 撃墜されている間は機体を隠す（破片は combat の撃墜の演出）
-  aircraftMesh.visible = session.player.active;
-  playerView.update(aircraft, controls, session.combat.missileAmmo.count, alpha, frameSeconds);
-  // カメラが地面にめり込まないよう、前フレームのカメラ位置の地表の高さを渡す
-  const groundUnderCamera = getGroundHeight(camera.position.x, camera.position.z);
-  const focus = assistFlags.camera ? (session.combat.targeting.selected?.position ?? null) : null;
-  chaseCamera.update(aircraftMesh, aircraft.state, groundUnderCamera, frameSeconds, focus);
-  touch.controls.syncThrottle(aircraft.throttle);
-  touch.controls.syncSecondary(weaponInput.secondary);
 }
