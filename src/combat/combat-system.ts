@@ -27,8 +27,14 @@ export { createCombatInput, type CombatInput } from './combat-input';
 
 export type ImpactListener = (x: number, y: number, z: number, onTarget: boolean) => void;
 export type DestroyedListener = (target: CombatTarget) => void;
-/** ミサイルの起爆。onTarget は信管が対象に反応したか（false なら地面） */
-export type ExplosionListener = (x: number, y: number, z: number, onTarget: boolean) => void;
+/** ミサイルの起爆。onTarget は信管が対象に反応したか（false なら地面）。radius は範囲ダメージの半径（爆発の規模。4-4） */
+export type ExplosionListener = (
+  x: number,
+  y: number,
+  z: number,
+  onTarget: boolean,
+  radius: number,
+) => void;
 
 /** プレイヤーの弾が当たる相手（プレイヤー側でない） */
 const playerHostile = (t: CombatTarget): boolean => teamOf(t) !== TEAM_PLAYER;
@@ -221,7 +227,7 @@ export class CombatSystem {
     spareTeam: number | null,
     onTarget = true,
   ): void {
-    for (const fn of this.explosionListeners) fn(x, y, z, onTarget);
+    for (const fn of this.explosionListeners) fn(x, y, z, onTarget, spec.radius);
     for (const t of this.fuseTargets) {
       if (!t.active || (spareTeam !== null && teamOf(t) === spareTeam)) continue;
       const p = t.position;
@@ -282,8 +288,9 @@ export class CombatSystem {
 
   /** 範囲ダメージ: 爆心から各対象の表面までの距離で減衰。撃った陣営には入らない */
   private readonly handleDetonation = (d: Readonly<Detonation<CombatTarget>>): void => {
-    for (const fn of this.explosionListeners) fn(d.x, d.y, d.z, d.target !== null);
     const spec = this.missiles.spec;
+    for (const fn of this.explosionListeners)
+      fn(d.x, d.y, d.z, d.target !== null, spec.blastRadius);
     for (const t of this.fuseTargets) {
       if (!t.active || teamOf(t) === d.owner) continue;
       const p = t.position;

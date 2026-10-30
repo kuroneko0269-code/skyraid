@@ -1,0 +1,29 @@
+/* 音量のスライダー（4-4）。ポーズメニューの設定の 2 列のグリッドをまたいで 1 行に 1 本 */
+.volume-settings {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--ui-space-2);
+}
+
+.pause-settings .volume-item {
+  justify-content: space-between;
+  gap: var(--ui-space-3);
+}
+
+.volume-name {
+  min-width: 5em;
+  text-align: left;
+}
+
+.volume-item input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--ui-accent);
+}
+
+.volume-value {
+  min-width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-text-dim);
+}

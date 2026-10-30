@@ -41,6 +41,9 @@ import { openBrowserSave } from './ui/save-link';
 import { createTouchLink } from './ui/touch-link';
 import { Screens } from './ui/screens';
 import { installAppShell } from './ui/app-shell';
+import { createGameAudio } from './audio/setup';
+import { FxEvents } from './render/fx/fx-events';
+import { FrameFx } from './render/frame-fx';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app が見つかりません');
@@ -129,11 +132,18 @@ createEnemySettings(settingsPanel, storage, (enabled, difficulty) => {
 createSaveSettings(settingsPanel, save);
 const damageOverlay = new DamageOverlay(document.body);
 const controls = createControls();
-const views = new FlightViews(scene, aircraftMesh, session);
-// 機体モデルの細かさ（4-3。画質「低」は LOD）
+// エフェクトと音のきっかけ（4-4）。被弾・近くの爆発でカメラを揺らす
+const fxEvents = new FxEvents(session, getGroundHeight);
+const views = new FlightViews(scene, aircraftMesh, session, fxEvents, camera.position, (k) => {
+  chaseCamera.addImpact(k);
+});
+const audio = createGameAudio(session, fxEvents, getGroundHeight, settingsPanel, save);
+const frameFx = new FrameFx(pipeline, playerView, camera, audio);
+// 機体モデルの細かさ（4-3。画質「低」は LOD）と陽炎の屈折（4-4。「高」だけ）
 quality.onPreset((preset) => {
   playerView.setDetail(preset.aircraftDetail);
   views.setAircraftDetail(preset.aircraftDetail);
+  playerView.setHazeRefraction(preset.heatHazeRefraction);
 });
 const ringView = new RingView(scene);
 const missionLink = new MissionLink(missionHud, camera, aircraftMesh, play);
@@ -228,6 +238,7 @@ loop.onRender((alpha) => {
   if (state === 'flight' && hud.visible)
     hudLink.update(alpha, window.innerWidth, window.innerHeight);
   if (state === 'flight') missionLink.update(window.innerWidth, window.innerHeight);
+  frameFx.update(state, worldTime);
   pipeline.render();
   if (state === 'flight' && lastFrameMs !== null && quality.recordFlightFrame(frameSeconds)) {
     const { notice, noticeSeconds } = QUALITY_CONFIG.autoDowngrade;

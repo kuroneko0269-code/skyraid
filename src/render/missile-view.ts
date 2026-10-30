@@ -1,5 +1,6 @@
-// ミサイル（2-2）の描画: 本体・煙の尾・フレアの光点・起爆の閃光。
-// 追加の draw call は 本体 1 + 煙 1 + フレア 1 + 閃光 1 の最大 4（数によらない）。破片・火花は combat-view.ts
+// ミサイル（2-2）の描画: 本体・煙の尾・フレアの光点。
+// 追加の draw call は 本体 1 + 煙 1 + フレア 1 の最大 3（数によらない）。破片・火花は combat-view.ts。
+// 起爆の閃光は 4-4 から爆発（src/render/fx/explosion.ts）の閃光・火球に置き換えた
 import {
   BoxGeometry,
   DynamicDrawUsage,
@@ -13,16 +14,10 @@ import {
 } from 'three';
 import type { CombatSystem } from '../combat/combat-system';
 import type { Missile } from '../combat/missile';
-import {
-  EXPLOSION_CONFIG,
-  FLARE_VIEW_CONFIG,
-  MISSILE_VIEW_CONFIG,
-  SMOKE_CONFIG,
-} from '../data/effects';
+import { FLARE_VIEW_CONFIG, MISSILE_VIEW_CONFIG, SMOKE_CONFIG } from '../data/effects';
 import type { Vec3 } from '../flight/math';
 import { EMISSIVE_CONFIG } from '../data/sky';
 import { createEmissiveMaterial } from './materials';
-import { ParticleSystem } from './particles';
 import { SmokeTrail } from './smoke';
 
 /** ミサイルごとの煙の出し方の状態（発射の通し番号が変わったら作り直す） */
@@ -45,7 +40,6 @@ export class MissileView {
   private readonly bodies: InstancedMesh;
   private readonly smoke = new SmokeTrail();
   private readonly flares: InstancedMesh;
-  private readonly flashes: ParticleSystem;
   private readonly trails = new Map<Missile, TrailState>();
 
   constructor(
@@ -74,16 +68,7 @@ export class MissileView {
     this.flares.count = 0;
     this.flares.visible = false;
 
-    const e = EXPLOSION_CONFIG;
-    this.flashes = new ParticleSystem(
-      e.flashMax,
-      createEmissiveMaterial(e.flashColor, EMISSIVE_CONFIG.explosion),
-      { gravity: 0, shrinkFraction: 1, sizePerMeter: 0 },
-      new IcosahedronGeometry(0.5, 1),
-    );
-
-    scene.add(this.bodies, this.smoke.mesh, this.flares, this.flashes.mesh);
-    combat.onExplosion(this.spawnFlash);
+    scene.add(this.bodies, this.smoke.mesh, this.flares);
   }
 
   /** 描画フレームごとに呼ぶ。alpha は固定ステップの補間係数、frameSeconds はポーズ中 0 */
@@ -91,12 +76,10 @@ export class MissileView {
     this.updateMissiles(alpha, frameSeconds);
     this.smoke.update(frameSeconds);
     this.updateFlares(alpha, camera);
-    this.flashes.update(frameSeconds, camera);
   }
 
   reset(): void {
     this.smoke.clear();
-    this.flashes.clear();
     this.trails.clear();
   }
 
@@ -181,15 +164,4 @@ export class MissileView {
     this.flares.visible = pool.count > 0;
     if (pool.count > 0) this.flares.instanceMatrix.needsUpdate = true;
   }
-
-  private readonly spawnFlash = (x: number, y: number, z: number): void => {
-    const e = EXPLOSION_CONFIG;
-    const p = this.flashes.spawn(e.flashLife);
-    if (!p) return;
-    p.x = x;
-    p.y = y;
-    p.z = z;
-    p.vx = p.vy = p.vz = 0;
-    p.sx = p.sy = p.sz = e.flashSize;
-  };
 }

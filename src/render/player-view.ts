@@ -1,6 +1,6 @@
 // 自機の見た目（4-3）: 出撃する機体の手続き生成モデルを、固定ステップの間を補間して置く。操舵面は操作に比例して動き、
-// 撃ったミサイルはパイロンから消え、アフターバーナーで炎、高 G 旋回で翼端から飛行機雲
-import { Group, Vector3, type Scene } from 'three';
+// 撃ったミサイルはパイロンから消え、アフターバーナーで炎、高 G 旋回で翼端から飛行機雲、巡航中はノズルの後ろに陽炎（4-4）
+import { Group, Vector3, type Camera, type Scene } from 'three';
 import type { AircraftModel } from '../data/aircraft';
 import { CONTRAIL_CONFIG, type AircraftDetail } from '../data/aircraft-model';
 import type { Aircraft, AircraftControls } from '../entities/aircraft';
@@ -8,6 +8,7 @@ import { applyInterpolatedPose } from './aircraft-mesh';
 import { AircraftObject } from './aircraft-model/aircraft-object';
 import { loadFactor } from './aircraft-model/planform';
 import { SmokeTrail } from './smoke';
+import { hazeLevel, type HazeSegment } from './fx/heat-haze';
 
 const tip = new Vector3();
 const heading = new Vector3();
@@ -75,9 +76,24 @@ export class PlayerView {
     if (alive) this.model.steer(controls.pitch * invert, controls.roll, controls.yaw, dt);
     this.model.setMissiles(missiles);
     this.model.flame.update(alive && aircraft.state.afterburnerActive, dt);
+    this.model.haze.update(
+      alive ? hazeLevel(aircraft.throttle, this.model.flame.intensity) : 0,
+      dt,
+    );
     const s = aircraft.state;
     const g = loadFactor(s.angularRate.x, s.speed);
     this.updateContrails(alive && dt > 0 && g >= CONTRAIL_CONFIG.minLoadFactor, dt);
+  }
+
+  /** 陽炎を画面の屈折にするか（画質「高」。4-4） */
+  setHazeRefraction(on: boolean): void {
+    this.model.haze.refraction = on;
+  }
+
+  /** 屈折の陽炎の画面上の帯（屈折しないときは strength 0）。update の後に呼ぶ */
+  hazeSegment(camera: Camera, aspect: number, out: HazeSegment): HazeSegment {
+    this.mesh.updateMatrixWorld(true);
+    return this.model.haze.segment(this.mesh, camera, aspect, out);
   }
 
   /** 高 G の間、両翼端から前フレームの位置との間を spacing ごとに埋めて玉を出す */

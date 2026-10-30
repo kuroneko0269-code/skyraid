@@ -11,6 +11,7 @@ import {
 import { QUALITY_CONFIG, type QualityPreset } from '../data/quality';
 import { AtmosphereFog } from './atmosphere';
 import { PostEffects } from './post';
+import type { HazeSegment } from './fx/heat-haze';
 
 export interface RenderStats {
   /** 1 フレームの合計（影・シーン・ポストエフェクトのすべての描画） */
@@ -84,6 +85,11 @@ export class RenderPipeline {
     this.exposure = exposure;
     this.renderer.toneMappingExposure = exposure;
     this.post?.setExposure(exposure);
+  }
+
+  /** 陽炎の屈折（4-4。ポストエフェクトがあるときだけ効く） */
+  setHaze(seg: Readonly<HazeSegment>, time: number): void {
+    this.post?.setHaze(seg, time);
   }
 
   resize(width: number, height: number): void {

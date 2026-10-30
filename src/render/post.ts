@@ -1,8 +1,9 @@
 // ポストエフェクト（4-1）: three/examples/jsm の EffectComposer。
-// シーン（リニア HDR、MSAA）→ ブルーム（画質「高」のみ）→ 仕上げ（ビネット + 露出 + ACES + sRGB を 1 パスで）
+// シーン（リニア HDR、MSAA）→ ブルーム（画質「高」のみ）→ 仕上げ（陽炎の屈折（4-4。「高」のみ）+ ビネット + 露出 + ACES + sRGB を 1 パスで）
 import {
   HalfFloatType,
   Vector2,
+  Vector4,
   WebGLRenderTarget,
   type Camera,
   type Scene,
@@ -13,6 +14,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { BLOOM_CONFIG, POST_CONFIG, VIGNETTE_CONFIG } from '../data/sky';
+import type { HazeSegment } from './fx/heat-haze';
 
 // UnrealBloomPass の内部の描画回数（明るい部分の抽出 1 + ぼかし 5 段 × 2 + 合成 1 + 足し込み 1）
 const BLOOM_STEPS = 13;
@@ -26,6 +28,12 @@ const FinishShader = {
   uniforms: {
     tDiffuse: { value: null },
     uVignette: { value: VIGNETTE_CONFIG.strength },
+    // 陽炎の帯（4-4）: 始点・終点の uv、太さ（画面の高さに対する割合）、ずれの大きさ、時間、画面の縦横比
+    uHazeSeg: { value: new Vector4() },
+    uHazeWidth: { value: 0 },
+    uHazeStrength: { value: 0 },
+    uHazeTime: { value: 0 },
+    uAspect: { value: 1 },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -37,9 +45,34 @@ const FinishShader = {
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     uniform float uVignette;
+    uniform vec4 uHazeSeg;
+    uniform float uHazeWidth;
+    uniform float uHazeStrength;
+    uniform float uHazeTime;
+    uniform float uAspect;
     varying vec2 vUv;
+
+    // 陽炎: ノズルから後ろへ伸びる帯の中だけ、流れる波で像をずらす（根元は細く強く、先は太く弱く）
+    vec2 hazeOffset(vec2 uv) {
+      vec2 scale = vec2(uAspect, 1.0);
+      vec2 p = uv * scale;
+      vec2 a = uHazeSeg.xy * scale;
+      vec2 ab = uHazeSeg.zw * scale - a;
+      float h = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-8), 0.0, 1.0);
+      float d = length(p - a - ab * h);
+      float w = uHazeWidth * mix(1.0, 2.4, h);
+      float m = (1.0 - smoothstep(0.0, w, d)) * (1.0 - h) * smoothstep(0.0, 0.08, h);
+      vec2 n = vec2(
+        sin(h * 37.0 - uHazeTime * 17.0 + p.y * 230.0),
+        cos(h * 29.0 - uHazeTime * 13.0 + p.x * 190.0)
+      );
+      return n * uHazeStrength * m;
+    }
+
     void main() {
-      vec3 color = texture2D(tDiffuse, vUv).rgb;
+      vec2 uv = vUv;
+      if (uHazeStrength > 0.0) uv += hazeOffset(vUv);
+      vec3 color = texture2D(tDiffuse, uv).rgb;
       // ビネット: 中心からの距離² に比例して暗く（四隅 = 距離² 0.5 で uVignette）
       vec2 d = vUv - 0.5;
       color *= 1.0 - uVignette * 2.0 * dot(d, d);
@@ -99,8 +132,20 @@ export class PostEffects {
     this.updateThreshold();
   }
 
+  /** 陽炎の屈折の帯（strength 0 で無し）と時間（秒） */
+  setHaze(seg: Readonly<HazeSegment>, time: number): void {
+    const strength = seg.strength;
+    uniform(this.finish, 'uHazeStrength').value = strength;
+    if (strength <= 0) return;
+    const v: unknown = uniform(this.finish, 'uHazeSeg').value;
+    if (v instanceof Vector4) v.set(seg.ax, seg.ay, seg.bx, seg.by);
+    uniform(this.finish, 'uHazeWidth').value = seg.width;
+    uniform(this.finish, 'uHazeTime').value = time;
+  }
+
   setSize(width: number, height: number, pixelRatio: number): void {
     this.size.set(width, height);
+    uniform(this.finish, 'uAspect').value = width / Math.max(1, height);
     this.composer.setPixelRatio(pixelRatio);
     this.composer.setSize(width, height);
   }
@@ -124,4 +169,11 @@ export class PostEffects {
     this.composer.dispose();
     this.renderer.setRenderTarget(null);
   }
+}
+
+/** ShaderPass の uniform（ShaderPass は定義を複製するので、パスの側から取る） */
+function uniform(pass: ShaderPass, name: string): { value: unknown } {
+  const u = pass.uniforms[name];
+  if (!u) throw new Error(`uniform ${name} がない`);
+  return u;
 }

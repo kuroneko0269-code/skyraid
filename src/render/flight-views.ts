@@ -1,5 +1,5 @@
 // フリーフライトの戦闘まわりの描画をまとめる（的・弾・ミサイル・ドローン・敵機・ミッションの出現物（2-5）・
-// 地上目標とロケット・爆弾（2-6））。main.ts は update / reset を呼ぶだけ
+// 地上目標とロケット・爆弾（2-6）・爆発や煙などのエフェクト（4-4））。main.ts は update / reset を呼ぶだけ
 import type { Object3D, Scene } from 'three';
 import type { Vec3 } from '../flight/math';
 import type { AircraftDetail } from '../data/aircraft-model';
@@ -7,6 +7,8 @@ import type { FlightSession } from '../missions/flight-session';
 import { CombatView } from './combat-view';
 import { AAA_CONFIG } from '../data/ground-targets';
 import { DroneView } from './drone-view';
+import { FxLink } from './fx/fx-link';
+import type { FxEvents } from './fx/fx-events';
 import { EnemyView } from './enemy-view';
 import { GroundTargetView } from './ground-target-view';
 import { MissileView } from './missile-view';
@@ -21,8 +23,18 @@ export class FlightViews {
   private readonly props: MissionPropsView;
   private readonly groundTargets: GroundTargetView;
   private readonly ordnance: OrdnanceView;
+  private readonly fx: FxLink;
 
-  constructor(scene: Scene, aircraftMesh: Object3D, ff: FlightSession) {
+  constructor(
+    scene: Scene,
+    aircraftMesh: Object3D,
+    ff: FlightSession,
+    private readonly events: FxEvents,
+    /** カメラの位置（爆発の揺れを距離で減らす） */
+    camera: Readonly<Vec3>,
+    /** カメラを揺らす（被弾・近くの爆発。4-4） */
+    shake: (strength: number) => void,
+  ) {
     this.combat = new CombatView(scene, aircraftMesh, ff.combat);
     this.missiles = new MissileView(scene, ff.combat);
     this.drones = new DroneView(scene, ff.combat.drones);
@@ -32,6 +44,7 @@ export class FlightViews {
     this.props = new MissionPropsView(scene, ff.props);
     this.groundTargets = new GroundTargetView(scene, ff.props.groundTargets);
     this.ordnance = new OrdnanceView(scene, ff.combat);
+    this.fx = new FxLink(scene, events, ff.enemies, camera, shake);
   }
 
   /** 描画フレームごとに呼ぶ。frameSeconds は演出を進める時間（飛行中以外は 0） */
@@ -43,6 +56,8 @@ export class FlightViews {
     this.props.update(alpha);
     this.groundTargets.update(frameSeconds);
     this.ordnance.update(alpha);
+    if (frameSeconds > 0) this.events.frame();
+    this.fx.update(frameSeconds);
   }
 
   /** 敵機・輸送機のモデルの細かさ（画質。4-3） */
@@ -56,5 +71,7 @@ export class FlightViews {
     this.combat.reset();
     this.missiles.reset();
     this.groundTargets.reset();
+    this.fx.reset();
+    this.events.sync();
   }
 }

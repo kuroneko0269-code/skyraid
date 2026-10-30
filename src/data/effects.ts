@@ -95,7 +95,7 @@ export const FLARE_VIEW_CONFIG = {
 } as const;
 
 export const EXPLOSION_CONFIG = {
-  /** 閃光（球）の同時に出せる上限・寿命・直径。出た瞬間が最大で縮んで消える */
+  /** 閃光（球）の同時に出せる上限・寿命・直径（2-2。4-4 から使わない。閃光は src/data/fx.ts の爆発の閃光） */
   flashMax: 16,
   flashLife: 0.35,
   flashSize: 16,

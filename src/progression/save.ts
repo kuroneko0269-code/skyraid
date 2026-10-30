@@ -2,6 +2,7 @@
 // 古い版から SAVE_MIGRATIONS を順に通して今の版にし、normalizeSave で形と値を確かめる。
 // 壊れていたら null（呼ぶ側で初期値に戻す）。書き込み・イベントは save-store.ts
 import { DIFFICULTIES, FREE_FLIGHT_ENEMIES, type Difficulty } from '../data/ai';
+import { AUDIO_CONFIG } from '../data/audio';
 import { STARTER_AIRCRAFT, findAircraftModel } from '../data/aircraft';
 import { QUALITY_LEVELS, type QualityLevel } from '../data/quality';
 import { RANKS, type Rank } from '../data/ranking';
@@ -32,6 +33,18 @@ export interface SaveSettings {
   difficulty: Difficulty;
   /** HUD の表示（H キー / 設定の HUD ON/OFF） */
   hud: boolean;
+  /** 音量（4-4。v3 から）: マスター / 効果音 / BGM。0〜1 */
+  volume: VolumeSettings;
+}
+
+export interface VolumeSettings {
+  master: number;
+  sfx: number;
+  bgm: number;
+}
+
+export function defaultVolume(): VolumeSettings {
+  return { ...AUDIO_CONFIG.defaultVolumes };
 }
 
 export interface SaveData {
@@ -61,6 +74,7 @@ export function defaultSettings(): SaveSettings {
     enemies: true,
     difficulty: FREE_FLIGHT_ENEMIES.defaultDifficulty,
     hud: true,
+    volume: defaultVolume(),
   };
 }
 
@@ -88,6 +102,7 @@ const V1_STARTER_ID = 'starter';
  * 版ごとの移行: キーの版 → 次の版のデータを返す関数。
  * - v0 → v1: 仕組みの確認用のダミー（版番号がなく、ランクを { id: ランク } で持つ想定の形。tests/save.test.ts）
  * - v1 → v2（3-3）: 強化 Lv を 1 つ下げる（v1 は Lv1〜5 で Lv1 が未強化、v2 は Lv0〜5）。初期機の id を starter → kestrel
+ * - v2 → v3（4-4）: 設定に音量（settings.volume）を足す（初期値）
  */
 export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
   0: (d) => {
@@ -125,6 +140,10 @@ export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
       version: 2,
       aircraft: { selected: typeof selected === 'string' ? rename(selected) : selected, owned },
     };
+  },
+  2: (d) => {
+    if (!isObject(d.settings)) return d;
+    return { ...d, version: 3, settings: { ...d.settings, volume: defaultVolume() } };
   },
 };
 
@@ -194,6 +213,15 @@ export function normalizeSave(d: Json): SaveData | null {
   if (typeof s.enemies === 'boolean') set.enemies = s.enemies;
   if (isOneOf(DIFFICULTIES, s.difficulty)) set.difficulty = s.difficulty;
   if (typeof s.hud === 'boolean') set.hud = s.hud;
+  if (isObject(s.volume)) {
+    const v = s.volume;
+    const d = set.volume;
+    set.volume = {
+      master: volumeOr(v.master, d.master),
+      sfx: volumeOr(v.sfx, d.sfx),
+      bgm: volumeOr(v.bgm, d.bgm),
+    };
+  }
   return save;
 }
 
@@ -253,6 +281,11 @@ export function decodeSave(text: string): SaveData | null {
   } catch {
     return null;
   }
+}
+
+/** 音量（0〜1 に収める。数でなければ既定値） */
+function volumeOr(v: unknown, fallback: number): number {
+  return typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback;
 }
 
 function isObject(v: unknown): v is Json {

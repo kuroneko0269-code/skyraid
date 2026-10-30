@@ -286,7 +286,6 @@ describe('セーブ v1 → v2 の移行', () => {
     };
     const save = migrateSave(JSON.parse(JSON.stringify(v1)));
     expect(save?.version).toBe(SAVE_CONFIG.version);
-    expect(save?.version).toBe(2);
     expect(save?.credits).toBe(4200);
     expect(save?.aircraft).toEqual({
       selected: 'kestrel',

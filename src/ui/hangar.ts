@@ -1,4 +1,5 @@
 import './hangar.css';
+import { UI_SOUND_EVENTS } from '../data/audio';
 import type { AircraftModel, AircraftStats } from '../data/aircraft';
 import { HANGAR_CONFIG } from '../data/hangar';
 import { UPGRADE_KINDS, UPGRADE_LEVELS, type UpgradeKind } from '../data/upgrades';
@@ -122,7 +123,10 @@ export class HangarScreen {
     const m = this.hangar.model(this.viewing);
     if (!m || this.hangar.canBuy(m.id) !== 'ok') return;
     this.withConfirm(`${m.name} を ${formatCredits(m.price)} で購入しますか？`, m.price, () => {
-      if (this.hangar.buy(m.id) === 'ok') this.notice.textContent = `${m.name} を購入しました`;
+      if (this.hangar.buy(m.id) === 'ok') {
+        this.notice.textContent = `${m.name} を購入しました`;
+        notifyPurchase();
+      }
       this.refresh();
     });
   }
@@ -132,7 +136,7 @@ export class HangarScreen {
     const price = this.hangar.upgradePrice(id, kind);
     if (price === null || this.hangar.canUpgrade(id, kind) !== 'ok') return;
     this.withConfirm(`${formatCredits(price)} で強化しますか？`, price, () => {
-      this.hangar.upgrade(id, kind);
+      if (this.hangar.upgrade(id, kind) === 'ok') notifyPurchase();
       this.notice.textContent = '';
       this.refresh();
     });
@@ -213,4 +217,9 @@ function maxStats(models: readonly AircraftModel[]): AircraftStats {
     for (const k of STAT_KEYS) max[k] = Math.max(max[k], s[k]);
   }
   return max;
+}
+
+/** 購入・強化の成功を音（4-4）に知らせる */
+function notifyPurchase(): void {
+  document.dispatchEvent(new Event(UI_SOUND_EVENTS.purchase));
 }

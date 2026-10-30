@@ -57,6 +57,8 @@ export interface QualityPreset {
    * ハンガーの展示は画質によらず high
    */
   readonly aircraftDetail: AircraftDetail;
+  /** 陽炎を画面を歪める屈折で描く（4-4。ポストエフェクトの仕上げのパス）。false は薄い半透明の揺らぎ */
+  readonly heatHazeRefraction: boolean;
   /** 森の地面に、木の影の代わりに太陽と反対側へずらした暗いまだらを描く（4-6。シャドウマップは使わない） */
   readonly treeShade: boolean;
 }
@@ -86,6 +88,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     terrainNormalDetail: false,
     treeShade: false,
     aircraftDetail: 'low',
+    heatHazeRefraction: false,
   },
   medium: {
     shadows: true,
@@ -107,6 +110,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     terrainNormalDetail: true,
     treeShade: false,
     aircraftDetail: 'high',
+    heatHazeRefraction: false,
   },
   high: {
     shadows: true,
@@ -128,6 +132,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     terrainNormalDetail: true,
     treeShade: true,
     aircraftDetail: 'high',
+    heatHazeRefraction: true,
   },
 };
 

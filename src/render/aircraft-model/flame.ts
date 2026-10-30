@@ -63,6 +63,11 @@ export class AfterburnerFlame {
     this.mesh.renderOrder = 1;
   }
 
+  /** 炎の強さ（0 = 消えている 〜 1 = 点火）。陽炎（4-4）を消すのに使う */
+  get intensity(): number {
+    return this.level;
+  }
+
   /** ノズルの位置に合わせて作り直す（機体を作り直したとき） */
   setNozzles(nozzles: readonly NozzleSpot[]): void {
     const c = AFTERBURNER_FLAME_CONFIG;

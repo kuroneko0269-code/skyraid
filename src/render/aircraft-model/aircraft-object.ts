@@ -1,9 +1,10 @@
 // 1 機ぶんの機体モデル（自機・ハンガー）: 機体（不透明・操舵面とミサイルはシェーダー）+ キャノピー（半透明）+
-// アフターバーナーの炎。draw call は機体 1・キャノピー 1・炎 1（点火中だけ）
+// アフターバーナーの炎 + 陽炎（4-4）。draw call は機体 1・キャノピー 1・炎 1（点火中だけ）・陽炎 1（巡航中・画質「高」以外）
 import { Group, Mesh } from 'three';
 import type { AircraftShape } from '../../data/aircraft-shapes';
 import { AIRCRAFT_MODEL_CONFIG, type AircraftDetail } from '../../data/aircraft-model';
 import { buildAircraft, type BuiltAircraft } from './build';
+import { HeatHaze } from '../fx/heat-haze';
 import { AfterburnerFlame } from './flame';
 import {
   animatePaint,
@@ -24,6 +25,7 @@ const zeroAngles = (): SurfaceAngles => ({
 export class AircraftObject {
   readonly group = new Group();
   readonly flame = new AfterburnerFlame();
+  readonly haze = new HeatHaze();
   private readonly body: Mesh;
   private readonly canopy: Mesh;
   private readonly uniforms = createSurfaceUniforms();
@@ -42,7 +44,7 @@ export class AircraftObject {
     this.body.receiveShadow = true;
     this.canopy = new Mesh(undefined, createCanopyMaterial());
     this.canopy.receiveShadow = true;
-    this.group.add(this.body, this.canopy, this.flame.mesh);
+    this.group.add(this.body, this.canopy, this.flame.mesh, this.haze.mesh);
   }
 
   /** 三角形の数（機体 + キャノピー。炎は除く） */
@@ -69,6 +71,7 @@ export class AircraftObject {
     if (b.canopy) this.canopy.geometry = b.canopy;
     setHinges(this.uniforms, b.hinges);
     this.flame.setNozzles(b.nozzles);
+    this.haze.setNozzles(b.nozzles);
     this.uniforms.uMissiles.value = missiles;
   }
 

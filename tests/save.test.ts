@@ -4,6 +4,7 @@ import { loadEnemySettings, saveEnemySettings } from '../src/core/enemy-settings
 import { QualitySettings, resolveInitialQuality } from '../src/core/settings';
 import { loadTouchMode } from '../src/core/touch-settings';
 import { ENEMY_SETTINGS_KEYS } from '../src/data/ai';
+import { AUDIO_CONFIG } from '../src/data/audio';
 import { QUALITY_CONFIG } from '../src/data/quality';
 import { rankScore, RANKING_CONFIG } from '../src/data/ranking';
 import { SAVE_CONFIG } from '../src/data/save';
@@ -136,10 +137,10 @@ describe('壊れたセーブデータの復旧', () => {
 });
 
 describe('バージョン移行の仕組み', () => {
-  it('版番号のない v0（ダミー）を v1 → v2 に移行して読む', () => {
+  it('版番号のない v0（ダミー）を v1 → v2 → v3 に移行して読む', () => {
     const v0 = { credits: 2500, ranks: { training: 'S', 'first-sortie': 'B' } };
     const save = migrateSave(v0);
-    expect(save?.version).toBe(2);
+    expect(save?.version).toBe(SAVE_CONFIG.version);
     expect(save?.aircraft).toEqual(createInitialSave().aircraft);
     expect(save?.credits).toBe(2500);
     expect(save?.missions.training).toEqual({ unlocked: true, bestRank: 'S' });
@@ -288,5 +289,33 @@ describe('評価の任意目標の加点（3-2）', () => {
     expect(rankScore(72, 60, 40, 200, { completed: 1, total: 2 })).toBeCloseTo(80 + w / 2, 5);
     expect(rankScore(72, 60, 40, 200, { completed: 2, total: 2 })).toBeCloseTo(80 + w, 5);
     expect(rankScore(60, 60, 0, 200, { completed: 1, total: 1 })).toBe(100);
+  });
+});
+
+describe('音量の設定（4-4。スキーマ v3）', () => {
+  it('v2 のセーブを v3 に移行すると音量が初期値で入り、ほかの設定は残る', () => {
+    const v3 = createInitialSave();
+    const settings: Record<string, unknown> = { ...v3.settings, hud: false };
+    delete settings.volume;
+    const save = migrateSave({ ...v3, version: 2, settings });
+    expect(save?.version).toBe(3);
+    expect(save?.settings.volume).toEqual(AUDIO_CONFIG.defaultVolumes);
+    expect(save?.settings.hud).toBe(false);
+  });
+
+  it('保存した音量を読み直せる。範囲外は 0〜1 に、数でなければ既定値に直す', () => {
+    const storage = new FakeStorage();
+    const a = SaveStore.open(storage).store;
+    a.setSetting('volume', { master: 0.25, sfx: 0.5, bgm: 0 });
+    expect(SaveStore.open(storage).store.settings.volume).toEqual({
+      master: 0.25,
+      sfx: 0.5,
+      bgm: 0,
+    });
+    const raw = JSON.parse(storage.map.get(KEY) ?? '{}') as { settings: Record<string, unknown> };
+    raw.settings.volume = { master: 3, sfx: 'loud', bgm: -1 };
+    storage.map.set(KEY, JSON.stringify(raw));
+    const v = SaveStore.open(storage).store.settings.volume;
+    expect(v).toEqual({ master: 1, sfx: AUDIO_CONFIG.defaultVolumes.sfx, bgm: 0 });
   });
 });

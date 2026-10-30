@@ -69,6 +69,11 @@ export class EnemySquadron {
     this.bulletPools = this.units.map((u) => u.gun.bullets);
   }
 
+  /** enemies[index] の機銃が撃った弾の数（音の演出。4-4） */
+  gunShotCount(index: number): number {
+    return this.units[index]?.gun.shotCount ?? 0;
+  }
+
   get enabled(): boolean {
     return this.enabledFlag;
   }
