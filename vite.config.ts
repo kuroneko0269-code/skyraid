@@ -29,12 +29,18 @@ export default defineConfig({
         icons: [
           { src: BRAND_ASSETS.icon192, sizes: '192x192', type: 'image/png' },
           { src: BRAND_ASSETS.icon512, sizes: '512x512', type: 'image/png' },
-          { src: BRAND_ASSETS.icon512, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-          { src: BRAND_ASSETS.iconSvg, sizes: 'any', type: 'image/svg+xml' },
+          {
+            src: BRAND_ASSETS.iconMaskable,
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        // アイコンの元画像（1254px・約 1.3MB）は配信には使わないのでプリキャッシュしない
+        globIgnores: ['**/brand/icon-source.png'],
         // three を含む本体の JS が既定の上限（2MiB）を超えても入れる
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         cleanupOutdatedCaches: true,

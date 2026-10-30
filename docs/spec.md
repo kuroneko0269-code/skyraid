@@ -517,9 +517,9 @@
 
 #### タイトル・ブランド素材・PWA（4-10）
 
-- ロゴ: `public/brand/logo.png` があれば画像（画面の幅 70%・高さ 36% に収める）、無ければ「SkyRaid」のテキスト（Rajdhani の斜体、白 → シアンのグラデーション）。起動時に画像として読めるかを調べて切り替える（Cloudflare Pages は無いファイルに index.html を返すことがあるので、「画像として読めるか」で判定）
+- ロゴ: `public/brand/logo.png` があれば画像（画面の幅の 46%（最大 760px）・高さの 24% に収める。横画面のスマホで幅の 40〜50%。4-4 の事前修正。それまでは幅 70%・高さ 36%）、無ければ「SkyRaid」のテキスト（Rajdhani の斜体、白 → シアンのグラデーション）。起動時に画像として読めるかを調べて切り替える（Cloudflare Pages は無いファイルに index.html を返すことがあるので、「画像として読めるか」で判定）
 - 起動して最初にタイトルを出したときだけ 0.6 秒の HUD 展開（上下の線が中央から伸びる 0.33 秒・四隅の括弧 0.24 秒 → ロゴ 0.24〜0.54 秒 → 「タップ / Enter で開始」とパイロット名 0.36〜0.6 秒でフェードイン）。2 回目以降（タイトルへ戻ったとき）は出さない。全体に 3px ごとの薄いスキャンライン
-- ブランド素材の受け口は `public/brand/`（`logo.png`・`icon-512.png`・`icon-192.png`・`favicon.ico`）。今は仮のアイコン（`icon.svg` と、そこから作った PNG・ICO）。差し替え方は README
+- ブランド素材の受け口は `public/brand/`（`logo.png`・`icon-512.png`・`icon-192.png`・`icon-maskable-512.png`・`apple-touch-icon.png`・`favicon.ico`）。4-4 の事前修正で仮のアイコン（`icon.svg`）を `icon-source.png`（1254px）から作った本番のアイコンに置き換えた（`scripts/brand-icons.py`。通常のアイコンは角丸の外を透明、maskable と apple-touch-icon（180px）は角を紺 `#051d4b` で塗った全面、64 色に減色）。`icon-source.png` はプリキャッシュしない。ロゴ（2172×724・368KB で 500KB 以下のため縮小はせず）は透明な余白をトリムして 2000×287 に。差し替え方は README
 - PWA: `manifest.webmanifest`（名前 SkyRaid: Titan Skies・短縮名 SkyRaid・`standalone`・`landscape`・テーマ色 `#050a12`）と Service Worker（vite-plugin-pwa の generateSW。ビルド成果物（JS・CSS・HTML・画像・manifest）をプリキャッシュし、オフラインでも起動できる。Google Fonts はキャッシュしない）。SW は本番ビルドだけ登録する
 - 更新: 新しい SW は待機させ（skipWaiting しない）、全部のタブを閉じた次の起動で差し替わる。待機に入ったら画面下に「新しいバージョンがあります（次回の起動で更新）」を 12 秒（「今すぐ更新」で切り替えて読み込み直す・「閉じる」）。初めてのインストールでは出さない。判定は `src/core/sw-update.ts`（DOM 非依存・テストあり）
 - スマホ: standalone で起動したときはステータスバーの下まで描き（`black-translucent`）、画面の部品は safe-area の内側に置く（`--ui-safe-*`）。iOS の Safari でブラウザから開いたとき、2 回目以降の起動で 1 度だけ画面下に「共有ボタン →「ホーム画面に追加」で全画面で遊べます」を 10 秒（起動回数と表示済みは localStorage の `skyraid.launches` / `skyraid.installHintShown`。セーブデータとは別）

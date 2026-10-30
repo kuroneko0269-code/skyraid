@@ -107,11 +107,13 @@
   -webkit-text-fill-color: transparent;
 }
 
-/* 画像のロゴ: 横長を想定。画面の幅の 70% と高さの 36% に収める */
+/* 画像のロゴ（約 7:1 の横長。余白はトリム済み）: 画面の幅の 46%（最大 760px）と高さの 24% に収める。
+   横画面のスマホ（高さ 480px 以下）でも幅の 40〜50% になる */
 .title-logo-image {
   display: block;
-  max-width: min(70vw, 720px);
-  max-height: 36vh;
+  width: min(46vw, 760px);
+  height: auto;
+  max-height: 24vh;
   object-fit: contain;
   pointer-events: none;
 }

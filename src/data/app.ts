@@ -6,7 +6,10 @@ export const BRAND_ASSETS = {
   logo: 'brand/logo.png',
   icon192: 'brand/icon-192.png',
   icon512: 'brand/icon-512.png',
-  iconSvg: 'brand/icon.svg',
+  /** maskable（角丸なしの全面。中央 80% に絵を収める） */
+  iconMaskable: 'brand/icon-maskable-512.png',
+  /** iOS のホーム画面（180px。iOS が角を丸めるので全面） */
+  appleTouchIcon: 'brand/apple-touch-icon.png',
   favicon: 'brand/favicon.ico',
 } as const;
 
