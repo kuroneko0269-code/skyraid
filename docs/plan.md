@@ -46,7 +46,7 @@
 - [x] 4-8 地形の残課題（画質「中」以上の山腹の階段状の縞・砂浜の面積・近景の木の色の個体差） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/5ac763a
 - [x] 4-3 機体モデル差し替え（CC0素材 or 自作）。Draco圧縮 → 手続き生成の自作モデル（4 機種・敵機・輸送機、操舵面・炎・飛行機雲、外部アセットなし） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/f2c3c91（事前修正: 300 行を超えた 3 ファイルの分割 https://github.com/kuroneko0269-code/skyraid/commit/87835b2）
 - [x] 4-10 UI 刷新・ブランド素材の受け口・セキュリティヘッダー・PWA（デザインシステム、タイトルのロゴと展開アニメ、アイコン・favicon、`_headers` の CSP、innerHTML の点検、manifest と Service Worker、safe-area と iOS の「ホーム画面に追加」案内） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/07deb07（事前修正: 機体の環境マップ https://github.com/kuroneko0269-code/skyraid/commit/a2090e5・plan.md の並べ替え https://github.com/kuroneko0269-code/skyraid/commit/3a0f536）
-- [ ] 4-4 エフェクト（排気、ミサイル煙、爆発）
+- [x] 4-4 エフェクト（排気、ミサイル煙、爆発）と音（Web Audio の合成・BGM の受け口・音量の設定） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/c340ea1（事前修正: ランク S を金色に https://github.com/kuroneko0269-code/skyraid/commit/54eaa50・アイコンの生成とロゴの表示サイズ https://github.com/kuroneko0269-code/skyraid/commit/e10ce5b）
 - [ ] 4-9 低地の色と木
 - [ ] 4-11 操作設定とチュートリアル
 - [ ] 4-5 コックピット視点
