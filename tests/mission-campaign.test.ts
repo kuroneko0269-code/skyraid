@@ -59,7 +59,7 @@ describe('初期ミッション 5 本のデータ', () => {
     }
   });
 
-  it('M2: 敵機 3 機が 1 機ずつ 20 秒差（0 / 20 / 40 秒）で出る。最初の 1 機だけ easy（4-7 の事前修正）', () => {
+  it('M2: 敵機 3 機が 1 機ずつ 20 秒差（0 / 20 / 40 秒）で出る。easy・easy・normal（4-7 / 4-11 の事前修正）', () => {
     const fighters = FIRST_SORTIE_MISSION.spawns.filter((s) => s.kind === 'enemyFighter');
     expect(
       fighters.map((s) => [
@@ -69,7 +69,7 @@ describe('初期ミッション 5 本のデータ', () => {
       ]),
     ).toEqual([
       [1, 'easy', 'start'],
-      [1, 'normal', 20],
+      [1, 'easy', 20],
       [1, 'normal', 40],
     ]);
   });
@@ -235,7 +235,7 @@ describe('初期ミッションの通し（シード固定のボット）', () =
     ]);
   });
 
-  it('M2 初陣（1 機ずつ 20 秒差・最初の 1 機は easy）の成功率: 8 シードで 熟練者役 1/8・平均的 0/8（4-12 で easy を緩めた後。4-7 では 2/8・0/8。docs/decisions.md の 4-12）', () => {
+  it('M2 初陣（1 機ずつ 20 秒差・easy・easy・normal）の成功率: 8 シードで 熟練者役 6/8・平均的 0/8（4-11 の事前修正。easy・normal・normal では 1/8・0/8。docs/decisions.md の 4-11）', () => {
     const rate = (skill: typeof VETERAN): number => {
       let ok = 0;
       for (let seed = 1; seed <= 8; seed++) {
@@ -256,7 +256,7 @@ describe('初期ミッションの通し（シード固定のボット）', () =
       }
       return ok;
     };
-    expect([rate(VETERAN), rate(AVERAGE)]).toEqual([1, 0]);
+    expect([rate(VETERAN), rate(AVERAGE)]).toEqual([6, 0]);
     // 16 回 × 最大 450 秒のシミュレーション（全体の実行中は 5 秒を超えることがある）
   }, 30000);
 
