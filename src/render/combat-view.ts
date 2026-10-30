@@ -117,7 +117,7 @@ export class CombatView {
     const r = TARGET_CONFIG.visualRadius;
     let n = 0;
     for (const b of this.combat.targets.balloons) {
-      if (b.isDestroyed) continue;
+      if (!b.active) continue;
       const p = b.position;
       const q = b.prevPosition;
       pos.set(q.x + (p.x - q.x) * alpha, q.y + (p.y - q.y) * alpha, q.z + (p.z - q.z) * alpha);

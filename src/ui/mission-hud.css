@@ -1,0 +1,217 @@
+/* ミッションの HUD（2-4）。色は HUD と同じ（--hud-color / --hud-red は .hud で定義しているのでここでも定義） */
+.mission-hud {
+  --hud-color: rgba(110, 240, 255, 0.85);
+  --hud-red: rgba(255, 60, 60, 0.95);
+  --hud-good: rgba(255, 215, 90, 0.95);
+  position: fixed;
+  inset: 0;
+  z-index: 16;
+  pointer-events: none;
+  color: var(--hud-color);
+  font:
+    600 14px/1.3 system-ui,
+    sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+:root:not([data-screen='flight']):not([data-screen='pause']) .mission-hud {
+  display: none;
+}
+
+/* 右上: ⏸ ボタン（タッチ操作中はヨーボタン）の下 */
+.mission-panel {
+  position: absolute;
+  top: calc(80px + env(safe-area-inset-top, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 6px 10px;
+  background: rgba(0, 20, 30, 0.35);
+  border-right: var(--hud-line, 2px) solid var(--hud-color);
+}
+
+.mission-panel[hidden],
+.mission-timer[hidden],
+.mission-banner[hidden],
+.boundary-warning[hidden],
+.mission-waypoint[hidden],
+.mission-waypoint-arrow[hidden] {
+  display: none;
+}
+
+.mission-timer {
+  font:
+    700 16px/1.2 ui-monospace,
+    'SFMono-Regular',
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+.mission-timer.is-low {
+  color: var(--hud-red);
+}
+
+.mission-objective {
+  white-space: nowrap;
+}
+
+.mission-objective.is-pending {
+  opacity: 0.45;
+}
+
+.mission-objective.is-complete {
+  color: var(--hud-good);
+}
+
+.mission-objective.is-complete::before {
+  content: '✓ ';
+}
+
+/* 中央の大きな文字（2 秒）。ラダーの窓の上に重ねる */
+.mission-banner {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  white-space: nowrap;
+  animation: mission-banner-in 0.25s ease-out;
+}
+
+.mission-banner-main {
+  font:
+    800 38px/1.1 system-ui,
+    sans-serif;
+  letter-spacing: 0.12em;
+}
+
+.mission-banner-sub {
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+.mission-banner.is-good {
+  color: var(--hud-good);
+}
+
+.mission-banner.is-bad {
+  color: var(--hud-red);
+}
+
+@keyframes mission-banner-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.25);
+  }
+}
+
+/* 境界の警告: 中央やや上に赤く点滅、カウントは大きく */
+.boundary-warning {
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  transform: translateX(-50%);
+  color: var(--hud-red);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.boundary-warning-main {
+  font:
+    800 24px/1.2 system-ui,
+    sans-serif;
+  letter-spacing: 0.1em;
+  animation: mission-blink 0.8s steps(1, end) infinite;
+}
+
+.boundary-warning-count {
+  font:
+    800 40px/1.1 ui-monospace,
+    'SFMono-Regular',
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+@keyframes mission-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* 次のリングの印: 菱形と距離。画面外なら画面端の三角 */
+.mission-waypoint {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+
+.mission-waypoint-mark {
+  position: absolute;
+  left: -9px;
+  top: -9px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--hud-good);
+  transform: rotate(45deg);
+}
+
+.mission-waypoint-text {
+  position: absolute;
+  left: 14px;
+  top: -8px;
+  color: var(--hud-good);
+  font:
+    600 12px/1 ui-monospace,
+    'SFMono-Regular',
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: nowrap;
+}
+
+.mission-waypoint-arrow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  will-change: transform;
+}
+
+.mission-waypoint-arrow::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: -9px;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-left: 18px solid var(--hud-good);
+}
+
+@media (max-width: 760px), (max-height: 480px) {
+  .mission-panel {
+    top: calc(74px + env(safe-area-inset-top, 0px));
+    font-size: 12px;
+  }
+
+  .mission-banner-main {
+    font-size: 26px;
+  }
+
+  .mission-banner-sub {
+    font-size: 14px;
+  }
+
+  .boundary-warning-main {
+    font-size: 18px;
+  }
+
+  .boundary-warning-count {
+    font-size: 30px;
+  }
+}

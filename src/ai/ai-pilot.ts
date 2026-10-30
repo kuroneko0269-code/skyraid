@@ -46,10 +46,16 @@ export class AiPilot {
 
   constructor(
     private readonly spec: AircraftSpec,
-    private readonly patrol: readonly PatrolPoint[],
+    private patrol: readonly PatrolPoint[],
     private readonly gun: GunSpec,
     private readonly config: typeof AI_CONFIG = AI_CONFIG,
   ) {}
+
+  /** 巡航の経路を差し替える（ミッションの敵機。2-4）。最初の点から回る */
+  setPatrol(patrol: readonly PatrolPoint[]): void {
+    this.patrol = patrol;
+    this.waypoint = 0;
+  }
 
   reset(): void {
     this.waypoint = 0;

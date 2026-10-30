@@ -98,9 +98,42 @@ describe('GameState の遷移', () => {
     ]);
   });
 
-  it('固定更新を進めるのは飛行中だけ。デモカメラは boot / title / mode_select', () => {
+  it('固定更新を進めるのは飛行中だけ。デモカメラはメニュー（boot / title / mode_select / mission_select / briefing）', () => {
     expect(SCREEN_STATES.filter(isSimulating)).toEqual(['flight']);
-    expect(SCREEN_STATES.filter(usesDemoCamera)).toEqual(['boot', 'title', 'mode_select']);
+    expect(SCREEN_STATES.filter(usesDemoCamera)).toEqual([
+      'boot',
+      'title',
+      'mode_select',
+      'mission_select',
+      'briefing',
+    ]);
+  });
+
+  it('キャンペーン（2-4）: ミッション一覧 → ブリーフィング → 飛行 → リザルト → もう一度 / 一覧へ、ポーズから中断', () => {
+    const game = gameAt('title', 'mode_select', 'mission_select', 'briefing', 'flight', 'result');
+    expect(game.transition('flight')).toBe(true);
+    expect(game.transition('result')).toBe(true);
+    expect(game.transition('mission_select')).toBe(true);
+    expect(
+      gameAt(
+        'title',
+        'mode_select',
+        'mission_select',
+        'briefing',
+        'flight',
+        'pause',
+        'mission_select',
+      ).state,
+    ).toBe('mission_select');
+    // 戻る
+    expect(
+      gameAt('title', 'mode_select', 'mission_select', 'briefing', 'mission_select', 'mode_select')
+        .state,
+    ).toBe('mode_select');
+    // リザルトからポーズ・タイトルへは行かない
+    const result = gameAt('title', 'mode_select', 'flight', 'result');
+    expect(result.transition('pause')).toBe(false);
+    expect(result.transition('title')).toBe(false);
   });
 });
 

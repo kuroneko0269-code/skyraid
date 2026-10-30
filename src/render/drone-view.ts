@@ -58,7 +58,7 @@ export class DroneView {
   update(alpha: number): void {
     let n = 0;
     for (const d of this.drones) {
-      if (d.isDestroyed) continue;
+      if (!d.active) continue;
       const p = d.position;
       const q = d.prevPosition;
       const x = q.x + (p.x - q.x) * alpha;

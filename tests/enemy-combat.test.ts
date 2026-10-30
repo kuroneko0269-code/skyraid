@@ -10,7 +10,7 @@ import { AIRCRAFT_COMBAT, STARTER_AIRCRAFT } from '../src/data/aircraft';
 import { MISSILE_CONFIG } from '../src/data/weapons';
 import type { AircraftControls } from '../src/entities/aircraft';
 import { EnemyAircraft } from '../src/entities/enemy-aircraft';
-import { FreeFlight } from '../src/missions/free-flight';
+import { FlightSession } from '../src/missions/flight-session';
 import { createHudFrame, fillRadar } from '../src/ui/hud-feed';
 import { arenaForce } from './ai-sim';
 import { DT, lookQuat, point, shooter } from './combat-helpers';
@@ -18,8 +18,8 @@ import { DT, lookQuat, point, shooter } from './combat-helpers';
 const NONE: CombatInput = { trigger: false, missile: false, flare: false, targetNext: false };
 const LEVEL: AircraftControls = { pitch: 0, roll: 0, yaw: 0, throttle: 0, afterburner: false };
 
-function freeFlight(): FreeFlight {
-  const ff = new FreeFlight({
+function freeFlight(): FlightSession {
+  const ff = new FlightSession({
     rng: () => 0.5,
     start: { x: 30000, y: 1500, z: 0 },
     enemies: arenaForce(2, 6000),

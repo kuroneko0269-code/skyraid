@@ -18,6 +18,9 @@ export class TargetDrone implements CombatTarget {
   respawnTimer = 0;
   /** 被弾で白く光る残り時間（秒） */
   flashTimer = 0;
+  /** 出ているか・撃墜されたら再出現するか（ミッションでは定義どおりの数・再出現なし。2-4） */
+  deployed = true;
+  respawns = true;
   private readonly health: Health;
 
   constructor(
@@ -44,7 +47,7 @@ export class TargetDrone implements CombatTarget {
   }
 
   get active(): boolean {
-    return !this.health.isDestroyed;
+    return this.deployed && !this.health.isDestroyed;
   }
 
   /** 角速度（rad/s）。上から見て反時計回り */
@@ -53,7 +56,7 @@ export class TargetDrone implements CombatTarget {
   }
 
   applyDamage(amount: number): boolean {
-    if (this.isDestroyed || !(amount > 0)) return false;
+    if (!this.active || !(amount > 0)) return false;
     this.flashTimer = this.config.hitFlashSeconds;
     const destroyed = this.health.applyDamage(amount);
     if (destroyed) this.respawnTimer = this.config.respawnSeconds;
@@ -76,7 +79,7 @@ export class TargetDrone implements CombatTarget {
     this.angle += this.angularSpeed * dt;
     if (this.angle > Math.PI * 2) this.angle -= Math.PI * 2;
     this.place();
-    if (this.isDestroyed) {
+    if (this.isDestroyed && this.respawns) {
       this.respawnTimer -= dt;
       if (this.respawnTimer <= 0) {
         this.health.reset();

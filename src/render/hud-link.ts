@@ -2,7 +2,7 @@
 import type { Object3D, PerspectiveCamera } from 'three';
 import type { CombatTarget } from '../combat/target';
 import type { GroundHeightFn } from '../entities/aircraft';
-import type { FreeFlight } from '../missions/free-flight';
+import type { FlightSession } from '../missions/flight-session';
 import type { Hud, HudFrame } from '../ui/hud';
 import { createHudFrame, fillHudFrame } from '../ui/hud-feed';
 import { projectFlightPath } from './hud-projection';
@@ -17,7 +17,7 @@ export class HudLink {
     private readonly hud: Hud,
     private readonly camera: PerspectiveCamera,
     private readonly aircraftMesh: Object3D,
-    private readonly ff: FreeFlight,
+    private readonly ff: FlightSession,
     private readonly groundHeight: GroundHeightFn,
   ) {
     this.frame = createHudFrame(ff.aircraft);

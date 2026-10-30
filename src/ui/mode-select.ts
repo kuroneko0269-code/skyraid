@@ -10,12 +10,12 @@ const FREE_FLIGHT_NOTES = { on: '敵機と空戦・自由に飛ぶ', off: '敵�
 /** 表示するモード。enabled でないものは「近日」と出して選べない */
 const MODE_ENTRIES: readonly { mode: GameMode; label: string; note: string; enabled: boolean }[] = [
   { mode: 'free', label: 'フリーフライト', note: FREE_FLIGHT_NOTES.on, enabled: true },
-  { mode: 'campaign', label: 'キャンペーン', note: 'ミッションを順にクリア', enabled: false },
+  { mode: 'campaign', label: 'キャンペーン', note: 'ミッションを順にクリア', enabled: true },
   { mode: 'pvp', label: 'PvP', note: '2〜4 人で空戦', enabled: false },
   { mode: 'raid', label: 'レイド', note: '巨大怪獣を協力撃破', enabled: false },
 ];
 
-/** モード選択画面。今はフリーフライトだけ選べる */
+/** モード選択画面。今はフリーフライトとキャンペーン（2-4）を選べる */
 export class ModeSelectScreen {
   readonly root: HTMLDivElement;
   private firstEnabled: HTMLButtonElement | null = null;

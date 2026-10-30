@@ -1,0 +1,181 @@
+// ミッション定義の型（2-4。データ駆動）。定義そのものは src/data/missions.ts に TS のデータとして置き、ロジックを含めない。
+// ミッションを増やすとき（2-5）はデータを足すだけで済むよう、出現物・目標・失敗条件・報酬をすべてここで表す
+import type { Difficulty, PatrolPoint } from '../data/ai';
+import type { Rank } from '../data/ranking';
+
+/** 位置と向き（機首の向きは -Z から右回り、度。真上から見て時計回り） */
+export interface Pose {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly headingDeg: number;
+}
+
+// ---- 出現物 ----
+
+/** 出現のタイミング */
+export type SpawnTrigger =
+  /** ミッション開始時 */
+  | { readonly type: 'start' }
+  /** 開始から seconds 秒後 */
+  | { readonly type: 'time'; readonly seconds: number }
+  /** 目標 objective が始まったとき（順番の目標の「次」に合わせて出す） */
+  | { readonly type: 'objectiveActive'; readonly objective: string }
+  /** 目標 objective を達成したとき */
+  | { readonly type: 'objectiveComplete'; readonly objective: string };
+
+/** 敵機。count 機を positions（足りなければ先頭から使い回す）に出し、patrol を巡回させる。撃墜されても再出現しない */
+export interface EnemyFighterSpawn {
+  readonly kind: 'enemyFighter';
+  /** 目標（撃墜数）から数える単位 */
+  readonly group: string;
+  readonly count: number;
+  readonly difficulty: Difficulty;
+  readonly trigger: SpawnTrigger;
+  readonly positions: readonly Pose[];
+  readonly patrol: readonly PatrolPoint[];
+}
+
+/** 射撃練習用の的（風船。位置は src/data/targets.ts の出現地点の先頭から count 個）。再出現しない */
+export interface TargetSpawn {
+  readonly kind: 'targets';
+  readonly count: number;
+  readonly trigger: SpawnTrigger;
+}
+
+/** 周回ドローン（軌道は src/data/targets.ts の先頭から count 機）。再出現しない */
+export interface DroneSpawn {
+  readonly kind: 'drones';
+  readonly count: number;
+  readonly trigger: SpawnTrigger;
+}
+
+/** 地上目標（2-6 で追加する。今は型だけで、出しても何も現れない） */
+export interface GroundTargetSpawn {
+  readonly kind: 'groundTarget';
+  readonly group: string;
+  /** 種類（建物・車両など。2-6 で決める） */
+  readonly targetType: string;
+  readonly trigger: SpawnTrigger;
+  readonly positions: readonly Pose[];
+}
+
+export type SpawnDef = EnemyFighterSpawn | TargetSpawn | DroneSpawn | GroundTargetSpawn;
+export type SpawnKind = SpawnDef['kind'];
+
+// ---- 目標 ----
+
+/**
+ * 目標の始まり方（順序）。最初の目標は開始時に始まる。
+ * withPrevious: 直前の目標と同時に始まる / afterPrevious: それまでの必須目標をすべて達成してから始まる
+ */
+export type ObjectiveStart = 'withPrevious' | 'afterPrevious';
+
+interface ObjectiveBase {
+  /** ミッション内で一意。出現のタイミング・HUD・リザルトで参照する */
+  readonly id: string;
+  /** true: 成功に必要 / false: 任意（達成しなくても成功できる） */
+  readonly required: boolean;
+  readonly start: ObjectiveStart;
+  /** HUD・ブリーフィングの表示名。省略すると種類ごとの既定（src/ui/mission-text.ts） */
+  readonly label?: string;
+}
+
+/** 撃墜数: target の種類（group を指定すればその出現物だけ）を count 機落とす。目標が始まってからの数だけ数える */
+export interface KillObjective extends ObjectiveBase {
+  readonly type: 'kill';
+  readonly target: DestroyableKind;
+  readonly group?: string;
+  readonly count: number;
+}
+
+/** 生存時間: 目標が始まってから seconds 秒、撃墜されずに飛ぶ */
+export interface SurviveObjective extends ObjectiveBase {
+  readonly type: 'survive';
+  readonly seconds: number;
+}
+
+/** リングの位置と向き（輪の面の法線の向き。pitchDeg は上向きが正、省略で水平） */
+export interface RingDef {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly headingDeg: number;
+  readonly pitchDeg?: number;
+}
+
+/** リング通過: rings を順番に通る（次のリング以外は通っても数えない） */
+export interface RingObjective extends ObjectiveBase {
+  readonly type: 'rings';
+  readonly rings: readonly RingDef[];
+}
+
+/** 護衛（2-5 で実装）: group の味方を destination（水平の円）まで送り届ける。失うと失敗 */
+export interface EscortObjective extends ObjectiveBase {
+  readonly type: 'escort';
+  readonly group: string;
+  readonly destination: { readonly x: number; readonly z: number; readonly radius: number };
+}
+
+/** 破壊（2-6 で実装）: group の地上目標を count 個壊す */
+export interface DestroyObjective extends ObjectiveBase {
+  readonly type: 'destroy';
+  readonly group: string;
+  readonly count: number;
+}
+
+/** 怪獣（フェーズ6 で実装）: 怪獣に HP の damageRatio だけダメージを与える（撤退させる） */
+export interface KaijuObjective extends ObjectiveBase {
+  readonly type: 'kaiju';
+  readonly damageRatio: number;
+}
+
+export type ObjectiveDef =
+  | KillObjective
+  | SurviveObjective
+  | RingObjective
+  | EscortObjective
+  | DestroyObjective
+  | KaijuObjective;
+export type ObjectiveType = ObjectiveDef['type'];
+
+/** 撃墜数で数えられるものの種類（any は全部） */
+export type DestroyableKind = 'enemyFighter' | 'target' | 'drone' | 'groundTarget' | 'any';
+
+// ---- 成功・失敗・報酬 ----
+
+/** 成功条件。今は「必須の目標をすべて達成」だけ */
+export type SuccessCondition = 'allRequiredObjectives';
+
+/**
+ * 失敗条件。playerDown: 自機撃墜（地面・海面への墜落も） / escortLost: 護衛対象の喪失 /
+ * timeUp: 制限時間超過（timeLimitSeconds があるとき） / outOfBounds: 戦域離脱（境界の外で猶予を過ぎる）
+ */
+export type FailCondition = 'playerDown' | 'escortLost' | 'timeUp' | 'outOfBounds';
+
+export interface RewardDef {
+  /** クレジットの基本額 */
+  readonly baseCredits: number;
+  /** ランク別の倍率。省略で src/data/ranking.ts の既定 */
+  readonly rankMultipliers?: Readonly<Record<Rank, number>>;
+}
+
+export interface MissionDef {
+  readonly id: string;
+  readonly title: string;
+  /** ブリーフィング文（改行は \n） */
+  readonly briefing: string;
+  /** src/data/maps.ts のマップ id */
+  readonly mapId: string;
+  /** 自機の開始位置と向き */
+  readonly start: Pose;
+  /** 制限時間（秒）。省略で無制限 */
+  readonly timeLimitSeconds?: number;
+  /** 評価の基準時間（秒）。これ以内のクリアで時間の減点 0（src/data/ranking.ts） */
+  readonly parTimeSeconds: number;
+  readonly spawns: readonly SpawnDef[];
+  readonly objectives: readonly ObjectiveDef[];
+  readonly success: SuccessCondition;
+  readonly failConditions: readonly FailCondition[];
+  readonly reward: RewardDef;
+}

@@ -15,8 +15,10 @@ export class PlayerVitals implements CombatTarget {
   flashTimer = 0;
   /** 撃墜されてからリスポーンまでの残り時間（秒）。生きている間は 0 */
   respawnTimer = 0;
-  /** 撃墜された回数 */
+  /** 撃墜された回数（地面への墜落も） */
   downCount = 0;
+  /** 受けたダメージの合計（ミッションの評価。2-4）。墜落は含めない */
+  damageTaken = 0;
   private readonly health: Health;
 
   constructor(
@@ -57,12 +59,22 @@ export class PlayerVitals implements CombatTarget {
   applyDamage(amount: number): boolean {
     if (!this.active || !(amount > 0)) return false;
     this.flashTimer = this.flashSeconds;
+    this.damageTaken += Math.min(amount, this.health.hp);
     const destroyed = this.health.applyDamage(amount);
-    if (destroyed) {
-      this.downCount++;
-      this.respawnTimer = this.respawnSeconds;
-    }
+    if (destroyed) this.goDown();
     return destroyed;
+  }
+
+  /** 地面・海面への墜落（2-4）。撃墜と同じ扱い（HP 0・respawnSeconds 後にリスポーン） */
+  crash(): void {
+    if (!this.active) return;
+    this.health.applyDamage(this.health.hp);
+    this.goDown();
+  }
+
+  private goDown(): void {
+    this.downCount++;
+    this.respawnTimer = this.respawnSeconds;
   }
 
   /** 機体を動かしたあとに呼ぶ。速度を更新し、タイマーを進める。リスポーンの時なら true */

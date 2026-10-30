@@ -1,7 +1,7 @@
 // ゲームの状態から HUD に渡す 1 フレーム分の値を作る（毎フレーム同じオブジェクトに書き込む）
 import { TEAM_PLAYER } from '../combat/target';
 import type { Aircraft, GroundHeightFn } from '../entities/aircraft';
-import type { FreeFlight } from '../missions/free-flight';
+import type { FlightSession } from '../missions/flight-session';
 import type { HudFrame } from './hud-frame';
 import { createRadarFrame, type HudRadarFrame } from './hud-radar';
 import { createWeaponsFrame } from './hud-weapons';
@@ -36,7 +36,11 @@ export function createHudFrame(aircraft: Aircraft): HudFrame {
  * 機体と射撃の状態を frame に書く。画面座標（進行方向マーカー flightPath、対象のマーカー・予測照準点）は
  * 呼び出し側で入れる（render/target-projection.ts）
  */
-export function fillHudFrame(frame: HudFrame, ff: FreeFlight, groundHeight: GroundHeightFn): void {
+export function fillHudFrame(
+  frame: HudFrame,
+  ff: FlightSession,
+  groundHeight: GroundHeightFn,
+): void {
   const { aircraft, combat, player } = ff;
   const state = aircraft.state;
   const p = state.position;
@@ -68,7 +72,7 @@ export function fillHudFrame(frame: HudFrame, ff: FreeFlight, groundHeight: Grou
 }
 
 /** レーダーの点: 出撃中の敵機と、自機を追っている敵のミサイル */
-export function fillRadar(r: HudRadarFrame, ff: FreeFlight): void {
+export function fillRadar(r: HudRadarFrame, ff: FlightSession): void {
   let n = 0;
   const max = r.contacts.length;
   for (const e of ff.enemies) {

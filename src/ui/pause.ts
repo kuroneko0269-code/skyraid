@@ -4,7 +4,7 @@ import { TOUCH_CONFIG } from '../data/touch';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 /**
- * ポーズメニュー（再開 / 設定 / タイトルへ）。設定（画質・タッチ・HUD・全画面）の部品は
+ * ポーズメニュー（再開 / 設定 / ミッションを中断（ミッション中だけ）/ タイトルへ）。設定（画質・タッチ・HUD・全画面）の部品は
  * main で settings に入れる。「設定」ボタンで開閉し、開閉状態はメニューを閉じても保つ
  */
 export class PauseMenu {
@@ -12,9 +12,13 @@ export class PauseMenu {
   /** 設定の部品を入れる場所 */
   readonly settings: HTMLDivElement;
   private readonly settingsButton: HTMLButtonElement;
+  private readonly abortButton: HTMLButtonElement;
   private settingsOpen = false;
 
-  constructor(parent: HTMLElement, handlers: { onResume: () => void; onTitle: () => void }) {
+  constructor(
+    parent: HTMLElement,
+    handlers: { onResume: () => void; onTitle: () => void; onAbort: () => void },
+  ) {
     const root = createScreen(parent, 'pause-screen');
     const panel = document.createElement('div');
     panel.className = 'pause-panel';
@@ -31,6 +35,14 @@ export class PauseMenu {
     this.settings = document.createElement('div');
     this.settings.className = 'pause-settings';
     panel.appendChild(this.settings);
+    // ミッション中だけ出す（2-4）
+    this.abortButton = createButton(
+      panel,
+      'menu-button pause-title',
+      'ミッションを中断',
+      handlers.onAbort,
+    );
+    this.abortButton.hidden = true;
     createButton(panel, 'menu-button pause-title', 'タイトルへ', handlers.onTitle);
     this.setSettingsOpen(false);
     this.root = root;
@@ -38,6 +50,11 @@ export class PauseMenu {
 
   setShown(shown: boolean): void {
     setScreenShown(this.root, shown);
+  }
+
+  /** ミッション中か（「ミッションを中断」を出す） */
+  setInMission(inMission: boolean): void {
+    this.abortButton.hidden = !inMission;
   }
 
   private setSettingsOpen(open: boolean): void {

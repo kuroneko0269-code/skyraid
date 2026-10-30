@@ -1,7 +1,7 @@
 // フリーフライトの戦闘まわりの描画をまとめる（的・弾・ミサイル・ドローン・敵機）。main.ts は update / reset を呼ぶだけ
 import type { Object3D, Scene } from 'three';
 import type { Vec3 } from '../flight/math';
-import type { FreeFlight } from '../missions/free-flight';
+import type { FlightSession } from '../missions/flight-session';
 import { CombatView } from './combat-view';
 import { DroneView } from './drone-view';
 import { EnemyView } from './enemy-view';
@@ -13,7 +13,7 @@ export class FlightViews {
   private readonly drones: DroneView;
   private readonly enemies: EnemyView;
 
-  constructor(scene: Scene, aircraftMesh: Object3D, ff: FreeFlight) {
+  constructor(scene: Scene, aircraftMesh: Object3D, ff: FlightSession) {
     this.combat = new CombatView(scene, aircraftMesh, ff.combat);
     this.missiles = new MissileView(scene, ff.combat);
     this.drones = new DroneView(scene, ff.combat.drones);

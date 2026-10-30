@@ -26,6 +26,8 @@ export class TargetBalloon implements CombatTarget {
   respawnTimer = 0;
   /** 被弾で白く光る残り時間（秒） */
   flashTimer = 0;
+  /** 出ているか（ミッションで使わない的は引っ込める。2-4） */
+  deployed = true;
   private readonly health: Health;
   private baseY = 0;
 
@@ -52,11 +54,11 @@ export class TargetBalloon implements CombatTarget {
 
   /** 当たり判定を行うか（GunTarget） */
   get active(): boolean {
-    return !this.health.isDestroyed;
+    return this.deployed && !this.health.isDestroyed;
   }
 
   applyDamage(amount: number): boolean {
-    if (this.isDestroyed || !(amount > 0)) return false;
+    if (!this.active || !(amount > 0)) return false;
     this.flashTimer = this.config.hitFlashSeconds;
     const destroyed = this.health.applyDamage(amount);
     if (destroyed) this.respawnTimer = this.config.respawnSeconds;
@@ -103,6 +105,9 @@ export class TargetBalloon implements CombatTarget {
 export class TargetField {
   readonly balloons: TargetBalloon[];
   private time = 0;
+  /** 出す数と、撃墜された的を再出現させるか（フリーフライトは全部・再出現、ミッションは定義どおり・再出現なし） */
+  private deployCount: number;
+  private respawns = true;
 
   constructor(
     private readonly groundHeight: GroundHeightFn = () => 0,
@@ -116,14 +121,23 @@ export class TargetField {
       { length: config.count },
       (_, i) => new TargetBalloon(config, i * PHASE_STEP),
     );
+    this.deployCount = config.count;
     this.reset();
   }
 
-  /** 全部の的を最初の地点に HP 満タンで戻す */
+  /** 出す数（先頭から）と再出現の有無を変え、最初の地点に置き直す */
+  configure(count: number, respawns: boolean): void {
+    this.deployCount = Math.max(0, Math.min(count, this.balloons.length));
+    this.respawns = respawns;
+    this.reset();
+  }
+
+  /** 全部の的を最初の地点に HP 満タンで戻す（出す数を超える的は引っ込める） */
   reset(): void {
     this.time = 0;
     this.balloons.forEach((b, i) => {
       this.placeAt(b, i);
+      b.deployed = i < this.deployCount;
     });
   }
 
@@ -131,7 +145,9 @@ export class TargetField {
     this.time += dt;
     for (const b of this.balloons) {
       if (b.flashTimer > 0) b.flashTimer = Math.max(0, b.flashTimer - dt);
+      if (!b.deployed) continue;
       if (b.isDestroyed) {
+        if (!this.respawns) continue;
         b.respawnTimer -= dt;
         if (b.respawnTimer <= 0) this.placeAt(b, this.pickSpawn(b.spawnIndex));
       } else {
@@ -156,7 +172,7 @@ export class TargetField {
 
   private isFree(index: number, exclude: number): boolean {
     if (index === exclude) return false;
-    return !this.balloons.some((b) => b.spawnIndex === index);
+    return !this.balloons.some((b) => b.deployed && b.spawnIndex === index);
   }
 
   private placeAt(b: TargetBalloon, index: number): void {

@@ -2,11 +2,10 @@
 // 固定ステップで「知覚 → AI → 飛行（プレイヤーと共通の物理）→ 武装」を進める。
 // ミサイルとフレアは CombatSystem のものを共有する（プレイヤーのフレアが敵のミサイルに効く）
 import type { CombatSystem } from '../combat/combat-system';
-import { Gun, type Bullet, type GunHit } from '../combat/gun';
+import type { Bullet, GunHit } from '../combat/gun';
 import { Magazine } from '../combat/magazine';
 import type { Pool } from '../combat/pool';
 import { TEAM_ENEMY, type CombatTarget } from '../combat/target';
-import { Targeting } from '../combat/targeting';
 import {
   DIFFICULTY_PRESETS,
   FREE_FLIGHT_ENEMIES,
@@ -17,31 +16,13 @@ import {
 } from '../data/ai';
 import { ENEMY_FIGHTER } from '../data/aircraft';
 import { ENEMY_GUN_CONFIG } from '../data/weapons';
-import type { AircraftControls, GroundHeightFn } from '../entities/aircraft';
+import type { GroundHeightFn } from '../entities/aircraft';
 import { EnemyAircraft } from '../entities/enemy-aircraft';
-import { vec3, type Vec3 } from '../flight/math';
-import { createCommand, type AiCommand, type AiSelf, type AiSenses, type Rng } from './ai-types';
-import { EnemyFighterAI } from './enemy-fighter';
+import type { Vec3 } from '../flight/math';
+import type { Rng } from './ai-types';
+import { createUnit, type Unit } from './squadron-unit';
 
 export type SquadronConfig = EnemyForceConfig;
-
-/** 1 機分の AI・武装と、毎ステップ書き換える知覚・出力 */
-interface Unit {
-  readonly enemy: EnemyAircraft;
-  readonly ai: EnemyFighterAI;
-  readonly gun: Gun<CombatTarget>;
-  readonly targeting: Targeting<CombatTarget>;
-  missiles: Magazine;
-  flares: Magazine;
-  readonly command: AiCommand;
-  readonly controls: AircraftControls;
-  readonly self: MutableSelf;
-  readonly senses: MutableSenses;
-  readonly threat: Vec3;
-}
-
-type MutableSelf = { -readonly [K in keyof AiSelf]: AiSelf[K] };
-type MutableSenses = { -readonly [K in keyof AiSenses]: AiSenses[K] };
 
 export class EnemySquadron {
   /** 敵機（maxCount 機。出撃するのは先頭から count 機） */
@@ -49,6 +30,8 @@ export class EnemySquadron {
   /** 敵の機銃の弾（描画用。機体ごとのプール） */
   readonly bulletPools: readonly Pool<Bullet>[];
   private readonly units: Unit[];
+  /** 撃墜された機体を再出現させるか（フリーフライト true、ミッション false。2-4） */
+  respawns = true;
   private enabledFlag = true;
   private countValue: number;
   private difficultyValue: Difficulty;
@@ -69,48 +52,19 @@ export class EnemySquadron {
     this.difficultyValue = config.defaultDifficulty;
     this.enemies = enemies;
     this.playerTargets = combat.player ? [combat.player] : [];
-    const preset = DIFFICULTY_PRESETS[this.difficultyValue];
-    this.units = this.enemies.map((enemy, i) => {
-      const patrol: readonly PatrolPoint[] = config.patrols[i % config.patrols.length] ?? [];
-      const self: MutableSelf = {
-        position: enemy.aircraft.state.position,
-        orientation: enemy.aircraft.state.orientation,
-        angularRate: enemy.aircraft.state.angularRate,
-        speed: 0,
-        afterburnerGauge: 1,
-        hpRatio: 1,
-        agl: 0,
-        verticalSpeed: 0,
-      };
-      return {
+    this.units = this.enemies.map((enemy, i) =>
+      createUnit(
         enemy,
-        ai: new EnemyFighterAI(enemy.spec, preset, patrol, rng),
-        gun: new Gun<CombatTarget>(
-          ENEMY_GUN_CONFIG,
-          (hit) => {
-            this.onBulletHit(hit);
-          },
-          groundHeight,
-          rng,
-        ),
-        targeting: new Targeting<CombatTarget>(),
-        missiles: new Magazine(preset.missileAmmo, 0),
-        flares: new Magazine(preset.flareCharges, combat.flares.spec.cooldownSeconds),
-        command: createCommand(),
-        controls: { pitch: 0, roll: 0, yaw: 0, throttle: 0, afterburner: false, throttleTarget: 0 },
-        self,
-        senses: {
-          self,
-          target: combat.player,
-          threat: null,
-          damageTaken: 0,
-          locked: false,
-          missileReady: false,
-          flareReady: false,
+        config.patrols[i % config.patrols.length] ?? [],
+        this.difficultyValue,
+        combat,
+        groundHeight,
+        rng,
+        (hit) => {
+          this.onBulletHit(hit);
         },
-        threat: vec3(),
-      };
-    });
+      ),
+    );
     this.bulletPools = this.units.map((u) => u.gun.bullets);
   }
 
@@ -132,24 +86,51 @@ export class EnemySquadron {
     this.difficultyValue = difficulty;
     this.countValue = Math.max(0, Math.min(count, this.enemies.length));
     // 出し直す前の敵のミサイル・フレアは残さない（OFF にした瞬間に消える）
-    this.combat.missiles.removeOwnedBy(TEAM_ENEMY);
-    this.combat.flares.removeOwnedBy(TEAM_ENEMY);
+    this.removeEnemyOrdnance();
     this.reset();
   }
 
-  /** 全機を出し直す（無効なら全機引っ込める）。弾も消す */
+  /** 全機を出し直す（無効なら全機引っ込める）。弾も消す。経路・難易度はフリーフライトの設定に戻す */
   reset(): void {
-    const preset = DIFFICULTY_PRESETS[this.difficultyValue];
     this.units.forEach((u, i) => {
       u.gun.reset();
       u.targeting.reset();
-      u.ai.difficulty = preset;
-      u.missiles = new Magazine(preset.missileAmmo, 0);
-      u.flares = new Magazine(preset.flareCharges, this.combat.flares.spec.cooldownSeconds);
+      u.difficulty = this.difficultyValue;
+      u.ai.setPatrol(this.config.patrols[i % this.config.patrols.length] ?? []);
       if (this.enabledFlag && i < this.countValue)
         this.spawn(u, this.config.spawns[i % this.config.spawns.length]);
       else u.enemy.withdraw();
     });
+  }
+
+  /** 全機を引っ込め、敵の弾・ミサイル・フレアも消す（ミッションの開始。2-4） */
+  withdrawAll(): void {
+    this.removeEnemyOrdnance();
+    for (const u of this.units) {
+      u.gun.reset();
+      u.targeting.reset();
+      u.enemy.withdraw();
+    }
+  }
+
+  /**
+   * 空いている機体（出撃していない・撃墜済み）を 1 機、at に出して patrol を巡回させる（ミッションの敵機。2-4）。
+   * 出した機体の番号（enemies の添字）。空きがなければ -1
+   */
+  deploy(at: EnemySpawn, patrol: readonly PatrolPoint[], difficulty: Difficulty): number {
+    const i = this.units.findIndex((u) => !u.enemy.active);
+    const u = this.units[i];
+    if (!u) return -1;
+    u.gun.reset();
+    u.difficulty = difficulty;
+    u.ai.setPatrol(patrol);
+    this.spawn(u, at);
+    return i;
+  }
+
+  private removeEnemyOrdnance(): void {
+    this.combat.missiles.removeOwnedBy(TEAM_ENEMY);
+    this.combat.flares.removeOwnedBy(TEAM_ENEMY);
   }
 
   /** 固定ステップ 1 回分。CombatSystem.step より前に呼ぶ（撃ったミサイルは同じステップで動き出す） */
@@ -165,6 +146,7 @@ export class EnemySquadron {
       }
       if (e.isDestroyed) {
         u.gun.step(false, e.aircraft.state, this.playerTargets, dt);
+        if (!this.respawns) continue;
         e.respawnTimer -= dt;
         if (e.respawnTimer <= 1e-9) this.spawn(u, this.farthestSpawn());
         continue;
@@ -238,9 +220,10 @@ export class EnemySquadron {
   private spawn(u: Unit, at: EnemySpawn | undefined): void {
     if (!at) return;
     u.enemy.spawn(at);
+    const preset = DIFFICULTY_PRESETS[u.difficulty];
+    u.ai.difficulty = preset;
     u.ai.reset();
     u.targeting.reset();
-    const preset = DIFFICULTY_PRESETS[this.difficultyValue];
     u.missiles = new Magazine(preset.missileAmmo, 0);
     u.flares = new Magazine(preset.flareCharges, this.combat.flares.spec.cooldownSeconds);
   }

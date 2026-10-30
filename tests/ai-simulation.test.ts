@@ -1,7 +1,7 @@
 // 敵機 AI のシミュレーション（乱数のシードを固定）。プレイヤー役はボット（tests/ai-sim.ts）
 import { describe, expect, it } from 'vitest';
 import { createRandom } from '../src/core/random';
-import { FreeFlight } from '../src/missions/free-flight';
+import { FlightSession } from '../src/missions/flight-session';
 import { getGroundHeight } from '../src/render/terrain-height';
 import { AVERAGE, BEGINNER, PilotBot, SIM_DT, simulate } from './ai-sim';
 
@@ -45,7 +45,7 @@ describe('シミュレーション', () => {
 
   it('敵は地形に衝突しない（島の上空で 4 機が 3 分戦う）', () => {
     for (const seed of [1, 2]) {
-      const ff = new FreeFlight({ rng: createRandom(seed), groundHeight: getGroundHeight });
+      const ff = new FlightSession({ rng: createRandom(seed), groundHeight: getGroundHeight });
       ff.configureEnemies(true, 'hard', 4);
       ff.reset();
       const bot = new PilotBot(ff, AVERAGE, createRandom(seed + 100));
@@ -63,7 +63,7 @@ describe('シミュレーション', () => {
 
 describe('性能', () => {
   it('敵 4 機 + 各ミサイルの AI 処理（固定ステップ 1 回）は 1ms 以内（戦闘全体の 1 ステップで測る）', () => {
-    const ff = new FreeFlight({ rng: createRandom(7), groundHeight: getGroundHeight });
+    const ff = new FlightSession({ rng: createRandom(7), groundHeight: getGroundHeight });
     ff.configureEnemies(true, 'hard', 4);
     ff.reset();
     const bot = new PilotBot(ff, AVERAGE, createRandom(8));

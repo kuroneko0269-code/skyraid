@@ -84,6 +84,11 @@ export class EnemyFighterAI {
     return this.intent.state;
   }
 
+  /** 巡航の経路を差し替える（ミッションの敵機。2-4） */
+  setPatrol(patrol: readonly PatrolPoint[]): void {
+    this.pilot.setPatrol(patrol);
+  }
+
   /** 巡航から始め直す（出現・再出現） */
   reset(): void {
     this.enter('patrol');

@@ -14,7 +14,7 @@ import { GUN_CONFIG } from '../src/data/weapons';
 import type { AircraftControls } from '../src/entities/aircraft';
 import type { EnemyAircraft } from '../src/entities/enemy-aircraft';
 import type { Vec3 } from '../src/flight/math';
-import { FreeFlight } from '../src/missions/free-flight';
+import { FlightSession } from '../src/missions/flight-session';
 
 export const SIM_DT = 1 / 60;
 /** 島（半径 約 3km）・的・ドローン（島の中心から 5km 以内）から十分離れた沖合 */
@@ -104,7 +104,7 @@ export function simulate(
   skill: DifficultySpec,
   distance = 4000,
 ): SimResult {
-  const ff = new FreeFlight({
+  const ff = new FlightSession({
     rng: createRandom(seed),
     start: { x: ARENA_X, y: 1500, z: 0 },
     enemies: arenaForce(count, distance),
@@ -142,7 +142,7 @@ export class PilotBot {
   private readonly threat: Vec3 = { x: 0, y: 0, z: 0 };
 
   constructor(
-    private readonly ff: FreeFlight,
+    private readonly ff: FlightSession,
     skill: DifficultySpec,
     rng: () => number,
   ) {

@@ -2,9 +2,19 @@ import { EventBus } from './event-bus';
 
 /**
  * 画面の状態。boot は読み込み中（起動直後だけ）。
- * docs/spec.md「UI」: タイトル → モード選択 → プレイ。ハンガー・リザルト等は後のフェーズで足す
+ * docs/spec.md「UI」: タイトル → モード選択 → （キャンペーン: ミッション一覧 → ブリーフィング）→ プレイ → リザルト（2-4）。
+ * ハンガーはフェーズ3 で足す
  */
-export const SCREEN_STATES = ['boot', 'title', 'mode_select', 'flight', 'pause'] as const;
+export const SCREEN_STATES = [
+  'boot',
+  'title',
+  'mode_select',
+  'mission_select',
+  'briefing',
+  'flight',
+  'pause',
+  'result',
+] as const;
 export type ScreenState = (typeof SCREEN_STATES)[number];
 
 /** 許可される遷移（遷移元 → 遷移先の一覧）。ここにない遷移は拒否する */
@@ -12,9 +22,15 @@ export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenStat
   // ?skipTitle のときは boot から直接 flight
   boot: ['title', 'flight'],
   title: ['mode_select'],
-  mode_select: ['title', 'flight'],
-  flight: ['pause'],
-  pause: ['flight', 'title'],
+  mode_select: ['title', 'flight', 'mission_select'],
+  mission_select: ['mode_select', 'briefing'],
+  briefing: ['mission_select', 'flight'],
+  // ミッションが終わるとリザルトへ
+  flight: ['pause', 'result'],
+  // ミッション中はポーズから「ミッションを中断」でミッション一覧へ
+  pause: ['flight', 'title', 'mission_select'],
+  // 「もう一度」は飛行へ直接、「ミッション一覧へ」
+  result: ['flight', 'mission_select'],
 };
 
 export interface StateChange {
@@ -36,9 +52,15 @@ export function isSimulating(state: ScreenState): boolean {
   return state === 'flight';
 }
 
-/** 背景をデモカメラ（島の周回）で描く状態か。飛行・ポーズは追従カメラ */
+/** 背景をデモカメラ（島の周回）で描く状態か。飛行・ポーズ・リザルトは追従カメラ（リザルトは止まった飛行の画面の上に出す） */
 export function usesDemoCamera(state: ScreenState): boolean {
-  return state === 'boot' || state === 'title' || state === 'mode_select';
+  return (
+    state === 'boot' ||
+    state === 'title' ||
+    state === 'mode_select' ||
+    state === 'mission_select' ||
+    state === 'briefing'
+  );
 }
 
 /** 画面状態の管理。遷移は STATE_TRANSITIONS で検査し、成功したらバスに 'state:change' を流す */

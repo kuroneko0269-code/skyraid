@@ -3,22 +3,22 @@ import { describe, expect, it } from 'vitest';
 import type { CombatInput } from '../src/combat/combat-system';
 import { TEAM_ENEMY, TEAM_PLAYER } from '../src/combat/target';
 import type { AircraftControls } from '../src/entities/aircraft';
-import { FreeFlight } from '../src/missions/free-flight';
+import { FlightSession } from '../src/missions/flight-session';
 
 const NONE: CombatInput = { trigger: false, missile: false, flare: false, targetNext: false };
 const LEVEL: AircraftControls = { pitch: 0, roll: 0, yaw: 0, throttle: 0, afterburner: false };
 const DT = 1 / 60;
 
-function run(ff: FreeFlight, seconds: number, each?: () => void): void {
+function run(ff: FlightSession, seconds: number, each?: () => void): void {
   for (let i = 0; i < Math.round(seconds / DT); i++) {
     ff.step(LEVEL, NONE, DT);
     each?.();
   }
 }
 
-const activeEnemies = (ff: FreeFlight): number => ff.enemies.filter((e) => e.active).length;
+const activeEnemies = (ff: FlightSession): number => ff.enemies.filter((e) => e.active).length;
 
-function enemyMissiles(ff: FreeFlight): number {
+function enemyMissiles(ff: FlightSession): number {
   const pool = ff.combat.missiles.missiles;
   let n = 0;
   for (let i = 0; i < pool.count; i++) if (pool.get(i).owner === TEAM_ENEMY) n++;
@@ -27,7 +27,7 @@ function enemyMissiles(ff: FreeFlight): number {
 
 describe('敵 OFF（4-2c）', () => {
   it('OFF のままフリーフライトを始めて 60 秒進めても敵は 0 機', () => {
-    const ff = new FreeFlight({ rng: () => 0.5 });
+    const ff = new FlightSession({ rng: () => 0.5 });
     ff.configureEnemies(false, 'normal');
     ff.reset();
     let max = 0;
@@ -39,7 +39,7 @@ describe('敵 OFF（4-2c）', () => {
   });
 
   it('途中で OFF にすると敵機と敵のミサイル・フレアがその場で消え、再出現もしない', () => {
-    const ff = new FreeFlight({ rng: () => 0.5 });
+    const ff = new FlightSession({ rng: () => 0.5 });
     ff.configureEnemies(true, 'normal');
     ff.reset();
     run(ff, 5);
@@ -66,7 +66,7 @@ describe('敵 OFF（4-2c）', () => {
   });
 
   it('ON に戻すと出現し、OFF でもプレイヤーのミサイルは消さない', () => {
-    const ff = new FreeFlight({ rng: () => 0.5 });
+    const ff = new FlightSession({ rng: () => 0.5 });
     ff.configureEnemies(false, 'normal');
     ff.reset();
     ff.combat.missiles.launch(ff.aircraft.state, null, TEAM_PLAYER);
