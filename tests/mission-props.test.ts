@@ -12,6 +12,7 @@ import { Transport } from '../src/entities/transport';
 import { quatIdentity } from '../src/flight/math';
 import { FlightSession } from '../src/missions/flight-session';
 import { CampaignProgress } from '../src/progression/campaign-progress';
+import { SaveStore } from '../src/progression/save-store';
 import { DT } from './mission-bots';
 
 describe('輸送機', () => {
@@ -213,9 +214,9 @@ describe('出現物と戦闘', () => {
   });
 });
 
-describe('キャンペーンの進み具合（セッション内）', () => {
+describe('キャンペーンの進み具合', () => {
   it('前のミッションを成功するまで次は選べない。ランクは最高のものを残す', () => {
-    const p = new CampaignProgress(['a', 'b', 'c']);
+    const p = new CampaignProgress(['a', 'b', 'c'], SaveStore.open(null).store);
     expect([p.isUnlocked('a'), p.isUnlocked('b'), p.isUnlocked('c')]).toEqual([true, false, false]);
     p.recordClear('a', 'B');
     expect([p.isUnlocked('b'), p.isUnlocked('c')]).toEqual([true, false]);
@@ -229,7 +230,7 @@ describe('キャンペーンの進み具合（セッション内）', () => {
   });
 
   it('?unlockAll ならすべて選べる', () => {
-    const p = new CampaignProgress(['a', 'b', 'c'], true);
+    const p = new CampaignProgress(['a', 'b', 'c'], SaveStore.open(null).store, true);
     expect(p.isUnlocked('c')).toBe(true);
   });
 });

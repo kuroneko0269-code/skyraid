@@ -1,9 +1,10 @@
 import './campaign.css';
+import './save.css';
 import type { Locale } from '../core/locale';
 import type { MissionDef } from '../missions/types';
 import type { CampaignProgress } from '../progression/campaign-progress';
 import { el } from './hud-dom';
-import { missionStrings } from './mission-text';
+import { formatCredits, missionStrings } from './mission-text';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 interface Entry {
@@ -14,21 +15,27 @@ interface Entry {
 
 /**
  * キャンペーンのミッション一覧（2-4。2-5 で 5 本）。並び順に表示し、前のミッションを成功するまで次は選べない。
- * クリア済みにはランクを出す。解放・ランクは CampaignProgress（今はセッション内だけ）
+ * クリア済みにはランクを出す。解放・ランクは CampaignProgress（3-1 からセーブに記録）。上部にクレジット残高（3-2）
  */
 export class MissionSelectScreen {
   readonly root: HTMLDivElement;
   private readonly entries: Entry[] = [];
+  private readonly balance: HTMLSpanElement;
 
   constructor(
     parent: HTMLElement,
     missions: readonly MissionDef[],
     private readonly progress: CampaignProgress,
+    /** クレジット残高（表示のたびに読む） */
+    private readonly credits: () => number,
     locale: Locale,
     handlers: { onSelect: (mission: MissionDef) => void; onBack: () => void },
   ) {
     const root = createScreen(parent, 'campaign-screen');
     el('h2', 'campaign-heading', root, 'キャンペーン');
+    const balance = el('div', 'campaign-balance', root);
+    el('span', '', balance, '残高');
+    this.balance = el('span', 'campaign-balance-value', balance);
     const list = el('div', 'mission-list', root);
     missions.forEach((m, i) => {
       const button = createButton(list, 'menu-button mission-entry', '', () => {
@@ -45,8 +52,9 @@ export class MissionSelectScreen {
     this.refresh();
   }
 
-  /** 解放とランクの表示を進み具合に合わせる */
+  /** 残高・解放・ランクの表示をセーブに合わせる */
   refresh(): void {
+    this.balance.textContent = formatCredits(this.credits());
     for (const { mission, button, status } of this.entries) {
       const unlocked = this.progress.isUnlocked(mission.id);
       const rank = this.progress.bestRank(mission.id);

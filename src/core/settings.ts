@@ -137,8 +137,9 @@ export class QualitySettings {
   }
 }
 
-/** ブラウザの localStorage。アクセス自体が例外になる環境（ストレージ無効化など）では null */
-export function getBrowserStorage(): StorageLike | null {
+/** ブラウザの localStorage。アクセス自体が例外になる環境（ストレージ無効化など）では null。
+ * removeItem はセーブ（3-1）が古い設定のキーを消すのに使う */
+export function getBrowserStorage(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null {
   try {
     return typeof window === 'undefined' ? null : window.localStorage;
   } catch {

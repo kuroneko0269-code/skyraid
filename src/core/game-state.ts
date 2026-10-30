@@ -3,11 +3,12 @@ import { EventBus } from './event-bus';
 /**
  * 画面の状態。boot は読み込み中（起動直後だけ）。
  * docs/spec.md「UI」: タイトル → モード選択 → （キャンペーン: ミッション一覧 → ブリーフィング）→ プレイ → リザルト（2-4）。
- * ハンガーはフェーズ3 で足す
+ * 初回起動（セーブにパイロット名がない）はタイトルの後にパイロット名の入力（3-1）。ハンガーは 3-3 で足す
  */
 export const SCREEN_STATES = [
   'boot',
   'title',
+  'pilot_name',
   'mode_select',
   'mission_select',
   'briefing',
@@ -21,7 +22,9 @@ export type ScreenState = (typeof SCREEN_STATES)[number];
 export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenState[]>> = {
   // ?skipTitle のときは boot から直接 flight
   boot: ['title', 'flight'],
-  title: ['mode_select'],
+  // 初回起動はパイロット名の入力を挟む（3-1）。入力から Esc でタイトルへ戻れる
+  title: ['mode_select', 'pilot_name'],
+  pilot_name: ['mode_select', 'title'],
   mode_select: ['title', 'flight', 'mission_select'],
   mission_select: ['mode_select', 'briefing'],
   briefing: ['mission_select', 'flight'],
@@ -57,6 +60,7 @@ export function usesDemoCamera(state: ScreenState): boolean {
   return (
     state === 'boot' ||
     state === 'title' ||
+    state === 'pilot_name' ||
     state === 'mode_select' ||
     state === 'mission_select' ||
     state === 'briefing'

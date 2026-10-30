@@ -4,10 +4,12 @@ import { detectLocale } from '../core/locale';
 import type { MissionResult } from '../missions/runner';
 import type { MissionDef } from '../missions/types';
 import { CampaignProgress } from '../progression/campaign-progress';
+import type { SaveStore } from '../progression/save-store';
 import { BriefingScreen } from './briefing';
 import { MissionSelectScreen } from './mission-select';
 import { ModeSelectScreen } from './mode-select';
 import { PauseMenu, createPauseButton } from './pause';
+import { PilotNameScreen } from './pilot-name';
 import { ResultScreen } from './result';
 import { FadeCurtain, LoadingScreen, applyScreenFade } from './screen';
 import { TitleScreen } from './title';
@@ -20,6 +22,7 @@ import { TitleScreen } from './title';
 export class Screens {
   readonly loading: LoadingScreen;
   readonly title: TitleScreen;
+  readonly pilotName: PilotNameScreen;
   readonly modeSelect: ModeSelectScreen;
   readonly missionSelect: MissionSelectScreen;
   readonly briefing: BriefingScreen;
@@ -28,7 +31,7 @@ export class Screens {
   readonly pauseButton: HTMLButtonElement;
   /** ミッション一覧で選んだミッション（ブリーフィング・もう一度で使う） */
   selectedMission: MissionDef | null = null;
-  /** ミッションの解放とクリア済みのランク（2-5。今はセッション内だけ） */
+  /** ミッションの解放とクリア済みのランク（2-5。3-1 からセーブに記録） */
   readonly progress: CampaignProgress;
   private readonly curtain: FadeCurtain;
 
@@ -36,6 +39,8 @@ export class Screens {
     parent: HTMLElement,
     game: GameState,
     missions: readonly MissionDef[],
+    /** セーブ（3-1）: 進み具合・残高・パイロット名 */
+    private readonly save: SaveStore,
     /** ポーズメニューの「ミッションを中断」（遷移の前に呼ぶ） */
     onAbortMission: () => void,
   ) {
@@ -44,9 +49,20 @@ export class Screens {
     const locale = detectLocale(search, navigator.languages);
     this.progress = new CampaignProgress(
       missions.map((m) => m.id),
+      save,
       parseUnlockAll(search),
     );
-    this.title = new TitleScreen(parent, () => game.transition('mode_select'));
+    // 初回起動（パイロット名がまだない）はタイトルの後に名前の入力（3-1）
+    this.title = new TitleScreen(parent, () =>
+      game.transition(save.needsPilotName ? 'pilot_name' : 'mode_select'),
+    );
+    this.title.setPilotName(save.pilotName);
+    this.pilotName = new PilotNameScreen(parent, {
+      onSubmit: (name) => {
+        this.title.setPilotName(save.setPilotName(name));
+        game.transition('mode_select');
+      },
+    });
     this.modeSelect = new ModeSelectScreen(parent, {
       // PvP・レイドは disabled
       onSelect: (mode) => {
@@ -55,14 +71,21 @@ export class Screens {
       },
       onBack: () => game.transition('title'),
     });
-    this.missionSelect = new MissionSelectScreen(parent, missions, this.progress, locale, {
-      onSelect: (mission) => {
-        this.selectedMission = mission;
-        this.briefing.show(mission);
-        game.transition('briefing');
+    this.missionSelect = new MissionSelectScreen(
+      parent,
+      missions,
+      this.progress,
+      () => save.credits,
+      locale,
+      {
+        onSelect: (mission) => {
+          this.selectedMission = mission;
+          this.briefing.show(mission);
+          game.transition('briefing');
+        },
+        onBack: () => game.transition('mode_select'),
       },
-      onBack: () => game.transition('mode_select'),
-    });
+    );
     this.briefing = new BriefingScreen(parent, locale, {
       onLaunch: () => game.transition('flight'),
       onBack: () => game.transition('mission_select'),
@@ -93,17 +116,19 @@ export class Screens {
     });
   }
 
-  /** リザルトを出す。成功ならクリアを記録して次のミッションを解放する */
+  /**
+   * リザルトを出す。クリアの記録と報酬はミッションの終わりのイベントでセーブに入っている
+   * （progression/mission-rewards.ts）ので、ここは残高を読むだけ
+   */
   showResult(result: MissionResult): void {
-    if (result.outcome === 'success' && result.rank)
-      this.progress.recordClear(result.missionId, result.rank);
-    this.result.show(result);
+    this.result.show(result, { balance: this.save.credits, pilotName: this.save.pilotName });
   }
 
   private show(state: ScreenState): void {
     document.documentElement.dataset.screen = state;
     this.loading.setShown(state === 'boot');
     this.title.setShown(state === 'title');
+    this.pilotName.setShown(state === 'pilot_name');
     this.modeSelect.setShown(state === 'mode_select');
     this.missionSelect.setShown(state === 'mission_select');
     this.briefing.setShown(state === 'briefing');

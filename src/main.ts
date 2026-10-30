@@ -6,7 +6,6 @@ import { parseDebugFlags, parseSkipTitle } from './core/debug-flags';
 import { BOOT_TASKS, runBoot } from './core/boot';
 import { GameState, isSimulating, syncLoopWithState, usesDemoCamera } from './core/game-state';
 import { FrameStats } from './core/frame-stats';
-import { getBrowserStorage } from './core/settings';
 import { parseFlightOptions } from './core/flight-options';
 import { ACTIONS } from './data/keybinds';
 import { QUALITY_CONFIG } from './data/quality';
@@ -17,6 +16,7 @@ import { createCombatInput } from './combat/combat-system';
 import { WeaponInput } from './core/weapon-input';
 import { FlightSession } from './missions/flight-session';
 import { GamePlay } from './missions/game-play';
+import { bindMissionRewards } from './progression/mission-rewards';
 import { FlightViews } from './render/flight-views';
 import { HudLink } from './render/hud-link';
 import { MissionLink } from './render/mission-link';
@@ -33,8 +33,11 @@ import { DamageOverlay } from './ui/damage-overlay';
 import { DebugOverlay } from './ui/debug-overlay';
 import { createEnemySettings } from './ui/enemy-settings';
 import { Hud } from './ui/hud';
+import { createHudToggle } from './ui/hud-toggle';
 import { MissionHud } from './ui/mission-hud';
-import { createFullscreenButton, createToggleButton, installTouchGuards } from './ui/mobile';
+import { createFullscreenButton, installTouchGuards } from './ui/mobile';
+import { createSaveSettings } from './ui/save-settings';
+import { openBrowserSave } from './ui/save-link';
 import { createTouchLink } from './ui/touch-link';
 import { Screens } from './ui/screens';
 
@@ -56,14 +59,18 @@ scene.add(aircraftMesh);
 const chaseCamera = new ChaseCamera(camera);
 const demoCamera = new DemoCamera(camera);
 
-// 画面状態（タイトル → モード選択 →（ミッション一覧 → ブリーフィング →）飛行 ⇄ ポーズ →（リザルト））。DOM は ui/screens.ts
+// セーブ（3-1）: 進み具合・クレジット・パイロット名・設定。壊れていたら初期値にしてお知らせ
+const save = openBrowserSave(document.body);
+// 設定の部品は今までどおり StorageLike で読み書きし、セーブの設定に振り分ける
+const storage = save.settingsStorage;
+
+// 画面状態（タイトル →（初回: パイロット名 →）モード選択 →（ミッション一覧 → ブリーフィング →）飛行 ⇄ ポーズ →（リザルト））
 const game = new GameState();
-const screens = new Screens(document.body, game, MISSIONS, () => {
+const screens = new Screens(document.body, game, MISSIONS, save, () => {
   play.abortMission();
 });
 
 // 品質設定（初期判定・切り替え・自動ダウングレード）と露出
-const storage = getBrowserStorage();
 const quality = new QualityLink(renderer, pipeline, world, storage);
 installTouchGuards(document);
 // 設定（画質・タッチ・HUD・全画面）はポーズメニューの中
@@ -89,15 +96,10 @@ const touch = createTouchLink(
   settingsPanel,
   () => game.state === 'flight',
 );
-// HUD: H キー / ポーズメニューの設定のボタンで表示切替。ミッションの HUD（2-4）も合わせる
+// HUD: H キー / ポーズメニューの設定のボタンで表示切替（3-1 から保存）。ミッションの HUD（2-4）も合わせる
 const hud = new Hud(document.body);
 const missionHud = new MissionHud(document.body);
-const toggleHud = (): boolean => {
-  hud.toggle();
-  missionHud.setHudVisible(hud.visible);
-  return hud.visible;
-};
-const hudButton = createToggleButton(settingsPanel, 'HUD', hud.visible, toggleHud);
+const hudToggle = createHudToggle(settingsPanel, hud, missionHud, save);
 createFullscreenButton(settingsPanel);
 
 // ?debug でデバッグ表示を初期表示、?debug=input で押したアクション名をコンソールに出す
@@ -120,6 +122,8 @@ createEnemySettings(settingsPanel, storage, (enabled, difficulty) => {
   session.configureEnemies(enabled, difficulty);
   screens.modeSelect.setEnemiesEnabled(enabled);
 });
+// 設定の最下部: セーブデータのコピー / 復元 / 削除。復元・削除の後は読み込み直して新しいセーブで始める
+createSaveSettings(settingsPanel, save);
 const damageOverlay = new DamageOverlay(document.body);
 const controls = createControls();
 const views = new FlightViews(scene, aircraftMesh, session);
@@ -128,10 +132,8 @@ const missionLink = new MissionLink(missionHud, camera, aircraftMesh, play);
 play.onRunnerChange((runner) => {
   missionHud.attach(runner);
   screens.pause.setInMission(runner !== null);
-  // 報酬の受け皿（保存・残高はフェーズ3）。今は知らせるだけ
-  runner?.bus.on('mission:reward', ({ missionId, credits, rank }) => {
-    console.info(`[mission] ${missionId}: rank ${rank ?? '-'} / ${credits} CR`);
-  });
+  // 成功の記録と報酬をセーブへ（3-2）
+  if (runner) bindMissionRewards(runner.bus, save, screens.progress);
 });
 // 撃墜（地面への墜落も）されたら揺らし、リスポーンしたらカメラを寄せ直す
 session.onPlayerDown(() => {
@@ -258,7 +260,7 @@ function startFlight(mission: boolean): void {
 /** 飛行中・メニュー中どちらでも効くキー（F3 / H）と入力ログ。固定更新 1 回分の終わりに呼ぶ */
 function handleCommonKeys(): void {
   if (input.wasPressed('debugToggle')) overlay.toggle();
-  if (input.wasPressed('hudToggle')) hudButton.sync(toggleHud());
+  if (input.wasPressed('hudToggle')) hudToggle.toggle();
   if (debugFlags.logInput) {
     for (const action of ACTIONS) {
       if (input.wasPressed(action)) console.info(`[input] ${action}`);
@@ -273,7 +275,7 @@ function menuTick(): void {
   if (input.wasPressed('pause')) {
     // Esc / Start: ポーズ → 再開、モード選択 → タイトル
     if (game.state === 'pause') game.transition('flight');
-    else if (game.state === 'mode_select') game.transition('title');
+    else if (game.state === 'mode_select' || game.state === 'pilot_name') game.transition('title');
     else if (game.state === 'mission_select') game.transition('mode_select');
     else if (game.state === 'briefing') game.transition('mission_select');
   }

@@ -98,15 +98,23 @@ describe('GameState の遷移', () => {
     ]);
   });
 
-  it('固定更新を進めるのは飛行中だけ。デモカメラはメニュー（boot / title / mode_select / mission_select / briefing）', () => {
+  it('固定更新を進めるのは飛行中だけ。デモカメラはメニュー（boot / title / pilot_name / mode_select / mission_select / briefing）', () => {
     expect(SCREEN_STATES.filter(isSimulating)).toEqual(['flight']);
     expect(SCREEN_STATES.filter(usesDemoCamera)).toEqual([
       'boot',
       'title',
+      'pilot_name',
       'mode_select',
       'mission_select',
       'briefing',
     ]);
+  });
+
+  it('初回起動（3-1）: タイトル → パイロット名 → モード選択。名前の入力から Esc でタイトルへ', () => {
+    expect(gameAt('title', 'pilot_name', 'mode_select').state).toBe('mode_select');
+    expect(gameAt('title', 'pilot_name', 'title').state).toBe('title');
+    expect(canTransition('pilot_name', 'flight')).toBe(false);
+    expect(canTransition('mode_select', 'pilot_name')).toBe(false);
   });
 
   it('キャンペーン（2-4）: ミッション一覧 → ブリーフィング → 飛行 → リザルト → もう一度 / 一覧へ、ポーズから中断', () => {

@@ -47,7 +47,7 @@ export interface MissionEvents extends Record<string, unknown> {
   'mission:end': { readonly result: MissionResult };
   /** 中断した */
   'mission:abort': { readonly result: MissionResult };
-  /** 獲得クレジット（保存・残高はフェーズ3。今は知らせるだけ） */
+  /** 獲得クレジット（3-2: progression/mission-rewards.ts が残高に足して保存する） */
   'mission:reward': {
     readonly missionId: string;
     readonly credits: number;

@@ -259,8 +259,14 @@ export class MissionRunner {
       target: o.target,
     }));
     const success = outcome === 'success';
+    // 任意目標の達成は加点（3-2）
+    const optional = this.objectives.filter((o) => !o.def.required);
+    const tally = {
+      completed: optional.filter((o) => o.status === 'complete').length,
+      total: optional.length,
+    };
     const rank = success
-      ? computeRank(this.elapsed, this.def.parTimeSeconds, damageTaken, w.playerMaxHp)
+      ? computeRank(this.elapsed, this.def.parTimeSeconds, damageTaken, w.playerMaxHp, tally)
       : null;
     const credits = rank
       ? rewardCredits(this.def.reward.baseCredits, rank, this.def.reward.rankMultipliers)

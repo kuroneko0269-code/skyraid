@@ -1,4 +1,5 @@
 import './campaign.css';
+import './save.css';
 import type { MissionResult } from '../missions/runner';
 import { el } from './hud-dom';
 import {
@@ -9,9 +10,19 @@ import {
 } from './mission-text';
 import { createButton, createScreen, setScreenShown } from './screen';
 
-/** リザルト（2-4）: 成功 / 失敗、目標ごとの達成、時間、被弾、ランク、報酬と「もう一度」「ミッション一覧へ」 */
+/** 3-2: 報酬はセーブに足した後の残高と並べ、パイロット名も出す */
+export interface ResultExtras {
+  readonly balance: number;
+  readonly pilotName: string | null;
+}
+
+/**
+ * リザルト（2-4）: 成功 / 失敗、目標ごとの達成、時間、被弾、ランク、報酬（獲得 / 残高。3-2）、パイロット名（3-1）と
+ * 「もう一度」「ミッション一覧へ」
+ */
 export class ResultScreen {
   readonly root: HTMLDivElement;
+  private readonly pilot: HTMLDivElement;
   private readonly outcome: HTMLHeadingElement;
   private readonly reason: HTMLDivElement;
   private readonly objectives: HTMLUListElement;
@@ -23,6 +34,7 @@ export class ResultScreen {
     const root = createScreen(parent, 'campaign-screen result-screen');
     const panel = el('div', 'campaign-panel', root);
     el('div', 'campaign-kicker', panel, 'RESULT');
+    this.pilot = el('div', 'result-pilot', panel);
     this.outcome = el('h2', 'campaign-title result-outcome', panel);
     this.reason = el('div', 'result-reason', panel);
     this.rank = el('div', 'result-rank', panel);
@@ -34,10 +46,12 @@ export class ResultScreen {
     this.root = root;
   }
 
-  show(r: MissionResult): void {
+  show(r: MissionResult, extras: ResultExtras): void {
     const success = r.outcome === 'success';
     this.root.classList.toggle('is-success', success);
     this.outcome.textContent = success ? 'MISSION COMPLETE' : 'MISSION FAILED';
+    this.pilot.textContent = extras.pilotName === null ? '' : `PILOT  ${extras.pilotName}`;
+    this.pilot.hidden = extras.pilotName === null;
     this.reason.textContent = r.failReason ? FAIL_REASON_TEXT[r.failReason] : '';
     this.reason.hidden = !r.failReason;
     this.rank.textContent = r.rank ?? '';
@@ -58,7 +72,7 @@ export class ResultScreen {
     };
     fact('時間', formatClock(r.elapsedSeconds));
     fact('被弾', `${Math.round(r.damageTaken)} / ${r.maxHp}`);
-    fact('報酬', formatCredits(r.credits));
+    fact('報酬', `獲得 +${formatCredits(r.credits)} / 残高 ${formatCredits(extras.balance)}`);
   }
 
   setShown(shown: boolean): void {
