@@ -49,6 +49,12 @@ export class Screens {
   /** ハンガーを閉じたら戻る画面（モード選択かブリーフィング） */
   private hangarReturn: 'mode_select' | 'briefing' = 'mode_select';
   private readonly viewListeners: ((model: AircraftModel) => void)[] = [];
+  /** PvP（5-1）: モード選択の「PvP」・ロビーの Esc・飛行中の ⏸（main が PvP を読み込んで差し込む） */
+  private pvp: {
+    onSelect: () => void;
+    onBack: () => void;
+    onPause: () => boolean;
+  } | null = null;
 
   constructor(
     parent: HTMLElement,
@@ -87,13 +93,14 @@ export class Screens {
       },
     });
     this.modeSelect = new ModeSelectScreen(parent, this.tutorialText, {
-      // PvP・レイドは disabled
+      // レイドは disabled
       onSelect: (mode) => {
         if (mode === 'free' || mode === 'tutorial') {
           this.nextMission = mode === 'tutorial' ? TUTORIAL_MISSION : null;
           game.transition('flight');
         } else if (mode === 'campaign') game.transition('mission_select');
         else if (mode === 'hangar') this.openHangar(game, 'mode_select');
+        else if (mode === 'pvp') this.pvp?.onSelect();
       },
       onBack: () => game.transition('title'),
     });
@@ -147,7 +154,10 @@ export class Screens {
         game.transition(this.inTutorial ? 'mode_select' : 'mission_select');
       },
     });
-    this.pauseButton = createPauseButton(parent, () => game.transition('pause'));
+    // PvP の飛行中はゲームを止めずに PvP のメニュー
+    this.pauseButton = createPauseButton(parent, () => {
+      if (!this.pvp?.onPause()) game.transition('pause');
+    });
     this.loading = new LoadingScreen(parent);
     this.curtain = new FadeCurtain(parent);
     this.show(game.state);
@@ -172,6 +182,15 @@ export class Screens {
     return this.nextMission?.id === TUTORIAL_MISSION.id;
   }
 
+  /** PvP（5-1）の入口をつなぐ */
+  setPvpHandlers(handlers: {
+    onSelect: () => void;
+    onBack: () => void;
+    onPause: () => boolean;
+  }): void {
+    this.pvp = handlers;
+  }
+
   /** ハンガーで見ている機体が変わったとき（展示の形） */
   onAircraftView(fn: (model: AircraftModel) => void): void {
     this.viewListeners.push(fn);
@@ -194,6 +213,7 @@ export class Screens {
     else if (state === 'mission_select') game.transition('mode_select');
     else if (state === 'briefing') game.transition('mission_select');
     else if (state === 'hangar') this.closeHangar(game);
+    else if (state === 'lobby') this.pvp?.onBack();
   }
 
   closeHangar(game: GameState): void {

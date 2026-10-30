@@ -5,7 +5,7 @@ import type { AircraftControls } from '../entities/aircraft';
 import type { BoundaryWatch } from './boundary';
 import type { FlightSession } from './flight-session';
 import { MissionRunner } from './runner';
-import type { MissionDef } from './types';
+import type { MissionDef, Pose } from './types';
 
 export class GamePlay {
   /** 進行中（または終わったばかり）のミッション。フリーフライトなら null */
@@ -26,6 +26,12 @@ export class GamePlay {
 
   startFree(): void {
     this.session.startFree();
+    this.setRunner(null);
+  }
+
+  /** PvP（5-1）: 敵・的・ミッションなしで世界を空にする（機体は net/ が動かし、session.step は呼ばない） */
+  startEmpty(start: Readonly<Pose>): void {
+    this.session.startMission(start);
     this.setRunner(null);
   }
 

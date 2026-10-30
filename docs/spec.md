@@ -410,6 +410,23 @@
 - ホスト切断時はセッション終了（再接続は将来課題）
 - 遅延対策: デッドレコニング（速度で外挿）+ スナップ補正
 
+#### P2P の基盤の決めた数値（5-1。値は `src/data/net.ts`、仕組みは `src/net/`。Three.js・DOM 非依存）
+
+- 通信の抽象 `Transport`（`src/net/transport.ts`）: connect / send / onMessage / onPeerJoin / onPeerLeave / close。実装は PeerJS（`peerjs-transport.ts`。公開シグナリングサーバー 0.peerjs.com + Google の STUN。相手ごとに確実・順番どおりの経路と順不同の経路の 2 本）、インメモリ（`MemoryNetwork`。テスト用、遅延・揺らぎ・ロスを設定でき時刻は手で進める）、BroadcastChannel（`local-transport.ts`。`?net=local` で同じブラウザのタブどうし。確認用）
+- 部屋（`room.ts` / `client-room.ts`）: ホストが 6 文字の部屋コード（0 / O / 1 / I を除いた英大文字と数字 32 文字）を作り、PeerJS の ID `skyraid-titan-<コード>` で待つ。使用中なら作り直す（4 回まで）。クライアントはコードで接続し join を送り、welcome（名簿・割当 ID 0〜3・ホストのゲーム設定）を受け取る。最大 4 人（満員・開始後・版違いは理由つきで断る）。入力のゆれ（小文字・空白・ハイフン）は受け付ける。参加の待ちは 15 秒
+- 切断: クライアントが抜けたら名簿から消して全員に名簿を送り直し、その機体を消す。ホストが抜けたら（自分で退出: 終了の event / 接続が閉じた / 6 秒なにも届かない）全員に「ホストが切断しました」と出してモード選択へ。ping は 1Hz（往復時間の計測と生存確認）
+- メッセージ（`protocol.ts`。ArrayBuffer、先頭 1 バイトが種類）: join / welcome / input（クライアント → ホスト、30Hz）/ state（ホスト → 全員、15Hz）/ event（start・end・fire・kill。fire・kill は 5-3 で使う）/ ping。位置は float32、姿勢は smallest-three（15 ビット × 3、6 バイト、誤差 0.01° 未満）、速度ベクトルは 1/16 m/s の int16。state は 1 機 37 バイト
+- 入力: クライアントは操作を量子化（各軸 ±127 段階）してから自機に使い、ステップ番号（seq）付きで 2 ステップに 1 回、直近 6 ステップを送る。オートレベル・ピッチ反転の設定も入れる。ホストは最初に 6 ステップ溜めてから seq の順に 1 ステップ 1 つずつ使い（12 を超えたら 2 つずつ）、届かない・切れたステップは直前の操作で埋める。丸ごと間に合わないメッセージが 3 回続いたら溜め直す
+- 自機: 手元で先行計算する（操作の遅れなし）。ホストの state の「最後に使った seq」の位置と、同じ seq の自分の記録が 0.5m 以上ずれたら差を足して直す（記録は 128 ステップ）
+- 他機: ホストの時刻で 100ms 遅らせ、前後の state を位置はエルミート・姿勢は球面線形で補間。途切れたら速度と加速度で最大 0.5 秒外挿（加速度は 150 m/s² まで）、その先は止める。ホストの時刻は受信の直近 30 個から推定し、毎秒 0.1 秒までの速さで寄せる（0.25 秒を超えたら一度に）
+- ホストのゲーム設定（welcome）: マップ `island`・制限時間 300 秒・撃墜数 10（時間と撃墜数は 5-4 の勝敗で使う。今はロビーにマップだけ出す）
+- 開始位置: 島の沖合（0, 500, 4500）に ID 順の横一列、間隔 80m、機首は -Z。各自がハンガーで選んだ機体・強化で飛ぶ（ホストもその数値で計算する）
+- 色: ID 0〜3 が赤・青・黄・緑。機体のアクセント色をその色に、胴体を 30% その色に寄せる（自機も）。他機には名前と距離の名札（10m 単位、1km からは 0.1km 単位）
+- ロビー（`src/ui/lobby.ts`）: モード選択の「PvP」→「部屋を作る」/ 部屋コードを入れて「コードで参加」→ ロビー（部屋コード・マップ・参加者の色と名前・ホストの「開始」（2 人以上）・退出）。`?room=XXXXXX` で起動するとタイトルの後に直接参加する
+- 飛行中の Esc / ⏸: ゲームを止めないメニュー（続ける / 退出する）。撃ち合いは 5-3（今は機銃・ミサイルを押しても何も起きない）
+- `?netdebug`: 飛行中、左下に役割・ID・人数・往復時間・state の受信（送信）回数 / 秒・補間遅延・補間の余裕（最新の state − 表示時刻）・外挿中の機数・自機の補正の回数（ホストは入力の溜め・推測で埋めた数・溜め直しの回数）
+- 読み込み: シングルプレイでは `src/net/`・peerjs・ロビーを読まない（PvP を選んだとき・`?room` のときに別チャンクで読む）
+
 ## 10. ビジュアル
 
 - 目標: 写真のような写実。物理ベースの空（大気散乱。HDR 画像は使わない）、PBR マテリアル、水面（ゲルストナー波）、ブルーム、空気遠近、雲（「中」以上は疑似体積、「低」はビルボード）
@@ -632,12 +649,12 @@
 
 #### タイトル・モード選択・ポーズの決めた数値（1-6。値は `src/data/screens.ts`）
 
-- 画面の状態: 読み込み中（boot）→ タイトル → モード選択 →（キャンペーン: ミッション一覧 → ブリーフィング →）飛行 ⇄ ポーズ →（ミッションの終わり: リザルト）。モード選択からタイトルへ戻れる。`?skipTitle` は読み込み中 → 飛行。遷移表は `src/core/game-state.ts`
+- 画面の状態: 読み込み中（boot）→ タイトル → モード選択 →（キャンペーン: ミッション一覧 → ブリーフィング →）飛行 ⇄ ポーズ →（ミッションの終わり: リザルト）。PvP（5-1）はモード選択 ⇄ ロビー → 飛行 → モード選択（ポーズなし）。モード選択からタイトルへ戻れる。`?skipTitle` は読み込み中 → 飛行。遷移表は `src/core/game-state.ts`
 - 固定ステップ更新（ゲームの時間）は飛行中だけ進める。ポーズ・タイトル・モード選択では止め、止めている間の時間は貯めない（再開しても一気に進まない）。描画は続けるが、ポーズ中は機体・カメラ・海の波も止まる
 - 画面遷移は CSS transition のフェード 0.3 秒。カメラが切り替わる遷移（モード選択 → 飛行、ポーズ → タイトル）は一瞬黒にして 0.3 秒で明ける暗転で隠す
 - 読み込み中: 起動時に `BOOT_TASKS`（`src/core/boot.ts`）を順に Promise で待ち、進捗バーを出す。アセットはまだ無いので即完了
 - タイトル: 背景は実際のシーン。デモカメラが島の中心の周りを半径 3600m・高度 480m で 150 秒に 1 周（約 2.4°/秒）し、島の中心の高さ 800m を見る（2-5 の事前修正。それまでは高度 600m・注視点 200m。山頂（約 600m）を画面の中央より下に置き、山が画面の下半分に入るようにした）。開始位置は起動位置と同じ南側（+Z）。ロゴは「SkyRaid」のテキストと CSS のみ（サブタイトルなし。4-10 から画像の受け口と見出しの Web フォント。上の「タイトル・ブランド素材・PWA」）。画面のどこをタップ / Enter で開始
-- モード選択: チュートリアル（4-11）・フリーフライトとキャンペーン（2-4）を選べる。PvP・レイドは「近日」と表示して押せない。Esc / 「← タイトルへ」で戻る
+- モード選択: チュートリアル（4-11）・フリーフライトとキャンペーン（2-4）・PvP（5-1）を選べる。レイドは「近日」と表示して押せない。Esc / 「← タイトルへ」で戻る
 - フリーフライト: モード選択から入るたびに起動位置・巡航速度から始める。墜落は撃墜と同じ扱い（2-4）。戦域の境界の外では「RETURN TO BATTLEFIELD」を出すだけ（カウント・失敗なし）
 - ポーズ: Esc / パッドの Start / 右上の ⏸ ボタン（一辺 44px。タッチ操作中は右上のヨーボタンの左隣、間隔 12px）。メニューは「再開」「設定 ▼」（画質・タッチ・HUD・全画面・敵・操作補助・音量（4-4）・操作（4-11）・セーブデータ。開閉できる）「タイトルへ」。Esc / Start でも再開
 - 飛行中の画面上部の設定バーは廃止し、ポーズメニューの設定に移した。F3（デバッグ表示）と H（HUD）はメニュー中も効く
@@ -649,7 +666,7 @@
 
 #### セキュリティヘッダー（4-10。`public/_headers`、Cloudflare Pages の形式）
 
-- Content-Security-Policy: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`。ビルド後に `_headers` を付けて配信し、ヘッドレスのブラウザでタイトル → 飛行 → ポーズまで違反が 0 件なことを確かめた
+- Content-Security-Policy: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' wss://0.peerjs.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`。ビルド後に `_headers` を付けて配信し、ヘッドレスのブラウザでタイトル → 飛行 → ポーズまで違反が 0 件なことを確かめた。5-1 で connect-src に PeerJS のシグナリング（`wss://0.peerjs.com`）を足した（STUN は connect-src の対象外）。PvP のロビー → 飛行 → 切断（`?net=local`）でも違反 0 件
 - X-Content-Type-Options: nosniff / Referrer-Policy: strict-origin-when-cross-origin / Permissions-Policy: camera・microphone・geolocation・payment・usb を無効 / X-Frame-Options: DENY（`frame-ancestors` を知らない古いブラウザ向け）
 - `sw.js` と `manifest.webmanifest` は `Cache-Control: no-cache`（更新をすぐ見つける）
 - DOM に文字を入れるのは `textContent` だけ（`innerHTML` は使わない。4-10 でタイトルの 1 か所（固定の文字列）もなくした）。パイロット名・セーブデータの復元の文字列も `textContent` / `value` で扱う

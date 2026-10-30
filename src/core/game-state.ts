@@ -4,7 +4,8 @@ import { EventBus } from './event-bus';
  * 画面の状態。boot は読み込み中（起動直後だけ）。
  * docs/spec.md「UI」: タイトル → モード選択 → （キャンペーン: ミッション一覧 → ブリーフィング）→ プレイ → リザルト（2-4）。
  * 初回起動（セーブにパイロット名がない）はタイトルの後にパイロット名の入力（3-1）。
- * ハンガー（3-3）はモード選択とブリーフィング（機体変更）から開き、開いた画面へ戻る
+ * ハンガー（3-3）はモード選択とブリーフィング（機体変更）から開き、開いた画面へ戻る。
+ * PvP（5-1）はモード選択 → ロビー → 飛行。飛行からはモード選択へ（退出・ホストの切断）。PvP の飛行にポーズはない
  */
 export const SCREEN_STATES = [
   'boot',
@@ -17,6 +18,7 @@ export const SCREEN_STATES = [
   'pause',
   'result',
   'hangar',
+  'lobby',
 ] as const;
 export type ScreenState = (typeof SCREEN_STATES)[number];
 
@@ -27,7 +29,8 @@ export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenStat
   // 初回起動はパイロット名の入力を挟む（3-1）。入力から Esc でタイトルへ戻れる
   title: ['mode_select', 'pilot_name'],
   pilot_name: ['mode_select', 'title'],
-  mode_select: ['title', 'flight', 'mission_select', 'hangar'],
+  mode_select: ['title', 'flight', 'mission_select', 'hangar', 'lobby'],
+  lobby: ['mode_select', 'flight'],
   mission_select: ['mode_select', 'briefing'],
   briefing: ['mission_select', 'flight', 'hangar'],
   hangar: ['mode_select', 'briefing'],
@@ -69,7 +72,8 @@ export function usesDemoCamera(state: ScreenState): boolean {
     state === 'pilot_name' ||
     state === 'mode_select' ||
     state === 'mission_select' ||
-    state === 'briefing'
+    state === 'briefing' ||
+    state === 'lobby'
   );
 }
 

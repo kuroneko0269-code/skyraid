@@ -16,12 +16,13 @@ const MODE_ENTRIES: readonly { mode: GameMode; label: string; note: string; enab
   { mode: 'free', label: 'フリーフライト', note: FREE_FLIGHT_NOTES.on, enabled: true },
   { mode: 'campaign', label: 'キャンペーン', note: 'ミッションを順にクリア', enabled: true },
   { mode: 'hangar', label: 'ハンガー', note: '機体の購入・強化', enabled: true },
-  { mode: 'pvp', label: 'PvP', note: '2〜4 人で空戦', enabled: false },
+  // PvP（5-1）: 今は同じ空を飛ぶまで（撃ち合いは 5-3）
+  { mode: 'pvp', label: 'PvP', note: '2〜4 人で同じ空を飛ぶ', enabled: true },
   { mode: 'raid', label: 'レイド', note: '巨大怪獣を協力撃破', enabled: false },
 ];
 
 /**
- * モード選択画面。今はチュートリアル（4-11）・フリーフライトとキャンペーン（2-4）とハンガー（3-3）を選べる。
+ * モード選択画面。チュートリアル（4-11）・フリーフライトとキャンペーン（2-4）・ハンガー（3-3）・PvP（5-1）を選べる。
  * 初回起動（パイロット名の入力の後）に 1 度だけ「チュートリアルを始めますか？」を重ねて出す
  */
 export class ModeSelectScreen {

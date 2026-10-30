@@ -1,0 +1,178 @@
+/* PvP のロビー（5-1）。枠・ボタン・文字はキャンペーンの画面（campaign.css）と共通 */
+
+.lobby-panel {
+  width: min(460px, 100%);
+}
+
+.lobby-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
+}
+
+.lobby-view[hidden] {
+  display: none;
+}
+
+.lobby-wide {
+  width: 100%;
+}
+
+.lobby-join {
+  display: flex;
+  gap: var(--ui-space-2);
+  margin: 0;
+}
+
+.lobby-code-input {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 48px;
+  font: 600 20px/1 var(--ui-font-body);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.lobby-join-button {
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.lobby-error {
+  margin: 0;
+  color: var(--ui-warn-text);
+}
+
+.lobby-error[hidden] {
+  display: none;
+}
+
+.lobby-connecting {
+  min-height: 48px;
+}
+
+/* 部屋コード: 大きく、読み間違えにくい等幅で */
+.lobby-code {
+  font: 600 40px/1.1 var(--ui-font-body);
+  letter-spacing: 0.3em;
+  color: var(--ui-accent);
+  text-shadow: var(--ui-glow);
+  user-select: all;
+}
+
+.lobby-players {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lobby-player {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  min-height: 32px;
+  padding: 0 var(--ui-space-2);
+  background: var(--ui-bg-sunken);
+}
+
+.lobby-dot {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+}
+
+.lobby-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-height: 480px) {
+  .lobby-code {
+    font-size: 28px;
+  }
+}
+
+/* 飛行中の他プレイヤーの名札（機体の画面上の位置に出す） */
+.pvp-tags {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.pvp-tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font: 600 12px/1.2 var(--ui-font-body);
+  letter-spacing: 0.06em;
+  color: var(--ui-text);
+  text-shadow: var(--ui-shadow-text);
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.pvp-tag[hidden] {
+  display: none;
+}
+
+.pvp-tag-dist {
+  color: var(--ui-text-dim);
+}
+
+/* PvP 中の Esc / ⏸ のメニュー（ゲームは止まらない） */
+.pvp-menu {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ui-scrim);
+}
+
+.pvp-menu[hidden] {
+  display: none;
+}
+
+.pvp-menu-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-3);
+  width: min(360px, calc(100% - 2 * var(--ui-space-4)));
+  padding: var(--ui-space-4);
+}
+
+/* お知らせ（ホストが切断しました など） */
+.pvp-toast {
+  position: fixed;
+  left: 50%;
+  top: calc(var(--ui-space-5) + var(--ui-safe-top));
+  transform: translateX(-50%);
+  padding: var(--ui-space-2) var(--ui-space-4);
+  --fill: var(--ui-warn-fill);
+  --edge: var(--ui-warn-line);
+}
+
+/* ?netdebug の通信の値 */
+.pvp-debug {
+  position: fixed;
+  left: calc(var(--ui-space-2) + var(--ui-safe-left));
+  bottom: calc(var(--ui-space-2) + var(--ui-safe-bottom));
+  margin: 0;
+  padding: var(--ui-space-1) var(--ui-space-2);
+  font: 11px/1.4 var(--ui-font-body);
+  color: var(--ui-accent-hud);
+  background: var(--ui-bg-sunken);
+  white-space: pre;
+  pointer-events: none;
+}
+
+.pvp-debug[hidden] {
+  display: none;
+}

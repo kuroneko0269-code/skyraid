@@ -38,13 +38,14 @@ import { createDisplaySettings, createGameSettings } from './ui/settings-link';
 import { FlightFrame } from './render/flight-frame';
 import { createControlsLink } from './ui/controls-link';
 import { TutorialLink } from './ui/tutorial-link';
-import type { MissionDef } from './missions/types';
 import { openBrowserSave } from './ui/save-link';
 import { Screens } from './ui/screens';
 import { installAppShell } from './ui/app-shell';
 import { createGameAudio } from './audio/setup';
 import { FxEvents } from './render/fx/fx-events';
 import { FrameFx } from './render/frame-fx';
+import { PvpEntry } from './ui/pvp-entry';
+import { createFlightStarter } from './ui/flight-start';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app が見つかりません');
@@ -144,11 +145,23 @@ const tutorial = new TutorialLink(document.body, save, input, touch, hud, () => 
   screens.abortTutorial(game);
 });
 const frameFx = new FrameFx(pipeline, playerView, camera, audio);
+// PvP（5-1）: 選んだとき・?room のときだけ通信の部分を読み込む
+const search = window.location.search;
+const pvp = new PvpEntry(screens, search, {
+  game,
+  scene,
+  camera,
+  session,
+  playerView,
+  pilotName: () => save.pilotName,
+  groundHeight: getGroundHeight,
+});
 // 機体モデルの細かさ（4-3。画質「低」は LOD）と陽炎の屈折（4-4。「高」だけ）
 quality.onPreset((preset) => {
   playerView.setDetail(preset.aircraftDetail);
   views.setAircraftDetail(preset.aircraftDetail);
   playerView.setHazeRefraction(preset.heatHazeRefraction);
+  pvp.setAircraftDetail(preset.aircraftDetail);
 });
 const ringView = new RingView(scene);
 const missionLink = new MissionLink(missionHud, camera, aircraftMesh, play);
@@ -187,11 +200,22 @@ const hudLink = new HudLink(
 // HUD の対象をタップ（クリック）すると選ぶ。スティック・ボタンの上は canvas に届かない
 hudLink.bindTap(renderer.domElement, () => game.state === 'flight');
 
+const startFlight = createFlightStarter({
+  screens,
+  session,
+  play,
+  playerView,
+  views,
+  chaseCamera,
+  quality,
+  pvp,
+});
+
 const loop = new GameLoop();
 // 固定ステップ更新は飛行中だけ（ポーズ・メニュー中は GameLoop ごと止める）
 syncLoopWithState(game, loop);
 game.onChange(({ from, to }) => {
-  if (to === 'flight' && from !== 'pause') startFlight(screens.nextMission);
+  if (to === 'flight' && from !== 'pause') startFlight(screens.nextMission, from === 'lobby');
   if (to === 'pause') play.runner?.pause();
   else if (to === 'flight') play.runner?.resume();
   // 止めている間に押されたキー（再開に使った Esc など）を飛行に持ち込まない
@@ -235,7 +259,8 @@ const frame = new FlightFrame({
 
 loop.onUpdate((dt) => {
   gamepad.poll();
-  if (input.wasPressed('pause')) {
+  // PvP の飛行中はゲームを止めず、Esc で PvP のメニュー
+  if (input.wasPressed('pause') && !pvp.togglePause()) {
     input.endStep();
     game.transition('pause');
     return;
@@ -243,7 +268,8 @@ loop.onUpdate((dt) => {
   readFlightControls(input, controls);
   assist.apply(controls);
   weaponInput.read(input, combatInput, dt);
-  play.step(controls, combatInput, dt);
+  if (pvp.flying) pvp.step(controls, dt);
+  else play.step(controls, combatInput, dt);
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
   keys.handle();
   // ミッションが終わり、大きな文字を出し終えたらリザルトへ（固定更新もここで止まる）
@@ -254,6 +280,7 @@ loop.onUpdate((dt) => {
   }
 });
 loop.onRender((alpha) => {
+  pvp.render(alpha);
   frame.render(game.state, alpha, keys.menuTick);
   tutorial.update(game.state === 'flight');
 });
@@ -263,26 +290,6 @@ loop.start();
 void runBoot(BOOT_TASKS, (progress) => {
   screens.loading.setProgress(progress);
 }).then(() => {
-  game.transition(parseSkipTitle(window.location.search) ? 'flight' : 'title');
+  game.transition(parseSkipTitle(search) ? 'flight' : 'title');
+  pvp.joinFromUrl();
 });
-
-/**
- * 飛行を始める（モード選択・ブリーフィング・リザルトの「もう一度」から入るたび）。
- * フリーフライトは起動位置から、ミッション（チュートリアルも）は定義の開始位置から
- */
-function startFlight(def: MissionDef | null): void {
-  applyPlayerLoadout();
-  if (def) play.startMission(def);
-  else play.startFree();
-  views.reset();
-  playerView.reset();
-  chaseCamera.snap();
-  quality.startWatch();
-}
-
-/** ハンガーで選んだ機体と強化を自機に入れる（3-3）。飛行を始めるたびに呼ぶ。見た目も機体の形に */
-function applyPlayerLoadout(): void {
-  const loadout = screens.hangar.loadout();
-  session.applyLoadout(loadout);
-  playerView.setModel(screens.hangar.selectedModel, loadout.missiles);
-}

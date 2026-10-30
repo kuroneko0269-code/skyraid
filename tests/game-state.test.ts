@@ -99,7 +99,7 @@ describe('GameState の遷移', () => {
     ]);
   });
 
-  it('固定更新を進めるのは飛行中だけ。デモカメラはメニュー（boot / title / pilot_name / mode_select / mission_select / briefing）', () => {
+  it('固定更新を進めるのは飛行中だけ。デモカメラはメニュー（boot / title / pilot_name / mode_select / mission_select / briefing / lobby）', () => {
     expect(SCREEN_STATES.filter(isSimulating)).toEqual(['flight']);
     expect(SCREEN_STATES.filter(usesDemoCamera)).toEqual([
       'boot',
@@ -108,7 +108,18 @@ describe('GameState の遷移', () => {
       'mode_select',
       'mission_select',
       'briefing',
+      'lobby',
     ]);
+  });
+
+  it('PvP（5-1）: モード選択 ⇄ ロビー → 飛行 → モード選択（退出・ホストの切断）。PvP の飛行にポーズの状態はない', () => {
+    const game = gameAt('title', 'mode_select', 'lobby');
+    expect(game.transition('mode_select')).toBe(true);
+    expect(game.transition('lobby')).toBe(true);
+    expect(game.transition('flight')).toBe(true);
+    expect(game.transition('mode_select')).toBe(true);
+    expect(canTransition('title', 'lobby')).toBe(false);
+    expect(canTransition('lobby', 'title')).toBe(false);
   });
 
   it('初回起動（3-1）: タイトル → パイロット名 → モード選択。名前の入力から Esc でタイトルへ', () => {
