@@ -6,7 +6,7 @@ export const QUALITY_LEVELS = ['low', 'medium', 'high'] as const;
 export type QualityLevel = (typeof QUALITY_LEVELS)[number];
 
 export interface QualityPreset {
-  /** 太陽光のシャドウマップ（機体のまわり 600m。src/data/sky.ts の SHADOW_CONFIG） */
+  /** 太陽光のシャドウマップ（機体のまわり 250m。src/data/sky.ts の SHADOW_CONFIG） */
   readonly shadows: boolean;
   /** シャドウマップの解像度（shadows が false なら使わない） */
   readonly shadowMapSize: number;

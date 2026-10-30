@@ -77,7 +77,7 @@ export class SfxKit {
 
   /**
    * 層（フィルタ type・周波数 freq・Q → 音量）をボイスのフィルタの手前に作る。音量は attack 秒で peak、
-   * decay 秒で消える（t から）
+   * hold 秒そのまま保ってから、decay 秒（t から）で消える
    */
   layer(
     v: Voice,
@@ -88,6 +88,7 @@ export class SfxKit {
     peak: number,
     attack: number,
     decay: number,
+    hold = 0,
   ): Layer {
     const ctx = this.engine.ctx;
     if (!ctx) throw new Error('AudioEngine が使えるようになってから鳴らす');
@@ -96,7 +97,7 @@ export class SfxKit {
     filter.frequency.setValueAtTime(freq, t);
     filter.Q.setValueAtTime(q, t);
     const gain = ctx.createGain();
-    decayEnvelope(gain.gain, t, attack, peak, decay);
+    decayEnvelope(gain.gain, t, attack, peak, decay, hold);
     filter.connect(gain);
     gain.connect(v.filter);
     v.extras.push(filter, gain);
@@ -114,7 +115,10 @@ export class SfxKit {
   }
 }
 
-/** 音量の包絡: attack 秒で peak へ、duration で SILENT まで指数減衰 */
+/**
+ * 音量の包絡: attack 秒で peak へ、hold 秒保って、duration で SILENT まで指数減衰。指数で SILENT（-80dB）まで
+ * 落とすと聞こえる長さは duration の 1/4 ほどになるので、重さを残したい低域は hold で長さを足す（4-12b）
+ */
 export function envelope(
   v: Voice,
   t: number,
@@ -131,8 +135,11 @@ export function decayEnvelope(
   attack: number,
   peak: number,
   duration: number,
+  hold = 0,
 ): void {
+  const top = Math.max(SILENT, peak);
   g.setValueAtTime(SILENT, t);
-  g.exponentialRampToValueAtTime(Math.max(SILENT, peak), t + attack);
-  g.exponentialRampToValueAtTime(SILENT, t + Math.max(attack + 0.01, duration));
+  g.exponentialRampToValueAtTime(top, t + attack);
+  if (hold > 0) g.setValueAtTime(top, t + attack + hold);
+  g.exponentialRampToValueAtTime(SILENT, t + Math.max(attack + hold + 0.01, duration));
 }

@@ -1,8 +1,8 @@
 // 単発の合成効果音（4-4）: 機銃・ミサイル発射・爆発（規模 4 段階）・被弾・対空砲（砲声・フラック）・UI（タップ・決定・購入）。
-// 4-12 で機銃の命中音・撃墜の音を足し、ミサイル発射を 3 層に（sfx/combat-sounds.ts）。
+// 4-12 で機銃の命中音・撃墜の音を足し、ミサイル発射を 3 層に（sfx/combat-sounds.ts）。4-12b で被弾を作り直した。
 // どれも VoicePool のボイス（フィルタ → 音量 →（パンナー →）効果音のバス）に、ノイズ（共有バッファ）とオシレーターをつないで鳴らす。
 // pos を渡した音は 3D 配置（敵機・爆発・対空砲）、渡さない音は自機・UI（定位なし）
-import { AAA_SOUND, GUN_SOUND, HIT_SOUND, UI_SOUND } from '../../data/audio';
+import { AAA_SOUND, GUN_SOUND, UI_SOUND } from '../../data/audio';
 import type { ExplosionScale } from '../../data/fx';
 import type { AudioEngine } from '../engine';
 import { createHitCompressor, explosionSound, hitCompression } from '../params';
@@ -40,7 +40,7 @@ export class OneShots {
     this.combat.missileLaunch(pos);
   }
 
-  /** 自機の機銃が対象に当たった（4-12）。続けて当たるほど 1 発の音量を下げる（ソフトのコンプ） */
+  /** 自機の機銃が対象に当たった（命中音 (a)。4-12）。続けて当たるほど 1 発の音量を下げる（ソフトのコンプ。下限あり） */
   gunHit(): void {
     if (!this.engine.voices) return;
     const gain = hitCompression(this.hitComp, this.engine.now);
@@ -68,18 +68,9 @@ export class OneShots {
     this.boom(pos, c.lowStart, c.lowEnd, c.decay, c.cutoff, c.decay * 1.6, c.gain, c.decay * 1.6);
   }
 
-  /** 自機の被弾: 金属的なクリック（矩形波）+ 短いノイズ（ハイパス） */
+  /** 敵の弾が自機に当たった（被弾 (b)。4-12b）: コックピットで聞く近い衝撃 */
   hit(): void {
-    const c = HIT_SOUND;
-    const v = this.voice(c.noiseDuration, null);
-    if (!v) return;
-    const t = this.engine.now;
-    v.filter.type = 'highpass';
-    v.filter.frequency.setValueAtTime(c.noiseCutoff * 0.5, t);
-    envelope(v, t, 0.002, c.gain, c.noiseDuration);
-    this.noise(v, t, c.noiseDuration);
-    const osc = this.osc(v, 'square', c.clickFreq, t, c.clickDuration);
-    osc.frequency.exponentialRampToValueAtTime(c.clickEndFreq, t + c.clickDuration);
+    this.combat.playerHit();
   }
 
   ui(kind: UiSoundKind): void {
@@ -95,20 +86,18 @@ export class OneShots {
 
   private gunShot(pos: Readonly<Position> | null, gain: number): void {
     const c = GUN_SOUND;
-    const v = this.voice(c.duration, pos);
+    const th = c.thump;
+    const duration = Math.max(c.duration, th.duration);
+    const v = this.voice(duration, pos);
     if (!v) return;
     const t = this.engine.now;
-    // ローパスなので低域のクリックもそのまま通る
-    v.filter.type = 'lowpass';
-    v.filter.frequency.setValueAtTime(c.noiseCutoff, t);
-    v.filter.Q.setValueAtTime(c.noiseQ, t);
-    envelope(v, t, 0.001, gain, c.duration);
-    this.noise(v, t, c.duration);
-    const osc = this.osc(v, 'sine', c.clickFreq, t, c.duration);
+    // ノイズ + 低域のクリックは 4-4 のまま（ローパスなのでクリックもそのまま通る）。重さの低域パルスは別の層で長く（4-12b）
+    this.kit.open(v, t, gain, duration);
+    const burst = this.kit.layer(v, t, 'lowpass', c.noiseCutoff, c.noiseQ, 1, 0.001, c.duration);
+    this.kit.noise(v, t, c.duration, burst.filter);
+    const osc = this.osc(v, 'sine', c.clickFreq, t, c.duration, burst.filter);
     osc.frequency.exponentialRampToValueAtTime(c.clickEndFreq, t + c.duration);
-    // 重さの低域パルス（4-12）
-    const th = c.thump;
-    this.combat.thump(v, t, th.startFreq, th.endFreq, th.duration, th.cutoff, th.gain);
+    this.combat.thump(v, t, th);
   }
 
   /** 低域のインパルス（サイン波の下降）+ ローパスのノイズの減衰 */
@@ -166,7 +155,8 @@ export class OneShots {
     freq: number,
     t: number,
     duration: number,
+    dest?: AudioNode,
   ): OscillatorNode {
-    return this.kit.osc(v, type, freq, t, duration);
+    return this.kit.osc(v, type, freq, t, duration, dest);
   }
 }

@@ -139,14 +139,23 @@ export const POST_CONFIG = {
   samples: 4,
 } as const;
 
-/** 影（太陽光のシャドウマップ）。画質「中」以上。解像度は src/data/quality.ts の shadowMapSize */
+/**
+ * 影（太陽光のシャドウマップ）。画質「中」以上。解像度は src/data/quality.ts の shadowMapSize。
+ * 4-12b: 範囲を 600 → 250m に狭めた（1 テクセル 0.59 → 0.24m（中 1024）。機体の影が数テクセル幅しかなく、
+ * 縁のディザだけが点線の輪郭に見えていた）。bias -0.0004 → -0.0003、normalBias 0.6 → 0.25（約 1 テクセル）
+ */
 export const SHADOW_CONFIG = {
-  /** 影を計算する範囲（機体を中心にした一辺。m） */
-  range: 600,
+  /** 影を計算する範囲（機体を中心にした一辺。m）。機体の影が主目的なので狭く */
+  range: 250,
   /** 光源をどれだけ離すか（影の奥行きの範囲。機体の上下に range 程度あれば足りる） */
   distance: 800,
-  bias: -0.0004,
-  normalBias: 0.6,
+  bias: -0.0003,
+  normalBias: 0.25,
+  /**
+   * PCF のぼかしの半径（テクセル）。three r186 では PCFSoftShadowMap が廃止されて PCF に戻されるので、
+   * 柔らかさはこの半径と、タップの回し方を画素ごとに変えない設定（src/render/shadow-filter.ts）で出す
+   */
+  radius: 1.5,
 } as const;
 
 /**

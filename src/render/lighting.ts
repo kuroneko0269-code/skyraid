@@ -4,6 +4,7 @@ import { SHADOW_CONFIG } from '../data/sky';
 import type { Vec3 } from '../flight/math';
 import type { Atmosphere } from './atmosphere';
 import type { Rgb } from './atmosphere-model';
+import { installStableShadowFilter } from './shadow-filter';
 
 /**
  * 太陽光と半球ライト。影は機体を中心にした range 四方だけを計算し、光源を中心に追従させる
@@ -29,6 +30,9 @@ export class SceneLights {
     cam.far = s.distance * 2;
     this.sun.shadow.bias = s.bias;
     this.sun.shadow.normalBias = s.normalBias;
+    this.sun.shadow.radius = s.radius;
+    // 縁を点のディザにしない（4-12b）。最初の描画でシェーダーをコンパイルする前に
+    installStableShadowFilter();
     this.sun.shadow.autoUpdate = true;
     scene.add(this.sun, this.sun.target, this.hemi);
     this.applyLighting();

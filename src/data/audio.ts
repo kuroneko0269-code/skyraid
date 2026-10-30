@@ -45,46 +45,109 @@ export const WIND_SOUND = {
   stall: { cutoffScale: 0.45, q: 5, gainAdd: 0.05 },
 } as const;
 
+/** 低域のパルス（機銃の発射音の重さ・命中音のドン・被弾の衝撃）。hold 秒保ってから duration までに消える */
+export interface ThumpSound {
+  readonly startFreq: number;
+  readonly endFreq: number;
+  readonly duration: number;
+  readonly hold: number;
+  /** ローパス（三角波の倍音をどこまで通すか） */
+  readonly cutoff: number;
+  readonly gain: number;
+  /**
+   * 波形。三角波は 3 倍音（-19dB）が 200〜400Hz に乗り、低域の出ないスマホのスピーカーでも基音の高さが聞こえる
+   * （4-12b。サイン波だとスマホでは消え、ノイズの「チュ」だけが残る）
+   */
+  readonly wave: OscillatorType;
+}
+
 /**
- * 機銃: 短いノイズのバースト（ローパス）+ 低域のクリック（サイン波の急な下降）+ 重さの低域パルス（4-12。サイン波 120 → 80Hz を
- * 0.05 秒、ローパス 400Hz）。連射で重ねる
+ * 機銃: 短いノイズのバースト（ローパス）+ 低域のクリック（サイン波の急な下降）+ 重さの低域パルス（4-12。4-12b で
+ * 三角波 120 → 80Hz を 0.08 秒・保持 0.03 秒・音量 1.6 倍に。スマホで「チュチュ」と軽く聞こえたため。全体の音量は
+ * 0.32 → 0.21 にして、命中音 (a) がピークで 6dB 以上大きくなるようにした）。連射で重ねる
  */
-export const GUN_SOUND = {
+export const GUN_SOUND: {
+  readonly duration: number;
+  readonly noiseCutoff: number;
+  readonly noiseQ: number;
+  readonly clickFreq: number;
+  readonly clickEndFreq: number;
+  readonly gain: number;
+  readonly thump: ThumpSound;
+  readonly maxPerFrame: number;
+  readonly enemyGain: number;
+  readonly enemyInterval: number;
+} = {
   duration: 0.07,
   noiseCutoff: 3200,
   noiseQ: 0.7,
   clickFreq: 140,
   clickEndFreq: 45,
-  gain: 0.32,
-  thump: { startFreq: 120, endFreq: 80, duration: 0.05, cutoff: 400, gain: 0.9 },
+  gain: 0.21,
+  thump: {
+    startFreq: 120,
+    endFreq: 80,
+    duration: 0.08,
+    hold: 0.03,
+    cutoff: 400,
+    gain: 1.45,
+    wave: 'triangle',
+  },
   /** 1 描画フレームで鳴らす最大の発数（低 fps で一度にたくさん重ねない） */
   maxPerFrame: 2,
   /** 敵機の機銃（位置つき）。1 機あたりこの間隔より詰めて鳴らさない */
   enemyGain: 0.5,
   enemyInterval: 0.09,
-} as const;
+};
 
 /**
- * 機銃の命中音（4-12。自機の弾が対象に当たったとき。定位なしの手応え）: 金属の衝撃（200〜400Hz の部分音 3 つ + 300Hz の
- * 鋭いバンドパスのノイズが 0.12 秒で減衰）+ 高域のクラック（ハイパス 3500Hz のノイズ 18ms）+ 低域のドン（サイン波 90 → 60Hz、40ms）。
- * 連続ヒットはソフトのコンプ: 直近のヒットの量（1 発ごとに +1、時定数 compressTau 秒で減る）を n として音量を 1 / √(1 + n) にする
+ * 機銃の命中音 (a)（4-12。自機の弾が敵・目標に当たったとき。定位なしの手応え）: 金属の衝撃（200〜400Hz の部分音 3 つ +
+ * 300Hz のバンドパスのノイズ）+ 高域のクラック（ハイパス 3500Hz のノイズ 18ms）+ 低域のドン（三角波 110 → 55Hz）。
+ * 4-12b: ピークを発射音より 6dB 以上大きく（ドンを保持つきで長く、金属のノイズの Q を下げて太く）。
+ * 連続ヒットはソフトのコンプ: 直近のヒットの量（1 発ごとに +1、時定数 compressTau 秒で減る）を n として
+ * 音量を max(minGain, 1 / √(1 + n)) にする（連射中も重さを残す）
  */
-export const GUN_HIT_SOUND = {
-  gain: 0.5,
+export const GUN_HIT_SOUND: {
+  readonly gain: number;
+  readonly metal: {
+    readonly partials: readonly number[];
+    readonly partialGain: number;
+    readonly noiseFreq: number;
+    readonly noiseQ: number;
+    readonly noiseGain: number;
+    readonly decay: number;
+  };
+  readonly crack: { readonly cutoff: number; readonly duration: number; readonly gain: number };
+  readonly thump: ThumpSound;
+  readonly compressTau: number;
+  readonly minGain: number;
+  readonly minInterval: number;
+} = {
+  gain: 0.68,
   metal: {
     partials: [230, 310, 385],
-    partialGain: 0.22,
+    partialGain: 0.6,
     noiseFreq: 300,
-    noiseQ: 14,
-    noiseGain: 1.4,
-    decay: 0.12,
+    noiseQ: 5,
+    noiseGain: 2.6,
+    decay: 0.16,
   },
-  crack: { cutoff: 3500, duration: 0.018, gain: 0.7 },
-  thump: { startFreq: 90, endFreq: 60, duration: 0.04, gain: 0.9 },
+  crack: { cutoff: 3500, duration: 0.018, gain: 0.5 },
+  thump: {
+    startFreq: 110,
+    endFreq: 55,
+    duration: 0.13,
+    hold: 0.035,
+    cutoff: 400,
+    gain: 1.5,
+    wave: 'triangle',
+  },
   compressTau: 0.25,
+  /** コンプの下限（4-12b。1/√(1+n) は 15 発/秒で 0.44 まで下がり、連射中に軽くなった） */
+  minGain: 0.6,
   /** これより詰めて鳴らさない（1 描画フレームに何発当たっても 1 回） */
   minInterval: 0.03,
-} as const;
+};
 
 /**
  * ミサイル発射（4-12 で 3 層に）: 点火のクラック（ハイパス 1500Hz のノイズ 30ms）→ 低域のうなり（鋸波 80 → 50Hz・ローパス 220Hz、
@@ -166,14 +229,26 @@ export const WARNING_SOUND: {
   },
 };
 
-/** 被弾（自機）: 金属的なクリック（矩形波の短い下降）+ 短いハイパスのノイズ */
-export const HIT_SOUND = {
-  clickFreq: 2300,
-  clickEndFreq: 900,
-  clickDuration: 0.04,
-  noiseCutoff: 2600,
-  noiseDuration: 0.09,
-  gain: 0.45,
+/**
+ * 被弾 (b)（敵の弾が自機に当たったとき。定位なし）: コックピットの中で聞く近い衝撃。強い低域（三角波 80 → 38Hz）+
+ * 機体の共鳴（170Hz の狭いバンドパスのノイズ）+ 短いこもったノイズ（ローパス 650Hz）。高域は入れない。
+ * 4-12b で作り直した（4-4 の矩形波 2300 → 900Hz のクリックは「チュ」と軽く、命中音 (a) とも区別がつかなかった）。
+ * 命中音 (a) より大きく、低い
+ */
+export const PLAYER_HIT_SOUND = {
+  gain: 0.7,
+  duration: 0.2,
+  impact: {
+    startFreq: 80,
+    endFreq: 38,
+    duration: 0.2,
+    hold: 0.045,
+    cutoff: 260,
+    gain: 1.6,
+    wave: 'triangle',
+  } satisfies ThumpSound,
+  hull: { freq: 170, q: 4, gain: 2.4, decay: 0.16 },
+  muffle: { cutoff: 650, duration: 0.07, hold: 0.012, gain: 1.3 },
 } as const;
 
 /** 対空砲（位置つき）: 砲声とフラックの破裂。爆発の small より軽い */

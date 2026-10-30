@@ -1,4 +1,5 @@
 // 戦闘の手応えの音（4-12）: 機銃の命中音（コンプ）・発射音の低域・ミサイル発射の 3 層とドップラー・撃墜の音。
+// 4-12b: 命中音 (a) と被弾 (b) を別の音に、コンプの下限、発射音の低域パルスを 80ms に。
 // 実音は鳴らさず、モックの AudioContext に作られたノードと周波数の予定を確かめる
 import { describe, expect, it } from 'vitest';
 import { AudioEngine } from '../src/audio/engine';
@@ -9,7 +10,13 @@ import {
   missileSweep,
 } from '../src/audio/params';
 import { OneShots } from '../src/audio/sfx/oneshots';
-import { GUN_HIT_SOUND, GUN_SOUND, KILL_SOUND, MISSILE_SOUND } from '../src/data/audio';
+import {
+  GUN_HIT_SOUND,
+  GUN_SOUND,
+  KILL_SOUND,
+  MISSILE_SOUND,
+  PLAYER_HIT_SOUND,
+} from '../src/data/audio';
 import { MISSIONS } from '../src/data/missions';
 import { missionDifficultyText } from '../src/ui/mission-text';
 import { asContext, MockAudioContext } from './audio-mock';
@@ -46,11 +53,11 @@ describe('命中音のコンプ', () => {
     const gains: number[] = [];
     for (let i = 1; i <= 30; i++) gains.push(hitCompression(c, i / 15));
     expect(gains[0]).toBeLessThan(1);
-    // 落ち着いた音量（約 0.45）より下がり続けない。音の重なり（0.12 秒 ≒ 2 発）を足しても 1 発目と同程度
+    // 1/√(1+n) は 15 発/秒で約 0.45 まで下がるが、下限 minGain（0.6）で止まる（4-12b。連射中も重さを残す）
     const steady = gains[gains.length - 1] ?? 0;
-    expect(steady).toBeGreaterThan(0.4);
-    expect(steady).toBeLessThan(0.5);
-    expect(steady * (GUN_HIT_SOUND.metal.decay * 15)).toBeLessThan(1.1);
+    expect(GUN_HIT_SOUND.minGain).toBe(0.6);
+    expect(steady).toBe(GUN_HIT_SOUND.minGain);
+    expect(Math.min(...gains)).toBe(GUN_HIT_SOUND.minGain);
     // 1 秒空けばほぼ戻る
     expect(hitCompression(c, 3)).toBeGreaterThan(0.95);
   });
@@ -64,28 +71,60 @@ describe('命中音のコンプ', () => {
 });
 
 describe('機銃の命中音・発射音', () => {
-  it('命中音: 200〜400Hz の部分音 3 つ + 低域のドン（90 → 60Hz）。ノイズは共鳴とクラックの 2 本', () => {
+  it('命中音 (a): 200〜400Hz の部分音 3 つ + 低域のドン（三角波 110 → 55Hz）。ノイズは共鳴とクラックの 2 本', () => {
     const { shots, ctx } = setup();
     shots.gunHit();
     const osc = oscillators(ctx);
-    const partials = osc.filter(([type]) => type === 'triangle').map(([, f]) => f);
-    expect(partials).toEqual([...GUN_HIT_SOUND.metal.partials]);
-    for (const f of partials) {
+    const th = GUN_HIT_SOUND.thump;
+    const partials = osc.filter(([, start, end]) => start === end).map(([type, f]) => [type, f]);
+    expect(partials).toEqual(GUN_HIT_SOUND.metal.partials.map((f) => ['triangle', f]));
+    for (const [, f] of partials) {
       expect(f).toBeGreaterThanOrEqual(200);
       expect(f).toBeLessThanOrEqual(400);
     }
-    expect(osc.filter(([type]) => type === 'sine')).toEqual([['sine', 90, 60]]);
+    expect(osc.filter(([, start, end]) => start !== end)).toEqual([
+      ['triangle', th.startFreq, th.endFreq],
+    ]);
+    expect([th.startFreq, th.endFreq]).toEqual([110, 55]);
     expect(ctx.sources.length - osc.length).toBe(2);
   });
 
-  it('発射音: 4-4 のノイズ + クリックに、80〜120Hz の短いパルスを足した', () => {
+  it('被弾 (b): 命中音 (a) と別の音。基音は (a) より低く、高域の音源（400Hz 超のオシレーター・ハイパス）を持たない', () => {
+    const { shots, ctx } = setup();
+    const made: { type: string; frequency: { value: number } }[] = [];
+    const create = ctx.createBiquadFilter.bind(ctx);
+    ctx.createBiquadFilter = () => {
+      const f = create();
+      made.push(f);
+      return f;
+    };
+    shots.hit();
+    const osc = oscillators(ctx);
+    const im = PLAYER_HIT_SOUND.impact;
+    expect(osc).toEqual([['triangle', im.startFreq, im.endFreq]]);
+    expect(im.startFreq).toBeLessThan(GUN_HIT_SOUND.thump.startFreq);
+    // 強い低域・機体の共鳴・こもったノイズ（ノイズ 2 本）。ハイパス（クリック・クラック）は使わない
+    expect(ctx.sources.length - osc.length).toBe(2);
+    const layers = made.slice(-3);
+    expect(layers.map((f) => f.type)).toEqual(['lowpass', 'bandpass', 'lowpass']);
+    for (const f of layers) expect(f.frequency.value).toBeLessThanOrEqual(700);
+    // コックピットの中の近い衝撃なので (a) より長く大きい
+    expect(PLAYER_HIT_SOUND.gain * im.gain).toBeGreaterThan(
+      GUN_HIT_SOUND.gain * GUN_HIT_SOUND.thump.gain,
+    );
+    expect(im.duration).toBeGreaterThan(GUN_HIT_SOUND.thump.duration);
+  });
+
+  it('発射音: 4-4 のノイズ + クリックに、80〜120Hz の低域パルス（4-12b で 80ms・保持つき）を足した', () => {
     const { shots, ctx } = setup();
     shots.gun();
     const osc = oscillators(ctx);
     expect(osc).toEqual([
       ['sine', GUN_SOUND.clickFreq, GUN_SOUND.clickEndFreq],
-      ['sine', 120, 80],
+      ['triangle', 120, 80],
     ]);
+    expect(GUN_SOUND.thump.duration).toBe(0.08);
+    expect(GUN_SOUND.thump.hold).toBeGreaterThan(0);
   });
 
   it('ボイスを使い回すとき、前の音の層（フィルタ・音量）を外す', () => {
@@ -170,5 +209,23 @@ describe('ミッション一覧の難易度の表記', () => {
       '普',
       '易',
     ]);
+  });
+});
+
+describe('音量の包絡の保持（4-12b）', () => {
+  it('hold 秒は peak を保ってから SILENT へ落とす（hold 0 なら 4-4 と同じ 3 点）', async () => {
+    const { decayEnvelope, SILENT } = await import('../src/audio/sfx/kit');
+    const { MockParam } = await import('./audio-mock');
+    const g = new MockParam();
+    decayEnvelope(g as unknown as AudioParam, 1, 0.002, 0.8, 0.08, 0.03);
+    expect(g.events).toEqual([
+      { type: 'set', value: SILENT, time: 1 },
+      { type: 'exp', value: 0.8, time: 1.002 },
+      { type: 'set', value: 0.8, time: 1.032 },
+      { type: 'exp', value: SILENT, time: 1.08 },
+    ]);
+    const h = new MockParam();
+    decayEnvelope(h as unknown as AudioParam, 0, 0.001, 1, 0.07);
+    expect(h.events.map((e) => e.type)).toEqual(['set', 'exp', 'exp']);
   });
 });

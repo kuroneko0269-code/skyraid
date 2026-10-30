@@ -1,6 +1,13 @@
-// 戦闘の手応えの効果音（4-12）: 機銃の命中音・ミサイル発射（3 層 + ドップラー）・撃墜の「金属が裂ける」音。
-// 数値は src/data/audio.ts の GUN_HIT_SOUND / MISSILE_SOUND / KILL_SOUND、ドップラーとコンプの式は ../params.ts
-import { GUN_HIT_SOUND, KILL_SOUND, MISSILE_SOUND } from '../../data/audio';
+// 戦闘の手応えの効果音（4-12）: 機銃の命中音 (a)・自機の被弾 (b)（4-12b）・ミサイル発射（3 層 + ドップラー）・
+// 撃墜の「金属が裂ける」音。数値は src/data/audio.ts の GUN_HIT_SOUND / PLAYER_HIT_SOUND / MISSILE_SOUND / KILL_SOUND、
+// ドップラーとコンプの式は ../params.ts
+import {
+  GUN_HIT_SOUND,
+  KILL_SOUND,
+  MISSILE_SOUND,
+  PLAYER_HIT_SOUND,
+  type ThumpSound,
+} from '../../data/audio';
 import { missileSweep } from '../params';
 import type { Voice } from '../voices';
 import { SILENT, type Position, type SfxKit } from './kit';
@@ -9,16 +16,16 @@ export class CombatSounds {
   constructor(private readonly kit: SfxKit) {}
 
   /**
-   * 機銃の命中音（定位なし）。gain はコンプの倍率（params.ts の hitCompression）を掛けた音量。
-   * 金属の衝撃（200〜400Hz の部分音 + 300Hz の鋭いバンドパスのノイズ）+ 高域のクラック + 低域のドン
+   * 機銃の命中音 (a)（定位なし）。gain はコンプの倍率（params.ts の hitCompression）を掛けた音量。
+   * 金属の衝撃（200〜400Hz の部分音 + 300Hz のバンドパスのノイズ）+ 高域のクラック + 低域のドン
    */
   gunHit(gain: number): void {
     const c = GUN_HIT_SOUND;
     const k = this.kit;
-    const v = k.voice(c.metal.decay, null);
+    const v = k.voice(Math.max(c.metal.decay, c.thump.duration), null);
     if (!v) return;
     const t = k.now;
-    k.open(v, t, c.gain * gain, c.metal.decay);
+    k.open(v, t, c.gain * gain, Math.max(c.metal.decay, c.thump.duration));
     const m = c.metal;
     const ring = k.layer(v, t, 'bandpass', m.noiseFreq, m.noiseQ, m.noiseGain, 0.001, m.decay);
     k.noise(v, t, m.decay, ring.filter);
@@ -27,23 +34,34 @@ export class CombatSounds {
     const cr = c.crack;
     const crack = k.layer(v, t, 'highpass', cr.cutoff, 0.7, cr.gain, 0.0005, cr.duration);
     k.noise(v, t, cr.duration, crack.filter);
-    this.thump(v, t, c.thump.startFreq, c.thump.endFreq, c.thump.duration, 300, c.thump.gain);
+    this.thump(v, t, c.thump);
   }
 
-  /** 低域のパルス（サイン波の下降。機銃の発射音の重さ・命中音のドン） */
-  thump(
-    v: Voice,
-    t: number,
-    startFreq: number,
-    endFreq: number,
-    duration: number,
-    cutoff: number,
-    gain: number,
-  ): void {
+  /**
+   * 自機の被弾 (b)（4-12b。定位なし）: コックピットの中で聞く近い衝撃。強い低域 + 機体の共鳴 + 短いこもったノイズ
+   */
+  playerHit(): void {
+    const c = PLAYER_HIT_SOUND;
     const k = this.kit;
-    const l = k.layer(v, t, 'lowpass', cutoff, 0.7, gain, 0.002, duration);
-    const o = k.osc(v, 'sine', startFreq, t, duration, l.filter);
-    o.frequency.exponentialRampToValueAtTime(endFreq, t + duration);
+    const v = k.voice(c.duration, null);
+    if (!v) return;
+    const t = k.now;
+    k.open(v, t, c.gain, c.duration);
+    this.thump(v, t, c.impact);
+    const h = c.hull;
+    const hull = k.layer(v, t, 'bandpass', h.freq, h.q, h.gain, 0.002, h.decay);
+    k.noise(v, t, h.decay, hull.filter);
+    const mu = c.muffle;
+    const muffle = k.layer(v, t, 'lowpass', mu.cutoff, 0.8, mu.gain, 0.001, mu.duration, mu.hold);
+    k.noise(v, t, mu.duration, muffle.filter);
+  }
+
+  /** 低域のパルス（下降する周波数。機銃の発射音の重さ・命中音のドン・被弾の衝撃） */
+  thump(v: Voice, t: number, c: ThumpSound): void {
+    const k = this.kit;
+    const l = k.layer(v, t, 'lowpass', c.cutoff, 0.7, c.gain, 0.002, c.duration, c.hold);
+    const o = k.osc(v, c.wave, c.startFreq, t, c.duration, l.filter);
+    o.frequency.exponentialRampToValueAtTime(c.endFreq, t + c.duration);
   }
 
   /**

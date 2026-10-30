@@ -52,6 +52,18 @@ export class PlayerView {
   }
 
   /**
+   * リスポーン（撃墜・墜落。4-12b）: 機体を新しい位置・姿勢へ補間なしで置き、飛行機雲を前の位置からつながない。
+   * 炎・陽炎は機体の子なので一緒に移る。飛行機雲の残りは消さない（撃墜された空に残す）
+   */
+  respawn(aircraft: Aircraft): void {
+    const s = aircraft.state;
+    applyInterpolatedPose(this.mesh, s.position, s.position, s.orientation, s.orientation, 1);
+    this.mesh.updateMatrixWorld(true);
+    this.hasPrev = false;
+    this.model.neutral();
+  }
+
+  /**
    * 描画フレームごとに呼ぶ（飛行中）。前ステップと現ステップの間を alpha で補間して置き、操舵面・残りのミサイル・
    * 炎・飛行機雲を合わせる。dt は演出の時間（ポーズ中 0）
    */

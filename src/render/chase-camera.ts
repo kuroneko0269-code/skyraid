@@ -1,7 +1,7 @@
 import type { Object3D, PerspectiveCamera } from 'three';
 import { CAMERA_CONFIG, type CameraConfig } from '../data/camera';
 import type { Vec3 } from '../flight/math';
-import { CameraRig, type CameraMode, type CameraTarget } from './camera-rig';
+import { CameraRig, type CameraMode, type CameraPose, type CameraTarget } from './camera-rig';
 
 /** 機体メッシュ（補間済みの姿勢）以外にカメラが使う飛行状態 */
 export interface CameraFlightState {
@@ -47,6 +47,29 @@ export class ChaseCamera {
     dt: number,
     focus: Readonly<Vec3> | null = null,
   ): void {
+    const t = this.setTarget(mesh, flight);
+    this.rig.focus = focus;
+    this.rig.aspect = this.camera.aspect;
+    this.apply(this.rig.update(t, groundHeight, dt));
+  }
+
+  /**
+   * リスポーン（撃墜・墜落。4-12b）: 機体の新しい位置・姿勢へ今すぐ移す。スプリング・ターゲットカメラの寄せ・揺れを捨て、
+   * 次の描画を待たずにカメラを置く（次のフレームの地面の高さもカメラの新しい位置で引ける）。
+   * mesh は新しい位置に置き直した機体、groundAt は地面の高さ
+   */
+  snapTo(
+    mesh: Object3D,
+    flight: CameraFlightState,
+    groundAt: (x: number, z: number) => number,
+  ): void {
+    const t = this.setTarget(mesh, flight);
+    this.rig.aspect = this.camera.aspect;
+    // カメラは機体の数十 m 後ろなので、機体の真下の地面の高さで足りる
+    this.apply(this.rig.snapTo(t, groundAt(mesh.position.x, mesh.position.z)));
+  }
+
+  private setTarget(mesh: Object3D, flight: CameraFlightState): CameraTarget {
     const t = this.target;
     t.position = mesh.position;
     t.orientation = mesh.quaternion;
@@ -54,11 +77,11 @@ export class ChaseCamera {
     t.afterburnerActive = flight.afterburnerActive;
     t.stall = flight.stall;
     t.angularRate = flight.angularRate;
+    return t;
+  }
 
+  private apply(pose: Readonly<CameraPose>): void {
     const camera = this.camera;
-    this.rig.focus = focus;
-    this.rig.aspect = camera.aspect;
-    const pose = this.rig.update(t, groundHeight, dt);
     camera.position.set(pose.position.x, pose.position.y, pose.position.z);
     camera.up.set(pose.up.x, pose.up.y, pose.up.z);
     camera.lookAt(pose.lookAt.x, pose.lookAt.y, pose.lookAt.z);

@@ -158,12 +158,14 @@ play.onRunnerChange((runner) => {
   // 成功の記録と報酬をセーブへ（3-2）
   if (runner) bindMissionRewards(runner.bus, save, screens.progress);
 });
-// 撃墜（地面への墜落も）されたら揺らし、リスポーンしたらカメラを寄せ直す
+// 撃墜（地面への墜落も）されたら揺らし、リスポーンしたら機体とカメラを新しい位置へすぐ移す（4-12b。
+// 次の描画を待つと、揺れ・地面の高さ・飛行機雲が撃墜された場所のまま 1 フレーム残る）
 session.onPlayerDown(() => {
   chaseCamera.addImpact();
 });
 session.onRespawn(() => {
-  chaseCamera.snap();
+  playerView.respawn(aircraft);
+  chaseCamera.snapTo(aircraftMesh, aircraft.state, getGroundHeight);
 });
 const combatInput = createCombatInput();
 // 武器の操作（タッチ・パッドの長押しで兵装の切替・爆弾。2-6）

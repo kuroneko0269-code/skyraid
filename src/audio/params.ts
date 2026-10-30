@@ -157,19 +157,20 @@ export function createHitCompressor(): HitCompressor {
 }
 
 /**
- * 時刻 now に命中音を鳴らすときの音量の倍率（1 / √(1 + 直近のヒットの量)）。量は 1 発ごとに +1、時定数 tau 秒で減る。
- * 最後に鳴らしてから minInterval 未満なら 0（鳴らさない。量も増やさない）
+ * 時刻 now に命中音を鳴らすときの音量の倍率（max(minGain, 1 / √(1 + 直近のヒットの量))）。量は 1 発ごとに +1、
+ * 時定数 tau 秒で減る。最後に鳴らしてから minInterval 未満なら 0（鳴らさない。量も増やさない）
  */
 export function hitCompression(
   c: HitCompressor,
   now: number,
   tau: number = GUN_HIT_SOUND.compressTau,
   minInterval: number = GUN_HIT_SOUND.minInterval,
+  minGain: number = GUN_HIT_SOUND.minGain,
 ): number {
   const dt = now - c.last;
   if (dt < minInterval) return 0;
   c.level = Number.isFinite(dt) ? c.level * Math.exp(-dt / tau) : 0;
-  const gain = 1 / Math.sqrt(1 + c.level);
+  const gain = Math.max(minGain, 1 / Math.sqrt(1 + c.level));
   c.level += 1;
   c.last = now;
   return gain;

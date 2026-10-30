@@ -106,6 +106,17 @@ export class CameraRig {
     this.targetFocus.reset();
   }
 
+  /**
+   * 機体の新しい位置・姿勢へ今すぐ移す（リスポーン。4-12b）。位置・注視点・ロールのスプリング、ターゲットカメラの寄せ、
+   * 揺れを捨てて、機体の後方の標準オフセットに置いた pose を返す。groundHeight はカメラ直下の地面の高さ（m）
+   */
+  snapTo(target: CameraTarget, groundHeight: number): Readonly<CameraPose> {
+    this.snap();
+    this.shake.reset();
+    // dt 0: スプリングは目標そのもの、寄せは 0 のまま、揺れも足さない
+    return this.update(target, groundHeight, 0);
+  }
+
   toggleMode(): CameraMode {
     const i = CAMERA_MODES.indexOf(this.mode);
     this.mode = CAMERA_MODES[(i + 1) % CAMERA_MODES.length] ?? 'chase';
