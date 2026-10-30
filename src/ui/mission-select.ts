@@ -4,7 +4,7 @@ import type { Locale } from '../core/locale';
 import type { MissionDef } from '../missions/types';
 import type { CampaignProgress } from '../progression/campaign-progress';
 import { el } from './hud-dom';
-import { formatCredits, missionStrings } from './mission-text';
+import { formatCredits, missionDifficultyText, missionStrings } from './mission-text';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 interface Entry {
@@ -43,6 +43,9 @@ export class MissionSelectScreen {
       });
       const head = el('span', 'mission-entry-head', button);
       el('span', 'mission-entry-no', head, `MISSION ${String(i + 1).padStart(2, '0')}`);
+      // 難易度（4-12）。例「入門」「易〜普」
+      const level = missionDifficultyText(m);
+      if (level) el('span', 'mission-entry-level', head, level);
       const status = el('span', 'mission-entry-status', head);
       el('span', 'mission-entry-title', button, missionStrings(m.id, locale).title);
       this.entries.push({ mission: m, button, status });

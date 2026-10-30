@@ -1,36 +1,32 @@
 // 単発の合成効果音（4-4）: 機銃・ミサイル発射・爆発（規模 4 段階）・被弾・対空砲（砲声・フラック）・UI（タップ・決定・購入）。
+// 4-12 で機銃の命中音・撃墜の音を足し、ミサイル発射を 3 層に（sfx/combat-sounds.ts）。
 // どれも VoicePool のボイス（フィルタ → 音量 →（パンナー →）効果音のバス）に、ノイズ（共有バッファ）とオシレーターをつないで鳴らす。
 // pos を渡した音は 3D 配置（敵機・爆発・対空砲）、渡さない音は自機・UI（定位なし）
-import {
-  AAA_SOUND,
-  GUN_SOUND,
-  HIT_SOUND,
-  MISSILE_SOUND,
-  SPATIAL_CONFIG,
-  UI_SOUND,
-} from '../../data/audio';
+import { AAA_SOUND, GUN_SOUND, HIT_SOUND, UI_SOUND } from '../../data/audio';
 import type { ExplosionScale } from '../../data/fx';
 import type { AudioEngine } from '../engine';
-import { explosionSound } from '../params';
+import { createHitCompressor, explosionSound, hitCompression } from '../params';
 import type { Voice } from '../voices';
+import { CombatSounds } from './combat-sounds';
+import { SfxKit, envelope, type Position } from './kit';
 
-export interface Position {
-  x: number;
-  y: number;
-  z: number;
-}
+export type { Position } from './kit';
 
 export type UiSoundKind = 'tap' | 'confirm' | 'purchase';
 
-/** 指数減衰の下限（0 にはできない） */
-const SILENT = 0.0001;
-
 export class OneShots {
-  constructor(
-    private readonly engine: AudioEngine,
-    /** リスナーの位置（遠すぎる音は鳴らさない） */
-    private readonly listener: Readonly<Position>,
-  ) {}
+  private readonly kit: SfxKit;
+  private readonly combat: CombatSounds;
+  private readonly hitComp = createHitCompressor();
+
+  constructor(engine: AudioEngine, listener: Readonly<Position>) {
+    this.kit = new SfxKit(engine, listener);
+    this.combat = new CombatSounds(this.kit);
+  }
+
+  private get engine(): AudioEngine {
+    return this.kit.engine;
+  }
 
   gun(): void {
     this.gunShot(null, GUN_SOUND.gain);
@@ -41,15 +37,19 @@ export class OneShots {
   }
 
   missileLaunch(pos: Readonly<Position> | null): void {
-    const c = MISSILE_SOUND;
-    const v = this.voice(c.duration, pos);
-    if (!v) return;
-    const t = this.engine.now;
-    v.filter.type = 'lowpass';
-    v.filter.frequency.setValueAtTime(c.startCutoff, t);
-    v.filter.frequency.exponentialRampToValueAtTime(c.endCutoff, t + c.duration);
-    envelope(v, t, 0.02, c.gain, c.duration);
-    this.noise(v, t, c.duration);
+    this.combat.missileLaunch(pos);
+  }
+
+  /** 自機の機銃が対象に当たった（4-12）。続けて当たるほど 1 発の音量を下げる（ソフトのコンプ） */
+  gunHit(): void {
+    if (!this.engine.voices) return;
+    const gain = hitCompression(this.hitComp, this.engine.now);
+    if (gain > 0) this.combat.gunHit(gain);
+  }
+
+  /** 自機が敵側を撃墜した（4-12）: 金属が裂ける音 */
+  kill(): void {
+    this.combat.kill();
   }
 
   explosion(scale: ExplosionScale, pos: Readonly<Position> | null): void {
@@ -106,6 +106,9 @@ export class OneShots {
     this.noise(v, t, c.duration);
     const osc = this.osc(v, 'sine', c.clickFreq, t, c.duration);
     osc.frequency.exponentialRampToValueAtTime(c.clickEndFreq, t + c.duration);
+    // 重さの低域パルス（4-12）
+    const th = c.thump;
+    this.combat.thump(v, t, th.startFreq, th.endFreq, th.duration, th.cutoff, th.gain);
   }
 
   /** 低域のインパルス（サイン波の下降）+ ローパスのノイズの減衰 */
@@ -150,27 +153,11 @@ export class OneShots {
   }
 
   private voice(duration: number, pos: Readonly<Position> | null): Voice | null {
-    const pool = this.engine.voices;
-    if (!pool) return null;
-    if (pos) {
-      const l = this.listener;
-      const d = Math.hypot(pos.x - l.x, pos.y - l.y, pos.z - l.z);
-      if (d > SPATIAL_CONFIG.cullDistance) return null;
-    }
-    return pool.acquire(duration, pos);
+    return this.kit.voice(duration, pos);
   }
 
   private noise(v: Voice, t: number, duration: number): void {
-    const ctx = this.engine.ctx;
-    const buffer = this.engine.noise;
-    const pool = this.engine.voices;
-    if (!ctx || !buffer || !pool) return;
-    const src = ctx.createBufferSource();
-    src.buffer = buffer;
-    // 毎回違う場所から読んで同じ音に聞こえないように
-    const offset = Math.random() * Math.max(0, buffer.duration - duration);
-    pool.attach(v, src);
-    src.start(t, offset, duration + 0.02);
+    this.kit.noise(v, t, duration);
   }
 
   private osc(
@@ -180,23 +167,6 @@ export class OneShots {
     t: number,
     duration: number,
   ): OscillatorNode {
-    const ctx = this.engine.ctx;
-    const pool = this.engine.voices;
-    if (!ctx || !pool) throw new Error('AudioEngine が使えるようになってから鳴らす');
-    const o = ctx.createOscillator();
-    o.type = type;
-    o.frequency.setValueAtTime(freq, t);
-    pool.attach(v, o);
-    o.start(t);
-    o.stop(t + duration + 0.02);
-    return o;
+    return this.kit.osc(v, type, freq, t, duration);
   }
-}
-
-/** 音量の包絡: attack 秒で peak へ、duration で SILENT まで指数減衰 */
-function envelope(v: Voice, t: number, attack: number, peak: number, duration: number): void {
-  const g = v.amp.gain;
-  g.setValueAtTime(SILENT, t);
-  g.exponentialRampToValueAtTime(Math.max(SILENT, peak), t + attack);
-  g.exponentialRampToValueAtTime(SILENT, t + Math.max(attack + 0.01, duration));
 }

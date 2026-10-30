@@ -2,6 +2,7 @@
 // 古い版から SAVE_MIGRATIONS を順に通して今の版にし、normalizeSave で形と値を確かめる。
 // 壊れていたら null（呼ぶ側で初期値に戻す）。書き込み・イベントは save-store.ts
 import { DIFFICULTIES, FREE_FLIGHT_ENEMIES, type Difficulty } from '../data/ai';
+import { ASSIST_SETTINGS, type AssistKind } from '../data/assist';
 import { AUDIO_CONFIG } from '../data/audio';
 import { STARTER_AIRCRAFT, findAircraftModel } from '../data/aircraft';
 import { QUALITY_LEVELS, type QualityLevel } from '../data/quality';
@@ -35,6 +36,18 @@ export interface SaveSettings {
   hud: boolean;
   /** 音量（4-4。v3 から）: マスター / 効果音 / BGM。0〜1 */
   volume: VolumeSettings;
+  /** 操作補助（4-12。v4 から）: エイムアシスト / ターゲットカメラ / HUD 補助 */
+  assist: AssistSettings;
+}
+
+export type AssistSettings = Record<AssistKind, boolean>;
+
+export function defaultAssist(): AssistSettings {
+  return {
+    aim: ASSIST_SETTINGS.aim.defaultOn,
+    camera: ASSIST_SETTINGS.camera.defaultOn,
+    hud: ASSIST_SETTINGS.hud.defaultOn,
+  };
 }
 
 export interface VolumeSettings {
@@ -75,6 +88,7 @@ export function defaultSettings(): SaveSettings {
     difficulty: FREE_FLIGHT_ENEMIES.defaultDifficulty,
     hud: true,
     volume: defaultVolume(),
+    assist: defaultAssist(),
   };
 }
 
@@ -95,6 +109,8 @@ export function createInitialSave(): SaveData {
 
 type Json = Record<string, unknown>;
 
+const ASSIST_KINDS: readonly AssistKind[] = ['aim', 'camera', 'hud'];
+
 /** v1 までの初期機の id（v2 で kestrel に改名） */
 const V1_STARTER_ID = 'starter';
 
@@ -103,6 +119,7 @@ const V1_STARTER_ID = 'starter';
  * - v0 → v1: 仕組みの確認用のダミー（版番号がなく、ランクを { id: ランク } で持つ想定の形。tests/save.test.ts）
  * - v1 → v2（3-3）: 強化 Lv を 1 つ下げる（v1 は Lv1〜5 で Lv1 が未強化、v2 は Lv0〜5）。初期機の id を starter → kestrel
  * - v2 → v3（4-4）: 設定に音量（settings.volume）を足す（初期値）
+ * - v3 → v4（4-12）: 設定に操作補助（settings.assist）を足す（初期値）。難易度は保存した値のまま
  */
 export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
   0: (d) => {
@@ -144,6 +161,10 @@ export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
   2: (d) => {
     if (!isObject(d.settings)) return d;
     return { ...d, version: 3, settings: { ...d.settings, volume: defaultVolume() } };
+  },
+  3: (d) => {
+    if (!isObject(d.settings)) return d;
+    return { ...d, version: 4, settings: { ...d.settings, assist: defaultAssist() } };
   },
 };
 
@@ -221,6 +242,13 @@ export function normalizeSave(d: Json): SaveData | null {
       sfx: volumeOr(v.sfx, d.sfx),
       bgm: volumeOr(v.bgm, d.bgm),
     };
+  }
+  if (isObject(s.assist)) {
+    const a = s.assist;
+    for (const k of ASSIST_KINDS) {
+      const v = a[k];
+      if (typeof v === 'boolean') set.assist[k] = v;
+    }
   }
   return save;
 }

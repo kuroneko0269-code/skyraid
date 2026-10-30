@@ -36,8 +36,17 @@ export class ChaseCamera {
     return this.rig.mode;
   }
 
-  /** dt は実時間（秒）。描画フレームごとに呼ぶ。groundHeight はカメラ直下の地面の高さ */
-  update(mesh: Object3D, flight: CameraFlightState, groundHeight: number, dt: number): void {
+  /**
+   * dt は実時間（秒）。描画フレームごとに呼ぶ。groundHeight はカメラ直下の地面の高さ。
+   * focus はターゲットカメラ（4-12）で寄せる対象の位置（null なら寄せない）
+   */
+  update(
+    mesh: Object3D,
+    flight: CameraFlightState,
+    groundHeight: number,
+    dt: number,
+    focus: Readonly<Vec3> | null = null,
+  ): void {
     const t = this.target;
     t.position = mesh.position;
     t.orientation = mesh.quaternion;
@@ -46,8 +55,10 @@ export class ChaseCamera {
     t.stall = flight.stall;
     t.angularRate = flight.angularRate;
 
-    const pose = this.rig.update(t, groundHeight, dt);
     const camera = this.camera;
+    this.rig.focus = focus;
+    this.rig.aspect = camera.aspect;
+    const pose = this.rig.update(t, groundHeight, dt);
     camera.position.set(pose.position.x, pose.position.y, pose.position.z);
     camera.up.set(pose.up.x, pose.up.y, pose.up.z);
     camera.lookAt(pose.lookAt.x, pose.lookAt.y, pose.lookAt.z);

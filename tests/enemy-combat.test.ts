@@ -203,9 +203,9 @@ describe('敵の設定の保存', () => {
     };
   }
 
-  it('未保存なら「敵あり・ふつう」、保存した値を読み戻せる', () => {
+  it('未保存なら「敵あり・やさしい」（4-12 で normal から）、保存した値を読み戻せる', () => {
     const s = memory();
-    expect(loadEnemySettings(s)).toEqual({ enabled: true, difficulty: 'normal' });
+    expect(loadEnemySettings(s)).toEqual({ enabled: true, difficulty: 'easy' });
     saveEnemySettings(s, { enabled: false, difficulty: 'hard' });
     expect(loadEnemySettings(s)).toEqual({ enabled: false, difficulty: 'hard' });
   });
@@ -213,7 +213,7 @@ describe('敵の設定の保存', () => {
   it('不正な値・読めないストレージは既定値', () => {
     const s = memory();
     s.data.set(ENEMY_SETTINGS_KEYS.difficulty, 'insane');
-    expect(loadEnemySettings(s).difficulty).toBe('normal');
+    expect(loadEnemySettings(s).difficulty).toBe('easy');
     const broken: StorageLike = {
       getItem: () => {
         throw new Error('denied');
@@ -222,7 +222,7 @@ describe('敵の設定の保存', () => {
         throw new Error('denied');
       },
     };
-    expect(loadEnemySettings(broken)).toEqual({ enabled: true, difficulty: 'normal' });
+    expect(loadEnemySettings(broken)).toEqual({ enabled: true, difficulty: 'easy' });
     expect(saveEnemySettings(broken, { enabled: true, difficulty: 'easy' })).toBe(false);
     expect(loadEnemySettings(null).enabled).toBe(true);
   });

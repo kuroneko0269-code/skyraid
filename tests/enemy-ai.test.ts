@@ -304,8 +304,8 @@ describe('状態遷移', () => {
 
 describe('難易度', () => {
   it('hard ほど反応が速く、狙いが正確で、ミサイルをよく使い、強く引ける', () => {
-    const [easy, normal, hard] = DIFFICULTIES.map((d) => DIFFICULTY_PRESETS[d]);
-    if (!easy || !normal || !hard) throw new Error('難易度が足りない');
+    const [rookie, easy, normal, hard] = DIFFICULTIES.map((d) => DIFFICULTY_PRESETS[d]);
+    if (!rookie || !easy || !normal || !hard) throw new Error('難易度が足りない');
     expect(hard.reactionSeconds).toBeLessThan(normal.reactionSeconds);
     expect(normal.reactionSeconds).toBeLessThan(easy.reactionSeconds);
     expect(hard.aimErrorDeg).toBeLessThan(normal.aimErrorDeg);
@@ -315,6 +315,7 @@ describe('難易度', () => {
     expect(hard.missileIntervalSeconds).toBeLessThan(easy.missileIntervalSeconds);
     expect(hard.maxG).toBeGreaterThan(normal.maxG);
     expect(normal.maxG).toBeGreaterThan(easy.maxG);
+    expect(easy.maxG).toBeGreaterThan(rookie.maxG);
   });
 
   it('発見から追尾に移るまでの時間は反応時間で決まる（hard は easy より速い）', () => {

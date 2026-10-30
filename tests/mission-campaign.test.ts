@@ -235,7 +235,7 @@ describe('初期ミッションの通し（シード固定のボット）', () =
     ]);
   });
 
-  it('M2 初陣（1 機ずつ 20 秒差・最初の 1 機は easy）の成功率: 8 シードで 熟練者役 2/8・平均的 0/8（docs/decisions.md の 4-7 に記録）', () => {
+  it('M2 初陣（1 機ずつ 20 秒差・最初の 1 機は easy）の成功率: 8 シードで 熟練者役 1/8・平均的 0/8（4-12 で easy を緩めた後。4-7 では 2/8・0/8。docs/decisions.md の 4-12）', () => {
     const rate = (skill: typeof VETERAN): number => {
       let ok = 0;
       for (let seed = 1; seed <= 8; seed++) {
@@ -256,7 +256,7 @@ describe('初期ミッションの通し（シード固定のボット）', () =
       }
       return ok;
     };
-    expect([rate(VETERAN), rate(AVERAGE)]).toEqual([2, 0]);
+    expect([rate(VETERAN), rate(AVERAGE)]).toEqual([1, 0]);
     // 16 回 × 最大 450 秒のシミュレーション（全体の実行中は 5 秒を超えることがある）
   }, 30000);
 

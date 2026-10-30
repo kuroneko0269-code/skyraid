@@ -12,6 +12,8 @@ export interface Voice {
   positional: boolean;
   /** このボイスで鳴っている音源（盗まれたら止める） */
   readonly sources: AudioScheduledSourceNode[];
+  /** 層ごとのフィルタ・音量（4-12。重ねる音）。次にこのボイスを使うときに外す */
+  readonly extras: AudioNode[];
 }
 
 export class VoicePool {
@@ -37,7 +39,15 @@ export class VoicePool {
       filter.connect(amp);
       amp.connect(bus);
       panner.connect(bus);
-      this.voices.push({ filter, amp, panner, endTime: 0, positional: false, sources: [] });
+      this.voices.push({
+        filter,
+        amp,
+        panner,
+        endTime: 0,
+        positional: false,
+        sources: [],
+        extras: [],
+      });
     }
   }
 
@@ -75,6 +85,8 @@ export class VoicePool {
       }
     }
     pick.sources.length = 0;
+    for (const n of pick.extras) n.disconnect();
+    pick.extras.length = 0;
     pick.amp.gain.cancelScheduledValues(now);
     pick.filter.frequency.cancelScheduledValues(now);
     pick.filter.Q.cancelScheduledValues(now);
@@ -91,9 +103,13 @@ export class VoicePool {
     return pick;
   }
 
-  /** 音源をボイスにつなぐ（フィルタの入口）。鳴り終わったら外す */
-  attach(voice: Voice, source: AudioScheduledSourceNode & AudioNode): void {
-    source.connect(voice.filter);
+  /** 音源をボイスにつなぐ（既定はフィルタの入口。層の入口 dest も可）。鳴り終わったら外す */
+  attach(
+    voice: Voice,
+    source: AudioScheduledSourceNode & AudioNode,
+    dest: AudioNode = voice.filter,
+  ): void {
+    source.connect(dest);
     voice.sources.push(source);
     source.onended = () => {
       source.disconnect();

@@ -90,7 +90,8 @@ export class HudWeapons {
   private readonly arrow: Slot;
   private readonly lead: Slot;
   private readonly ring: HTMLDivElement;
-  private readonly distText: HTMLDivElement;
+  /** 選択中の対象の距離（HUD 補助の接近 / 離脱の色。4-12） */
+  readonly distText: HTMLDivElement;
   private readonly mslText: HTMLSpanElement;
   private readonly flrText: HTMLSpanElement;
   private readonly flrRow: HTMLDivElement;

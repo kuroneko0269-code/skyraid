@@ -2,7 +2,8 @@
 import type { Locale } from '../core/locale';
 import en from '../data/i18n/en.json';
 import ja from '../data/i18n/ja.json';
-import type { FailCondition, ObjectiveDef, ObjectiveType } from '../missions/types';
+import { DIFFICULTIES, DIFFICULTY_SHORT_LABELS, type Difficulty } from '../data/ai';
+import type { FailCondition, MissionDef, ObjectiveDef, ObjectiveType } from '../missions/types';
 
 /** 言語ごとの文（src/data/i18n/*.json）。ミッションの文は missions[id] */
 export interface MissionStrings {
@@ -71,6 +72,34 @@ export function objectiveSummary(def: ObjectiveDef): string {
     case 'kaiju':
       return `${label} ${Math.round(def.damageRatio * 100)} %`;
   }
+}
+
+/**
+ * ミッション一覧の難易度の表記（4-12）。敵機と対空砲の難易度の最も低いものから最も高いもの。
+ * 例「入門」「易〜普」。敵機も対空砲もいなければ空文字
+ */
+export function missionDifficultyText(def: MissionDef): string {
+  const order: readonly Difficulty[] = DIFFICULTIES;
+  let lo = order.length;
+  let hi = -1;
+  for (const s of def.spawns) {
+    const d =
+      s.kind === 'enemyFighter'
+        ? s.difficulty
+        : s.kind === 'groundTarget' && s.targetType === 'aaa'
+          ? (s.difficulty ?? 'normal')
+          : null;
+    if (!d) continue;
+    const i = order.indexOf(d);
+    lo = Math.min(lo, i);
+    hi = Math.max(hi, i);
+  }
+  const a = order[lo];
+  const b = order[hi];
+  if (!a || !b) return '';
+  return a === b
+    ? DIFFICULTY_SHORT_LABELS[a]
+    : `${DIFFICULTY_SHORT_LABELS[a]}〜${DIFFICULTY_SHORT_LABELS[b]}`;
 }
 
 /** 時間の表示「m:ss」（切り上げ。残り時間が 0.2 秒なら 0:01） */

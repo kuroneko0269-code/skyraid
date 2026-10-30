@@ -23,6 +23,8 @@ export class HudLink {
     private readonly groundHeight: GroundHeightFn,
     /** タッチの MSL ボタンで撃つ兵装を HUD に出す（2-6） */
     private readonly weaponInput: Pick<WeaponInput, 'secondary'> | null = null,
+    /** 設定「HUD 補助」（4-12）。毎フレーム読む */
+    private readonly assist: () => boolean = () => false,
   ) {
     this.frame = createHudFrame(ff.aircraft);
     this.projector = new TargetProjector(camera);
@@ -31,7 +33,7 @@ export class HudLink {
   /** 描画フレームごとに呼ぶ（DOM の書き換えは HUD 側で変化があったときだけ） */
   update(alpha: number, width: number, height: number): void {
     const f = this.frame;
-    fillHudFrame(f, this.ff, this.groundHeight);
+    fillHudFrame(f, this.ff, this.groundHeight, this.assist());
     const fpm = projectFlightPath(this.camera, this.aircraftMesh, width, height, this.flightPath);
     f.flightPath = fpm ? this.flightPath : null;
     this.projector.fill(

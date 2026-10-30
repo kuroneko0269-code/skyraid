@@ -1,6 +1,7 @@
 // 音（4-4）の数値。Web Audio API の合成だけ（音声ファイルは BGM の受け口だけ）。仕組みは src/audio/
 // 周波数は Hz、時間は秒、音量（ゲイン）は 0〜1 の倍率、距離は m
 import type { ExplosionScale } from './fx';
+import { MISSILE_CONFIG } from './weapons';
 
 export const AUDIO_CONFIG = {
   /**
@@ -44,7 +45,10 @@ export const WIND_SOUND = {
   stall: { cutoffScale: 0.45, q: 5, gainAdd: 0.05 },
 } as const;
 
-/** 機銃: 短いノイズのバースト（ローパス）+ 低域のクリック（サイン波の急な下降）。連射で重ねる */
+/**
+ * 機銃: 短いノイズのバースト（ローパス）+ 低域のクリック（サイン波の急な下降）+ 重さの低域パルス（4-12。サイン波 120 → 80Hz を
+ * 0.05 秒、ローパス 400Hz）。連射で重ねる
+ */
 export const GUN_SOUND = {
   duration: 0.07,
   noiseCutoff: 3200,
@@ -52,6 +56,7 @@ export const GUN_SOUND = {
   clickFreq: 140,
   clickEndFreq: 45,
   gain: 0.32,
+  thump: { startFreq: 120, endFreq: 80, duration: 0.05, cutoff: 400, gain: 0.9 },
   /** 1 描画フレームで鳴らす最大の発数（低 fps で一度にたくさん重ねない） */
   maxPerFrame: 2,
   /** 敵機の機銃（位置つき）。1 機あたりこの間隔より詰めて鳴らさない */
@@ -59,12 +64,59 @@ export const GUN_SOUND = {
   enemyInterval: 0.09,
 } as const;
 
-/** ミサイル発射: ホワイトノイズのスイープ（ローパスの周波数を下げていく） */
+/**
+ * 機銃の命中音（4-12。自機の弾が対象に当たったとき。定位なしの手応え）: 金属の衝撃（200〜400Hz の部分音 3 つ + 300Hz の
+ * 鋭いバンドパスのノイズが 0.12 秒で減衰）+ 高域のクラック（ハイパス 3500Hz のノイズ 18ms）+ 低域のドン（サイン波 90 → 60Hz、40ms）。
+ * 連続ヒットはソフトのコンプ: 直近のヒットの量（1 発ごとに +1、時定数 compressTau 秒で減る）を n として音量を 1 / √(1 + n) にする
+ */
+export const GUN_HIT_SOUND = {
+  gain: 0.5,
+  metal: {
+    partials: [230, 310, 385],
+    partialGain: 0.22,
+    noiseFreq: 300,
+    noiseQ: 14,
+    noiseGain: 1.4,
+    decay: 0.12,
+  },
+  crack: { cutoff: 3500, duration: 0.018, gain: 0.7 },
+  thump: { startFreq: 90, endFreq: 60, duration: 0.04, gain: 0.9 },
+  compressTau: 0.25,
+  /** これより詰めて鳴らさない（1 描画フレームに何発当たっても 1 回） */
+  minInterval: 0.03,
+} as const;
+
+/**
+ * ミサイル発射（4-12 で 3 層に）: 点火のクラック（ハイパス 1500Hz のノイズ 30ms）→ 低域のうなり（鋸波 80 → 50Hz・ローパス 220Hz、
+ * 0.8 秒で減衰）→ 離れていくシュー（ノイズのローパスを 6000 → 300Hz へ閉じながら 1.6 秒）。うなりとシューの周波数には
+ * ドップラーの倍率（音速 / (音速 + 遠ざかる速さ)。遠ざかる速さは発射機に対して thrust で加速し maxRecede で頭打ち）を掛ける。
+ * 自機は定位なし、敵機は位置つき
+ */
 export const MISSILE_SOUND = {
-  duration: 1.2,
-  startCutoff: 5200,
-  endCutoff: 260,
+  duration: 1.6,
   gain: 0.42,
+  crack: { cutoff: 1500, duration: 0.03, gain: 1 },
+  rumble: { startFreq: 80, endFreq: 50, decay: 0.8, cutoff: 220, gain: 0.8 },
+  whoosh: { startCutoff: 6000, endCutoff: 300, q: 1.2, attack: 0.06, gain: 0.7 },
+  doppler: {
+    soundSpeed: 343,
+    thrust: MISSILE_CONFIG.thrust,
+    /** 最高速 700 − 巡航 250（ミサイルの初速は母機の速度なので、母機から見た遠ざかる速さの上限） */
+    maxRecede: MISSILE_CONFIG.maxSpeed - 250,
+    /** スイープを折れ線で近似する点の数 */
+    points: 8,
+  },
+} as const;
+
+/**
+ * 撃墜（4-12。自機が敵側を落としたとき、爆発に重ねる。定位なし）: 金属が裂ける音 = バンドパスのノイズ（Q 6）を 2600 → 700Hz へ
+ * 下げ、37Hz の矩形波で音量を刻む（裂け目のざらつき）+ 鋸波 2 本（520・733Hz の不協和）を 260・366Hz へ 0.35 秒で下げる
+ */
+export const KILL_SOUND = {
+  duration: 0.45,
+  gain: 0.38,
+  tear: { startFreq: 2600, endFreq: 700, q: 6, gain: 1.2, ratchetHz: 37, ratchetDepth: 0.6 },
+  screech: { freqs: [520, 733], endRatio: 0.5, glide: 0.35, cutoff: 1400, gain: 0.12 },
 } as const;
 
 export interface ExplosionSound {

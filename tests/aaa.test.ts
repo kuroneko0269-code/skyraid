@@ -120,7 +120,7 @@ describe('対空砲の予測射撃', () => {
     expect(rates.normal).toBeLessThan(0.36);
     expect(rates.hard).toBeGreaterThan(0.38);
     expect(rates.hard).toBeLessThan(0.52);
-    expect(AAA_CONFIG.hitChance).toEqual({ easy: 0.15, normal: 0.3, hard: 0.45 });
+    expect(AAA_CONFIG.hitChance).toEqual({ rookie: 0.1, easy: 0.15, normal: 0.3, hard: 0.45 });
   });
 
   it('外す弾は予測点から 18〜45m ずれた所を通る（自機の当たり判定 6m に当たらない）', () => {

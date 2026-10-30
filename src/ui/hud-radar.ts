@@ -1,4 +1,5 @@
 // HUD のレーダー（1-4 / 2-3）。機首方向が上。島の中心・敵機（赤い点）・自機を追うミサイル（赤い ×）を出す。
+// HUD 補助（4-12）が ON なら、敵機の高度差を点の上下の小さな三角で、後方の敵機を点滅で出す。
 // DOM の点は最初に作って使い回し、位置が変わったときだけ書く
 import { HUD_CONFIG } from '../data/hud';
 import { el } from './hud-dom';
@@ -6,16 +7,24 @@ import { changed, radarPoint, type RadarPoint } from './hud-math';
 
 export type RadarContactKind = 'enemy' | 'missile';
 
+/** 高度差の印（4-12）: above = 自機より高い / below = 低い / '' = なし */
+export type RadarAltitude = '' | 'above' | 'below';
+
 export interface RadarContact {
   x: number;
   z: number;
   kind: RadarContactKind;
+  altitude: RadarAltitude;
+  /** 自機の後方（BEHIND）にいる敵機（4-12） */
+  behind: boolean;
 }
 
 /** レーダーに出す対象（ワールドの x, z）。先頭 count 個が有効 */
 export interface HudRadarFrame {
   readonly contacts: RadarContact[];
   count: number;
+  /** HUD 補助（4-12）。false なら高度差・後方の印を出さない */
+  assist: boolean;
 }
 
 export function createRadarFrame(): HudRadarFrame {
@@ -24,8 +33,11 @@ export function createRadarFrame(): HudRadarFrame {
       x: 0,
       z: 0,
       kind: 'enemy',
+      altitude: '',
+      behind: false,
     })),
     count: 0,
+    assist: false,
   };
 }
 
@@ -34,6 +46,8 @@ interface Dot {
   shown: boolean;
   kind: RadarContactKind | '';
   edge: boolean;
+  altitude: RadarAltitude;
+  behind: boolean;
   x: number;
   y: number;
 }
@@ -51,7 +65,16 @@ export class HudRadar {
     this.dots = Array.from({ length: HUD_CONFIG.radar.maxContacts }, () => {
       const e = el('div', 'hud-radar-dot', radar);
       e.hidden = true;
-      return { el: e, shown: false, kind: '', edge: false, x: NaN, y: NaN };
+      return {
+        el: e,
+        shown: false,
+        kind: '',
+        edge: false,
+        altitude: '',
+        behind: false,
+        x: NaN,
+        y: NaN,
+      };
     });
     el('div', 'hud-radar-self', radar);
   }
@@ -89,6 +112,19 @@ export class HudRadar {
         d.kind = contact.kind;
         d.el.className = `hud-radar-dot is-${contact.kind}`;
         d.edge = false;
+        d.altitude = '';
+        d.behind = false;
+      }
+      const altitude = f.assist ? contact.altitude : '';
+      if (altitude !== d.altitude) {
+        d.el.classList.toggle('is-above', altitude === 'above');
+        d.el.classList.toggle('is-below', altitude === 'below');
+        d.altitude = altitude;
+      }
+      const behind = f.assist && contact.behind;
+      if (behind !== d.behind) {
+        d.el.classList.toggle('is-behind', behind);
+        d.behind = behind;
       }
       if (q.clamped !== d.edge) {
         d.edge = q.clamped;

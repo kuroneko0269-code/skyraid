@@ -81,6 +81,13 @@ export class GameAudio {
       playerGun: (n) => {
         for (let i = 0; i < Math.min(n, GUN_SOUND.maxPerFrame); i++) s.gun();
       },
+      // 命中音（4-12）: 1 描画フレームに何発当たっても 1 回（音量はコンプで決める）
+      playerGunHit: () => {
+        s.gunHit();
+      },
+      playerKill: () => {
+        s.kill();
+      },
       enemyGun: (x, y, z) => {
         // 敵機の機銃はまとめて enemyInterval より詰めて鳴らさない（15 発/秒 × 機数でボイスを埋めない）
         const now = engine.now;

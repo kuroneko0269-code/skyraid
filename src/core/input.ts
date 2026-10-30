@@ -15,6 +15,9 @@ interface KeyLike {
 export const ANALOG_SOURCES = ['touch', 'gamepad'] as const;
 export type AnalogSource = (typeof ANALOG_SOURCES)[number];
 
+/** 最後に操作した入力系統（4-12。操作補助はタッチ・パッドのときだけ効かせる） */
+export type InputDevice = 'keyboard' | AnalogSource;
+
 interface AnalogState {
   /** アクションごとの値（0〜1） */
   readonly values: Map<Action, number>;
@@ -39,6 +42,8 @@ export class Input {
   };
   private throttleTarget: number | null = null;
   private source: KeyEventSource | null = null;
+  /** 最後に操作した入力系統。キーを押す・タッチやパッドの値が 0 より大きくなると切り替わる */
+  lastDevice: InputDevice = 'keyboard';
 
   constructor(bindings: KeyBindings = DEFAULT_KEYBINDS) {
     this.setBindings(bindings);
@@ -115,7 +120,10 @@ export class Input {
     const state = this.analog[source];
     const v = Math.min(1, Math.max(0, value));
     if (v === 0) state.values.delete(action);
-    else state.values.set(action, v);
+    else {
+      state.values.set(action, v);
+      this.lastDevice = source;
+    }
     if (state.held.has(action)) {
       if (v < ANALOG_INPUT.releaseThreshold) state.held.delete(action);
     } else if (v >= ANALOG_INPUT.pressThreshold) {
@@ -133,6 +141,7 @@ export class Input {
   /** スロットル位置（0〜1）を直接指定する（タッチのスライダー）。次の takeThrottleTarget で受け取る */
   setThrottleTarget(value: number): void {
     this.throttleTarget = Math.min(1, Math.max(0, value));
+    this.lastDevice = 'touch';
   }
 
   /** 指定されたスロットル位置を受け取ってクリアする。指定がなければ null */
@@ -162,6 +171,7 @@ export class Input {
     e.preventDefault?.();
     if (e.repeat || this.downCodes.has(e.code)) return;
     this.downCodes.add(e.code);
+    this.lastDevice = 'keyboard';
     for (const a of actions) this.pressed.add(a);
   }
 

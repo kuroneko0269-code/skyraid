@@ -39,6 +39,15 @@
   gap: 8px;
 }
 
+.mission-entry-level {
+  margin-right: auto;
+  padding: 0 6px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
 .mission-entry-status {
   font-size: 12px;
   letter-spacing: 0.2em;

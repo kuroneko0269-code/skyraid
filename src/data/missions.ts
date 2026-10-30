@@ -14,7 +14,7 @@ export const MISSION_FLOW = {
 } as const;
 
 /**
- * M1 訓練: 島の周りのリング 10 個を順に通り、そのあと敵機 2 機（easy）を撃墜する（2-4 の仮ミッションをそのまま M1 にした）。
+ * M1 訓練: 島の周りのリング 10 個を順に通り、そのあと敵機 2 機（rookie。4-12 で easy から）を撃墜する（2-4 の仮ミッションをそのまま M1 にした）。
  * - リング: 1 個目は開始位置の 1.2km 先（機首の正面）。2〜10 個目は島の中心から半径 3700m の円上に 37.5° おき
  *   （間隔 約 2.4km = 巡航で約 10 秒）、高度 450〜750m。向きは円の接線（南 → 東 → 北 → 西と回る）。一周 約 100 秒
  * - 敵機: リングをすべて通ると（撃墜の目標が始まると）、島の上空に南向きで出て、島の周りを回る（巡航の経路はフリーフライトと同じ）
@@ -31,7 +31,7 @@ export const TRAINING_MISSION: MissionDef = {
       kind: 'enemyFighter',
       group: 'training-bandits',
       count: 2,
-      difficulty: 'easy',
+      difficulty: 'rookie',
       trigger: { type: 'objectiveActive', objective: 'bandits' },
       positions: [
         { x: -800, y: 1000, z: -600, headingDeg: 200 },

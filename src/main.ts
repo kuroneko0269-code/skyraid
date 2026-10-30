@@ -32,6 +32,8 @@ import { createWorldScene } from './render/scene';
 import { getGroundHeight } from './render/terrain-height';
 import { DamageOverlay } from './ui/damage-overlay';
 import { createEnemySettings } from './ui/enemy-settings';
+import { createAssistSettings } from './ui/assist-settings';
+import { AssistControl } from './core/assist-control';
 import { Hud } from './ui/hud';
 import { createHudToggle } from './ui/hud-toggle';
 import { MissionHud } from './ui/mission-hud';
@@ -128,6 +130,9 @@ createEnemySettings(settingsPanel, storage, (enabled, difficulty) => {
   session.configureEnemies(enabled, difficulty);
   screens.modeSelect.setEnemiesEnabled(enabled);
 });
+// 操作補助（4-12）: エイムアシスト（タッチ・パッドだけ）・ターゲットカメラ・HUD 補助。ポーズメニューの設定で OFF にできる
+const assistFlags = createAssistSettings(settingsPanel, storage);
+const assist = new AssistControl(session, assistFlags, () => input.lastDevice);
 // 設定の最下部: セーブデータのコピー / 復元 / 削除。復元・削除の後は読み込み直して新しいセーブで始める
 createSaveSettings(settingsPanel, save);
 const damageOverlay = new DamageOverlay(document.body);
@@ -163,7 +168,15 @@ session.onRespawn(() => {
 const combatInput = createCombatInput();
 // 武器の操作（タッチ・パッドの長押しで兵装の切替・爆弾。2-6）
 const weaponInput = new WeaponInput();
-const hudLink = new HudLink(hud, camera, aircraftMesh, session, getGroundHeight, weaponInput);
+const hudLink = new HudLink(
+  hud,
+  camera,
+  aircraftMesh,
+  session,
+  getGroundHeight,
+  weaponInput,
+  () => assistFlags.hud,
+);
 // HUD の対象をタップ（クリック）すると選ぶ。スティック・ボタンの上は canvas に届かない
 hudLink.bindTap(renderer.domElement, () => game.state === 'flight');
 
@@ -196,6 +209,7 @@ loop.onUpdate((dt) => {
     return;
   }
   readFlightControls(input, controls);
+  assist.apply(controls);
   weaponInput.read(input, combatInput, dt);
   play.step(controls, combatInput, dt);
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
@@ -305,7 +319,8 @@ function updateFlightView(alpha: number, frameSeconds: number): void {
   playerView.update(aircraft, controls, session.combat.missileAmmo.count, alpha, frameSeconds);
   // カメラが地面にめり込まないよう、前フレームのカメラ位置の地表の高さを渡す
   const groundUnderCamera = getGroundHeight(camera.position.x, camera.position.z);
-  chaseCamera.update(aircraftMesh, aircraft.state, groundUnderCamera, frameSeconds);
+  const focus = assistFlags.camera ? (session.combat.targeting.selected?.position ?? null) : null;
+  chaseCamera.update(aircraftMesh, aircraft.state, groundUnderCamera, frameSeconds, focus);
   touch.controls.syncThrottle(aircraft.throttle);
   touch.controls.syncSecondary(weaponInput.secondary);
 }

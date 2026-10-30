@@ -3,6 +3,7 @@ import { HUD_CONFIG } from '../data/hud';
 import { applyCssVariables, el, gauge } from './hud-dom';
 import type { HudFrame } from './hud-frame';
 import { HudOrdnance } from './hud-ordnance';
+import { HudAssist } from './hud-assist';
 import { HudRadar } from './hud-radar';
 import { HudWeapons } from './hud-weapons';
 import {
@@ -38,6 +39,7 @@ export class Hud {
   private readonly killsText: HTMLSpanElement;
   private readonly hpFill: HTMLDivElement;
   private readonly radar: HudRadar;
+  private readonly assist: HudAssist;
   private readonly weapons: HudWeapons;
   private readonly ordnance: HudOrdnance;
   private readonly notice: HTMLDivElement;
@@ -126,6 +128,8 @@ export class Hud {
 
     // 下: レーダー（機首方向が上）。島の中心・敵機・自機を追うミサイル
     this.radar = new HudRadar(root);
+    // 角度差の矢印・接近 / 離脱の色・BEHIND（4-12）
+    this.assist = new HudAssist(root, this.weapons.distText);
 
     parent.appendChild(root);
 
@@ -258,6 +262,7 @@ export class Hud {
     }
     this.weapons.update(f.weapons);
     this.ordnance.update(f.ordnance);
+    this.assist.update(f.assist, f.weapons.selected === 'screen');
   }
 
   private updateFlightPath(pos: { x: number; y: number } | null): void {
@@ -284,5 +289,6 @@ export class Hud {
     this.radar.invalidate();
     this.weapons.invalidate();
     this.ordnance.invalidate();
+    this.assist.invalidate();
   }
 }

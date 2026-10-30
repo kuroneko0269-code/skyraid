@@ -58,6 +58,10 @@ export class Gun<T extends GunTarget> {
   readonly bullets: Pool<Bullet>;
   /** これまでに撃った弾数（マズルフラッシュの判定に使う） */
   shotCount = 0;
+  /** これまでに対象に当たった弾数（命中音。4-12） */
+  hitCount = 0;
+  /** 対象の当たり判定の半径に掛ける倍率（タッチ・パッドのエイムアシスト。4-12。既定 1） */
+  hitRadiusScale = 1;
 
   private cooldown = 0;
   private readonly hit: GunHit<T> = { target: null, x: 0, y: 0, z: 0 };
@@ -160,7 +164,18 @@ export class Gun<T extends GunTarget> {
     for (const t of targets) {
       if (!t.active) continue;
       const c = t.position;
-      const s = segmentSphere(b.px, b.py, b.pz, b.x, b.y, b.z, c.x, c.y, c.z, t.hitRadius);
+      const s = segmentSphere(
+        b.px,
+        b.py,
+        b.pz,
+        b.x,
+        b.y,
+        b.z,
+        c.x,
+        c.y,
+        c.z,
+        t.hitRadius * this.hitRadiusScale,
+      );
       if (s >= 0 && s < best) {
         best = s;
         bestTarget = t;
@@ -190,6 +205,7 @@ export class Gun<T extends GunTarget> {
     h.x = b.px + (b.x - b.px) * s;
     h.y = b.py + (b.y - b.py) * s;
     h.z = b.pz + (b.z - b.pz) * s;
+    if (target) this.hitCount++;
     this.onHit(h);
   }
 }

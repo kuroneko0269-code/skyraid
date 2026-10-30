@@ -61,6 +61,25 @@ describe('シミュレーション', () => {
   }, 60000);
 });
 
+describe('弱い難易度の地面の回避（4-12）', () => {
+  it('rookie（maxG 9）も島の上空で地形に衝突しない（引き起こしだけは 14G。14G にしないと 4 シードで 2 回衝突した）', () => {
+    let crashes = 0;
+    for (const seed of [1, 2, 3, 4]) {
+      const ff = new FlightSession({ rng: createRandom(seed), groundHeight: getGroundHeight });
+      ff.configureEnemies(true, 'rookie', 4);
+      ff.reset();
+      const skill = seed % 2 ? AVERAGE : BEGINNER;
+      const bot = new PilotBot(ff, skill, createRandom(seed + 100), undefined, getGroundHeight);
+      for (let i = 0; i < 60 * 180; i++) {
+        bot.think(SIM_DT);
+        ff.step(bot.controls, bot.input, SIM_DT);
+      }
+      crashes += ff.enemies.reduce((a, e) => a + e.aircraft.crashCount, 0);
+    }
+    expect(crashes).toBe(0);
+  }, 120000);
+});
+
 describe('性能', () => {
   it('敵 4 機 + 各ミサイルの AI 処理（固定ステップ 1 回）は 1ms 以内（戦闘全体の 1 ステップで測る）', () => {
     const ff = new FlightSession({ rng: createRandom(7), groundHeight: getGroundHeight });

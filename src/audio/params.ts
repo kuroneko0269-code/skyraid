@@ -4,7 +4,9 @@ import {
   AUDIO_CONFIG,
   ENGINE_SOUND,
   EXPLOSION_SOUNDS,
+  GUN_HIT_SOUND,
   LOCK_SOUND,
+  MISSILE_SOUND,
   SPATIAL_CONFIG,
   WARNING_KINDS,
   WARNING_SOUND,
@@ -142,4 +144,63 @@ export function bgmTrackFor(state: ScreenState): BgmTrack | null {
     default:
       return 'title';
   }
+}
+
+/** 命中音のソフトのコンプ（4-12）の状態: 直近のヒットの量と、最後に鳴らした時刻 */
+export interface HitCompressor {
+  level: number;
+  last: number;
+}
+
+export function createHitCompressor(): HitCompressor {
+  return { level: 0, last: -Infinity };
+}
+
+/**
+ * 時刻 now に命中音を鳴らすときの音量の倍率（1 / √(1 + 直近のヒットの量)）。量は 1 発ごとに +1、時定数 tau 秒で減る。
+ * 最後に鳴らしてから minInterval 未満なら 0（鳴らさない。量も増やさない）
+ */
+export function hitCompression(
+  c: HitCompressor,
+  now: number,
+  tau: number = GUN_HIT_SOUND.compressTau,
+  minInterval: number = GUN_HIT_SOUND.minInterval,
+): number {
+  const dt = now - c.last;
+  if (dt < minInterval) return 0;
+  c.level = Number.isFinite(dt) ? c.level * Math.exp(-dt / tau) : 0;
+  const gain = 1 / Math.sqrt(1 + c.level);
+  c.level += 1;
+  c.last = now;
+  return gain;
+}
+
+/**
+ * ミサイルが母機から遠ざかる音のドップラーの倍率（4-12）: 音速 / (音速 + 遠ざかる速さ)。遠ざかる速さは発射から
+ * thrust で加速し maxRecede で頭打ち（t 秒後）
+ */
+export function missileDoppler(
+  t: number,
+  d: typeof MISSILE_SOUND.doppler = MISSILE_SOUND.doppler,
+): number {
+  const v = Math.min(d.maxRecede, d.thrust * Math.max(0, t));
+  return d.soundSpeed / (d.soundSpeed + v);
+}
+
+/**
+ * ミサイル発射の周波数のスイープ（start → end を対数で、duration 秒）にドップラーを掛けた折れ線。
+ * points + 1 個の [時刻（秒）, 周波数] を返す（先頭は 0 秒）
+ */
+export function missileSweep(
+  start: number,
+  end: number,
+  duration: number,
+  points: number = MISSILE_SOUND.doppler.points,
+): [number, number][] {
+  const out: [number, number][] = [];
+  for (let i = 0; i <= points; i++) {
+    const t = (duration * i) / points;
+    out.push([t, lerpLog(start, end, i / points) * missileDoppler(t)]);
+  }
+  return out;
 }

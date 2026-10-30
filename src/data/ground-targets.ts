@@ -204,7 +204,10 @@ export const AAA_CONFIG = {
   shotSpacing: 0.08,
   /** 撃つ前に警告を出す時間。範囲に入ってから最初のバーストまでもこの時間 */
   warnSeconds: 1,
-  hitChance: { easy: 0.15, normal: 0.3, hard: 0.45 } satisfies Record<Difficulty, number>,
+  hitChance: { rookie: 0.1, easy: 0.15, normal: 0.3, hard: 0.45 } satisfies Record<
+    Difficulty,
+    number
+  >,
   /** 外す弾のずらし幅（予測位置での距離）。自機の当たり判定 6m より十分大きく、曳光弾が近くを抜けて見える */
   missMin: 18,
   missMax: 45,

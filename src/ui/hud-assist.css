@@ -1,0 +1,107 @@
+/* HUD 補助（4-12）。寸法は src/data/assist.ts の HUD_ASSIST_CONFIG から CSS 変数で入る */
+.hud {
+  --hud-assist-ring: calc(var(--hud-assist-ring-normal) * 1px);
+  --hud-approach: rgba(255, 255, 255, 0.95);
+  --hud-recede: rgba(255, 160, 50, 0.95);
+}
+
+.hud.hud-compact {
+  --hud-assist-ring: calc(var(--hud-assist-ring-compact) * 1px);
+}
+
+/* 画面中央の○。外周に対象の向きの太い線（--hud-assist-deg は上から時計回り） */
+.hud-assist-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--hud-assist-ring) * 2);
+  height: calc(var(--hud-assist-ring) * 2);
+  margin: calc(var(--hud-assist-ring) * -1) 0 0 calc(var(--hud-assist-ring) * -1);
+  border: 1px solid var(--hud-dim);
+  border-radius: 50%;
+  box-sizing: border-box;
+  color: var(--hud-color);
+}
+
+.hud-assist-arrow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 26px;
+  margin: -13px 0 0 -3.5px;
+  border-radius: 3px;
+  background: currentColor;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
+  transform: rotate(var(--hud-assist-deg, 0deg)) translateY(calc(var(--hud-assist-ring) * -1));
+}
+
+/* 線の外側に「角度 距離」 */
+.hud-assist-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  white-space: nowrap;
+  font-family: var(--hud-mono);
+  font-variant-numeric: tabular-nums;
+  transform: rotate(var(--hud-assist-deg, 0deg))
+    translateY(calc(var(--hud-assist-ring) * -1 - 26px))
+    rotate(calc(var(--hud-assist-deg, 0deg) * -1)) translate(-50%, -50%);
+}
+
+/* 接近は白、離脱は橙（矢印・距離の文字） */
+.hud-assist-ring.is-approach,
+.hud .hud-sel .hud-sel-dist.is-approach {
+  color: var(--hud-approach);
+}
+
+.hud-assist-ring.is-recede,
+.hud .hud-sel .hud-sel-dist.is-recede {
+  color: var(--hud-recede);
+}
+
+/* 後方の敵機: レーダーの上に BEHIND、レーダーの該当点を点滅 */
+.hud-behind {
+  position: absolute;
+  left: 50%;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px) + var(--hud-radar-size) + 8px);
+  transform: translateX(-50%);
+  padding: 1px 10px;
+  border: var(--hud-line) solid var(--hud-red);
+  animation-duration: 0.4s;
+}
+
+.touch-active .hud-behind {
+  left: calc(50% + var(--hud-touch-shift));
+}
+
+.hud.is-behind .hud-behind {
+  display: block;
+}
+
+.hud-radar-dot.is-behind {
+  animation: hud-blink 0.3s steps(1, end) infinite;
+}
+
+/* レーダーの点の高度差: 上なら点の上に ▲、下なら点の下に ▼ */
+.hud-radar-dot.is-above::after,
+.hud-radar-dot.is-below::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 0;
+  height: 0;
+  margin-left: -3.5px;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+}
+
+.hud-radar-dot.is-above::after {
+  bottom: calc(100% + 2px);
+  border-bottom: 5px solid var(--hud-red);
+}
+
+.hud-radar-dot.is-below::after {
+  top: calc(100% + 2px);
+  border-top: 5px solid var(--hud-red);
+}

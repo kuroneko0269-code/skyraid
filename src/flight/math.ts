@@ -66,6 +66,17 @@ export function rotateVec3(out: Vec3, q: Readonly<Quat>, v: Readonly<Vec3>): Vec
   return out;
 }
 
+/** ワールドのベクトル v を姿勢 q の機体ローカルへ（q の逆回転 = 共役で回す）。out と v は同じでもよい */
+export function inverseRotateVec3(out: Vec3, q: Readonly<Quat>, v: Readonly<Vec3>): Vec3 {
+  CONJ.x = -q.x;
+  CONJ.y = -q.y;
+  CONJ.z = -q.z;
+  CONJ.w = q.w;
+  return rotateVec3(out, CONJ, v);
+}
+
+const CONJ: Quat = { x: 0, y: 0, z: 0, w: 1 };
+
 /** out = a * b（b を先に適用する回転） */
 export function multiplyQuat(out: Quat, a: Readonly<Quat>, b: Readonly<Quat>): Quat {
   const x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y;

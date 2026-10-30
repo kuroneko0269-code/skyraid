@@ -77,7 +77,9 @@ describe('loadout の変換', () => {
       9,
     );
     expect(b.flight.afterburner.durationSeconds).toBeCloseTo(9, 9);
-    expect(b.gunDamage).toBeCloseTo(15, 9);
+    // 4-12 で基準値 10 → 12。Lv5 は 1.5 倍の 18
+    expect(a.gunDamage).toBe(12);
+    expect(b.gunDamage).toBeCloseTo(18, 9);
     expect(b.missiles).toBe(a.missiles + 5);
     expect(b.flares).toBe(a.flares + 5);
     expect(b.targeting.lockSeconds).toBeCloseTo(0.72, 9);
@@ -163,7 +165,7 @@ describe('積載と弾数', () => {
     expect(combat.flares.magazine.count).toBe(14);
     expect(combat.rockets.count).toBe(18);
     expect(combat.bombs.magazine.count).toBe(6);
-    expect(combat.gunDamage).toBeCloseTo(15, 9);
+    expect(combat.gunDamage).toBeCloseTo(18, 9);
     expect(session.aircraft.flight.spec.speed.afterburner).toBeCloseTo(400 * 0.92 * 1.2, 9);
     session.applyLoadout(resolveLoadout(model('kestrel'), LV0));
     session.startFree();

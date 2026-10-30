@@ -82,14 +82,15 @@ export class AiPilot {
     const p = self.position;
 
     if (needsGroundAvoid(self.agl, self.verticalSpeed, cfg.ground)) {
-      // 何より先に上昇: 機首の水平方向 + 上
+      // 何より先に上昇: 機首の水平方向 + 上。弱い難易度でも minPullG までは引く
+      const pull = pitchLimitForG(this.spec, self.speed, Math.max(d.maxG, cfg.ground.minPullG));
       dir.x = forward.x;
       dir.y = 0;
       dir.z = forward.z;
       unit(dir, dir);
       dir.y = cfg.ground.climb;
       this.prevAimValid = false;
-      steerToward(out, self.orientation, self.angularRate, dir, maxPitch, cfg.steer);
+      steerToward(out, self.orientation, self.angularRate, dir, pull, cfg.steer);
       return;
     }
 

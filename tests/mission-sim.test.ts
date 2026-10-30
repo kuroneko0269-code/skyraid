@@ -14,14 +14,14 @@ import { DT, newPlay, WaypointBot } from './mission-bots';
 const rings = (TRAINING_MISSION.objectives.find((o) => o.type === 'rings') as RingObjective).rings;
 
 describe('M1 訓練のデータ', () => {
-  it('リング 10 個 → 敵機 2 機（easy）の順。リングは地表から 300m 以上・戦域の中', () => {
+  it('リング 10 個 → 敵機 2 機（rookie。4-12 で easy から）の順。リングは地表から 300m 以上・戦域の中', () => {
     expect(rings.length).toBe(10);
     const kill = TRAINING_MISSION.objectives[1];
     expect(kill?.type === 'kill' && kill.start === 'afterPrevious' && kill.count === 2).toBe(true);
     const spawn = TRAINING_MISSION.spawns[0];
-    expect(spawn?.kind === 'enemyFighter' && spawn.difficulty === 'easy' && spawn.count === 2).toBe(
-      true,
-    );
+    expect(
+      spawn?.kind === 'enemyFighter' && spawn.difficulty === 'rookie' && spawn.count === 2,
+    ).toBe(true);
     for (const r of rings) {
       expect(r.y - getGroundHeight(r.x, r.z)).toBeGreaterThan(300);
       expect(Math.hypot(r.x, r.z) + RING_CONFIG.radius).toBeLessThan(ISLAND_MAP.radius);

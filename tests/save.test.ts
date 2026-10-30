@@ -298,7 +298,7 @@ describe('音量の設定（4-4。スキーマ v3）', () => {
     const settings: Record<string, unknown> = { ...v3.settings, hud: false };
     delete settings.volume;
     const save = migrateSave({ ...v3, version: 2, settings });
-    expect(save?.version).toBe(3);
+    expect(save?.version).toBe(SAVE_CONFIG.version);
     expect(save?.settings.volume).toEqual(AUDIO_CONFIG.defaultVolumes);
     expect(save?.settings.hud).toBe(false);
   });

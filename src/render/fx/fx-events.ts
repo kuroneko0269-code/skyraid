@@ -31,6 +31,10 @@ export interface FxListener {
   flak?(x: number, y: number, z: number): void;
   /** 自機の機銃がこのフレームに撃った弾の数 */
   playerGun?(shots: number): void;
+  /** 自機の機銃の弾がこのフレームに対象に当たった数（4-12） */
+  playerGunHit?(hits: number): void;
+  /** 自機がこのフレームに敵側を撃墜した数（4-12。撃墜数 KILL が増えた分） */
+  playerKill?(kills: number): void;
   enemyGun?(x: number, y: number, z: number): void;
   aaaFire?(x: number, y: number, z: number): void;
 }
@@ -45,6 +49,8 @@ export class FxEvents {
   private readonly listeners: FxListener[] = [];
   private lastMissileSerial = -1;
   private lastGunShots = 0;
+  private lastGunHits = 0;
+  private lastKills = 0;
   private lastAaaShots = 0;
   private readonly enemyShots: number[];
   private readonly shells = new WeakMap<Bullet, ShellState>();
@@ -71,6 +77,8 @@ export class FxEvents {
   sync(): void {
     const s = this.session;
     this.lastGunShots = s.combat.gun.shotCount;
+    this.lastGunHits = s.combat.gun.hitCount;
+    this.lastKills = s.combat.kills;
     this.lastAaaShots = s.props.aaa.shotCount;
     const pool = s.combat.missiles.missiles;
     for (let i = 0; i < pool.count; i++)
@@ -114,6 +122,19 @@ export class FxEvents {
       this.emit((l) => l.playerGun?.(n));
     }
     this.lastGunShots = shots;
+    const hits = s.combat.gun.hitCount;
+    if (hits > this.lastGunHits) {
+      const n = hits - this.lastGunHits;
+      this.emit((l) => l.playerGunHit?.(n));
+    }
+    this.lastGunHits = hits;
+    // 撃墜数は飛行のやり直しで 0 に戻る（減ったら数え直すだけ）
+    const kills = s.combat.kills;
+    if (kills > this.lastKills) {
+      const n = kills - this.lastKills;
+      this.emit((l) => l.playerKill?.(n));
+    }
+    this.lastKills = kills;
     for (let i = 0; i < this.enemyShots.length; i++) {
       const count = s.squadron.gunShotCount(i);
       const e = s.enemies[i];

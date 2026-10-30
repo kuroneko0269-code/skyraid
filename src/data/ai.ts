@@ -1,13 +1,22 @@
 // 敵機 AI（2-3）の数値。ロジックは src/ai/、敵機の飛行パラメータは src/data/aircraft.ts の ENEMY_FIGHTER
 // 距離は m、時間は秒、角度は度。docs/spec.md「5. 戦闘」の「敵機AI」に各数値の意味を書いている
 
-export const DIFFICULTIES = ['easy', 'normal', 'hard'] as const;
+export const DIFFICULTIES = ['rookie', 'easy', 'normal', 'hard'] as const;
 export type Difficulty = (typeof DIFFICULTIES)[number];
 
 export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  rookie: '入門',
   easy: 'やさしい',
   normal: 'ふつう',
   hard: 'むずかしい',
+};
+
+/** ミッション一覧に出す難易度の短い表記（4-12） */
+export const DIFFICULTY_SHORT_LABELS: Record<Difficulty, string> = {
+  rookie: '入門',
+  easy: '易',
+  normal: '普',
+  hard: '難',
 };
 
 /** ポーズメニューの設定「敵」「難易度」の保存先（localStorage） */
@@ -45,24 +54,42 @@ export interface DifficultySpec {
 }
 
 /**
- * 難易度。初期機のプレイヤーは巡航で約 33G（ピッチ 75°/秒）まで引けるので、easy（14G）の敵は旋回で必ず振り切れる。
+ * 難易度。初期機のプレイヤーは巡航で約 33G（ピッチ 75°/秒）まで引けるので、easy（11G）の敵は旋回で必ず振り切れる。
  * 数値はシード固定のシミュレーション（tests/ai-simulation.test.ts）で決めた:
- * - easy 1 機 vs 初心者役のボット 60 秒: 被撃墜 0/20・撃墜 18/20
+ * - easy 1 機 vs 初心者役のボット 60 秒: 被撃墜 0/20・撃墜 18/20（2-3 の easy の値で）
  * - normal 2 機 vs 平均的なボット 150 秒: 被撃墜 9/12・撃墜 8/12・両方 6/12
  * - hard 1 機 vs 初心者役 60 秒: 被撃墜 18/20（熟練者役でも 6/20）
+ * 4-12: 実機のスマホで「敵が強すぎる」と評価されたので easy を緩め（maxG 14 → 11・ミサイル 0.08 → 0.04・反応 0.8 → 1.0 秒）、
+ * その下に rookie（入門。機銃だけ・maxG 9・狙いのずれ 2.5°。M1 の敵）を足した。normal / hard は 2-3 のまま
  */
 export const DIFFICULTY_PRESETS: Record<Difficulty, DifficultySpec> = {
+  rookie: {
+    reactionSeconds: 1.0,
+    aimErrorDeg: 2.5,
+    leadAccelWeight: 0,
+    gunConeDeg: 5,
+    gunBurstSeconds: 0.6,
+    gunPauseSeconds: 1.6,
+    missileChance: 0,
+    missileIntervalSeconds: 25,
+    missileAmmo: 0,
+    maxG: 9,
+    evadeMissileChance: 0.35,
+    evadeHitChance: 0.3,
+    flareChance: 0.25,
+    flareCharges: 2,
+  },
   easy: {
-    reactionSeconds: 0.8,
+    reactionSeconds: 1.0,
     aimErrorDeg: 1.4,
     leadAccelWeight: 0,
     gunConeDeg: 5,
     gunBurstSeconds: 0.6,
     gunPauseSeconds: 1.6,
-    missileChance: 0.08,
+    missileChance: 0.04,
     missileIntervalSeconds: 25,
     missileAmmo: 1,
-    maxG: 14,
+    maxG: 11,
     evadeMissileChance: 0.35,
     evadeHitChance: 0.3,
     flareChance: 0.25,
@@ -155,8 +182,12 @@ export const AI_CONFIG = {
     /** 相手と反対へ飛ぶときの上向きの成分 */
     climb: 0.25,
   },
-  /** 地面の回避: 地表から minAgl を切る（または lookAheadSeconds 後に切りそう）と、何より先に上昇する */
-  ground: { minAgl: 150, lookAheadSeconds: 3, climb: 1.5 },
+  /**
+   * 地面の回避: 地表から minAgl を切る（または lookAheadSeconds 後に切りそう）と、何より先に上昇する。
+   * 引き起こしだけは難易度の maxG が minPullG より小さくても minPullG まで引く（4-12。rookie 9G・easy 11G では
+   * 山の斜面で引き起こしが間に合わず衝突した。normal / hard は maxG がこれより大きいので変わらない）
+   */
+  ground: { minAgl: 150, lookAheadSeconds: 3, climb: 1.5, minPullG: 14 },
   /** 操縦（方向へ機首を向ける比例 + 角速度のダンピング）の係数。誤差は rad、角速度は rad/s */
   steer: {
     rollGain: 3,
@@ -204,7 +235,8 @@ export interface EnemyForceConfig {
 export const FREE_FLIGHT_ENEMIES: EnemyForceConfig = {
   count: 2,
   maxCount: 4,
-  defaultDifficulty: 'normal',
+  /** 4-12 で normal → easy（セーブに保存済みの難易度はそのまま） */
+  defaultDifficulty: 'easy',
   respawnSeconds: 12,
   spawns: [
     { x: -1500, y: 1000, z: -800, headingDeg: 90 },

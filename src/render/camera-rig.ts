@@ -10,6 +10,7 @@ import {
   type Quat,
   type Vec3,
 } from '../flight/math';
+import { CameraFocus } from './camera-focus';
 import { CameraShake } from './camera-shake';
 import { SpringVec3 } from './spring';
 
@@ -89,6 +90,11 @@ export class CameraRig {
   private readonly targetUp = vec3();
   private readonly view = vec3();
   private readonly right = vec3();
+  private readonly targetFocus = new CameraFocus();
+  /** ターゲットカメラ（4-12）で寄せる相手（選択中の対象）。null なら寄せない（設定 OFF も）。追従カメラのときだけ */
+  focus: Readonly<Vec3> | null = null;
+  /** 画面の縦横比（ターゲットカメラが横の画角を求める） */
+  aspect = 16 / 9;
 
   constructor(private readonly config: CameraConfig) {
     this.shake = new CameraShake(config.shake);
@@ -97,6 +103,7 @@ export class CameraRig {
   /** 次の update で補間せずに目標位置へ移す（リセット時・モード切替時） */
   snap(): void {
     this.initialized = false;
+    this.targetFocus.reset();
   }
 
   toggleMode(): CameraMode {
@@ -132,6 +139,8 @@ export class CameraRig {
     }
     addTo(pose.position, target.position, this.offset);
     addTo(pose.lookAt, target.position, this.lookOffset);
+    if (this.mode === 'chase')
+      this.targetFocus.apply(pose, target.position, this.focus, this.aspect, step);
     this.orthogonalizeUp();
 
     // 揺れは位置と注視点を同じだけずらす（画面全体が揺れる）

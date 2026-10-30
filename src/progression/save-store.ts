@@ -4,6 +4,7 @@
 // 設定の部品（QualitySettings など）は今までどおり StorageLike で読み書きし、settingsStorage がそれをセーブに振り分ける
 import type { StorageLike } from '../core/settings';
 import { DIFFICULTIES, ENEMY_SETTINGS_KEYS } from '../data/ai';
+import { ASSIST_SETTINGS_KEYS, type AssistKind } from '../data/assist';
 import { QUALITY_CONFIG, QUALITY_LEVELS } from '../data/quality';
 import { RANKS, type Rank } from '../data/ranking';
 import { SAVE_CONFIG } from '../data/save';
@@ -87,7 +88,23 @@ export const SETTING_KEYS: readonly SettingKey[] = [
       return true;
     },
   },
+  assistKey('aim'),
+  assistKey('camera'),
+  assistKey('hud'),
 ];
+
+/** 操作補助（4-12）の ON/OFF。値は 'on' / 'off' */
+function assistKey(kind: AssistKind): SettingKey {
+  return {
+    key: ASSIST_SETTINGS_KEYS[kind],
+    read: (s) => (s.assist[kind] ? 'on' : 'off'),
+    write: (s, v) => {
+      if (!(v === 'on' || v === 'off')) return false;
+      s.assist[kind] = v === 'on';
+      return true;
+    },
+  };
+}
 
 export class SaveStore {
   private data: SaveData;
