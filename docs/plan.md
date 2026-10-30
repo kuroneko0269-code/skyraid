@@ -26,7 +26,7 @@
 - [x] 2-3 敵機AI（巡航→追尾→攻撃→回避） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/58d80df53a29bc07b93d089c0ee707d9823c3514（事前修正: decisions.md に 2-2 の本来のコミットメッセージを追記 https://github.com/kuroneko0269-code/skyraid/commit/c53a2f2a36fd788e52f80d3d441818cce314decf）
 - [x] 2-4 ミッション定義とランナー。目標・成功失敗判定・リザルト画面 — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/1af38e806a65c137e86721f82e364475dd3f551c
 - [x] 2-5 初期ミッション 5 本のデータ（M1〜M5。輸送機・怪獣の仮実装・地上目標の仮置き、護衛・破壊・怪獣の目標、ミッションの解放） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/46e572d（事前修正: タイトルのデモカメラを下げて山を画面の下半分に https://github.com/kuroneko0269-code/skyraid/commit/9637dd0）
-- [ ] 2-6 地上目標と無誘導兵器
+- [x] 2-6 地上目標と無誘導兵器（レーダー・燃料タンク・格納庫・対空砲、ロケット・爆弾と着弾予測点、M4 の本実装） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/9784aee（事前修正: M2 の第 1 波を 1 機ずつ 20 秒差に https://github.com/kuroneko0269-code/skyraid/commit/de86fd8）
 
 ## フェーズ3: 成長
 
