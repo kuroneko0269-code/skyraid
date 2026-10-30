@@ -14,9 +14,16 @@ const lightChunk = /* glsl */ `
   uniform vec3 uSunIrr;
   uniform vec3 uSkyIrr;
   uniform float uReflectivity;
+  // x = 持ち上げ始める距離、y = 持ち上げきる距離、z = 持ち上げる量（反射の向きの y に足す）
+  uniform vec3 uHorizonLift;
   ${ATMOSPHERE_GLSL}
   vec3 oceanSky(vec3 r) {
     return atmoSky(normalize(vec3(r.x, max(abs(r.y), 0.02), r.z)), uSunDirection, uSunE, max(cameraPosition.y, 0.0));
+  }
+  // 遠くの海面ほど少し上の空を映す（3-1 の事前修正）。近く（uHorizonLift.x 未満）は oceanSky と同じ
+  vec3 oceanFarSky(vec3 r, float dist) {
+    float lift = uHorizonLift.z * smoothstep(uHorizonLift.x, uHorizonLift.y, dist);
+    return oceanSky(vec3(r.x, abs(r.y) + lift, r.z));
   }
   float oceanFresnel(float cosTheta) {
     float f = 1.0 - clamp(cosTheta, 0.0, 1.0);
@@ -136,7 +143,7 @@ export const detailedFragmentShader = /* glsl */ `
     body += uSss.rgb * uSss.w * toward * crest * uSunIrr * shade / PI;
 
     float F = oceanFresnel(dot(n, V));
-    vec3 color = body * (1.0 - F) + oceanSky(reflect(-V, n)) * (F * uReflectivity);
+    vec3 color = body * (1.0 - F) + oceanFarSky(reflect(-V, n), dist) * (F * uReflectivity);
 
     // 太陽の照り返し（GGX + Schlick + Kelemen の可視項）。遠く（さざ波が弱い・消えた所）はさざ波を
     // 粗さとして広げる
@@ -204,9 +211,10 @@ export const simpleVertexShader = /* glsl */ `
     vWorldPos = wp.xyz;
     vNormal = normalize(vec3(-grad.x, 1.0, -grad.y));
     // 水の色と空の色は頂点で計算する（フレネルの混ぜ方だけ画素ごと）
-    vec3 toEye = normalize(cameraPosition - wp.xyz);
+    vec3 eyeVec = cameraPosition - wp.xyz;
+    vec3 toEye = normalize(eyeVec);
     vBody = uDeepColor * (uSunIrr + uSkyIrr) / PI;
-    vSky = oceanSky(reflect(-toEye, vNormal));
+    vSky = oceanFarSky(reflect(-toEye, vNormal), length(eyeVec));
     vec4 mvPosition = viewMatrix * wp;
     gl_Position = projectionMatrix * mvPosition;
     #include <fog_vertex>

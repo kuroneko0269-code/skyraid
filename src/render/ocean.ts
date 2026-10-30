@@ -81,6 +81,13 @@ export class Ocean {
     uSkyIrr: { value: new Color() },
     uReflectivity: { value: OCEAN_CONFIG.reflectivity },
     uDeepColor: { value: new Color(OCEAN_CONFIG.deepColor) },
+    uHorizonLift: {
+      value: new Vector3(
+        OCEAN_CONFIG.horizonReflection.startDistance,
+        OCEAN_CONFIG.horizonReflection.endDistance,
+        OCEAN_CONFIG.horizonReflection.lift,
+      ),
+    },
   };
 
   constructor(atmosphere: Atmosphere, drawDistance: number, clouds: CloudField) {

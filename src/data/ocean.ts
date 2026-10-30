@@ -67,6 +67,13 @@ export const OCEAN_CONFIG = {
   /** フレネルで混ぜる空の反射の強さ（0〜1）。画質「高」は highBoost.reflectivity 倍 */
   reflectivity: 0.9,
   /**
+   * 遠くの海面の空の反射（3-1 の事前修正）: 遠くでは視線が海面にほぼ平行になり、水平線のすぐ上の
+   * 白っぽい空を映して空と見分けがつかなくなる。実際の海では、遠くほど手前を向いた波の斜面ばかりが
+   * 見えるので、少し上の（より青い）空を映す。反射の向きの上向き成分（sin 仰角）に、カメラからの
+   * 距離が startDistance m で 0、endDistance m で lift になるよう smoothstep で足す（近距離は変えない）
+   */
+  horizonReflection: { startDistance: 800, endDistance: 4000, lift: 0.12 },
+  /**
    * 太陽の照り返し（GGX）。roughness は近く（さざ波が見える範囲）と遠く（さざ波が消えた範囲）の
    * GGX の α。遠くは細かい波を粗さとして扱い、照り返しを広げる。strength は明るさの倍率
    * （4-2b で 1 → 0.6）

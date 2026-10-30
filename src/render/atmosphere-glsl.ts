@@ -32,6 +32,8 @@ const float ATMO_AERIAL_H = ${f(SKY_CONFIG.aerial.heightFalloff)};
 const vec3 ATMO_AERIAL_LOW = vec3(${f(SKY_CONFIG.aerial.lowFactor)}, ${f(SKY_CONFIG.aerial.lowFrom)}, ${f(SKY_CONFIG.aerial.lowTo)});
 const vec3 ATMO_SEA_ALBEDO = ${v3([sea.r, sea.g, sea.b])};
 const float ATMO_SEA_REFLECT = ${f(OCEAN_CONFIG.reflectivity)};
+// 描画距離の外の海面はすべて遠いので、海面のシェーダーの遠くと同じだけ上の空を映す（3-1 の事前修正）
+const float ATMO_SEA_LIFT = ${f(OCEAN_CONFIG.horizonReflection.lift)};
 
 // 空気の厚さ（天頂 = 1、地平線で約 36）。地平線より下は地平線と同じ
 float atmoAirMass(float c) {
@@ -96,7 +98,7 @@ vec3 atmoBackgroundSky(vec3 dir, vec3 sky, vec3 sun, float sunE, float h) {
   float c = 1.0 - clamp(-dir.y, 0.0, 1.0);
   float F = 0.02 + 0.98 * c * c * c * c * c;
   vec3 sea = ATMO_SEA_ALBEDO * (sunIrr + skyIrr) / 3.14159265 * (1.0 - F)
-    + atmoSky(vec3(dir.x, -dir.y, dir.z), sun, sunE, 0.0) * (F * ATMO_SEA_REFLECT);
+    + atmoSky(normalize(vec3(dir.x, -dir.y + ATMO_SEA_LIFT, dir.z)), sun, sunE, 0.0) * (F * ATMO_SEA_REFLECT);
   vec3 ext = exp(-atmoAerialDensity(y, 0.0) * t);
   return sea * ext + sky * (1.0 - ext);
 }
