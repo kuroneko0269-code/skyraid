@@ -1,4 +1,4 @@
-// ミッションの HUD に渡す値（2-4）: 残り時間・戦域の境界・次のリングの画面座標（カメラで投影）。
+// ミッションの HUD に渡す値（2-4）: 残り時間・戦域の境界・次のリング（護衛中は輸送機。2-5）の画面座標（カメラで投影）。
 // 目標の進み具合は MissionHud がランナーのイベントを購読する
 import { Vector3, type Object3D, type PerspectiveCamera } from 'three';
 import { HUD_CONFIG } from '../data/hud';
@@ -27,10 +27,13 @@ export class MissionLink {
     this.hud.setBoundary(b.outside, b.failOnExpire ? b.secondsLeft : null);
 
     const w = this.waypoint;
+    // 次のリング。なければ護衛中の輸送機（守る相手の位置を示す）
     const ring = runner?.running ? (runner.activeRings?.next ?? null) : null;
-    w.shown = ring !== null;
-    if (ring) {
-      p.set(ring.position.x, ring.position.y, ring.position.z);
+    const escort = runner?.running && !ring ? this.escortPosition() : null;
+    const mark = ring?.position ?? escort;
+    w.shown = mark !== null;
+    if (mark) {
+      p.set(mark.x, mark.y, mark.z);
       w.distance = p.distanceTo(this.aircraft.position);
       this.camera.updateMatrixWorld();
       p.applyMatrix4(this.camera.matrixWorldInverse);
@@ -48,5 +51,17 @@ export class MissionLink {
       }
     }
     this.hud.setWaypoint(w);
+  }
+
+  /** 進行中の護衛の目標の輸送機の位置（なければ null） */
+  private escortPosition(): Readonly<{ x: number; y: number; z: number }> | null {
+    const runner = this.play.runner;
+    if (!runner) return null;
+    for (const o of runner.objectives) {
+      if (o.status !== 'active' || o.def.type !== 'escort') continue;
+      const e = this.play.session.escort(o.def.group);
+      if (e?.active) return e.position;
+    }
+    return null;
   }
 }

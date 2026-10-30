@@ -1,5 +1,9 @@
+import { parseUnlockAll } from '../core/debug-flags';
 import { usesDemoCamera, type GameState, type ScreenState } from '../core/game-state';
+import { detectLocale } from '../core/locale';
+import type { MissionResult } from '../missions/runner';
 import type { MissionDef } from '../missions/types';
+import { CampaignProgress } from '../progression/campaign-progress';
 import { BriefingScreen } from './briefing';
 import { MissionSelectScreen } from './mission-select';
 import { ModeSelectScreen } from './mode-select';
@@ -24,6 +28,8 @@ export class Screens {
   readonly pauseButton: HTMLButtonElement;
   /** ミッション一覧で選んだミッション（ブリーフィング・もう一度で使う） */
   selectedMission: MissionDef | null = null;
+  /** ミッションの解放とクリア済みのランク（2-5。今はセッション内だけ） */
+  readonly progress: CampaignProgress;
   private readonly curtain: FadeCurtain;
 
   constructor(
@@ -34,6 +40,12 @@ export class Screens {
     onAbortMission: () => void,
   ) {
     applyScreenFade(document.documentElement);
+    const search = window.location.search;
+    const locale = detectLocale(search, navigator.languages);
+    this.progress = new CampaignProgress(
+      missions.map((m) => m.id),
+      parseUnlockAll(search),
+    );
     this.title = new TitleScreen(parent, () => game.transition('mode_select'));
     this.modeSelect = new ModeSelectScreen(parent, {
       // PvP・レイドは disabled
@@ -43,7 +55,7 @@ export class Screens {
       },
       onBack: () => game.transition('title'),
     });
-    this.missionSelect = new MissionSelectScreen(parent, missions, {
+    this.missionSelect = new MissionSelectScreen(parent, missions, this.progress, locale, {
       onSelect: (mission) => {
         this.selectedMission = mission;
         this.briefing.show(mission);
@@ -51,7 +63,7 @@ export class Screens {
       },
       onBack: () => game.transition('mode_select'),
     });
-    this.briefing = new BriefingScreen(parent, {
+    this.briefing = new BriefingScreen(parent, locale, {
       onLaunch: () => game.transition('flight'),
       onBack: () => game.transition('mission_select'),
     });
@@ -79,6 +91,13 @@ export class Screens {
       if (cut) this.curtain.cut();
       this.show(to);
     });
+  }
+
+  /** リザルトを出す。成功ならクリアを記録して次のミッションを解放する */
+  showResult(result: MissionResult): void {
+    if (result.outcome === 'success' && result.rank)
+      this.progress.recordClear(result.missionId, result.rank);
+    this.result.show(result);
   }
 
   private show(state: ScreenState): void {

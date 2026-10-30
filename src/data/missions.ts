@@ -1,6 +1,8 @@
-// ミッションの定義（2-4。データだけ、ロジックなし）。型は src/missions/types.ts、進め方は src/missions/runner.ts。
-// 2-5 でミッションを増やすときは MISSIONS に足すだけ。距離は m、時間は秒
+// ミッションの定義（2-4、2-5 で 5 本。データだけ、ロジックなし）。型は src/missions/types.ts、進め方は src/missions/runner.ts。
+// ミッションを増やすときは MISSIONS に足すだけ。タイトル・ブリーフィング文は src/data/i18n/*.json の missions[id]。
+// 距離は m、時間は秒。島の中心が原点、海岸線は半径 約 2.6〜3.2km、北は -Z。向き（headingDeg）は -Z から右回り（東 = 90）
 import type { MissionDef } from '../missions/types';
+import { ENCOUNTER_MISSION, ESCORT_MISSION, STRIKE_MISSION } from './missions-special';
 import { DEFAULT_RANK_MULTIPLIERS } from './ranking';
 
 /** ミッションの流れの時間 */
@@ -12,7 +14,7 @@ export const MISSION_FLOW = {
 } as const;
 
 /**
- * 訓練: 島の周りのリング 10 個を順に通り、そのあと敵機 2 機（easy）を撃墜する。
+ * M1 訓練: 島の周りのリング 10 個を順に通り、そのあと敵機 2 機（easy）を撃墜する（2-4 の仮ミッションをそのまま M1 にした）。
  * - リング: 1 個目は開始位置の 1.2km 先（機首の正面）。2〜10 個目は島の中心から半径 3700m の円上に 37.5° おき
  *   （間隔 約 2.4km = 巡航で約 10 秒）、高度 450〜750m。向きは円の接線（南 → 東 → 北 → 西と回る）。一周 約 100 秒
  * - 敵機: リングをすべて通ると（撃墜の目標が始まると）、島の上空に南向きで出て、島の周りを回る（巡航の経路はフリーフライトと同じ）
@@ -20,11 +22,6 @@ export const MISSION_FLOW = {
  */
 export const TRAINING_MISSION: MissionDef = {
   id: 'training',
-  title: '訓練',
-  briefing:
-    '島の周りに訓練用のリングを 10 個置いた。黄色く光るリングを順番にくぐれ。\n' +
-    'すべて通ったら、仮想敵の戦闘機 2 機が島の上空に現れる。ロックオンとミサイル・機銃で撃墜せよ。\n' +
-    '戦域（島の中心から 6km）の外へ出ないこと。',
   mapId: 'island',
   start: { x: 0, y: 500, z: 4500, headingDeg: 0 },
   timeLimitSeconds: 480,
@@ -82,5 +79,76 @@ export const TRAINING_MISSION: MissionDef = {
   reward: { baseCredits: 1000, rankMultipliers: DEFAULT_RANK_MULTIPLIERS },
 };
 
-/** キャンペーンのミッション一覧（並び順のとおりに表示する） */
-export const MISSIONS: readonly MissionDef[] = [TRAINING_MISSION];
+/** 島の周りを回る四角い経路（フリーフライトの敵機と同じ） */
+export const ISLAND_PATROL = [
+  { x: -2000, y: 1000, z: -2000 },
+  { x: 2000, y: 1100, z: -2000 },
+  { x: 2000, y: 1000, z: 2000 },
+  { x: -2000, y: 900, z: 2000 },
+] as const;
+
+/**
+ * M2 初陣: 敵機 3 機（normal）を撃墜する。2 機は開始時に島の北から、1 機は 40 秒後に北西から来る（時間差）。
+ * 開始位置は起動位置と同じ島の南の沖合
+ */
+export const FIRST_SORTIE_MISSION: MissionDef = {
+  id: 'first-sortie',
+  mapId: 'island',
+  start: { x: 0, y: 500, z: 4500, headingDeg: 0 },
+  timeLimitSeconds: 420,
+  parTimeSeconds: 210,
+  spawns: [
+    {
+      kind: 'enemyFighter',
+      group: 'first-sortie-bandits',
+      count: 2,
+      difficulty: 'normal',
+      trigger: { type: 'start' },
+      positions: [
+        { x: -3000, y: 1100, z: -2500, headingDeg: 120 },
+        { x: 3000, y: 1200, z: -3000, headingDeg: 240 },
+      ],
+      patrol: ISLAND_PATROL,
+    },
+    {
+      kind: 'enemyFighter',
+      group: 'first-sortie-bandits',
+      count: 1,
+      difficulty: 'normal',
+      trigger: { type: 'time', seconds: 40 },
+      positions: [{ x: -3200, y: 1200, z: -2200, headingDeg: 120 }],
+      patrol: ISLAND_PATROL,
+    },
+  ],
+  objectives: [
+    {
+      id: 'bandits',
+      type: 'kill',
+      required: true,
+      start: 'withPrevious',
+      target: 'enemyFighter',
+      group: 'first-sortie-bandits',
+      count: 3,
+    },
+  ],
+  success: 'allRequiredObjectives',
+  failConditions: ['playerDown', 'timeUp', 'outOfBounds'],
+  reward: { baseCredits: 1500 },
+};
+
+export {
+  ENCOUNTER_MISSION,
+  ESCORT_MISSION,
+  ESCORT_ROUTE,
+  KAIJU_ROUTE,
+  STRIKE_MISSION,
+} from './missions-special';
+
+/** キャンペーンのミッション一覧（並び順のとおりに表示し、前を成功すると次が解放される） */
+export const MISSIONS: readonly MissionDef[] = [
+  TRAINING_MISSION,
+  FIRST_SORTIE_MISSION,
+  ESCORT_MISSION,
+  STRIKE_MISSION,
+  ENCOUNTER_MISSION,
+];

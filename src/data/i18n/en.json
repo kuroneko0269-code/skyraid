@@ -1,0 +1,47 @@
+{
+  "missions": {
+    "training": {
+      "title": "Training",
+      "briefing": [
+        "Ten training rings are set up around the island. Fly through the glowing yellow rings in order.",
+        "Once you clear them all, two mock enemy fighters will appear above the island.",
+        "Shoot both down with your missiles and gun.",
+        "Stay inside the combat area (6 km from the island's center)."
+      ]
+    },
+    "first-sortie": {
+      "title": "First Sortie",
+      "briefing": [
+        "Unidentified fighters have entered our airspace from the north of the island. This is not a drill.",
+        "Two are inbound now, with one more close behind. Shoot down all three.",
+        "They carry missiles. When the warning sounds, use flares and break hard."
+      ]
+    },
+    "escort": {
+      "title": "Escort",
+      "briefing": [
+        "A transport carrying evacuees will fly from the east coast to the west coast evacuation point.",
+        "Four enemy fighters will come after it in two waves.",
+        "The transport cannot evade. Drive off the attackers and get it to the west coast.",
+        "If the transport is shot down, the mission fails."
+      ]
+    },
+    "strike": {
+      "title": "Strike",
+      "briefing": [
+        "We have located four enemy supply depots on the island.",
+        "Destroy all of them. No anti-air guns have been spotted.",
+        "Don't get too close to the ground. Pull up early after each pass."
+      ]
+    },
+    "encounter": {
+      "title": "Encounter",
+      "briefing": [
+        "We have detected two enemy fighters and a huge contact under the sea southeast of the island.",
+        "The contact is likely to surface while you are engaging the fighters. Its identity is unknown.",
+        "If a giant creature appears, concentrate your fire and drive it back into the sea.",
+        "Downing the fighters is optional, but watch your six."
+      ]
+    }
+  }
+}

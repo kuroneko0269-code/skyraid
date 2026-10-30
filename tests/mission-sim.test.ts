@@ -1,57 +1,19 @@
-// 仮ミッション（訓練）を本番と同じ FlightSession + MissionRunner で、シード固定のボットに飛ばす
+// M1 訓練（2-4 の仮ミッション）を本番と同じ FlightSession + MissionRunner で、シード固定のボットに飛ばす
 import { describe, expect, it } from 'vitest';
-import { steerToward } from '../src/ai/steering';
 import { createCombatInput } from '../src/combat/combat-system';
 import { createRandom } from '../src/core/random';
 import { ISLAND_MAP } from '../src/data/maps';
 import { TRAINING_MISSION } from '../src/data/missions';
 import { RING_CONFIG } from '../src/data/rings';
-import type { AircraftControls } from '../src/entities/aircraft';
 import type { Vec3 } from '../src/flight/math';
-import { FlightSession } from '../src/missions/flight-session';
-import { GamePlay } from '../src/missions/game-play';
 import type { RingObjective } from '../src/missions/types';
 import { getGroundHeight } from '../src/render/terrain-height';
 import { PilotBot, VETERAN } from './ai-sim';
-
-const DT = 1 / 60;
-
-function newPlay(seed: number): GamePlay {
-  return new GamePlay(
-    new FlightSession({
-      rng: createRandom(seed),
-      groundHeight: getGroundHeight,
-      flightOptions: { autoLevel: false },
-    }),
-  );
-}
-
-/** 点へ機首を向けて飛ぶボット（リングを順にくぐる・島の上を回る） */
-class WaypointBot {
-  readonly controls: AircraftControls = {
-    pitch: 0,
-    roll: 0,
-    yaw: 0,
-    throttle: 0,
-    afterburner: false,
-    throttleTarget: 0.75,
-  };
-  private readonly dir: Vec3 = { x: 0, y: 0, z: 0 };
-
-  constructor(private readonly session: FlightSession) {}
-
-  fly(to: Readonly<Vec3>): void {
-    const s = this.session.aircraft.state;
-    this.dir.x = to.x - s.position.x;
-    this.dir.y = to.y - s.position.y;
-    this.dir.z = to.z - s.position.z;
-    steerToward(this.controls, s.orientation, s.angularRate, this.dir, 1);
-  }
-}
+import { DT, newPlay, WaypointBot } from './mission-bots';
 
 const rings = (TRAINING_MISSION.objectives.find((o) => o.type === 'rings') as RingObjective).rings;
 
-describe('仮ミッション（訓練）のデータ', () => {
+describe('M1 訓練のデータ', () => {
   it('リング 10 個 → 敵機 2 機（easy）の順。リングは地表から 300m 以上・戦域の中', () => {
     expect(rings.length).toBe(10);
     const kill = TRAINING_MISSION.objectives[1];
@@ -67,7 +29,7 @@ describe('仮ミッション（訓練）のデータ', () => {
   });
 });
 
-describe('仮ミッションのシミュレーション（シード固定）', () => {
+describe('M1 訓練のシミュレーション（シード固定）', () => {
   it('リングを順に通り、敵機 2 機を倒せば成功（ランクと報酬が付く）', () => {
     const play = newPlay(11);
     const session = play.session;

@@ -1,8 +1,9 @@
 import './campaign.css';
+import type { Locale } from '../core/locale';
 import { DEFAULT_RANK_MULTIPLIERS } from '../data/ranking';
 import type { MissionDef } from '../missions/types';
 import { el } from './hud-dom';
-import { formatClock, formatCredits, objectiveSummary } from './mission-text';
+import { formatClock, formatCredits, missionStrings, objectiveSummary } from './mission-text';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 /** ブリーフィング（2-4）: タイトル・説明・目標の一覧・制限時間・報酬と「出撃」ボタン */
@@ -14,7 +15,11 @@ export class BriefingScreen {
   private readonly facts: HTMLDivElement;
   private readonly launch: HTMLButtonElement;
 
-  constructor(parent: HTMLElement, handlers: { onLaunch: () => void; onBack: () => void }) {
+  constructor(
+    parent: HTMLElement,
+    private readonly locale: Locale,
+    handlers: { onLaunch: () => void; onBack: () => void },
+  ) {
     const root = createScreen(parent, 'campaign-screen briefing-screen');
     const panel = el('div', 'campaign-panel', root);
     el('div', 'campaign-kicker', panel, 'BRIEFING');
@@ -31,8 +36,9 @@ export class BriefingScreen {
 
   /** 表示するミッション */
   show(m: MissionDef): void {
-    this.title.textContent = m.title;
-    this.text.textContent = m.briefing;
+    const text = missionStrings(m.id, this.locale);
+    this.title.textContent = text.title;
+    this.text.textContent = text.briefing.join('\n');
     this.objectives.replaceChildren();
     m.objectives.forEach((o, i) => {
       const li = el('li', 'briefing-objective', this.objectives);

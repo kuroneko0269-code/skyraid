@@ -20,7 +20,7 @@ import type { GroundHeightFn } from '../entities/aircraft';
 import { EnemyAircraft } from '../entities/enemy-aircraft';
 import type { Vec3 } from '../flight/math';
 import type { Rng } from './ai-types';
-import { createUnit, type Unit } from './squadron-unit';
+import { chooseTarget, createUnit, type Unit } from './squadron-unit';
 
 export type SquadronConfig = EnemyForceConfig;
 
@@ -35,6 +35,7 @@ export class EnemySquadron {
   private enabledFlag = true;
   private countValue: number;
   private difficultyValue: Difficulty;
+  /** 敵の機銃が当たるもの（プレイヤー機 + 味方の輸送機） */
   private readonly playerTargets: CombatTarget[];
 
   /**
@@ -51,7 +52,7 @@ export class EnemySquadron {
     this.countValue = config.count;
     this.difficultyValue = config.defaultDifficulty;
     this.enemies = enemies;
-    this.playerTargets = combat.player ? [combat.player] : [];
+    this.playerTargets = [...(combat.player ? [combat.player] : []), ...combat.allies];
     this.units = this.enemies.map((enemy, i) =>
       createUnit(
         enemy,
@@ -96,6 +97,7 @@ export class EnemySquadron {
       u.gun.reset();
       u.targeting.reset();
       u.difficulty = this.difficultyValue;
+      u.preferAllies = false;
       u.ai.setPatrol(this.config.patrols[i % this.config.patrols.length] ?? []);
       if (this.enabledFlag && i < this.countValue)
         this.spawn(u, this.config.spawns[i % this.config.spawns.length]);
@@ -117,12 +119,20 @@ export class EnemySquadron {
    * 空いている機体（出撃していない・撃墜済み）を 1 機、at に出して patrol を巡回させる（ミッションの敵機。2-4）。
    * 出した機体の番号（enemies の添字）。空きがなければ -1
    */
-  deploy(at: EnemySpawn, patrol: readonly PatrolPoint[], difficulty: Difficulty): number {
+  deploy(
+    at: EnemySpawn,
+    patrol: readonly PatrolPoint[],
+    difficulty: Difficulty,
+    /** true: 味方の輸送機を優先して狙う（M3。2-5） */
+    preferAllies = false,
+  ): number {
     const i = this.units.findIndex((u) => !u.enemy.active);
     const u = this.units[i];
     if (!u) return -1;
     u.gun.reset();
     u.difficulty = difficulty;
+    u.preferAllies = preferAllies;
+    u.playerAggro = false;
     u.ai.setPatrol(patrol);
     this.spawn(u, at);
     return i;
@@ -158,8 +168,11 @@ export class EnemySquadron {
   private stepUnit(u: Unit, dt: number): void {
     const e = u.enemy;
     const state = e.aircraft.state;
-    const player = this.combat.player;
-    u.targeting.step(state, this.playerTargets, false, dt);
+    // 狙う相手: 輸送機を優先する機体は最も近い輸送機（いなければプレイヤー機）。ロックもその相手だけ
+    const target = chooseTarget(u, this.combat.player, this.combat.allies);
+    u.lockTargets.length = 0;
+    if (target) u.lockTargets.push(target);
+    u.targeting.step(state, u.lockTargets, false, dt);
     u.missiles.step(dt);
     u.flares.step(dt);
 
@@ -171,7 +184,7 @@ export class EnemySquadron {
     self.agl = p.y - this.groundHeight(p.x, p.z);
     self.verticalSpeed = e.velocity.y;
     const senses = u.senses;
-    senses.target = player && player.active ? player : null;
+    senses.target = target;
     senses.threat = this.findThreat(e, u.threat);
     senses.damageTaken = e.takeDamage();
     senses.locked = u.targeting.locked;

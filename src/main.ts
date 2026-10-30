@@ -188,7 +188,7 @@ loop.onUpdate((dt) => {
   // ミッションが終わり、大きな文字を出し終えたらリザルトへ（固定更新もここで止まる）
   const runner = play.runner;
   if (runner?.readyForResult && runner.result) {
-    screens.result.show(runner.result);
+    screens.showResult(runner.result);
     game.transition('result');
   }
 });

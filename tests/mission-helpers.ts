@@ -1,5 +1,6 @@
 // ミッションのテスト用の偽の世界（MissionWorld）。値を直接書き換えて状況を作る
 import type { Vec3 } from '../src/flight/math';
+import type { EscortState } from '../src/missions/mission-props';
 import type { MissionEvents, MissionRunner } from '../src/missions/runner';
 import type { DestroyableKind, MissionDef, SpawnDef } from '../src/missions/types';
 import type { MissionWorld } from '../src/missions/world';
@@ -12,6 +13,9 @@ export class FakeWorld implements MissionWorld {
   playerDamageTaken = 0;
   playerMaxHp = 200;
   escortLost = false;
+  kaijuDamageRatio = 0;
+  /** 護衛対象（グループ名 → 様子） */
+  readonly escorts = new Map<string, EscortState>();
   readonly spawned: SpawnDef[] = [];
   readonly destroyed = new Map<string, number>();
 
@@ -21,6 +25,10 @@ export class FakeWorld implements MissionWorld {
 
   destroyedCount(kind: DestroyableKind, group?: string): number {
     return this.destroyed.get(group === undefined ? kind : `${kind}:${group}`) ?? 0;
+  }
+
+  escort(group: string): EscortState | null {
+    return this.escorts.get(group) ?? null;
   }
 
   /** 撃墜を 1 つ足す */
@@ -40,8 +48,6 @@ export class FakeWorld implements MissionWorld {
 export function missionDef(over: Partial<MissionDef> = {}): MissionDef {
   return {
     id: 'test',
-    title: 'テスト',
-    briefing: '',
     mapId: 'island',
     start: { x: 0, y: 500, z: 0, headingDeg: 0 },
     parTimeSeconds: 60,

@@ -1,31 +1,24 @@
-// 飛行 1 回分のゲーム状態（Three.js 非依存）: プレイヤー機・HP・戦闘（的・ドローン）・敵機（2-3）。
+// 飛行 1 回分のゲーム状態（Three.js 非依存）: プレイヤー機・HP・戦闘（的・ドローン）・敵機（2-3）・
+// ミッションの出現物（輸送機・怪獣・地上目標。2-5）。
 // フリーフライト（startFree）とミッション（startMission。出現物はランナーが spawn で出す）で共用する（2-4）。
 // 固定ステップで step() を呼ぶ。撃墜（地面・海面への墜落も）されると playerRespawnSeconds 後に復帰する:
 // フリーフライトは墜落（撃墜）地点の地表から spawn.position.y（300m）上空に水平で、ミッションは開始位置へ（4-6 の事前修正）
 import { EnemySquadron, createEnemies } from '../ai/enemy-squadron';
 import { CombatSystem, createCombatInput, type CombatInput } from '../combat/combat-system';
 import type { Rng } from '../combat/gun';
-import type { CombatTarget } from '../combat/target';
 import { FREE_FLIGHT_ENEMIES, type Difficulty, type EnemyForceConfig } from '../data/ai';
 import { FLIGHT_CONFIG } from '../data/flight';
 import { ISLAND_MAP } from '../data/maps';
 import { WORLD_CONFIG } from '../data/terrain';
 import { Aircraft, type AircraftControls, type GroundHeightFn } from '../entities/aircraft';
-import { EnemyAircraft, headingQuat } from '../entities/enemy-aircraft';
+import { headingDegOf, headingQuat, type EnemyAircraft } from '../entities/enemy-aircraft';
 import { PlayerVitals } from '../entities/player-vitals';
-import { TargetBalloon, TargetField } from '../entities/target-balloon';
-import { TargetDrone } from '../entities/target-drone';
+import { TargetField } from '../entities/target-balloon';
 import type { FlightOptions } from '../flight/flight-model';
-import {
-  copyQuat,
-  copyVec3,
-  quatIdentity,
-  rotateVec3,
-  vec3,
-  type Quat,
-  type Vec3,
-} from '../flight/math';
+import { copyQuat, copyVec3, quatIdentity, vec3, type Quat, type Vec3 } from '../flight/math';
 import { BoundaryWatch } from './boundary';
+import { DestroyTally } from './destroy-tally';
+import { MissionProps, type EscortState } from './mission-props';
 import type { DestroyableKind, Pose, SpawnDef } from './types';
 import type { MissionWorld } from './world';
 
@@ -42,8 +35,6 @@ export interface FlightSessionOptions {
 export type SessionMode = 'free' | 'mission';
 
 const NO_INPUT = createCombatInput();
-const FORWARD: Readonly<Vec3> = { x: 0, y: 0, z: -1 };
-const scratchForward: Vec3 = vec3();
 
 export class FlightSession implements MissionWorld {
   readonly aircraft: Aircraft;
@@ -51,6 +42,8 @@ export class FlightSession implements MissionWorld {
   readonly combat: CombatSystem;
   readonly squadron: EnemySquadron;
   readonly enemies: readonly EnemyAircraft[];
+  /** 輸送機・怪獣・地上目標（ミッションの出現物。2-5） */
+  readonly props: MissionProps;
   /** 地表の高さ（地形なしのテストでは FLIGHT_CONFIG.groundAltitude） */
   private readonly ground: (x: number, z: number) => number;
   /** フリーフライトの戦域の境界（警告だけ。ミッションの境界はランナーが持つ） */
@@ -60,10 +53,8 @@ export class FlightSession implements MissionWorld {
   /** 今の開始位置・向き（リスポーンもここ） */
   private readonly startPosition: Vec3 = vec3();
   private readonly startOrientation: Quat = quatIdentity();
-  /** ミッションの敵機の出現物（enemies[i] がどのグループか） */
-  private readonly enemyGroups: (string | null)[];
-  /** 撃墜・破壊の数（種類ごと・「種類:グループ」ごと）。startFree / startMission で 0 に戻す */
-  private readonly destroyed = new Map<string, number>();
+  /** 撃墜・破壊の数。startFree / startMission で 0 に戻す */
+  private readonly destroyed: DestroyTally;
   /** 撃墜を知らせた回数（player.downCount と比べる） */
   private notifiedDowns = 0;
   private readonly wreck: Vec3 = vec3();
@@ -85,7 +76,8 @@ export class FlightSession implements MissionWorld {
     const force = options.enemies ?? FREE_FLIGHT_ENEMIES;
     const enemies = createEnemies(ground, force);
     this.enemies = enemies;
-    this.enemyGroups = enemies.map(() => null);
+    this.props = new MissionProps(ground);
+    this.destroyed = new DestroyTally(enemies, this.props);
     this.combat = new CombatSystem(
       new TargetField(ground, rng),
       ground ?? null,
@@ -95,9 +87,11 @@ export class FlightSession implements MissionWorld {
       undefined,
       enemies,
       this.player,
+      this.props.hostileTargets,
+      this.props.transports,
     );
     this.squadron = new EnemySquadron(this.combat, enemies, ground, rng, force);
-    this.combat.onDestroyed(this.countDestroyed);
+    this.combat.onDestroyed(this.destroyed.count);
   }
 
   /** プレイヤーが撃墜されたとき（演出用） */
@@ -149,7 +143,7 @@ export class FlightSession implements MissionWorld {
     this.configureDrones(0, false);
     this.squadron.respawns = false;
     this.squadron.withdrawAll();
-    this.enemyGroups.fill(null);
+    this.destroyed.clearGroups();
   }
 
   private begin(): void {
@@ -157,6 +151,7 @@ export class FlightSession implements MissionWorld {
     this.player.revive();
     this.player.step(1 / 60);
     this.combat.reset();
+    this.props.reset();
     this.freeBoundary.reset();
     this.destroyed.clear();
   }
@@ -167,6 +162,7 @@ export class FlightSession implements MissionWorld {
     if (alive) this.stepAircraft(controls, dt);
     if (this.player.step(dt)) this.respawn();
     this.squadron.step(dt);
+    this.props.step(dt);
     this.combat.step(this.player.active ? input : NO_INPUT, this.aircraft.state, dt);
     if (this.mode === 'free' && this.player.active) {
       const p = this.aircraft.state.position;
@@ -224,9 +220,16 @@ export class FlightSession implements MissionWorld {
     return this.player.maxHp;
   }
 
-  /** 護衛（2-5）はまだないので失わない */
   get escortLost(): boolean {
-    return false;
+    return this.props.escortLost;
+  }
+
+  escort(group: string): EscortState | null {
+    return this.props.escort(group);
+  }
+
+  get kaijuDamageRatio(): number {
+    return this.props.kaijuDamageRatio;
   }
 
   spawn(def: SpawnDef): void {
@@ -235,8 +238,9 @@ export class FlightSession implements MissionWorld {
         for (let i = 0; i < def.count; i++) {
           const at = def.positions[i % def.positions.length];
           if (!at) break;
-          const index = this.squadron.deploy(at, def.patrol, def.difficulty);
-          if (index >= 0) this.enemyGroups[index] = def.group;
+          const preferAllies = def.attack === 'transport';
+          const index = this.squadron.deploy(at, def.patrol, def.difficulty, preferAllies);
+          if (index >= 0) this.destroyed.setEnemyGroup(index, def.group);
         }
         break;
       case 'targets':
@@ -246,14 +250,19 @@ export class FlightSession implements MissionWorld {
         this.configureDrones(def.count, false);
         break;
       case 'groundTarget':
-        // 地上目標は 2-6 で追加する
+        this.props.spawnGroundTargets(def);
+        break;
+      case 'transport':
+        this.props.spawnTransport(def);
+        break;
+      case 'kaiju':
+        this.props.spawnKaiju(def);
         break;
     }
   }
 
   destroyedCount(kind: DestroyableKind, group?: string): number {
-    const key = group === undefined ? kind : `${kind}:${group}`;
-    return this.destroyed.get(key) ?? 0;
+    return this.destroyed.get(kind, group);
   }
 
   private configureDrones(count: number, respawns: boolean): void {
@@ -263,19 +272,6 @@ export class FlightSession implements MissionWorld {
       d.respawns = respawns;
     });
   }
-
-  private readonly countDestroyed = (target: CombatTarget): void => {
-    let kind: DestroyableKind;
-    let group: string | null = null;
-    if (target instanceof EnemyAircraft) {
-      kind = 'enemyFighter';
-      group = this.enemyGroups[this.enemies.indexOf(target)] ?? null;
-    } else if (target instanceof TargetBalloon) kind = 'target';
-    else if (target instanceof TargetDrone) kind = 'drone';
-    else return;
-    const keys = group === null ? [kind, 'any'] : [kind, 'any', `${kind}:${group}`, `any:${group}`];
-    for (const key of keys) this.destroyed.set(key, (this.destroyed.get(key) ?? 0) + 1);
-  };
 
   private respawn(): void {
     if (this.mode === 'free') this.respawnAboveWreck();
@@ -297,12 +293,6 @@ export class FlightSession implements MissionWorld {
     this.wreck.x = p.x;
     this.wreck.y = this.ground(p.x, p.z) + FLIGHT_CONFIG.spawn.position.y;
     this.wreck.z = p.z;
-    // 機首（-Z）の水平成分から方位を出す（真上・真下を向いていたら北向き = 0°）
-    const forward = rotateVec3(scratchForward, a.state.orientation, FORWARD);
-    const heading =
-      Math.abs(forward.x) + Math.abs(forward.z) < 1e-6
-        ? 0
-        : (Math.atan2(forward.x, -forward.z) * 180) / Math.PI;
-    a.respawn(this.wreck, headingQuat(this.wreckOrientation, heading));
+    a.respawn(this.wreck, headingQuat(this.wreckOrientation, headingDegOf(a.state.orientation)));
   }
 }

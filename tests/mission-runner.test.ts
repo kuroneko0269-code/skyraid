@@ -168,11 +168,43 @@ describe('目標の進み具合と達成', () => {
     expect(r.result?.objectives.map((o) => o.status)).toEqual(['complete', 'active', 'complete']);
   });
 
-  it('護衛・破壊・怪獣は空の実装で達成しない', () => {
+  it('護衛: 輸送機が目的地の円に入れば達成。進み具合は経路の %（着くまでは 99 で止める）', () => {
     const w = new FakeWorld();
     const r = new MissionRunner(
       missionDef({
-        failConditions: [],
+        failConditions: ['escortLost'],
+        objectives: [
+          {
+            id: 'e',
+            type: 'escort',
+            required: true,
+            start: 'withPrevious',
+            group: 'g',
+            destination: { x: -3000, z: 0, radius: 300 },
+          },
+        ],
+      }),
+      w,
+    );
+    const escort = { position: { x: 0, y: 800, z: 0 }, progress: 0.5, active: true };
+    w.escorts.set('g', escort);
+    r.step(DT);
+    expect(r.objectives[0]?.current).toBe(50);
+    escort.position = { x: -2600, y: 800, z: 0 };
+    escort.progress = 1;
+    r.step(DT);
+    expect(r.objectives[0]?.current).toBe(99);
+    expect(r.status).toBe('running');
+    escort.position = { x: -2750, y: 800, z: 0 };
+    r.step(DT);
+    expect(r.status).toBe('success');
+  });
+
+  it('護衛: 輸送機を失うと「護衛対象を失った」で失敗', () => {
+    const w = new FakeWorld();
+    const r = new MissionRunner(
+      missionDef({
+        failConditions: ['escortLost'],
         objectives: [
           {
             id: 'e',
@@ -182,16 +214,58 @@ describe('目標の進み具合と達成', () => {
             group: 'g',
             destination: { x: 0, z: 0, radius: 100 },
           },
-          { id: 'd', type: 'destroy', required: true, start: 'withPrevious', group: 'g', count: 4 },
-          { id: 'm', type: 'kaiju', required: true, start: 'withPrevious', damageRatio: 0.3 },
         ],
       }),
       w,
     );
-    run((dt) => {
-      r.step(dt);
-    }, 3);
+    r.step(DT);
+    w.escortLost = true;
+    r.step(DT);
+    expect(r.status).toBe('failed');
+    expect(r.failReason).toBe('escortLost');
+  });
+
+  it('破壊: グループの地上目標を数え、count に届けば達成（始まる前の破壊は数えない）', () => {
+    const w = new FakeWorld();
+    w.kill('groundTarget', 'g');
+    const r = new MissionRunner(
+      missionDef({
+        objectives: [
+          { id: 'd', type: 'destroy', required: true, start: 'withPrevious', group: 'g', count: 2 },
+        ],
+      }),
+      w,
+    );
+    r.step(DT);
+    w.kill('groundTarget', 'other');
+    w.kill('groundTarget', 'g');
+    r.step(DT);
+    expect(r.objectives[0]?.current).toBe(1);
+    w.kill('groundTarget', 'g');
+    r.step(DT);
+    expect(r.status).toBe('success');
+  });
+
+  it('怪獣: 削った割合（%）を数え、damageRatio に届けば達成', () => {
+    const w = new FakeWorld();
+    const r = new MissionRunner(
+      missionDef({
+        objectives: [
+          { id: 'm', type: 'kaiju', required: true, start: 'withPrevious', damageRatio: 0.2 },
+        ],
+      }),
+      w,
+    );
+    expect(r.objectives[0]?.target).toBe(20);
+    w.kaijuDamageRatio = 0.125;
+    r.step(DT);
+    expect(r.objectives[0]?.current).toBe(12);
+    w.kaijuDamageRatio = 0.1999;
+    r.step(DT);
+    expect(r.objectives[0]?.current).toBe(19);
     expect(r.status).toBe('running');
-    expect(r.objectives.map((o) => o.status)).toEqual(['active', 'active', 'active']);
+    w.kaijuDamageRatio = 0.2;
+    r.step(DT);
+    expect(r.status).toBe('success');
   });
 });

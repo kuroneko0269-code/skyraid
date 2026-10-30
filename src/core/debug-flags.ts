@@ -19,3 +19,9 @@ export function parseSkipTitle(search: string): boolean {
   const params = new URLSearchParams(search);
   return params.has('skipTitle') || params.has('skiptitle');
 }
+
+/** ?unlockAll（開発用）: キャンペーンのミッションをすべて解放する（確認用。2-5） */
+export function parseUnlockAll(search: string): boolean {
+  const params = new URLSearchParams(search);
+  return params.has('unlockAll') || params.has('unlockall');
+}

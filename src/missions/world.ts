@@ -1,6 +1,7 @@
 // ミッションランナーとゲームの世界（飛行セッション）の間の取り決め（Three.js 非依存）。
 // ランナーは毎ステップこれを読む（ポーリング）だけで、機体・戦闘の中身を知らない。テストでは偽物を渡す
 import type { Vec3 } from '../flight/math';
+import type { EscortState } from './mission-props';
 import type { DestroyableKind, SpawnDef } from './types';
 
 export interface MissionWorld {
@@ -18,6 +19,10 @@ export interface MissionWorld {
   spawn(def: SpawnDef): void;
   /** 撃墜・破壊された数（kind の種類、group を指定すればその出現物だけ）。数えはじめはミッション開始 */
   destroyedCount(kind: DestroyableKind, group?: string): number;
-  /** 護衛対象を失ったか（2-5 で実装。今は常に false） */
+  /** 護衛対象（輸送機）のどれかを失ったか */
   readonly escortLost: boolean;
+  /** group の護衛対象（出ていなければ null） */
+  escort(group: string): EscortState | null;
+  /** 怪獣に与えたダメージの割合（0〜1。出ていなければ 0） */
+  readonly kaijuDamageRatio: number;
 }

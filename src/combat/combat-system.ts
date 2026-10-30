@@ -34,9 +34,11 @@ export function createCombatInput(): CombatInput {
 export class CombatSystem {
   readonly gun: Gun<CombatTarget>;
   readonly drones: TargetDrone[];
-  /** プレイヤーが撃てる対象すべて（的 + ドローン + 敵機）。順番は固定 */
+  /** プレイヤーが撃てる対象すべて（的 + ドローン + 敵機 + 怪獣・地上目標（2-5））。順番は固定 */
   readonly allTargets: readonly CombatTarget[];
-  /** ミサイルの信管が反応しうるものすべて（allTargets + プレイヤー機） */
+  /** プレイヤー機以外の味方（輸送機。2-5）。敵の機銃・ミサイルの対象で、プレイヤーの弾は当たらない */
+  readonly allies: readonly CombatTarget[];
+  /** ミサイルの信管が反応しうるものすべて（allTargets + プレイヤー機 + 味方） */
   readonly fuseTargets: readonly CombatTarget[];
   readonly targeting = new Targeting<CombatTarget>();
   readonly missileAmmo = new Magazine(MISSILE_CONFIG.ammo, MISSILE_CONFIG.fireInterval);
@@ -64,6 +66,10 @@ export class CombatSystem {
     enemies: readonly CombatTarget[] = [],
     /** プレイヤー機（2-3）。敵のミサイル・機銃の対象 */
     readonly player: CombatTarget | null = null,
+    /** 敵側のその他の対象（怪獣・地上目標。2-5）。出ていないときは active が false */
+    hostiles: readonly CombatTarget[] = [],
+    /** プレイヤー機以外の味方（輸送機。2-5） */
+    allies: readonly CombatTarget[] = [],
   ) {
     this.gun = new Gun<CombatTarget>(spec, this.handleHit, groundHeight, rng);
     this.missiles = new MissileSystem<CombatTarget>(
@@ -76,8 +82,9 @@ export class CombatSystem {
     );
     this.flares = new FlareField(undefined, 1 + enemies.length);
     this.drones = drones;
-    this.allTargets = [...targets.balloons, ...drones, ...enemies];
-    this.fuseTargets = player ? [...this.allTargets, player] : this.allTargets;
+    this.allTargets = [...targets.balloons, ...drones, ...enemies, ...hostiles];
+    this.allies = allies;
+    this.fuseTargets = [...this.allTargets, ...(player ? [player] : []), ...allies];
   }
 
   /** 命中（的・地面）ごとに呼ばれる。火花の演出用 */

@@ -2,6 +2,7 @@
 // ボットは敵と同じ AI（EnemyFighterAI）に「人間の腕前」の数値を渡して、プレイヤー機を操縦させる
 import { EnemyFighterAI, createCommand, type AiSelf, type AiSenses } from '../src/ai/enemy-fighter';
 import type { CombatInput } from '../src/combat/combat-system';
+import type { CombatTarget } from '../src/combat/target';
 import { createRandom } from '../src/core/random';
 import {
   DIFFICULTY_PRESETS,
@@ -124,7 +125,7 @@ export function simulate(
   return { playerDowns: ff.player.downCount, kills: ff.combat.kills, firstDownAt, firstKillAt };
 }
 
-/** プレイヤー機を AI で操縦する。目標は最も近い敵機 */
+/** プレイヤー機を AI で操縦する。目標は最も近い敵機（pick を渡せばその結果。ミッションの地上目標・怪獣など） */
 export class PilotBot {
   readonly controls: AircraftControls = {
     pitch: 0,
@@ -145,6 +146,9 @@ export class PilotBot {
     private readonly ff: FlightSession,
     skill: DifficultySpec,
     rng: () => number,
+    private readonly pick: () => CombatTarget | null = () => this.nearestEnemy(),
+    /** 地表の高さ（地面の回避に使う）。省略は海面 0（島から離れた海の上のシミュレーション） */
+    private readonly groundHeight: (x: number, z: number) => number = () => 0,
   ) {
     this.ai = new EnemyFighterAI(STARTER_AIRCRAFT, skill, [], rng, undefined, GUN_CONFIG);
     const s = ff.aircraft.state;
@@ -178,9 +182,9 @@ export class PilotBot {
     self.speed = s.speed;
     self.afterburnerGauge = s.afterburnerGauge;
     self.hpRatio = ff.player.hp / ff.player.maxHp;
-    self.agl = s.position.y;
+    self.agl = s.position.y - Math.max(0, this.groundHeight(s.position.x, s.position.z));
     self.verticalSpeed = ff.player.velocity.y;
-    const target = this.nearestEnemy();
+    const target = this.pick();
     // 選択中の対象を最も近い敵にそろえる（ロックはプレイヤーのロックの仕組みそのもの）
     if (target && ff.combat.targeting.selected !== target) ff.combat.targeting.select(target);
     this.senses.target = target;
@@ -217,7 +221,7 @@ export class PilotBot {
     return null;
   }
 
-  private nearestEnemy(): EnemyAircraft | null {
+  nearestEnemy(): EnemyAircraft | null {
     const p = this.ff.aircraft.state.position;
     let best: EnemyAircraft | null = null;
     let bestD = Infinity;

@@ -1,16 +1,24 @@
-// 破壊（2-6 で実装）。今は型と空の実装だけで、達成しない
-import type { DestroyObjective } from '../types';
+// 破壊（2-5）: group の地上目標を count 個壊す（出現物の数と同じにすれば「全部」）。
+// 地上目標は 2-6 までは仮置き（src/entities/ground-target-placeholder.ts）
+import type { DestroyObjective as DestroyDef } from '../types';
+import type { MissionWorld } from '../world';
 import { Objective } from './objective';
 
-export class DestroyObjectiveStub extends Objective<DestroyObjective> {
+export class DestroyObjective extends Objective<DestroyDef> {
   readonly target: number;
+  /** 目標が始まったときの破壊数（それより前は数えない） */
+  private base = 0;
 
-  constructor(def: DestroyObjective) {
+  constructor(def: DestroyDef) {
     super(def);
     this.target = def.count;
   }
 
-  step(): void {
-    // 2-6 で地上目標の破壊数を数える（MissionWorld.destroyedCount('groundTarget', group)）
+  protected override onActivate(world: MissionWorld): void {
+    this.base = world.destroyedCount('groundTarget', this.def.group);
+  }
+
+  step(world: MissionWorld): void {
+    this.setProgress(world.destroyedCount('groundTarget', this.def.group) - this.base);
   }
 }

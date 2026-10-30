@@ -1,5 +1,6 @@
 // ミッション定義の型（2-4。データ駆動）。定義そのものは src/data/missions.ts に TS のデータとして置き、ロジックを含めない。
-// ミッションを増やすとき（2-5）はデータを足すだけで済むよう、出現物・目標・失敗条件・報酬をすべてここで表す
+// ミッションを増やすときはデータを足すだけで済むよう、出現物・目標・失敗条件・報酬をすべてここで表す。
+// 表示する文（タイトル・ブリーフィング）は言語ごとに src/data/i18n/*.json に置き、ミッションの id で引く（2-5）
 import type { Difficulty, PatrolPoint } from '../data/ai';
 import type { Rank } from '../data/ranking';
 
@@ -9,6 +10,19 @@ export interface Pose {
   readonly y: number;
   readonly z: number;
   readonly headingDeg: number;
+}
+
+/** 水平の位置（地表に置くもの・水平の円の中心） */
+export interface Point2 {
+  readonly x: number;
+  readonly z: number;
+}
+
+/** 空間の位置 */
+export interface Point3 {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
 }
 
 // ---- 出現物 ----
@@ -34,6 +48,11 @@ export interface EnemyFighterSpawn {
   readonly trigger: SpawnTrigger;
   readonly positions: readonly Pose[];
   readonly patrol: readonly PatrolPoint[];
+  /**
+   * 狙う相手（2-5）。player（省略時）: プレイヤー機 / transport: 輸送機を優先して狙い、輸送機がいなければプレイヤー機。
+   * 飛び方・撃ち方（AI の数値）は同じで、相手の選び方だけが変わる
+   */
+  readonly attack?: 'player' | 'transport';
 }
 
 /** 射撃練習用の的（風船。位置は src/data/targets.ts の出現地点の先頭から count 個）。再出現しない */
@@ -50,17 +69,43 @@ export interface DroneSpawn {
   readonly trigger: SpawnTrigger;
 }
 
-/** 地上目標（2-6 で追加する。今は型だけで、出しても何も現れない） */
+/**
+ * 地上目標。positions の地表に 1 つずつ置く。
+ * 2-6 で種類（建物・車両など）と見た目を作るまでは、どの種類も「静止した大きな的」（placeholder）で出す（2-5）
+ */
 export interface GroundTargetSpawn {
   readonly kind: 'groundTarget';
   readonly group: string;
-  /** 種類（建物・車両など。2-6 で決める） */
+  /** 種類。2-6 までは 'placeholder' だけ */
   readonly targetType: string;
   readonly trigger: SpawnTrigger;
-  readonly positions: readonly Pose[];
+  readonly positions: readonly Point2[];
 }
 
-export type SpawnDef = EnemyFighterSpawn | TargetSpawn | DroneSpawn | GroundTargetSpawn;
+/** 輸送機（護衛対象、2-5）。from から to へ直線で一定速度（src/data/mission-props.ts）で飛ぶ。陣営はプレイヤー側 */
+export interface TransportSpawn {
+  readonly kind: 'transport';
+  /** 護衛の目標から参照する名前 */
+  readonly group: string;
+  readonly trigger: SpawnTrigger;
+  readonly from: Point3;
+  readonly to: Point3;
+}
+
+/**
+ * 怪獣（仮実装、2-5。6-1 で本実装）。position の海から浮かび上がり、walkTo へ歩く。
+ * HP の retreatDamageRatio を削られると海へ引き返す
+ */
+export interface KaijuSpawn {
+  readonly kind: 'kaiju';
+  readonly trigger: SpawnTrigger;
+  readonly position: Point2;
+  readonly walkTo: Point2;
+  readonly retreatDamageRatio: number;
+}
+
+export type SpawnDef =
+  EnemyFighterSpawn | TargetSpawn | DroneSpawn | GroundTargetSpawn | TransportSpawn | KaijuSpawn;
 export type SpawnKind = SpawnDef['kind'];
 
 // ---- 目標 ----
@@ -110,21 +155,24 @@ export interface RingObjective extends ObjectiveBase {
   readonly rings: readonly RingDef[];
 }
 
-/** 護衛（2-5 で実装）: group の味方を destination（水平の円）まで送り届ける。失うと失敗 */
+/**
+ * 護衛（2-5）: group の輸送機が destination（水平の円）に入るまで守る。
+ * 失うと失敗条件の escortLost（定義の failConditions に入れる）
+ */
 export interface EscortObjective extends ObjectiveBase {
   readonly type: 'escort';
   readonly group: string;
   readonly destination: { readonly x: number; readonly z: number; readonly radius: number };
 }
 
-/** 破壊（2-6 で実装）: group の地上目標を count 個壊す */
+/** 破壊（2-5）: group の地上目標を count 個壊す（出現物の数と同じにすれば「全部」） */
 export interface DestroyObjective extends ObjectiveBase {
   readonly type: 'destroy';
   readonly group: string;
   readonly count: number;
 }
 
-/** 怪獣（フェーズ6 で実装）: 怪獣に HP の damageRatio だけダメージを与える（撤退させる） */
+/** 怪獣（2-5。部位 HP はフェーズ6）: 怪獣の全体の HP の damageRatio だけダメージを与える（撤退させる） */
 export interface KaijuObjective extends ObjectiveBase {
   readonly type: 'kaiju';
   readonly damageRatio: number;
@@ -161,10 +209,8 @@ export interface RewardDef {
 }
 
 export interface MissionDef {
+  /** 一意な id。タイトル・ブリーフィング文は src/data/i18n/*.json の missions[id] */
   readonly id: string;
-  readonly title: string;
-  /** ブリーフィング文（改行は \n） */
-  readonly briefing: string;
   /** src/data/maps.ts のマップ id */
   readonly mapId: string;
   /** 自機の開始位置と向き */

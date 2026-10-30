@@ -227,3 +227,13 @@ export const FREE_FLIGHT_ENEMIES: EnemyForceConfig = {
     ],
   ],
 };
+
+/**
+ * 輸送機を優先して狙う敵機（M3。2-5）の相手の選び方。ふだんは最も近い輸送機を狙うが、
+ * プレイヤー機が playerAggroRange より近づくとプレイヤー機に切り替え、playerReleaseRange より離れると輸送機に戻る
+ * （行き来しないよう 2 つの距離に差をつける）。プレイヤーが割って入って輸送機から引きはがす、護衛らしい駆け引きにする
+ */
+export const ESCORT_ATTACK_CONFIG = {
+  playerAggroRange: 1500,
+  playerReleaseRange: 2500,
+} as const;

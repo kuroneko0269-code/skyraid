@@ -1,12 +1,22 @@
-// 怪獣（フェーズ6 で実装）。今は型と空の実装だけで、達成しない
-import type { KaijuObjective } from '../types';
+// 怪獣（2-5）: 怪獣の全体の HP の damageRatio を削れば達成（怪獣は自分で撤退する）。進み具合は削った割合（%）。
+// 部位 HP（頭・背・脚・尾）はフェーズ6
+import type { KaijuObjective as KaijuDef } from '../types';
+import type { MissionWorld } from '../world';
 import { Objective } from './objective';
 
-export class KaijuObjectiveStub extends Objective<KaijuObjective> {
-  /** 進み具合はダメージの割合（%） */
-  readonly target = 100;
+export class KaijuObjective extends Objective<KaijuDef> {
+  readonly target: number;
 
-  step(): void {
-    // フェーズ6 で怪獣に与えたダメージの割合を数える
+  constructor(def: KaijuDef) {
+    super(def);
+    this.target = Math.round(def.damageRatio * 100);
+  }
+
+  step(world: MissionWorld): void {
+    if (world.kaijuDamageRatio >= this.def.damageRatio - 1e-9) {
+      this.setProgress(this.target);
+      return;
+    }
+    this.setProgress(Math.min(this.target - 1, Math.floor(world.kaijuDamageRatio * 100 + 1e-9)));
   }
 }

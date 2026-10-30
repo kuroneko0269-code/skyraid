@@ -4,7 +4,7 @@ import { Health } from '../combat/damage';
 import { TEAM_ENEMY, type CombatTarget } from '../combat/target';
 import type { EnemySpawn } from '../data/ai';
 import { AIRCRAFT_COMBAT, ENEMY_FIGHTER, type AircraftSpec } from '../data/aircraft';
-import { copyVec3, vec3, type Quat, type Vec3 } from '../flight/math';
+import { copyVec3, rotateVec3, vec3, type Quat, type Vec3 } from '../flight/math';
 import { Aircraft, type AircraftControls, type GroundHeightFn } from './aircraft';
 
 /** 機首の向き（-Z から右回り、度）のクォータニオン */
@@ -15,6 +15,15 @@ export function headingQuat(out: Quat, headingDeg: number): Quat {
   out.z = 0;
   out.w = Math.cos(half);
   return out;
+}
+
+const FORWARD: Readonly<Vec3> = { x: 0, y: 0, z: -1 };
+const scratchForward: Vec3 = vec3();
+
+/** 姿勢 q の機首（-Z）の水平の方位（-Z から右回り、度）。真上・真下を向いていたら 0（北向き） */
+export function headingDegOf(q: Readonly<Quat>): number {
+  const f = rotateVec3(scratchForward, q, FORWARD);
+  return Math.abs(f.x) + Math.abs(f.z) < 1e-6 ? 0 : (Math.atan2(f.x, -f.z) * 180) / Math.PI;
 }
 
 export class EnemyAircraft implements CombatTarget {
