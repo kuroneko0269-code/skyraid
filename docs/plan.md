@@ -50,7 +50,7 @@
 - [x] 4-9 低地の色と木（乾いた草の割合と色・中間スケールのむら・低地の湿地・草の生えた砂の帯、葉の明度と空の環境マップ・ビルボードの法線、近景の円錐 3 段 + 丸めた頂点、遠景の手続きの樹冠テクスチャ、森の縁の高さと疎密、「高」の樹冠の影） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/b56d43d
 - [x] 4-12 操作補助・難易度・音の改善（実機のスマホの評価「敵が強すぎて撃墜できない」「操作が難しく敵を捉えられない」: エイムアシスト・ターゲットカメラ・機銃の判定 1.3 倍・HUD の角度差の矢印と接近 / 離脱の色・レーダー 1.3 倍と高度差・BEHIND、フリーフライトの初期値 easy・easy を緩める・rookie（M1）・機銃 12、命中音・発射音の低域・ミサイル発射 3 層・撃墜の音） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/e11d1a0
 - [x] 4-12b 実機確認の修正（機銃の命中音がまだ軽い・被弾音 (b) を別の音に・撃墜後の再開で機体の表示がずれる・機体の影が点線の輪郭になる） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/65412f5
-- [ ] 4-11 操作設定とチュートリアル
+- [x] 4-11 操作設定とチュートリアル（感度・デッドゾーン・反転・オートレベル・左右入替・振動・ボタンの大きさ・キー割当（セーブ v5）、5 段階のチュートリアル（練習・初回 500 CR）、タッチ操作のヒント） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/6608da6（事前修正: M2 の 2 機目を easy に https://github.com/kuroneko0269-code/skyraid/commit/4080fa1・難易度を一度だけ easy に https://github.com/kuroneko0269-code/skyraid/commit/f5f6236・main.ts の分割 https://github.com/kuroneko0269-code/skyraid/commit/b2a290a・効果音のリミッター https://github.com/kuroneko0269-code/skyraid/commit/c37f61c）
 - [ ] 4-5 コックピット視点
 
 ## フェーズ5: PvP
