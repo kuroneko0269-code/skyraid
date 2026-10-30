@@ -3,7 +3,7 @@ import { createScreen, setScreenShown } from './screen';
 
 /**
  * タイトル画面。背景は実際のシーン（デモカメラ）で、ここは文字だけの DOM。
- * ロゴはテキスト + CSS のみ（画像・Web フォントなし）。画面のどこをタップしても / Enter で開始
+ * ロゴは「SkyRaid」のテキスト + CSS のみ（サブタイトルなし。画像・Web フォントなし）。画面のどこをタップしても / Enter で開始
  */
 export class TitleScreen {
   readonly root: HTMLDivElement;
@@ -17,7 +17,6 @@ export class TitleScreen {
     root.innerHTML =
       '<div class="title-logo">' +
       '<span class="title-logo-main">SkyRaid</span>' +
-      '<span class="title-logo-sub">KAIJU FRONT</span>' +
       '</div>' +
       '<div class="title-prompt">タップ / Enter で開始</div>';
     root.addEventListener('click', this.start);

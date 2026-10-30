@@ -1,4 +1,4 @@
-# SkyRaid: Kaiju Front
+# SkyRaid: Titan Skies
 
 ブラウザで動く3Dフライトシューティング。
 

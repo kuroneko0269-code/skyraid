@@ -32,34 +32,6 @@
   -webkit-text-fill-color: transparent;
 }
 
-/* 副題の両脇に伸びる線（飛行機雲のイメージ） */
-.title-logo-sub {
-  display: flex;
-  align-items: center;
-  gap: 0.8em;
-  margin-top: 0.5em;
-  font:
-    700 clamp(12px, 2.4vw, 20px) / 1 system-ui,
-    sans-serif;
-  letter-spacing: 0.6em;
-  /* letter-spacing の分だけ右にずれるのを戻す */
-  margin-right: -0.6em;
-  color: #ffd27a;
-}
-
-.title-logo-sub::before,
-.title-logo-sub::after {
-  content: '';
-  width: clamp(28px, 8vw, 80px);
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #ffd27a);
-}
-
-.title-logo-sub::after {
-  margin-left: -0.6em;
-  background: linear-gradient(90deg, #ffd27a, transparent);
-}
-
 .title-prompt {
   font:
     600 clamp(15px, 2.6vw, 20px) / 1 system-ui,

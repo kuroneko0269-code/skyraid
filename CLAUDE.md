@@ -1,6 +1,6 @@
 # SkyRaid — CLAUDE.md
 
-ブラウザで動く3Dフライトシューティング「SkyRaid（正式名：SkyRaid: Kaiju Front）」のリポジトリ。
+ブラウザで動く3Dフライトシューティング「SkyRaid（正式名：SkyRaid: Titan Skies）」のリポジトリ。
 作業前に必ず `docs/spec.md`（仕様）と `docs/plan.md`（フェーズ計画）を読むこと。
 
 ## 技術スタック（変更禁止。変更したい場合は提案に留め、実装しない）
