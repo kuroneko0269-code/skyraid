@@ -6,6 +6,7 @@
 import { EnemySquadron, createEnemies } from '../ai/enemy-squadron';
 import { CombatSystem, createCombatInput, type CombatInput } from '../combat/combat-system';
 import type { Rng } from '../combat/gun';
+import { TEAM_ENEMY } from '../combat/target';
 import { FREE_FLIGHT_ENEMIES, type Difficulty, type EnemyForceConfig } from '../data/ai';
 import { FLIGHT_CONFIG } from '../data/flight';
 import { ISLAND_MAP } from '../data/maps';
@@ -76,7 +77,7 @@ export class FlightSession implements MissionWorld {
     const force = options.enemies ?? FREE_FLIGHT_ENEMIES;
     const enemies = createEnemies(ground, force);
     this.enemies = enemies;
-    this.props = new MissionProps(ground);
+    this.props = new MissionProps(ground, rng);
     this.destroyed = new DestroyTally(enemies, this.props);
     this.combat = new CombatSystem(
       new TargetField(ground, rng),
@@ -92,6 +93,10 @@ export class FlightSession implements MissionWorld {
     );
     this.squadron = new EnemySquadron(this.combat, enemies, ground, rng, force);
     this.combat.onDestroyed(this.destroyed.count);
+    this.props.onAaaHit = (h) => {
+      this.combat.reportImpact(h.x, h.y, h.z, true);
+      this.combat.dealDamage(this.player, this.props.aaa.config.damage, TEAM_ENEMY);
+    };
   }
 
   /** プレイヤーが撃墜されたとき（演出用） */
@@ -162,7 +167,7 @@ export class FlightSession implements MissionWorld {
     if (alive) this.stepAircraft(controls, dt);
     if (this.player.step(dt)) this.respawn();
     this.squadron.step(dt);
-    this.props.step(dt);
+    this.props.step(dt, this.player);
     this.combat.step(this.player.active ? input : NO_INPUT, this.aircraft.state, dt);
     if (this.mode === 'free' && this.player.active) {
       const p = this.aircraft.state.position;
@@ -278,11 +283,7 @@ export class FlightSession implements MissionWorld {
     else this.aircraft.respawn(this.startPosition, this.startOrientation);
     this.player.revive();
     this.player.step(1 / 60);
-    // 補給（弾・フレアも満タンに戻す）
-    this.combat.missileAmmo.refill();
-    this.combat.flares.magazine.refill();
-    this.combat.gun.heat.reset();
-    this.combat.targeting.reset();
+    this.combat.resupply();
     for (const fn of this.respawnListeners) fn();
   }
 

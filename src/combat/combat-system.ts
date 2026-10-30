@@ -1,15 +1,22 @@
 // フリーフライトの戦闘（2-1 / 2-2 / 2-3）: 機銃・ロックオン・ミサイル・フレア・的・ドローン・撃墜数を
-// 固定ステップで進める（Three.js 非依存）。ミサイルとフレアは敵機と共有し、陣営（team）で信管・ダメージを分ける
+// 固定ステップで進める（Three.js 非依存）。ミサイルとフレアは敵機と共有し、陣営（team）で信管・ダメージを分ける。
+// 無誘導ロケット・爆弾（2-6）はプレイヤーだけが持つ。壊れると範囲ダメージを出す対象（燃料タンク）の誘爆もここ
+import type { BlastSpec } from '../data/ground-targets';
 import { HUD_CONFIG } from '../data/hud';
+import { BOMB_CONFIG, ROCKET_CONFIG } from '../data/ordnance';
 import { GUN_CONFIG, MISSILE_CONFIG, MISSILE_POOL_SIZE, type GunSpec } from '../data/weapons';
 import { TargetField } from '../entities/target-balloon';
 import { createDrones, type TargetDrone } from '../entities/target-drone';
 import { vec3 } from '../flight/math';
+import { blastDamage } from './blast';
+import { BombBay } from './bomb';
 import { FlareField } from './flare';
 import { Gun, type GroundHeightFn, type GunHit, type Rng, type Shooter } from './gun';
 import { leadPoint } from './lead';
 import { Magazine } from './magazine';
 import { MissileSystem, splashDamage, type Detonation } from './missile';
+import type { Impact } from './projectile';
+import { RocketPod } from './rocket';
 import { TEAM_PLAYER, teamOf, type CombatTarget } from './target';
 import { Targeting } from './targeting';
 
@@ -18,18 +25,35 @@ export type DestroyedListener = (target: CombatTarget) => void;
 /** ミサイルの起爆。onTarget は信管が対象に反応したか（false なら地面） */
 export type ExplosionListener = (x: number, y: number, z: number, onTarget: boolean) => void;
 
-/** 1 ステップ分の戦闘の操作。missile / flare / targetNext は押した瞬間だけ true */
+/** 1 ステップ分の戦闘の操作。trigger 以外は押した瞬間だけ true */
 export interface CombatInput {
   trigger: boolean;
   missile: boolean;
   flare: boolean;
   targetNext: boolean;
+  /** ロケット 1 斉射（2-6） */
+  rocket: boolean;
+  /** 爆弾の投下（2-6。キーボード B） */
+  bomb: boolean;
+  /** 長押しでの爆弾の投下（タッチ AB・パッド RT。着弾予測点が出ているときだけ落とす） */
+  bombHeld: boolean;
 }
 
 /** 何も押していない入力（毎ステップ書き換えて使う入れ物） */
 export function createCombatInput(): CombatInput {
-  return { trigger: false, missile: false, flare: false, targetNext: false };
+  return {
+    trigger: false,
+    missile: false,
+    flare: false,
+    targetNext: false,
+    rocket: false,
+    bomb: false,
+    bombHeld: false,
+  };
 }
+
+/** プレイヤーの弾が当たる相手（プレイヤー側でない） */
+const playerHostile = (t: CombatTarget): boolean => teamOf(t) !== TEAM_PLAYER;
 
 export class CombatSystem {
   readonly gun: Gun<CombatTarget>;
@@ -44,6 +68,8 @@ export class CombatSystem {
   readonly missileAmmo = new Magazine(MISSILE_CONFIG.ammo, MISSILE_CONFIG.fireInterval);
   readonly missiles: MissileSystem<CombatTarget>;
   readonly flares: FlareField;
+  readonly rockets: RocketPod;
+  readonly bombs: BombBay;
   /** 選択中の対象の予測照準点（機銃の射程内のときだけ leadValid） */
   readonly lead = vec3();
   leadValid = false;
@@ -81,6 +107,8 @@ export class CombatSystem {
       MISSILE_POOL_SIZE,
     );
     this.flares = new FlareField(undefined, 1 + enemies.length);
+    this.rockets = new RocketPod(this.handleRocketImpact, groundHeight, rng);
+    this.bombs = new BombBay(this.handleBombImpact, groundHeight);
     this.drones = drones;
     this.allTargets = [...targets.balloons, ...drones, ...enemies, ...hostiles];
     this.allies = allies;
@@ -115,9 +143,13 @@ export class CombatSystem {
       this.missiles.launch(shooter, t, TEAM_PLAYER);
     }
     if (input.flare) this.flares.tryRelease(shooter, TEAM_PLAYER);
+    if (input.rocket) this.rockets.tryFire(shooter);
+    if (input.bomb || (input.bombHeld && this.bombs.predictionValid)) this.bombs.tryDrop(shooter);
     this.flares.step(dt);
     this.missiles.step(this.fuseTargets, this.flares.flares, dt);
     this.gun.step(input.trigger, shooter, this.allTargets, dt);
+    this.rockets.step(this.allTargets, playerHostile, dt);
+    this.bombs.step(shooter, this.allTargets, playerHostile, dt);
     this.updateLead(shooter);
   }
 
@@ -131,7 +163,19 @@ export class CombatSystem {
     this.missileAmmo.refill();
     this.missiles.reset();
     this.flares.reset();
+    this.rockets.reset();
+    this.bombs.reset();
     this.leadValid = false;
+  }
+
+  /** 補給（リスポーン）: ミサイル・フレア・ロケット・爆弾を満タンにし、機銃の熱とロックを戻す */
+  resupply(): void {
+    this.missileAmmo.refill();
+    this.flares.magazine.refill();
+    this.rockets.refill();
+    this.bombs.magazine.refill();
+    this.gun.heat.reset();
+    this.targeting.reset();
   }
 
   private updateLead(shooter: Shooter): void {
@@ -154,11 +198,45 @@ export class CombatSystem {
     this.leadValid = time >= 0;
   }
 
-  /** ダメージを与える。撃墜したら破片の演出を呼び、プレイヤーが敵側を落としたときだけ撃墜数を数える */
+  /**
+   * ダメージを与える。撃墜したら破片の演出を呼び、プレイヤーが敵側を落としたときだけ撃墜数を数える。
+   * 壊れると範囲ダメージを出す対象（燃料タンク）は、その場で誘爆させる（陣営によらず自機にも入る）
+   */
   dealDamage(target: CombatTarget, amount: number, attackerTeam: number): void {
     if (!target.applyDamage(amount)) return;
     if (attackerTeam === TEAM_PLAYER && teamOf(target) !== TEAM_PLAYER) this.kills++;
     this.notifyDestroyed(target);
+    const blast = target.deathBlast;
+    if (blast) {
+      const p = target.position;
+      this.applyBlast(p.x, p.y, p.z, blast, attackerTeam, null);
+    }
+  }
+
+  /**
+   * 範囲ダメージ（ロケット・爆弾・誘爆。2-6）: 爆心から各対象の表面までの距離で blastDamage。
+   * spareTeam の陣営には入らない（null ならすべてに入る）。起爆の演出（閃光・火花）も呼ぶ
+   */
+  applyBlast(
+    x: number,
+    y: number,
+    z: number,
+    spec: BlastSpec,
+    attackerTeam: number,
+    spareTeam: number | null,
+    onTarget = true,
+  ): void {
+    for (const fn of this.explosionListeners) fn(x, y, z, onTarget);
+    for (const t of this.fuseTargets) {
+      if (!t.active || (spareTeam !== null && teamOf(t) === spareTeam)) continue;
+      const p = t.position;
+      const dist = Math.hypot(p.x - x, p.y - y, p.z - z) - t.hitRadius;
+      const amount = blastDamage(spec, dist);
+      if (amount <= 0) continue;
+      if (attackerTeam === TEAM_PLAYER && teamOf(t) !== TEAM_PLAYER)
+        this.hitMarkerTimer = this.hitMarkerSeconds;
+      this.dealDamage(t, amount, attackerTeam);
+    }
   }
 
   /** 撃墜（地面への衝突も）を演出に知らせる */
@@ -189,6 +267,22 @@ export class CombatSystem {
     if (!target) return;
     this.hitMarkerTimer = this.hitMarkerSeconds;
     this.dealDamage(target, this.gun.spec.damage, TEAM_PLAYER);
+  };
+
+  private readonly handleRocketImpact = (i: Readonly<Impact>): void => {
+    this.applyBlast(
+      i.x,
+      i.y,
+      i.z,
+      ROCKET_CONFIG.blast,
+      TEAM_PLAYER,
+      TEAM_PLAYER,
+      i.target !== null,
+    );
+  };
+
+  private readonly handleBombImpact = (i: Readonly<Impact>): void => {
+    this.applyBlast(i.x, i.y, i.z, BOMB_CONFIG.blast, TEAM_PLAYER, TEAM_PLAYER, i.target !== null);
   };
 
   /** 範囲ダメージ: 爆心から各対象の表面までの距離で減衰。撃った陣営には入らない */

@@ -7,7 +7,15 @@ import { TargetField } from '../src/entities/target-balloon';
 
 const DT = 1 / 60;
 const NO_SPREAD: GunSpec = { ...GUN_CONFIG, spreadDeg: 0 };
-const FIRE = { trigger: true, missile: false, flare: false, targetNext: false };
+const FIRE = {
+  trigger: true,
+  missile: false,
+  flare: false,
+  targetNext: false,
+  rocket: false,
+  bomb: false,
+  bombHeld: false,
+};
 
 /** 原点で -Z（前方）を向いて静止した機体 */
 function shooter(speed = 0, y = 0): Shooter {

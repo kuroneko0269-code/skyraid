@@ -1,17 +1,12 @@
-// ミッションの出現物（2-5）: 輸送機・怪獣の仮実装・地上目標の仮置き・敵機の「輸送機を優先」、
+// ミッションの出現物（2-5）: 輸送機・怪獣の仮実装・敵機の「輸送機を優先」（地上目標は 2-6 の ground-target.test.ts）、
 // キャンペーンの解放とランク、表示言語
 import { describe, expect, it } from 'vitest';
 import { createCombatInput } from '../src/combat/combat-system';
 import { TEAM_PLAYER } from '../src/combat/target';
 import { detectLocale } from '../src/core/locale';
 import { ESCORT_ATTACK_CONFIG } from '../src/data/ai';
-import {
-  GROUND_TARGET_PLACEHOLDER_CONFIG,
-  KAIJU_PLACEHOLDER_CONFIG,
-  TRANSPORT_CONFIG,
-} from '../src/data/mission-props';
+import { KAIJU_PLACEHOLDER_CONFIG, TRANSPORT_CONFIG } from '../src/data/mission-props';
 import { headingQuat } from '../src/entities/enemy-aircraft';
-import { GroundTargetPlaceholder } from '../src/entities/ground-target-placeholder';
 import { KaijuPlaceholder } from '../src/entities/kaiju-placeholder';
 import { Transport } from '../src/entities/transport';
 import { quatIdentity } from '../src/flight/math';
@@ -94,21 +89,6 @@ describe('怪獣の仮実装', () => {
   });
 });
 
-describe('地上目標の仮置き', () => {
-  it('地表に置き（箱の中心は地表 + 高さの半分）、HP 400 で壊れる', () => {
-    const g = new GroundTargetPlaceholder(() => 120);
-    g.deploy('depots', 'placeholder', 10, 20);
-    expect(g.position).toEqual({
-      x: 10,
-      y: 120 + GROUND_TARGET_PLACEHOLDER_CONFIG.size.height / 2,
-      z: 20,
-    });
-    expect(g.applyDamage(390)).toBe(false);
-    expect(g.applyDamage(10)).toBe(true);
-    expect(g.active).toBe(false);
-  });
-});
-
 describe('出現物と戦闘', () => {
   function missionSession(): FlightSession {
     const s = new FlightSession({ rng: () => 0.5 });
@@ -136,7 +116,7 @@ describe('出現物と戦闘', () => {
     s.spawn({
       kind: 'groundTarget',
       group: 'depots',
-      targetType: 'placeholder',
+      targetType: 'hangar',
       trigger: { type: 'start' },
       positions: [
         { x: 0, z: -1000 },

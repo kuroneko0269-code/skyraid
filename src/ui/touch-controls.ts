@@ -5,13 +5,19 @@ import type { Input } from '../core/input';
 import type { Action } from '../data/keybinds';
 import { TOUCH_CONFIG } from '../data/touch';
 
-/** 右下のボタン群。grid の並び順（左上・右上・左下・右下） */
-const BUTTONS: readonly { action: Action; label: string; className: string }[] = [
-  { action: 'afterburner', label: 'AB', className: 'tc-ab' },
-  { action: 'missile', label: 'MSL', className: 'tc-msl' },
-  { action: 'flare', label: 'FLR', className: 'tc-flr' },
-  { action: 'fire', label: 'GUN', className: 'tc-gun' },
+/**
+ * 右下のボタン群。grid の並び順（左上・右上・左下・右下）。
+ * MSL は secondary（短押しで今の兵装、長押しで切替）、AB は長押しで爆弾も（2-6。src/core/weapon-input.ts）
+ */
+const BUTTONS: readonly { actions: readonly Action[]; label: string; className: string }[] = [
+  { actions: ['afterburner', 'bombHold'], label: 'AB', className: 'tc-ab' },
+  { actions: ['secondary'], label: 'MSL', className: 'tc-msl' },
+  { actions: ['flare'], label: 'FLR', className: 'tc-flr' },
+  { actions: ['fire'], label: 'GUN', className: 'tc-gun' },
 ];
+
+/** MSL ボタンの文字（今の兵装） */
+const SECONDARY_LABELS = { missile: 'MSL', rocket: 'RKT' } as const;
 
 /** 指が離れた（キャンセル・キャプチャ喪失を含む）ことを表すイベント */
 const RELEASE_EVENTS = ['pointerup', 'pointercancel', 'lostpointercapture'] as const;
@@ -27,7 +33,7 @@ function el(className: string, parent: HTMLElement, text?: string): HTMLDivEleme
 /** 長押しボタン。複数の指で押しても、全部離すまで押下が続く */
 interface HoldButton {
   readonly element: HTMLElement;
-  readonly action: Action;
+  readonly actions: readonly Action[];
   readonly pointers: Set<number>;
 }
 
@@ -47,6 +53,8 @@ export class TouchControls {
   private throttleTop = 0;
   private throttleHeight = 0;
   private shownThrottle = -1;
+  private readonly secondaryButton: HTMLElement | null;
+  private shownSecondary: keyof typeof SECONDARY_LABELS = 'missile';
   private visible = false;
 
   constructor(
@@ -69,10 +77,15 @@ export class TouchControls {
     }
 
     const buttons = el('tc-buttons', root);
-    for (const b of BUTTONS)
-      this.addHoldButton(el(`tc-button ${b.className}`, buttons, b.label), b.action);
-    this.addHoldButton(el('tc-button tc-yaw tc-yaw-left', root, '◀'), 'yawLeft');
-    this.addHoldButton(el('tc-button tc-yaw tc-yaw-right', root, '▶'), 'yawRight');
+    let secondary: HTMLElement | null = null;
+    for (const b of BUTTONS) {
+      const e = el(`tc-button ${b.className}`, buttons, b.label);
+      if (b.actions.includes('secondary')) secondary = e;
+      this.addHoldButton(e, b.actions);
+    }
+    this.secondaryButton = secondary;
+    this.addHoldButton(el('tc-button tc-yaw tc-yaw-left', root, '◀'), ['yawLeft']);
+    this.addHoldButton(el('tc-button tc-yaw tc-yaw-right', root, '▶'), ['yawRight']);
 
     const throttle = el('tc-throttle', root);
     this.throttleTrack = el('tc-throttle-track', throttle);
@@ -112,6 +125,13 @@ export class TouchControls {
     this.throttleTrack.style.setProperty('--throttle', value.toFixed(3));
   }
 
+  /** MSL ボタンの文字を今の兵装（MSL / RKT）にする。毎フレーム呼んでよい（変わったときだけ書く） */
+  syncSecondary(weapon: keyof typeof SECONDARY_LABELS): void {
+    if (weapon === this.shownSecondary || !this.secondaryButton) return;
+    this.shownSecondary = weapon;
+    this.secondaryButton.textContent = SECONDARY_LABELS[weapon];
+  }
+
   /** すべての指を離した扱いにする（フォーカス喪失・非表示時） */
   reset(): void {
     this.stick.reset();
@@ -124,21 +144,21 @@ export class TouchControls {
     this.input.clearAnalog('touch');
   }
 
-  private addHoldButton(element: HTMLElement, action: Action): void {
-    const button: HoldButton = { element, action, pointers: new Set() };
+  private addHoldButton(element: HTMLElement, actions: readonly Action[]): void {
+    const button: HoldButton = { element, actions, pointers: new Set() };
     this.holdButtons.push(button);
     element.addEventListener('pointerdown', (e) => {
       element.setPointerCapture(e.pointerId);
       button.pointers.add(e.pointerId);
       if (button.pointers.size === 1) {
         element.classList.add('is-pressed');
-        this.input.setAnalog('touch', action, 1);
+        for (const a of actions) this.input.setAnalog('touch', a, 1);
       }
     });
     const release = (e: PointerEvent): void => {
       if (!button.pointers.delete(e.pointerId) || button.pointers.size > 0) return;
       element.classList.remove('is-pressed');
-      this.input.setAnalog('touch', action, 0);
+      for (const a of actions) this.input.setAnalog('touch', a, 0);
     };
     for (const type of RELEASE_EVENTS) {
       element.addEventListener(type, release);

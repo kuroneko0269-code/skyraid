@@ -1,5 +1,5 @@
 // 破壊（2-5）: group の地上目標を count 個壊す（出現物の数と同じにすれば「全部」）。
-// 地上目標は 2-6 までは仮置き（src/entities/ground-target-placeholder.ts）
+// 地上目標は src/entities/ground-target.ts（2-6）
 import type { DestroyObjective as DestroyDef } from '../types';
 import type { MissionWorld } from '../world';
 import { Objective } from './objective';

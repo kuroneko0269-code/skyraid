@@ -100,17 +100,21 @@ describe('初期ミッション 5 本のデータ', () => {
     expect(minClearance).toBeGreaterThan(300);
   });
 
-  it('M4: 地上目標 4 つは島の上（陸）で、破壊の目標は 4 つ全部', () => {
-    const spawn = STRIKE_MISSION.spawns.find((s) => s.kind === 'groundTarget');
-    expect(spawn?.kind === 'groundTarget' && spawn.positions.length).toBe(4);
-    if (spawn?.kind !== 'groundTarget') return;
-    for (const p of spawn.positions) {
+  it('M4: 地上目標はレーダー・対空砲・格納庫・燃料タンクの 4 つで島の上（陸）。破壊の目標は 4 つ全部', () => {
+    const spawns = STRIKE_MISSION.spawns.flatMap((s) => (s.kind === 'groundTarget' ? [s] : []));
+    expect(spawns.map((s) => s.targetType)).toEqual(['radar', 'aaa', 'hangar', 'fuelTank']);
+    expect(STRIKE_MISSION.spawns.length).toBe(4);
+    const positions = spawns.flatMap((s) => s.positions);
+    expect(positions.length).toBe(4);
+    for (const p of positions) {
       const h = getGroundHeight(p.x, p.z);
       expect(h).toBeGreaterThan(5);
       expect(h).toBeLessThan(300);
     }
+    expect(spawns.every((s) => s.group === 'depots')).toBe(true);
     const objective = STRIKE_MISSION.objectives[0];
     expect(objective?.type === 'destroy' && objective.count).toBe(4);
+    expect(STRIKE_MISSION.reward.baseCredits).toBe(2000);
   });
 
   it('M5: 怪獣の出現位置は海の上（海岸線の外）で、撤退の割合は目標と同じ 20%', () => {
@@ -220,6 +224,15 @@ describe('初期ミッションの通し（シード固定のボット）', () =
     expect(runner.status).toBe('success');
     expect(s.destroyedCount('groundTarget', 'depots')).toBe(4);
     expect(s.player.downCount).toBe(0);
+    // 対空砲（2-6）は撃ってきたが、旋回し続けるボットにはほとんど当たらない
+    expect(s.props.aaa.shotCount).toBeGreaterThan(40);
+    expect(s.player.damageTaken).toBeLessThan(s.player.maxHp / 2);
+    expect(s.props.groundTargets.filter((g) => g.wrecked).map((g) => g.type)).toEqual([
+      'radar',
+      'aaa',
+      'hangar',
+      'fuelTank',
+    ]);
   });
 
   it('M2 初陣（1 機ずつ 20 秒差）の成功率: 8 シードで 熟練者役 1/8・平均的 0/8（docs/decisions.md の 2-6 に記録）', () => {

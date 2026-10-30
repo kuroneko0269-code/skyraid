@@ -3,6 +3,7 @@ import { TEAM_PLAYER } from '../combat/target';
 import type { Aircraft, GroundHeightFn } from '../entities/aircraft';
 import type { FlightSession } from '../missions/flight-session';
 import type { HudFrame } from './hud-frame';
+import { createOrdnanceFrame } from './hud-ordnance';
 import { createRadarFrame, type HudRadarFrame } from './hud-radar';
 import { createWeaponsFrame } from './hud-weapons';
 
@@ -29,6 +30,7 @@ export function createHudFrame(aircraft: Aircraft): HudFrame {
     maxHp: 1,
     missileWarning: false,
     radar: createRadarFrame(),
+    ordnance: createOrdnanceFrame(),
   };
 }
 
@@ -68,6 +70,10 @@ export function fillHudFrame(
   frame.hp = player.hp;
   frame.maxHp = player.maxHp;
   frame.missileWarning = ff.incomingMissiles > 0;
+  const o = frame.ordnance;
+  o.rockets = combat.rockets.count;
+  o.bombs = combat.bombs.count;
+  o.aaaWarning = player.active && ff.props.aaa.warning;
   fillRadar(frame.radar, ff);
 }
 

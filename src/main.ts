@@ -14,6 +14,7 @@ import { WORLD_CONFIG } from './data/terrain';
 import { MISSIONS } from './data/missions';
 import { createControls } from './entities/aircraft';
 import { createCombatInput } from './combat/combat-system';
+import { WeaponInput } from './core/weapon-input';
 import { FlightSession } from './missions/flight-session';
 import { GamePlay } from './missions/game-play';
 import { FlightViews } from './render/flight-views';
@@ -113,7 +114,7 @@ const session = new FlightSession({
   start: WORLD_CONFIG.start,
 });
 const play = new GamePlay(session);
-const { aircraft, combat } = session;
+const { aircraft } = session;
 // 敵の有無・難易度（ポーズメニューの設定。localStorage に保存）
 createEnemySettings(settingsPanel, storage, (enabled, difficulty) => {
   session.configureEnemies(enabled, difficulty);
@@ -140,13 +141,11 @@ session.onRespawn(() => {
   chaseCamera.snap();
 });
 const combatInput = createCombatInput();
-const hudLink = new HudLink(hud, camera, aircraftMesh, session, getGroundHeight);
+// 武器の操作（タッチ・パッドの長押しで兵装の切替・爆弾。2-6）
+const weaponInput = new WeaponInput();
+const hudLink = new HudLink(hud, camera, aircraftMesh, session, getGroundHeight, weaponInput);
 // HUD の対象をタップ（クリック）すると選ぶ。スティック・ボタンの上は canvas に届かない
-renderer.domElement.addEventListener('pointerdown', (e) => {
-  if (game.state !== 'flight') return;
-  const target = hudLink.pick(e.clientX, e.clientY);
-  if (target) combat.targeting.select(target);
-});
+hudLink.bindTap(renderer.domElement, () => game.state === 'flight');
 
 const loop = new GameLoop();
 // 固定ステップ更新は飛行中だけ（ポーズ・メニュー中は GameLoop ごと止める）
@@ -156,7 +155,10 @@ game.onChange(({ from, to }) => {
   if (to === 'pause') play.runner?.pause();
   else if (to === 'flight') play.runner?.resume();
   // 止めている間に押されたキー（再開に使った Esc など）を飛行に持ち込まない
-  if (to === 'flight') input.endStep();
+  if (to === 'flight') {
+    input.endStep();
+    weaponInput.reset();
+  }
   // 撃墜されたまま（ミッション失敗）のリザルトでは機体を隠す
   aircraftMesh.visible = !usesDemoCamera(to) && session.player.active;
   touch.refresh();
@@ -178,10 +180,7 @@ loop.onUpdate((dt) => {
   controls.throttle = input.axis('throttleDown', 'throttleUp');
   controls.afterburner = input.isDown('afterburner');
   controls.throttleTarget = input.takeThrottleTarget();
-  combatInput.trigger = input.isDown('fire');
-  combatInput.missile = input.wasPressed('missile');
-  combatInput.flare = input.wasPressed('flare');
-  combatInput.targetNext = input.wasPressed('targetNext');
+  weaponInput.read(input, combatInput, dt);
   play.step(controls, combatInput, dt);
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
   handleCommonKeys();
@@ -297,4 +296,5 @@ function updateFlightView(alpha: number, frameSeconds: number): void {
   const groundUnderCamera = getGroundHeight(camera.position.x, camera.position.z);
   chaseCamera.update(aircraftMesh, aircraft.state, groundUnderCamera, frameSeconds);
   touch.controls.syncThrottle(aircraft.throttle);
+  touch.controls.syncSecondary(weaponInput.secondary);
 }

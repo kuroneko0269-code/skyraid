@@ -3,6 +3,7 @@
 import { Vector3, type Object3D, type PerspectiveCamera } from 'three';
 import type { CombatSystem } from '../combat/combat-system';
 import type { CombatTarget } from '../combat/target';
+import type { Vec3 } from '../flight/math';
 import { HUD_CONFIG } from '../data/hud';
 import type { HudPoint, HudWeaponsFrame } from '../ui/hud-weapons';
 import { edgeArrow, pickNearest, type EdgeArrow } from '../ui/hud-math';
@@ -72,6 +73,13 @@ export class TargetProjector {
     }
     if (combat.leadValid && fpm)
       this.projectLead(w, combat, selected, aircraft, fpm, alpha, width, height);
+  }
+
+  /** ワールドの点を画面座標にして out に書く。画面内なら true（爆弾の着弾予測点。2-6） */
+  projectPoint(p: Readonly<Vec3>, width: number, height: number, out: HudPoint): boolean {
+    this.camera.updateMatrixWorld();
+    lead.set(p.x, p.y, p.z);
+    return this.toScreen(lead, width, height, out) && onScreen();
   }
 
   /** (x, y) の近くのマーカーの対象。なければ null */

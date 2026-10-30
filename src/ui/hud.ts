@@ -2,6 +2,7 @@ import './hud.css';
 import { HUD_CONFIG } from '../data/hud';
 import { applyCssVariables, el, gauge } from './hud-dom';
 import type { HudFrame } from './hud-frame';
+import { HudOrdnance } from './hud-ordnance';
 import { HudRadar } from './hud-radar';
 import { HudWeapons } from './hud-weapons';
 import {
@@ -38,6 +39,7 @@ export class Hud {
   private readonly hpFill: HTMLDivElement;
   private readonly radar: HudRadar;
   private readonly weapons: HudWeapons;
+  private readonly ordnance: HudOrdnance;
   private readonly notice: HTMLDivElement;
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -105,6 +107,7 @@ export class Hud {
     this.heatFill = gauge(gauges, 'GUN', 'hud-heat');
     // 索敵マーカー（中央のレイヤー）と残弾（ゲージ列の右）
     this.weapons = new HudWeapons(root, gauges);
+    this.ordnance = new HudOrdnance(root, this.weapons.ammo, this.weapons.mslRow);
     const speedBox = el('div', 'hud-box', left);
     el('div', 'hud-box-label', speedBox, 'SPD');
     this.speedText = el('span', 'hud-box-value', speedBox);
@@ -254,6 +257,7 @@ export class Hud {
       this.root.classList.toggle('is-missile', f.missileWarning);
     }
     this.weapons.update(f.weapons);
+    this.ordnance.update(f.ordnance);
   }
 
   private updateFlightPath(pos: { x: number; y: number } | null): void {
@@ -279,5 +283,6 @@ export class Hud {
     last.fpmX = last.fpmY = NaN;
     this.radar.invalidate();
     this.weapons.invalidate();
+    this.ordnance.invalidate();
   }
 }

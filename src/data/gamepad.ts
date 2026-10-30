@@ -16,8 +16,8 @@ export interface StickBinding {
 
 export interface GamepadMapping {
   readonly sticks: readonly StickBinding[];
-  /** ボタン番号 → アクション。LT/RT のようなアナログボタンは value（0〜1）をそのまま使う */
-  readonly buttons: Readonly<Record<number, Action>>;
+  /** ボタン番号 → アクション（複数可）。LT/RT のようなアナログボタンは value（0〜1）をそのまま使う */
+  readonly buttons: Readonly<Record<number, Action | readonly Action[]>>;
 }
 
 export const GAMEPAD_CONFIG = {
@@ -37,11 +37,13 @@ export const DEFAULT_GAMEPAD_MAPPING: GamepadMapping = {
   buttons: {
     0: 'missile',
     1: 'flare',
+    2: 'rocket',
     3: 'targetNext',
     4: 'afterburner',
     5: 'fire',
     6: 'yawLeft',
-    7: 'yawRight',
+    // RT はヨー（右）と爆弾の長押し投下を兼ねる（2-6。長押しの判定は src/core/weapon-input.ts）
+    7: ['yawRight', 'bombHold'],
     8: 'cameraToggle',
     9: 'pause',
   },

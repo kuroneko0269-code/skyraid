@@ -63,7 +63,9 @@ export function mapGamepad(
     if (!button) continue;
     // デジタルボタンは value が 0/1、トリガーは 0〜1。pressed だけ立つ実装にも備える
     const raw = Math.max(button.value, button.pressed ? 1 : 0);
-    addValue(out, action, applyDeadzone(raw, deadzones.button));
+    const value = applyDeadzone(raw, deadzones.button);
+    if (typeof action === 'string') addValue(out, action, value);
+    else for (const a of action) addValue(out, a, value);
   }
   return out;
 }

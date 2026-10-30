@@ -1,5 +1,6 @@
 // HUD に渡す 1 フレーム分の値の形。値を作るのは src/ui/hud-feed.ts、描くのは src/ui/hud.ts
 import type { Quat } from '../flight/math';
+import type { HudOrdnanceFrame } from './hud-ordnance';
 import type { HudRadarFrame } from './hud-radar';
 import type { HudWeaponsFrame } from './hud-weapons';
 
@@ -39,4 +40,6 @@ export interface HudFrame {
   missileWarning: boolean;
   /** レーダーの敵機・ミサイル */
   radar: HudRadarFrame;
+  /** ロケット・爆弾・着弾予測点・AAA 警告（2-6） */
+  ordnance: HudOrdnanceFrame;
 }

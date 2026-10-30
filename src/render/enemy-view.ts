@@ -1,5 +1,5 @@
 // 敵機（2-3）の描画: プレースホルダー機体と同じ形を赤で InstancedMesh 1 つ、敵の曳光弾を InstancedMesh 1 つ。
-// 追加の draw call は 2（機数・弾数によらない）
+// 対空砲の曳光弾（黄色、2-6）も敵の曳光弾と同じ InstancedMesh で描く。追加の draw call は 2（機数・弾数によらない）
 import {
   Color,
   DynamicDrawUsage,
@@ -32,11 +32,14 @@ export class EnemyView {
   private readonly mesh: InstancedMesh;
   private readonly tracers: TracerRenderer;
   private readonly baseColor = new Color(ENEMY_VIEW_CONFIG.color);
+  private readonly allPools: readonly Pool<Bullet>[];
 
   constructor(
     scene: Scene,
     private readonly enemies: readonly EnemyAircraft[],
-    private readonly bulletPools: readonly Pool<Bullet>[],
+    bulletPools: readonly Pool<Bullet>[],
+    /** 色の違う敵の弾（対空砲。2-6）。bulletPools の後に描く */
+    extraPools: readonly { pool: Pool<Bullet>; color: number }[] = [],
   ) {
     const material = new MeshStandardMaterial({
       vertexColors: true,
@@ -55,8 +58,17 @@ export class EnemyView {
     this.mesh.count = 0;
     this.mesh.visible = false;
 
-    const capacity = bulletPools.reduce((sum, p) => sum + p.capacity, 0);
-    this.tracers = new TracerRenderer(Math.max(1, capacity), TRACER_CONFIG.enemyColor);
+    this.allPools = [...bulletPools, ...extraPools.map((e) => e.pool)];
+    const capacity = this.allPools.reduce((sum, p) => sum + p.capacity, 0);
+    const colors = [
+      ...bulletPools.map(() => TRACER_CONFIG.enemyColor),
+      ...extraPools.map((e) => e.color),
+    ];
+    this.tracers = new TracerRenderer(
+      Math.max(1, capacity),
+      TRACER_CONFIG.enemyColor,
+      extraPools.length > 0 ? colors : null,
+    );
     scene.add(this.mesh, this.tracers.mesh);
   }
 
@@ -87,6 +99,6 @@ export class EnemyView {
       this.mesh.instanceMatrix.needsUpdate = true;
       if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
     }
-    this.tracers.update(this.bulletPools, alpha, camera);
+    this.tracers.update(this.allPools, alpha, camera);
   }
 }

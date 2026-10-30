@@ -135,7 +135,15 @@ export class PilotBot {
     afterburner: false,
     throttleTarget: 1,
   };
-  readonly input: CombatInput = { trigger: false, missile: false, flare: false, targetNext: false };
+  readonly input: CombatInput = {
+    trigger: false,
+    missile: false,
+    flare: false,
+    targetNext: false,
+    rocket: false,
+    bomb: false,
+    bombHeld: false,
+  };
   private readonly ai: EnemyFighterAI;
   private readonly command = createCommand();
   private readonly self: { -readonly [K in keyof AiSelf]: AiSelf[K] };

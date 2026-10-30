@@ -1,6 +1,6 @@
-// ミッションの出現物（2-5）の描画: 輸送機・怪獣の仮実装・地上目標の仮置き。どれもプリミティブのプレースホルダーで、
-// 種類ごとに InstancedMesh / Mesh 1 つ（追加の draw call は最大 3。出ていないものは描かない）。
-// 怪獣は 6-1、地上目標は 2-6 で作り直す
+// ミッションの出現物（2-5）の描画: 輸送機・怪獣の仮実装。どちらもプリミティブのプレースホルダーで、
+// 種類ごとに InstancedMesh / Mesh 1 つ（追加の draw call は最大 2。出ていないものは描かない）。
+// 怪獣は 6-1 で作り直す。地上目標（2-6）は ground-target-view.ts
 import {
   BoxGeometry,
   Color,
@@ -17,7 +17,6 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
-  GROUND_TARGET_PLACEHOLDER_CONFIG as GROUND,
   KAIJU_PLACEHOLDER_CONFIG as KAIJU,
   TRANSPORT_CONFIG as TRANSPORT,
 } from '../data/mission-props';
@@ -87,11 +86,9 @@ function createInstanced(geometry: BufferGeometry, hex: number, count: number): 
 
 export class MissionPropsView {
   private readonly transports: InstancedMesh;
-  private readonly groundTargets: InstancedMesh;
   private readonly kaiju: Mesh;
   private readonly kaijuMaterial: MeshStandardMaterial;
   private readonly transportColor = new Color(TRANSPORT.color);
-  private readonly groundColor = new Color(GROUND.color);
 
   constructor(
     scene: Scene,
@@ -102,24 +99,16 @@ export class MissionPropsView {
       TRANSPORT.color,
       props.transports.length,
     );
-    const s = GROUND.size;
-    this.groundTargets = createInstanced(
-      new BoxGeometry(s.width, s.height, s.depth),
-      GROUND.color,
-      props.groundTargets.length,
-    );
-    this.groundTargets.receiveShadow = true;
     this.kaijuMaterial = new MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
     this.kaiju = new Mesh(createKaijuGeometry(), this.kaijuMaterial);
     this.kaiju.castShadow = true;
     this.kaiju.visible = false;
-    scene.add(this.transports, this.groundTargets, this.kaiju);
+    scene.add(this.transports, this.kaiju);
   }
 
   /** 描画フレームごとに呼ぶ。動くもの（輸送機・怪獣）は前ステップとの間を補間する */
   update(alpha: number): void {
     this.updateTransports(alpha);
-    this.updateGroundTargets();
     this.updateKaiju(alpha);
   }
 
@@ -145,20 +134,6 @@ export class MissionPropsView {
       mesh.setMatrixAt(n, matrix);
       const flash = t.flashTimer > 0 ? FLASH : 0;
       mesh.setColorAt(n, color.copy(this.transportColor).lerp(WHITE, flash));
-      n++;
-    }
-    finish(mesh, n);
-  }
-
-  private updateGroundTargets(): void {
-    const mesh = this.groundTargets;
-    let n = 0;
-    for (const g of this.props.groundTargets) {
-      if (!g.active) continue;
-      matrix.makeTranslation(g.position.x, g.position.y, g.position.z);
-      mesh.setMatrixAt(n, matrix);
-      const flash = g.flashTimer > 0 ? FLASH : 0;
-      mesh.setColorAt(n, color.copy(this.groundColor).lerp(WHITE, flash));
       n++;
     }
     finish(mesh, n);

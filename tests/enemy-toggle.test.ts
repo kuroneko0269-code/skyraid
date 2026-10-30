@@ -5,7 +5,15 @@ import { TEAM_ENEMY, TEAM_PLAYER } from '../src/combat/target';
 import type { AircraftControls } from '../src/entities/aircraft';
 import { FlightSession } from '../src/missions/flight-session';
 
-const NONE: CombatInput = { trigger: false, missile: false, flare: false, targetNext: false };
+const NONE: CombatInput = {
+  trigger: false,
+  missile: false,
+  flare: false,
+  targetNext: false,
+  rocket: false,
+  bomb: false,
+  bombHeld: false,
+};
 const LEVEL: AircraftControls = { pitch: 0, roll: 0, yaw: 0, throttle: 0, afterburner: false };
 const DT = 1 / 60;
 

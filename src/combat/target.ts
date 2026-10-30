@@ -1,4 +1,5 @@
 // 撃てる対象の共通の形（Three.js 非依存）。的（風船）・ドローン・敵機（2-3）・プレイヤー機（2-3）
+import type { BlastSpec } from '../data/ground-targets';
 import type { Vec3 } from '../flight/math';
 import type { Damageable } from './damage';
 import type { GunTarget } from './gun';
@@ -16,6 +17,8 @@ export interface CombatTarget extends GunTarget, Damageable {
   readonly visualRadius: number;
   /** 陣営。省略は TEAM_ENEMY（練習用の的・ドローンはプレイヤーの敵側） */
   readonly team?: number;
+  /** 壊れたときに周囲へ出す範囲ダメージ（燃料タンク。2-6）。省略・null はなし */
+  readonly deathBlast?: BlastSpec | null;
 }
 
 /** 対象の陣営（省略は敵側） */

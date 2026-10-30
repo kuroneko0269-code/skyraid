@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { Input } from '../src/core/input';
-import { ACTIONS, DEFAULT_KEYBINDS, type KeyBindings } from '../src/data/keybinds';
+import {
+  ACTIONS,
+  ANALOG_ONLY_ACTIONS,
+  DEFAULT_KEYBINDS,
+  type KeyBindings,
+} from '../src/data/keybinds';
 
 /** node の Event に code を足した疑似キーイベント */
 function keyEvent(type: 'keydown' | 'keyup', code: string, repeat = false): Event {
@@ -19,9 +24,10 @@ function setup(bindings?: KeyBindings) {
 }
 
 describe('keybinds', () => {
-  it('全アクションに少なくとも1つキーが割り当てられている', () => {
+  it('全アクションに少なくとも1つキーが割り当てられている（タッチ・パッドの長押し専用を除く）', () => {
     for (const action of ACTIONS) {
-      expect(DEFAULT_KEYBINDS[action].length).toBeGreaterThan(0);
+      if (ANALOG_ONLY_ACTIONS.includes(action)) expect(DEFAULT_KEYBINDS[action]).toEqual([]);
+      else expect(DEFAULT_KEYBINDS[action].length).toBeGreaterThan(0);
     }
   });
 });

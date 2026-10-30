@@ -43,8 +43,24 @@ describe('弾数とクールダウン', () => {
       null,
       () => 0.5,
     );
-    const press: CombatInput = { trigger: false, missile: true, flare: true, targetNext: false };
-    const idle: CombatInput = { trigger: false, missile: false, flare: false, targetNext: false };
+    const press: CombatInput = {
+      trigger: false,
+      missile: true,
+      flare: true,
+      targetNext: false,
+      rocket: false,
+      bomb: false,
+      bombHeld: false,
+    };
+    const idle: CombatInput = {
+      trigger: false,
+      missile: false,
+      flare: false,
+      targetNext: false,
+      rocket: false,
+      bomb: false,
+      bombHeld: false,
+    };
     const s = shooter(250, IDENTITY, 3000);
     let flares = 0;
     for (let i = 0; i < 60 * 20; i++) {
@@ -165,7 +181,15 @@ describe('比例航法', () => {
       0.1,
       [drone],
     );
-    const idle: CombatInput = { trigger: false, missile: false, flare: false, targetNext: false };
+    const idle: CombatInput = {
+      trigger: false,
+      missile: false,
+      flare: false,
+      targetNext: false,
+      rocket: false,
+      bomb: false,
+      bombHeld: false,
+    };
     for (let i = 0; i < 120 && !combat.targeting.locked; i++) combat.step(idle, s, DT);
     expect(combat.targeting.selected).toBe(drone);
     expect(combat.targeting.locked).toBe(true);

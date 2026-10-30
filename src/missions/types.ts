@@ -2,6 +2,7 @@
 // ミッションを増やすときはデータを足すだけで済むよう、出現物・目標・失敗条件・報酬をすべてここで表す。
 // 表示する文（タイトル・ブリーフィング）は言語ごとに src/data/i18n/*.json に置き、ミッションの id で引く（2-5）
 import type { Difficulty, PatrolPoint } from '../data/ai';
+import type { GroundTargetType } from '../data/ground-targets';
 import type { Rank } from '../data/ranking';
 
 /** 位置と向き（機首の向きは -Z から右回り、度。真上から見て時計回り） */
@@ -70,16 +71,16 @@ export interface DroneSpawn {
 }
 
 /**
- * 地上目標。positions の地表に 1 つずつ置く。
- * 2-6 で種類（建物・車両など）と見た目を作るまでは、どの種類も「静止した大きな的」（placeholder）で出す（2-5）
+ * 地上目標（2-6）。positions の地表に 1 つずつ置く。種類はレーダー・燃料タンク・格納庫・対空砲
+ * （数値は src/data/ground-targets.ts）。difficulty は対空砲の命中率（省略は normal）
  */
 export interface GroundTargetSpawn {
   readonly kind: 'groundTarget';
   readonly group: string;
-  /** 種類。2-6 までは 'placeholder' だけ */
-  readonly targetType: string;
+  readonly targetType: GroundTargetType;
   readonly trigger: SpawnTrigger;
   readonly positions: readonly Point2[];
+  readonly difficulty?: Difficulty;
 }
 
 /** 輸送機（護衛対象、2-5）。from から to へ直線で一定速度（src/data/mission-props.ts）で飛ぶ。陣営はプレイヤー側 */

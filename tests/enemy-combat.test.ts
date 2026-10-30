@@ -15,7 +15,15 @@ import { createHudFrame, fillRadar } from '../src/ui/hud-feed';
 import { arenaForce } from './ai-sim';
 import { DT, lookQuat, point, shooter } from './combat-helpers';
 
-const NONE: CombatInput = { trigger: false, missile: false, flare: false, targetNext: false };
+const NONE: CombatInput = {
+  trigger: false,
+  missile: false,
+  flare: false,
+  targetNext: false,
+  rocket: false,
+  bomb: false,
+  bombHeld: false,
+};
 const LEVEL: AircraftControls = { pitch: 0, roll: 0, yaw: 0, throttle: 0, afterburner: false };
 
 function freeFlight(): FlightSession {

@@ -94,7 +94,9 @@ export class HudWeapons {
   private readonly mslText: HTMLSpanElement;
   private readonly flrText: HTMLSpanElement;
   private readonly flrRow: HTMLDivElement;
-  private readonly mslRow: HTMLDivElement;
+  /** 残弾の列とミサイルの行（2-6 のロケット・爆弾の行・兵装の印は hud-ordnance.ts が足す） */
+  readonly ammo: HTMLDivElement;
+  readonly mslRow: HTMLDivElement;
   private last = {
     ring: NaN,
     locked: false,
@@ -120,6 +122,7 @@ export class HudWeapons {
     this.lead = slot(el('div', 'hud-lead', layer));
 
     const ammo = el('div', 'hud-ammo', gauges);
+    this.ammo = ammo;
     this.mslRow = el('div', 'hud-ammo-row', ammo);
     el('span', 'hud-ammo-label', this.mslRow, 'MSL');
     this.mslText = el('span', 'hud-ammo-value', this.mslRow);

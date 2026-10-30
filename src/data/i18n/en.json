@@ -29,9 +29,9 @@
     "strike": {
       "title": "Strike",
       "briefing": [
-        "We have located four enemy supply depots on the island.",
-        "Destroy all of them. No anti-air guns have been spotted.",
-        "Don't get too close to the ground. Pull up early after each pass."
+        "We have located four enemy facilities on the island: a radar, a fuel tank, a hangar and an anti-air gun.",
+        "Destroy all of them. The AA gun in the west fires at anything within 2.5 km. When the \"AAA\" warning appears, turn to break its aim.",
+        "The hangar is tough, so use bombs or rockets. The fuel tank explodes; don't pass low right over it."
       ]
     },
     "encounter": {

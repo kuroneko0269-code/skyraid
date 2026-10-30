@@ -1,0 +1,47 @@
+/* 無誘導兵器と対空砲（2-6）。残弾の行は hud-weapons.css の .hud-ammo-row */
+
+/* タッチの MSL ボタンで撃つ兵装の行 */
+.hud-ammo-row.is-selected .hud-ammo-label::before {
+  content: '▸';
+}
+
+/* 爆弾の着弾予測点: 予測照準点（○ 10px）より大きい二重の円 */
+.hud-bomb-impact {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border: 1.5px solid var(--hud-color);
+  border-radius: 50%;
+  box-sizing: border-box;
+  will-change: transform;
+}
+
+.hud-bomb-impact::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: var(--hud-color);
+}
+
+/* 対空砲が撃つ前: MISSILE の警告（ラダーの窓の上端の上）のさらに上 */
+.hud-aaa {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - var(--hud-ladder-h) / 2 - 40px);
+  transform: translate(-50%, -100%);
+  padding: 2px 10px;
+  border: var(--hud-line) solid var(--hud-red);
+  animation-duration: 0.4s;
+}
+
+.hud.is-aaa .hud-aaa {
+  display: block;
+}

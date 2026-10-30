@@ -88,8 +88,9 @@ export const ESCORT_MISSION: MissionDef = {
 };
 
 /**
- * M4 爆撃: 島の地上目標 4 つを破壊する。2-6 で地上目標を作るまでは「静止した大きな的」（箱、HP 400）の仮置き。
- * 対空砲・敵機はなし。目標は島の四方の低い所（地表 300m 未満）
+ * M4 爆撃: 島の地上目標 4 つ（レーダー・燃料タンク・格納庫・対空砲）を破壊する。敵機はなし。
+ * 対空砲（normal、命中率 30%）は島の西、レーダーから 2.3km・開始位置から 3.7km。600〜2500m に入ると撃ってくる。
+ * 目標は島の四方の低い所（地表 300m 未満）。位置は 2-5 の仮置きと同じ
  */
 export const STRIKE_MISSION: MissionDef = {
   id: 'strike',
@@ -101,14 +102,31 @@ export const STRIKE_MISSION: MissionDef = {
     {
       kind: 'groundTarget',
       group: 'depots',
-      targetType: 'placeholder',
+      targetType: 'radar',
       trigger: { type: 'start' },
-      positions: [
-        { x: 900, z: 1700 },
-        { x: -1300, z: 1000 },
-        { x: -800, z: -1600 },
-        { x: 1600, z: -900 },
-      ],
+      positions: [{ x: 900, z: 1700 }],
+    },
+    {
+      kind: 'groundTarget',
+      group: 'depots',
+      targetType: 'aaa',
+      trigger: { type: 'start' },
+      positions: [{ x: -1300, z: 1000 }],
+      difficulty: 'normal',
+    },
+    {
+      kind: 'groundTarget',
+      group: 'depots',
+      targetType: 'hangar',
+      trigger: { type: 'start' },
+      positions: [{ x: -800, z: -1600 }],
+    },
+    {
+      kind: 'groundTarget',
+      group: 'depots',
+      targetType: 'fuelTank',
+      trigger: { type: 'start' },
+      positions: [{ x: 1600, z: -900 }],
     },
   ],
   objectives: [

@@ -1,9 +1,11 @@
-// ミッションの出現物のうち、敵機・的・ドローン以外（2-5）: 輸送機（護衛対象）・怪獣の仮実装・地上目標の仮置き。
+// ミッションの出現物のうち、敵機・的・ドローン以外（2-5）: 輸送機（護衛対象）・怪獣の仮実装・地上目標（2-6）と対空砲の射撃。
 // FlightSession が持ち、出現（spawn）・固定ステップ・ミッションの開始時の片付けをここにまとめる（Three.js 非依存）
+import { AntiAirFire, type AaaHit, type AaaTarget } from '../combat/aaa';
+import type { GroundHeightFn, Rng } from '../combat/gun';
 import type { CombatTarget } from '../combat/target';
-import { GROUND_TARGET_PLACEHOLDER_CONFIG, TRANSPORT_CONFIG } from '../data/mission-props';
-import type { GroundHeightFn } from '../entities/aircraft';
-import { GroundTargetPlaceholder } from '../entities/ground-target-placeholder';
+import { GROUND_TARGET_CONFIG } from '../data/ground-targets';
+import { TRANSPORT_CONFIG } from '../data/mission-props';
+import { GroundTarget } from '../entities/ground-target';
 import { KaijuPlaceholder } from '../entities/kaiju-placeholder';
 import { Transport } from '../entities/transport';
 import type { GroundTargetSpawn, KaijuSpawn, TransportSpawn } from './types';
@@ -19,16 +21,27 @@ export interface EscortState {
 export class MissionProps {
   readonly transports: Transport[];
   readonly kaiju: KaijuPlaceholder;
-  readonly groundTargets: GroundTargetPlaceholder[];
+  readonly groundTargets: GroundTarget[];
+  /** 対空砲の射撃（弾・警告）。当たったら onAaaHit */
+  readonly aaa: AntiAirFire;
+  /** 対空砲の弾が自機に当たったとき（FlightSession がダメージを与える） */
+  onAaaHit: (hit: Readonly<AaaHit>) => void = () => undefined;
   /** プレイヤーの敵側で、撃てる・ロックできるもの（怪獣・地上目標）。CombatSystem.allTargets に入れる */
   readonly hostileTargets: readonly CombatTarget[];
 
-  constructor(groundHeight: GroundHeightFn = () => 0) {
+  constructor(groundHeight: GroundHeightFn = () => 0, rng: Rng = Math.random) {
     this.transports = Array.from({ length: TRANSPORT_CONFIG.maxCount }, () => new Transport());
     this.kaiju = new KaijuPlaceholder(groundHeight);
     this.groundTargets = Array.from(
-      { length: GROUND_TARGET_PLACEHOLDER_CONFIG.maxCount },
-      () => new GroundTargetPlaceholder(groundHeight),
+      { length: GROUND_TARGET_CONFIG.maxCount },
+      () => new GroundTarget(groundHeight),
+    );
+    this.aaa = new AntiAirFire(
+      (hit) => {
+        this.onAaaHit(hit);
+      },
+      groundHeight,
+      rng,
     );
     this.hostileTargets = [this.kaiju, ...this.groundTargets];
   }
@@ -38,12 +51,15 @@ export class MissionProps {
     for (const t of this.transports) t.withdraw();
     this.kaiju.withdraw();
     for (const g of this.groundTargets) g.withdraw();
+    this.aaa.reset();
   }
 
-  step(dt: number): void {
+  /** player は対空砲が狙う自機（撃墜されている間は active が false） */
+  step(dt: number, player: AaaTarget | null = null): void {
     for (const t of this.transports) t.step(dt);
     this.kaiju.step(dt);
     for (const g of this.groundTargets) g.step(dt);
+    this.aaa.step(this.groundTargets, player, dt);
   }
 
   spawnTransport(def: TransportSpawn): void {
@@ -60,7 +76,7 @@ export class MissionProps {
     for (const p of def.positions) {
       const g = this.groundTargets.find((x) => !x.deployed);
       if (!g) break;
-      g.deploy(def.group, def.targetType, p.x, p.z);
+      g.deploy(def.group, def.targetType, p.x, p.z, def.difficulty);
     }
   }
 
@@ -81,6 +97,6 @@ export class MissionProps {
 
   /** 地上目標なら、そのグループ（撃墜数の数え上げ用）。地上目標でなければ undefined */
   groundTargetGroup(target: CombatTarget): string | undefined {
-    return target instanceof GroundTargetPlaceholder ? target.group : undefined;
+    return target instanceof GroundTarget ? target.group : undefined;
   }
 }

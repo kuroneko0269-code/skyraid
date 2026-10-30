@@ -178,7 +178,15 @@ describe('予測照準点', () => {
     );
     const b = combat.targets.balloons[0];
     if (!b) throw new Error('的がない');
-    const idle: CombatInput = { trigger: false, missile: false, flare: false, targetNext: false };
+    const idle: CombatInput = {
+      trigger: false,
+      missile: false,
+      flare: false,
+      targetNext: false,
+      rocket: false,
+      bomb: false,
+      bombHeld: false,
+    };
     const near = { x: b.position.x, y: b.position.y, z: b.position.z + 800 };
     combat.step(idle, { position: near, orientation: IDENTITY, speed: 250 }, DT);
     expect(combat.targeting.selected).toBe(b);
