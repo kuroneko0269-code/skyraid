@@ -208,7 +208,8 @@ export function computeSkyLighting(
 
 /**
  * 露出を決める。空と地面の明るさの対数平均（重み groundWeight）が key になる倍率を基本にし、
- * 露出後の地面が minGround より暗くならないよう下限をかける（空が明るくても地形がつぶれない）
+ * 露出後の地面が minGround より暗くならないよう下限をかける（空が明るくても地形がつぶれない）。
+ * 上限は maxExposure
  */
 export function computeExposure(
   skyLuminance: number,
@@ -217,11 +218,22 @@ export function computeExposure(
     key: number;
     groundWeight: number;
     minGround: number;
+    maxExposure: number;
   } = EXPOSURE_CONFIG,
 ): number {
   const sky = Math.max(skyLuminance, 1e-6);
   const ground = Math.max(groundLuminance, 1e-6);
   const w = cfg.groundWeight;
   const logAverage = Math.exp(w * Math.log(ground) + (1 - w) * Math.log(sky));
-  return Math.max(cfg.key / logAverage, cfg.minGround / ground);
+  return Math.min(Math.max(cfg.key / logAverage, cfg.minGround / ground), cfg.maxExposure);
+}
+
+/**
+ * 空気遠近で距離に掛ける倍率（カメラの高さ h で減る）。シェーダーの atmoAerial と同じ式
+ */
+export function aerialDistanceScale(
+  h: number,
+  cfg: { distanceScale: number; heightFalloff: number } = SKY_CONFIG.aerial,
+): number {
+  return cfg.distanceScale * Math.exp(-Math.max(h, 0) / cfg.heightFalloff);
 }

@@ -87,7 +87,23 @@ export class Ocean {
     const cfg = OCEAN_CONFIG;
     const waves = buildGerstnerWaves();
     const { layers, fades } = normalLayerUniforms();
-    const ripples = { uLayers: { value: layers }, uLayerFade: { value: fades } };
+    const band = cfg.sunGlint.band;
+    const ripples = {
+      uLayers: { value: layers },
+      uLayerFade: { value: fades },
+      uRippleFalloff: {
+        value: new Vector2(cfg.rippleFalloff.halfDistance, cfg.rippleFalloff.exponent),
+      },
+      uRipplePixel: { value: new Vector2(cfg.ripplePixel.fadeStart, cfg.ripplePixel.fadeEnd) },
+      uGlintBand: {
+        value: new Vector4(
+          Math.cos(band.inner * DEG),
+          Math.cos(band.outer * DEG),
+          band.outsideScale,
+          band.outsideMax,
+        ),
+      },
+    };
     const depthTex = createDepthTexture();
 
     const detailed = new ShaderMaterial({

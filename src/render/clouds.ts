@@ -10,6 +10,7 @@ import {
   Matrix4,
   Mesh,
   NormalBlending,
+  type Camera,
   PlaneGeometry,
   ShaderMaterial,
   UniformsLib,
@@ -88,6 +89,8 @@ export class Clouds {
           uInside: { value: 0 },
           uSunDir: field.uniforms.uCloudSun,
           uSunE: { value: SKY_CONFIG.sun.irradiance },
+          uProjInv: { value: new Matrix4() },
+          uCamWorld: { value: new Matrix4() },
         },
         vertexShader: volumeVertexShader,
         fragmentShader: volumeFragmentShader,
@@ -100,6 +103,12 @@ export class Clouds {
       }),
     );
     this.volume.name = 'clouds';
+    // 視線は描画するカメラの行列から世界座標で求める（ポストエフェクトの有無にかかわらず同じカメラ）
+    const u = this.volume.material.uniforms;
+    this.volume.onBeforeRender = (_renderer, _scene, camera: Camera) => {
+      (u.uProjInv?.value as Matrix4).copy(camera.projectionMatrixInverse);
+      (u.uCamWorld?.value as Matrix4).copy(camera.matrixWorld);
+    };
 
     const b = CLOUD_CONFIG.billboards;
     this.billboards = new InstancedMesh(

@@ -41,7 +41,8 @@ const fragmentShader = /* glsl */ `
   void main() {
     vec3 dir = normalize(vDir);
     float h = cameraPosition.y;
-    vec3 color = atmoSky(dir, uSun, uSunE, h);
+    // 地平線より下は描画距離の外の海面（atmoBackground）
+    vec3 color = atmoBackground(dir, uSun, uSunE, h);
     // 太陽の円盤とまぶしさ（光芒）。地上に届く太陽の色で、地平線より下には描かない
     vec3 sunColor = ATMO_SUN_COLOR * uSunE * atmoSunTransmittance(uSun, h);
     float c = max(dot(dir, uSun), 0.0);

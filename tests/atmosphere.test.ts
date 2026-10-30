@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EXPOSURE_CONFIG, SKY_CONFIG } from '../src/data/sky';
 import { QUALITY_LEVELS, QUALITY_PRESETS } from '../src/data/quality';
 import {
+  aerialDistanceScale,
   airMass,
   computeExposure,
   computeSkyLighting,
@@ -118,17 +119,31 @@ describe('露出', () => {
   });
 
   it('中間の明るさが key に合う', () => {
-    const cfg = { key: 0.18, groundWeight: 0.5, minGround: 0 };
+    const cfg = { key: 0.18, groundWeight: 0.5, minGround: 0, maxExposure: Infinity };
     const e = computeExposure(0.4, 0.1, cfg);
     expect(Math.sqrt(0.4 * 0.1) * e).toBeCloseTo(0.18, 5);
   });
 
-  it('空がとても明るくても地面は minGround より暗くならない', () => {
-    const ground = 0.02;
+  it('空がとても明るくても地面は minGround より暗くならない（上限の範囲で）', () => {
+    const ground = 0.05;
     for (const sky of [0.1, 1, 10, 100]) {
       expect(computeExposure(sky, ground) * ground).toBeGreaterThanOrEqual(
         EXPOSURE_CONFIG.minGround - 1e-9,
       );
+    }
+  });
+
+  it('露出は maxExposure（3）を超えない（4-2b）', () => {
+    expect(EXPOSURE_CONFIG.maxExposure).toBe(3);
+    for (const [sky, ground] of [
+      [1e-4, 1e-4],
+      [0.001, 0.02],
+      [0.05, 0.001],
+    ] as const) {
+      expect(computeExposure(sky, ground)).toBeLessThanOrEqual(3);
+    }
+    for (const el of [5, 15, 32, 60, 85]) {
+      expect(computeSkyLighting(sunDirection(40, el)).exposure).toBeLessThanOrEqual(3);
     }
   });
 
@@ -181,5 +196,17 @@ describe('品質フラグ', () => {
       if (p.bloom) expect(p.postEffects).toBe(true);
       if (p.shadows) expect(p.shadowMapSize).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('空気遠近の高さによる減衰（4-2b）', () => {
+  const ground = aerialDistanceScale(0);
+  it('地表では距離 3 倍のまま', () => {
+    expect(ground).toBe(SKY_CONFIG.aerial.distanceScale);
+  });
+  it('カメラ高度 1000m で地上の約 60%、2000m で約 35%', () => {
+    expect(aerialDistanceScale(1000) / ground).toBeCloseTo(0.6, 1);
+    expect(aerialDistanceScale(2000) / ground).toBeGreaterThan(0.32);
+    expect(aerialDistanceScale(2000) / ground).toBeLessThan(0.38);
   });
 });

@@ -1,5 +1,6 @@
 // 大気散乱の GLSL。atmosphere-model.ts と同じ式。定数は src/data/sky.ts から埋め込む
-import { ShaderChunk } from 'three';
+import { Color, ShaderChunk } from 'three';
+import { OCEAN_CONFIG } from '../data/ocean';
 import { SKY_CONFIG } from '../data/sky';
 import { extraterrestrialSun } from './atmosphere-model';
 
@@ -14,6 +15,7 @@ function commonGlsl(): string {
   const sun = SKY_CONFIG.sun;
   // 放射照度 1 あたりの太陽の色（色温度 ÷ ホワイトバランス）。強さは uniform で掛ける
   const color = extraterrestrialSun(sun.temperature, 1, sun.whiteBalance);
+  const sea = new Color(OCEAN_CONFIG.deepColor);
   return /* glsl */ `
 #ifndef ATMO_COMMON
 #define ATMO_COMMON
@@ -26,6 +28,9 @@ const float ATMO_G = ${f(a.mieG)};
 const float ATMO_MS = ${f(a.multiScatter / (4 * Math.PI))};
 const vec3 ATMO_SUN_COLOR = ${v3(color)};
 const float ATMO_DIST_SCALE = ${f(SKY_CONFIG.aerial.distanceScale)};
+const float ATMO_AERIAL_H = ${f(SKY_CONFIG.aerial.heightFalloff)};
+const vec3 ATMO_SEA_ALBEDO = ${v3([sea.r, sea.g, sea.b])};
+const float ATMO_SEA_REFLECT = ${f(OCEAN_CONFIG.reflectivity)};
 
 // 空気の厚さ（天頂 = 1、地平線で約 36）。地平線より下は地平線と同じ
 float atmoAirMass(float c) {
@@ -67,8 +72,38 @@ float atmoAvgDensity(float h0, float h1, float H) {
   return H * (e0 - exp(-h1 / H)) / dh;
 }
 
+// 高さ h0 → h1 の線分の空気遠近の消散係数（距離の倍率込み）。倍率はカメラの高さ h0 で減らす
+// （地表付近は距離 3 倍、上空では霞が薄くなる。atmosphere-model.ts の aerialDistanceScale）
+vec3 atmoAerialDensity(float h0, float h1) {
+  vec3 density = ATMO_BETA_R * atmoAvgDensity(h0, h1, ATMO_H_R) + ATMO_BETA_M_EXT * atmoAvgDensity(h0, h1, ATMO_H_M);
+  return density * ATMO_DIST_SCALE * exp(-h0 / ATMO_AERIAL_H);
+}
+
+// 地平線より下の背景（描画距離の外の海面を空気遠近ごしに見た色）。上は空そのもの。
+// 空の色（地平線の霞）だけにすると、上空から見下ろしたとき描画距離の果てが白く溶けて画面が白くなる
+// sky は同じ向きの atmoSky（呼ぶ側で計算済みのもの）
+vec3 atmoBackgroundSky(vec3 dir, vec3 sky, vec3 sun, float sunE, float h) {
+  if (dir.y >= 0.0) return sky;
+  float y = max(h, 0.0);
+  float t = y / max(-dir.y, 1e-3);
+  // 海面: 水の中から出てくる光（太陽 + 空。空の放射照度は仰角 25° の空の明るさ × π で近似）+ 空の反射
+  vec2 side = normalize(vec2(-sun.z, sun.x) + vec2(1e-5, 0.0));
+  vec3 skyIrr = 3.14159265 * atmoSky(vec3(side.x * 0.9063, 0.4226, side.y * 0.9063), sun, sunE, 0.0);
+  vec3 sunIrr = ATMO_SUN_COLOR * sunE * atmoSunTransmittance(sun, 0.0) * max(sun.y, 0.0);
+  float c = 1.0 - clamp(-dir.y, 0.0, 1.0);
+  float F = 0.02 + 0.98 * c * c * c * c * c;
+  vec3 sea = ATMO_SEA_ALBEDO * (sunIrr + skyIrr) / 3.14159265 * (1.0 - F)
+    + atmoSky(vec3(dir.x, -dir.y, dir.z), sun, sunE, 0.0) * (F * ATMO_SEA_REFLECT);
+  vec3 ext = exp(-atmoAerialDensity(y, 0.0) * t);
+  return sea * ext + sky * (1.0 - ext);
+}
+vec3 atmoBackground(vec3 dir, vec3 sun, float sunE, float h) {
+  return atmoBackgroundSky(dir, atmoSky(dir, sun, sunE, h), sun, sunE, h);
+}
+
 // 空気遠近: カメラ cam から点 p までの透過率 ext と散乱光 ins（色 = 同じ向きの空の色 × (1 − 透過率)）。
-// sunPacked = 太陽の向き × 放射照度。fadeStart〜fadeEnd で描画距離の果てを空の色に溶かす
+// sunPacked = 太陽の向き × 放射照度。fadeStart〜fadeEnd で描画距離の果てを背景（空、または地平線より
+// 下なら遠くの海面）の色に溶かす
 void atmoAerial(vec3 cam, vec3 p, vec3 sunPacked, float fadeStart, float fadeEnd, out vec3 ext, out vec3 ins) {
   float sunE = length(sunPacked);
   vec3 sun = sunPacked / max(sunE, 1e-6);
@@ -77,9 +112,12 @@ void atmoAerial(vec3 cam, vec3 p, vec3 sunPacked, float fadeStart, float fadeEnd
   vec3 dir = v / max(d, 1e-3);
   float h0 = max(cam.y, 0.0);
   float h1 = max(p.y, 0.0);
-  vec3 density = ATMO_BETA_R * atmoAvgDensity(h0, h1, ATMO_H_R) + ATMO_BETA_M_EXT * atmoAvgDensity(h0, h1, ATMO_H_M);
-  ext = exp(-density * d * ATMO_DIST_SCALE) * (1.0 - smoothstep(fadeStart, fadeEnd, d));
-  ins = atmoSky(dir, sun, sunE, h0) * (1.0 - ext);
+  vec3 e = exp(-atmoAerialDensity(h0, h1) * d);
+  float fade = smoothstep(fadeStart, fadeEnd, d);
+  vec3 sky = atmoSky(dir, sun, sunE, h0);
+  ext = e * (1.0 - fade);
+  ins = sky * (1.0 - e) * (1.0 - fade);
+  if (fade > 0.0) ins += atmoBackgroundSky(dir, sky, sun, sunE, h0) * fade;
 }
 #endif
 `;

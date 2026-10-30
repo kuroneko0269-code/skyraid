@@ -6,6 +6,7 @@ import {
   gerstnerDisplacement,
   gerstnerHeight,
   maxWaveHeight,
+  rippleFalloff,
   shoalFactor,
   wavePeriod,
 } from '../src/render/gerstner';
@@ -163,5 +164,37 @@ describe('海面の同心リング', () => {
       segments,
     );
     expect(1 + rings.length * segments).toBeLessThanOrEqual(40_000);
+  });
+});
+
+describe('さざ波と照り返し（4-2b）', () => {
+  it('さざ波の振幅は 500m で 50%、2000m で約 10%', () => {
+    expect(rippleFalloff(0)).toBe(1);
+    expect(rippleFalloff(500)).toBeCloseTo(0.5, 5);
+    expect(rippleFalloff(2000)).toBeGreaterThan(0.08);
+    expect(rippleFalloff(2000)).toBeLessThan(0.12);
+  });
+
+  it('遠いほど弱くなる', () => {
+    let prev = 1;
+    for (const d of [100, 300, 800, 1500, 3000, 6000]) {
+      const k = rippleFalloff(d);
+      expect(k).toBeLessThan(prev);
+      prev = k;
+    }
+  });
+
+  it('照り返しの帯は内側 < 外側、帯の外はブルームのしきい値より暗く頭打ち', () => {
+    const b = OCEAN_CONFIG.sunGlint.band;
+    expect(b.inner).toBeLessThan(b.outer);
+    expect(b.outsideScale).toBeLessThan(0.5);
+    // しきい値は露出後の明るさ（露出の上限 3 でも超えない）
+    expect(b.outsideMax * 3).toBeLessThan(2.2);
+  });
+
+  it('画素より細かいさざ波は消す範囲が正しい順', () => {
+    const p = OCEAN_CONFIG.ripplePixel;
+    expect(p.fadeStart).toBeLessThan(p.fadeEnd);
+    expect(p.fadeEnd).toBeLessThanOrEqual(0.5);
   });
 });

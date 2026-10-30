@@ -3,56 +3,9 @@
 import { OCEAN_CONFIG } from '../data/ocean';
 import { ATMOSPHERE_GLSL } from './atmosphere-glsl';
 import { CLOUD_GLSL } from './cloud-field';
+import { noiseChunk } from './ocean-noise-glsl';
 
 const WAVE_COUNT = OCEAN_CONFIG.waves.length;
-export const MAX_NORMAL_LAYERS = OCEAN_CONFIG.normalLayers.length;
-
-// 値と微分を返す 2D 勾配ノイズ（Inigo Quilez の noised）。ハッシュは正弦を使わない Dave Hoskins の hash22
-const noiseChunk = /* glsl */ `
-  vec2 oceanHash(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.xx + p3.yz) * p3.zy) * 2.0 - 1.0;
-  }
-  // x = 値（約 -0.7〜0.7）、yz = 微分
-  vec3 oceanNoise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
-    vec2 du = 30.0 * f * f * (f * (f - 2.0) + 1.0);
-    vec2 ga = oceanHash(i);
-    vec2 gb = oceanHash(i + vec2(1.0, 0.0));
-    vec2 gc = oceanHash(i + vec2(0.0, 1.0));
-    vec2 gd = oceanHash(i + vec2(1.0, 1.0));
-    float va = dot(ga, f);
-    float vb = dot(gb, f - vec2(1.0, 0.0));
-    float vc = dot(gc, f - vec2(0.0, 1.0));
-    float vd = dot(gd, f - vec2(1.0, 1.0));
-    float k = va - vb - vc + vd;
-    return vec3(
-      va + u.x * (vb - va) + u.y * (vc - va) + u.x * u.y * k,
-      ga + u.x * (gb - ga) + u.y * (gc - ga) + u.x * u.y * (ga - gb - gc + gd) + du * (u.yx * k + vec2(vb, vc) - va)
-    );
-  }
-  // さざ波の層: xy = 流れる速度（m/s）、z = 1 / 模様の大きさ、w = 傾きの強さ。fade = 消える距離
-  uniform vec4 uLayers[${MAX_NORMAL_LAYERS}];
-  uniform vec2 uLayerFade[${MAX_NORMAL_LAYERS}];
-  // n 層ぶんの傾き（xz）。near は先頭の層の残り具合（遠くで 0）
-  vec2 oceanRipples(vec2 xz, float dist, float time, int n, out float near) {
-    vec2 slope = vec2(0.0);
-    near = 0.0;
-    for (int i = 0; i < ${MAX_NORMAL_LAYERS}; i++) {
-      if (i >= n) break;
-      vec4 l = uLayers[i];
-      float fade = 1.0 - smoothstep(uLayerFade[i].x, uLayerFade[i].y, dist);
-      if (i == 0) near = fade;
-      if (fade <= 0.0) continue;
-      vec3 nd = oceanNoise((xz - l.xy * time) * l.z + float(i) * 17.3);
-      slope += nd.yz * l.w * fade;
-    }
-    return slope;
-  }
-`;
 
 // 水の中で散乱して出てくる光（拡散面と同じ: 放射照度 / π）と空の反射
 const lightChunk = /* glsl */ `
@@ -159,7 +112,7 @@ export const detailedFragmentShader = /* glsl */ `
     vec3 V = eyeVec / dist;
     vec2 xz = vWorldPos.xz;
     float near;
-    vec2 slope = oceanRipples(xz, dist, uTime, uLayerCount, near);
+    vec2 slope = oceanRipples(xz, dist, oceanFootprint(xz), uTime, uLayerCount, near);
     vec3 n = normalize(normalize(vNormal) + vec3(-slope.x, 0.0, -slope.y));
     #ifdef CLOUD_SHADOW
       float shade = cloudShadow(vWorldPos);
@@ -181,7 +134,8 @@ export const detailedFragmentShader = /* glsl */ `
     float F = oceanFresnel(dot(n, V));
     vec3 color = body * (1.0 - F) + oceanSky(reflect(-V, n)) * (F * uReflectivity);
 
-    // 太陽の照り返し（GGX + Schlick + Kelemen の可視項）。遠くはさざ波を粗さとして広げる
+    // 太陽の照り返し（GGX + Schlick + Kelemen の可視項）。遠く（さざ波が弱い・消えた所）はさざ波を
+    // 粗さとして広げる
     float a = mix(uGlint.y, uGlint.x, near);
     float a2 = a * a;
     vec3 H = normalize(uSunDirection + V);
@@ -191,6 +145,7 @@ export const detailedFragmentShader = /* glsl */ `
     float dd = NdotH * NdotH * (a2 - 1.0) + 1.0;
     float D = a2 / (PI * dd * dd);
     vec3 spec = uSunColor * (shade * D * oceanFresnel(LdotH) * 0.25 / max(LdotH * LdotH, 0.05) * NdotL * uGlint.z);
+    spec = oceanGlintBand(spec, V, normalize(vNormal), uSunDirection);
 
     // 海岸の泡: 海岸線の近く（水深 ÷ 水深の勾配 ≒ 海岸線までの距離）の白い帯。
     // 帯の端がゆっくり寄せては返し、ノイズでちぎれる
@@ -272,12 +227,13 @@ export const simpleFragmentShader = /* glsl */ `
     float dist = length(eyeVec);
     vec3 V = eyeVec / dist;
     float near;
-    vec2 slope = oceanRipples(vWorldPos.xz, dist, uTime, 1, near);
+    vec2 slope = oceanRipples(vWorldPos.xz, dist, oceanFootprint(vWorldPos.xz), uTime, 1, near);
     vec3 n = normalize(normalize(vNormal) + vec3(-slope.x, 0.0, -slope.y));
     float F = oceanFresnel(dot(n, V)) * uReflectivity;
     vec3 color = mix(vBody, vSky, F);
     vec3 r = reflect(-V, n);
-    color += uSunColor * pow(max(dot(r, uSunDirection), 0.0), uSunShininess) * uSunSpecular;
+    vec3 spec = uSunColor * pow(max(dot(r, uSunDirection), 0.0), uSunShininess) * uSunSpecular;
+    color += oceanGlintBand(spec, V, normalize(vNormal), uSunDirection);
     gl_FragColor = vec4(color, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>

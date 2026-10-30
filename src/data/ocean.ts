@@ -42,6 +42,16 @@ export const OCEAN_CONFIG = {
     { cell: 0.8, speed: 0.3, angle: -45, slope: 0.14, fade: { start: 30, end: 140 } },
   ],
   /**
+   * さざ波の距離による弱め（4-2b）。全層の傾きに 1 / (1 + (距離 / halfDistance)^exponent) を掛ける
+   * （500m で 50%、2000m で約 10%）。照り返しの粗さもこの割合で近く → 遠くの値へ移す
+   */
+  rippleFalloff: { halfDistance: 500, exponent: 1.6 },
+  /**
+   * 画素の大きさに対するさざ波の最小の模様（4-2b）。1 画素が海面で覆う幅（画面の微分で求める）が
+   * 模様の大きさ（cell）× fadeStart を超えたら消し始め、× fadeEnd で消しきる（画素単位のちらつき防止）
+   */
+  ripplePixel: { fadeStart: 0.15, fadeEnd: 0.4 },
+  /**
    * 真下を見たときの水の色（反射率）。沖（水深 deepDepth 以上）は濃紺、浅瀬はターコイズ。
    * 色は水深で exp(−水深 / depthScale) で混ぜる
    */
@@ -53,8 +63,19 @@ export const OCEAN_CONFIG = {
   /**
    * 太陽の照り返し（GGX）。roughness は近く（さざ波が見える範囲）と遠く（さざ波が消えた範囲）の
    * GGX の α。遠くは細かい波を粗さとして扱い、照り返しを広げる。strength は明るさの倍率
+   * （4-2b で 1 → 0.6）
    */
-  sunGlint: { roughnessNear: 0.07, roughnessFar: 0.2, strength: 1 },
+  sunGlint: {
+    roughnessNear: 0.07,
+    roughnessFar: 0.2,
+    strength: 0.6,
+    /**
+     * 照り返しの帯（4-2b）: 波のない海面で太陽を映す向きからの角度（度）が inner 以内は全部、
+     * outer まで弱めていく。帯の外は outsideScale 倍にし、明るさを outsideMax（露出前）で頭打ちに
+     * する（ブルームのしきい値の下。帯の外がきらめかず、落ち着いた濃紺のまま）
+     */
+    band: { inner: 7, outer: 20, outsideScale: 0.12, outsideMax: 0.35 },
+  },
   /**
    * 水面下の散乱っぽい明るさ: 太陽の方を見たとき、波の山が透けて緑がかって明るくなる。
    * 色（反射率）と強さ

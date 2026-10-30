@@ -28,21 +28,21 @@ export const volumeVertexShader = /* glsl */ `
   // x = 下面を描くか、y = 上面を描くか（カメラが層の下なら下面だけ、上なら上面だけ、中なら両方）
   uniform vec2 uShow;
   uniform float uHalfSize;
-  varying vec3 vWorld;
+  varying vec4 vClip;
   const float CLOUD_BASE_V = ${f(CLOUD_CONFIG.base)};
   const float CLOUD_TOP_V = ${f(CLOUD_CONFIG.top)};
   void main() {
-    // position: xz = -1〜1、y = 0（下面）/ 1（上面）
+    // position: xz = -1〜1、y = 0（下面）/ 1（上面）。板はカメラの位置に付いて動くが、向きは常に世界の水平
     float show = position.y < 0.5 ? uShow.x : uShow.y;
     vec3 wp = vec3(
       cameraPosition.x + position.x * uHalfSize,
       mix(CLOUD_BASE_V, CLOUD_TOP_V, position.y),
       cameraPosition.z + position.z * uHalfSize
     );
-    vWorld = wp;
     gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0);
     // 描かない面は画面外の 1 点につぶす（面積 0 で画素が出ない）
     if (show < 0.5) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    vClip = gl_Position;
   }
 `;
 
@@ -55,14 +55,19 @@ export const volumeFragmentShader = /* glsl */ `
   uniform vec3 fogColor;
   uniform float fogNear;
   uniform float fogFar;
-  varying vec3 vWorld;
+  // カメラの投影の逆行列とワールド行列（視線を画素の位置から世界座標で求める）
+  uniform mat4 uProjInv;
+  uniform mat4 uCamWorld;
+  varying vec4 vClip;
   ${ATMOSPHERE_GLSL}
   ${CLOUD_GLSL}
   ${lightChunk}
   #include <common>
   void main() {
     vec3 ro = cameraPosition;
-    vec3 rd = normalize(vWorld - ro);
+    // 画素の NDC → 投影の逆行列でカメラ空間の向き → カメラの回転で世界の向き（ロールしても雲は世界に固定）
+    vec4 pv = uProjInv * vec4(vClip.xy / vClip.w, 1.0, 1.0);
+    vec3 rd = normalize(mat3(uCamWorld) * (pv.xyz / pv.w));
     float ry = abs(rd.y) < 1e-4 ? 1e-4 : rd.y;
     float tb = (CLOUD_BASE - ro.y) / ry;
     float tt = (CLOUD_TOP - ro.y) / ry;
@@ -127,9 +132,12 @@ export const billboardVertexShader = /* glsl */ `
     // カメラのまわり ±uRadius の正方形の中に回り込ませる（風で流れても数は減らない）
     vec2 rel = mod(c.xz + uCloudOffset - cameraPosition.xz + uRadius, 2.0 * uRadius) - uRadius;
     vec3 center = vec3(cameraPosition.x + rel.x, c.y, cameraPosition.z + rel.y);
-    // カメラに正対（ビュー行列の右・上の向き）
-    vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
-    vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+    // 世界の上方向を軸にカメラへ向ける（右は常に水平。カメラのロールには追従しない）。
+    // 上下はカメラの方へ傾ける（雲の層より上・真下から見ても板が線にならない）
+    vec3 toCam = cameraPosition - center;
+    float hl = length(toCam.xz);
+    vec3 right = hl > 1e-3 ? vec3(toCam.z, 0.0, -toCam.x) / hl : vec3(1.0, 0.0, 0.0);
+    vec3 up = normalize(cross(normalize(toCam), right));
     vec3 wp = center + right * (position.x * w) + up * (position.y * h);
     vFade = 1.0 - smoothstep(0.7, 1.0, max(abs(rel.x), abs(rel.y)) / uRadius);
     vUv = uv;

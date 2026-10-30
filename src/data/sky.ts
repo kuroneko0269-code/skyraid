@@ -59,6 +59,11 @@ export const SKY_CONFIG = {
    */
   aerial: {
     distanceScale: 3,
+    /**
+     * 上の倍率をカメラの高さで減らすスケールハイト（4-2b）。倍率 × exp(−カメラの高さ / heightFalloff):
+     * 1000m で地上の 60%、2000m で 36%。地表付近の見え方（距離 3 倍）はそのまま、上空では霞が薄くなる
+     */
+    heightFalloff: 1960,
   },
   /**
    * 太陽のまわりのまぶしさ（スカイシェーダーで描く光芒）。ブルームのない画質「中」「低」で使う。
@@ -95,6 +100,8 @@ export const EXPOSURE_CONFIG = {
   minGround: 0.14,
   /** 半球ライトの地面側（照り返し）に使う反射率（陸と海の平均） */
   bounceAlbedo: 0.1,
+  /** 露出の上限（4-2b。空や地面の明るさの計算がどう転んでも、白く飛ぶほど上げない） */
+  maxExposure: 3,
 } as const;
 
 /** ブルーム（画質「高」のみ。three/examples/jsm の UnrealBloomPass） */

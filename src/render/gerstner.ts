@@ -102,3 +102,13 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
 export function shoalFactor(depth: number, shoal = OCEAN_CONFIG.shoal): number {
   return smoothstep(shoal.minDepth, shoal.fullDepth, depth);
 }
+
+/**
+ * さざ波（法線ノイズ）の距離による弱め（4-2b）。ocean-noise-glsl.ts の oceanRipples と同じ式
+ */
+export function rippleFalloff(
+  dist: number,
+  cfg: { halfDistance: number; exponent: number } = OCEAN_CONFIG.rippleFalloff,
+): number {
+  return 1 / (1 + Math.pow(Math.max(dist, 0) / cfg.halfDistance, cfg.exponent));
+}
