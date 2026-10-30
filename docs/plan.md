@@ -40,7 +40,7 @@
 - [x] 4-1 PBR + 物理ベースの空（大気散乱。HDR 画像は使わない）+ ブルーム（フェーズ2 の途中で前倒し） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/4daf5f2e2495c9e1c5133915b4099da43f3d22ac（事前修正: 画質の自動判定・自動ダウングレード・MISSILE 警告の位置 https://github.com/kuroneko0269-code/skyraid/commit/7b6aa009911a000a97ccabe94963aee4057ce300）
 - [x] 4-2 水面シェーダーと雲 — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/dd3d06d1406c2a3084b30cf3bf2d02abb284a509（事前修正: 正式名称を SkyRaid: Titan Skies に変更 https://github.com/kuroneko0269-code/skyraid/commit/c17a0601865d1f33d98cb1c24cf5592770e823c4）
 - [x] 4-2b 4-2 の実機確認の修正（雲がカメラと一緒に傾く・高高度で白く霞む・海の照り返しが白いノイズ） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/0c490abe416af8fed73241383aa78900e1f63e44
-- [ ] 4-2c 実機確認の修正（敵 OFF なのに敵機が出る・島の海岸線がちらつく）
+- [x] 4-2c 実機確認の修正（敵 OFF なのに敵機が出る・島の海岸線がちらつく） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/87faca56f0c5358f20ceac65d482bdc2e743a088
 - [ ] 4-3 機体モデル差し替え（CC0素材 or 自作）。Draco圧縮
 - [ ] 4-4 エフェクト（排気、ミサイル煙、爆発）
 - [ ] 4-5 コックピット視点
