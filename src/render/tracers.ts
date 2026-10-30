@@ -1,16 +1,10 @@
-// 曳光弾の描画。全弾を InstancedMesh 1 つ（1 draw call）で、前後に長い発光する（光の影響を受けない）棒として描く
-import {
-  BoxGeometry,
-  DynamicDrawUsage,
-  InstancedMesh,
-  Matrix4,
-  MeshBasicMaterial,
-  Quaternion,
-  Vector3,
-} from 'three';
+// 曳光弾の描画。全弾を InstancedMesh 1 つ（1 draw call）で、前後に長い発光する棒（emissive の PBR）として描く
+import { BoxGeometry, DynamicDrawUsage, InstancedMesh, Matrix4, Quaternion, Vector3 } from 'three';
 import type { Bullet } from '../combat/gun';
 import type { Pool } from '../combat/pool';
 import { TRACER_CONFIG } from '../data/effects';
+import { EMISSIVE_CONFIG } from '../data/sky';
+import { createEmissiveMaterial } from './materials';
 import type { Vec3 } from '../flight/math';
 
 const AXIS_Z = new Vector3(0, 0, 1);
@@ -24,11 +18,7 @@ export class TracerRenderer {
   readonly mesh: InstancedMesh;
 
   constructor(capacity: number, color: number = TRACER_CONFIG.color) {
-    const material = new MeshBasicMaterial({
-      color,
-      fog: false,
-      toneMapped: false,
-    });
+    const material = createEmissiveMaterial(color, EMISSIVE_CONFIG.tracer);
     this.mesh = new InstancedMesh(new BoxGeometry(1, 1, 1), material, capacity);
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.mesh.frustumCulled = false;

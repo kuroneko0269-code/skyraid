@@ -1,4 +1,4 @@
-// 島の地形・海面・空のパラメータ（1-3）。高さの計算は src/render/terrain-height.ts、
+// 島の地形・海面のパラメータ（1-3）。空は src/data/sky.ts（4-1）。高さの計算は src/render/terrain-height.ts、
 // メッシュと LOD は src/render/terrain.ts。距離・高さは m
 
 export const TERRAIN_CONFIG = {
@@ -95,32 +95,28 @@ export const OCEAN_CONFIG = {
   simple: { waveCount: 1 },
 } as const;
 
-export const SKY_CONFIG = {
-  /** 天頂の色と地平線の色（sRGB）。霧の色は地平線の色に合わせる */
-  zenithColor: 0x2f6bb8,
-  horizonColor: 0xbcd3e6,
-  /** グラデーションの曲がり方。1 未満で地平線付近の明るい帯が細くなる */
-  exponent: 0.55,
-  /** ドームの半径。深度テストなしで最初に描くので、far より小さければよい */
-  radius: 1000,
-  sun: {
-    /** 太陽の方向（方位は -Z（初期の進行方向）から右回り、仰角は地平線から。度） */
-    azimuth: 40,
-    elevation: 32,
-    color: 0xfff1d6,
-    /** 太陽の円盤の大きさ（視角の半径、度）と、まわりの光のにじみ */
-    discRadius: 1.2,
-    glowStrength: 0.5,
-    glowExponent: 60,
-    /** 平行光源の強さ（1-1 と同じ） */
-    lightIntensity: 2.0,
-  },
-} as const;
-
 export const WORLD_CONFIG = {
   /**
    * 起動時の位置。島の沖合（海岸から約 1.9km、山頂から 4.5km）、高度 500m。
-   * 初期姿勢は -Z（島の方向）向き。画質「低」の霧（2100m で消える）でも海岸が見える距離
+   * 初期姿勢は -Z（島の方向）向き。画質「低」の霧（4-1 から 2700m で消える。従来は 2100m）でも海岸が見える距離
    */
   start: { x: 0, y: 500, z: 4500 },
+} as const;
+
+/**
+ * 地形の近距離のディテール（4-1。画質「中」以上）。三面マッピング（triplanar）の手続きノイズで
+ * 頂点カラーの明るさをばらつかせ、草・岩の粒を出す。テクスチャ画像は使わない。描画は src/render/terrain-material.ts
+ */
+export const TERRAIN_DETAIL_CONFIG = {
+  /** 細かい粒（草・小石）: ノイズの一辺（m）、明るさのばらつき（±割合）、消える距離（m） */
+  fine: { cell: 1.5, amplitude: 0.25, fadeStart: 120, fadeEnd: 380 },
+  /** 中くらいのまだら（草むら・岩の割れ目） */
+  medium: { cell: 8, amplitude: 0.2, fadeStart: 500, fadeEnd: 1400 },
+  /** 大きな色むら（真上から投影。遠くまで残す）。草地の黄緑〜深緑の揺らぎ */
+  macro: { cell: 60, amplitude: 0.12, fadeStart: 2500, fadeEnd: 4500 },
+  /** 急斜面（岩）の粒を強くする倍率。法線の y が rockNormalY より小さいほど岩扱い */
+  rockBoost: 1.6,
+  rockNormalY: { from: 0.85, to: 0.65 },
+  /** 地形の粗さ（PBR）。草地・岩はほぼ完全な拡散面 */
+  roughness: 0.95,
 } as const;

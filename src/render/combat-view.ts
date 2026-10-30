@@ -6,7 +6,6 @@ import {
   InstancedMesh,
   Matrix4,
   Mesh,
-  MeshBasicMaterial,
   MeshStandardMaterial,
   Quaternion,
   SphereGeometry,
@@ -27,6 +26,8 @@ import { vec3, type Vec3 } from '../flight/math';
 import type { CombatTarget } from '../combat/target';
 import type { Bullet } from '../combat/gun';
 import type { Pool } from '../combat/pool';
+import { EMISSIVE_CONFIG } from '../data/sky';
+import { createEmissiveMaterial } from './materials';
 import { ParticleSystem, randomDirection } from './particles';
 import { TracerRenderer } from './tracers';
 
@@ -56,11 +57,7 @@ export class CombatView {
   ) {
     this.tracers = new TracerRenderer(combat.gun.bullets.capacity);
     this.bulletPools = [combat.gun.bullets];
-    const sparkMaterial = new MeshBasicMaterial({
-      color: SPARK_CONFIG.color,
-      fog: false,
-      toneMapped: false,
-    });
+    const sparkMaterial = createEmissiveMaterial(SPARK_CONFIG.color, EMISSIVE_CONFIG.spark);
     this.sparks = new ParticleSystem(SPARK_CONFIG.max, sparkMaterial, {
       gravity: SPARK_CONFIG.gravity,
       shrinkFraction: 1,
@@ -78,15 +75,13 @@ export class CombatView {
     this.balloons = new InstancedMesh(new SphereGeometry(1, 20, 14), balloonMaterial, count);
     this.balloons.instanceMatrix.setUsage(DynamicDrawUsage);
     this.balloons.frustumCulled = false;
+    this.balloons.castShadow = true;
     for (let i = 0; i < count; i++) this.balloons.setColorAt(i, this.baseColor);
 
     const f = MUZZLE_FLASH_CONFIG;
     this.flash = new Mesh(
       new SphereGeometry(1, 8, 6),
-      new MeshBasicMaterial({
-        color: f.color,
-        toneMapped: false,
-      }),
+      createEmissiveMaterial(f.color, EMISSIVE_CONFIG.muzzleFlash),
     );
     const m = GUN_CONFIG.muzzleOffset;
     // 楕円体の後ろ端が銃口に来るよう前へずらす

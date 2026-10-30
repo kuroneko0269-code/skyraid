@@ -1,4 +1,5 @@
 import {
+  ACESFilmicToneMapping,
   Fog,
   Mesh,
   type Material,
@@ -8,10 +9,15 @@ import {
   type WebGLRenderer,
 } from 'three';
 import { QUALITY_CONFIG, type QualityPreset } from '../data/quality';
+import { AtmosphereFog } from './atmosphere';
+import { PostEffects } from './post';
 
 export interface RenderStats {
+  /** 1 フレームの合計（影・シーン・ポストエフェクトのすべての描画） */
   drawCalls: number;
   triangles: number;
+  /** 描画ステップ数（シャドウマップ・シーン・ポストエフェクトのパス） */
+  steps: number;
 }
 
 /**
@@ -20,20 +26,26 @@ export interface RenderStats {
  */
 export class RenderPipeline {
   private maxPixelRatio = 1;
-  private postEffects = false;
-  private readonly stats: RenderStats = { drawCalls: 0, triangles: 0 };
+  private post: PostEffects | null = null;
+  private exposure = 1;
+  private readonly stats: RenderStats = { drawCalls: 0, triangles: 0, steps: 0 };
 
   constructor(
     private readonly renderer: WebGLRenderer,
     private readonly scene: Scene,
     private readonly camera: PerspectiveCamera,
-  ) {}
+  ) {
+    // トーンマッピングはどの画質でも ACES。「低」はレンダラー側（各マテリアルの最後）で、
+    // 「中」以上はポストエフェクトの仕上げのパスで掛ける
+    renderer.toneMapping = ACESFilmicToneMapping;
+    // ポストエフェクトの複数パスを 1 フレームとして数える（render() の最初に手動で reset）
+    renderer.info.autoReset = false;
+  }
 
   applyQuality(preset: QualityPreset): void {
     this.maxPixelRatio = preset.maxPixelRatio;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.maxPixelRatio));
 
-    // シャドウの受け口。影を落とすライト・メッシュの設定はフェーズ4で行う。
     // 実行中に切り替えた場合、既存マテリアルの再コンパイルが必要になる
     if (this.renderer.shadowMap.enabled !== preset.shadows) {
       this.renderer.shadowMap.enabled = preset.shadows;
@@ -42,11 +54,21 @@ export class RenderPipeline {
       });
     }
 
-    // ポストエフェクトの受け口。本体（ブルーム等）はフェーズ4で render() 内に足す
-    this.postEffects = preset.postEffects;
+    // ポストエフェクト（「中」以上）。「低」に切り替えたら解放する
+    if (preset.postEffects) {
+      this.post ??= new PostEffects(this.renderer, this.scene, this.camera);
+      this.post.setBloom(preset.bloom);
+      this.post.setExposure(this.exposure);
+      this.post.setSize(window.innerWidth, window.innerHeight, this.renderer.getPixelRatio());
+    } else if (this.post) {
+      this.post.dispose();
+      this.post = null;
+    }
+    if (this.scene.fog instanceof AtmosphereFog) this.scene.fog.setOutputToScreen(!this.post);
 
     this.camera.far = preset.drawDistance;
     this.camera.updateProjectionMatrix();
+    // 空気遠近とは別に、描画距離の果てを空の色に溶かしきる範囲
     if (this.scene.fog instanceof Fog) {
       this.scene.fog.near = preset.drawDistance * QUALITY_CONFIG.fogNearRatio;
       this.scene.fog.far = preset.drawDistance * QUALITY_CONFIG.fogFarRatio;
@@ -54,7 +76,14 @@ export class RenderPipeline {
   }
 
   get postEffectsEnabled(): boolean {
-    return this.postEffects;
+    return this.post !== null;
+  }
+
+  /** 露出（トーンマッピング前の倍率。大気の明るさから計算した値） */
+  setExposure(exposure: number): void {
+    this.exposure = exposure;
+    this.renderer.toneMappingExposure = exposure;
+    this.post?.setExposure(exposure);
   }
 
   resize(width: number, height: number): void {
@@ -62,14 +91,18 @@ export class RenderPipeline {
     this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.maxPixelRatio));
     this.renderer.setSize(width, height);
+    this.post?.setSize(width, height, this.renderer.getPixelRatio());
   }
 
   render(): void {
-    // TODO(フェーズ4): this.postEffects が true なら EffectComposer 経由で描画する
-    this.renderer.render(this.scene, this.camera);
-    const info = this.renderer.info.render;
-    this.stats.drawCalls = info.calls;
-    this.stats.triangles = info.triangles;
+    const info = this.renderer.info;
+    info.reset();
+    if (this.post) this.post.render();
+    else this.renderer.render(this.scene, this.camera);
+    this.stats.drawCalls = info.render.calls;
+    this.stats.triangles = info.render.triangles;
+    const shadowSteps = this.renderer.shadowMap.enabled ? 1 : 0;
+    this.stats.steps = shadowSteps + (this.post ? this.post.steps : 1);
   }
 
   /** 直前の render() の統計。オブジェクトは使い回すので保持しないこと */

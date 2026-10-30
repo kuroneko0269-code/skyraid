@@ -8,25 +8,28 @@ import {
   Vector3,
   Vector4,
 } from 'three';
-import { OCEAN_CONFIG, SKY_CONFIG, TERRAIN_CONFIG } from '../data/terrain';
+import { OCEAN_CONFIG, TERRAIN_CONFIG } from '../data/terrain';
+import { SKY_CONFIG } from '../data/sky';
 import type { Vec3 } from '../flight/math';
+import type { Atmosphere } from './atmosphere';
+import { ATMOSPHERE_GLSL } from './atmosphere-glsl';
 
 // 平面の一辺 = 描画距離 × この値。画面の端（視線から斜め）でも縁が霧の外に出るように
 const SIZE_PER_DRAW_DISTANCE = 2.5;
 
-// 頂点・フラグメントの両方で使う色の計算（水の色 + フレネルで空の反射）
+// 頂点・フラグメントの両方で使う色の計算（水の色 + フレネルで空の反射）。
+// 空の反射は空のドームと同じ大気散乱（atmoSky）、水の色は反射率 × 地形と同じ光（太陽 + 空）
 const shadeChunk = /* glsl */ `
   uniform vec3 uDeepColor;
   uniform vec3 uShallowColor;
-  uniform vec3 uZenithColor;
-  uniform vec3 uHorizonColor;
-  uniform float uSkyExponent;
+  uniform vec3 uSunDirection;
+  uniform float uSunE;
+  uniform vec3 uWaterLight;
   uniform float uReflectivity;
+  ${ATMOSPHERE_GLSL}
 
-  // sky.ts と同じグラデーション（反射に使う）
   vec3 skyColor(vec3 dir) {
-    float t = pow(clamp(dir.y, 0.0, 1.0), uSkyExponent);
-    return mix(uHorizonColor, uZenithColor, t);
+    return atmoSky(dir, uSunDirection, uSunE, cameraPosition.y);
   }
 
   // n: 法線、toEye: 目への向き（どちらも単位ベクトル）
@@ -38,7 +41,7 @@ const shadeChunk = /* glsl */ `
     float fresnel = 0.02 + 0.98 * f2 * f2 * f;
     vec3 r = reflect(-toEye, n);
     r.y = abs(r.y);
-    vec3 water = mix(uShallowColor, uDeepColor, facing);
+    vec3 water = mix(uShallowColor, uDeepColor, facing) * uWaterLight;
     return mix(water, skyColor(r), fresnel * uReflectivity);
   }
 `;
@@ -93,13 +96,13 @@ const fragmentShader = /* glsl */ `
   uniform float uRippleStrength;
   uniform float uRippleFadeStart;
   uniform float uRippleFadeEnd;
-  uniform vec3 uSunDirection;
   uniform vec3 uSunColor;
   uniform float uSunShininess;
   uniform float uSunSpecular;
   varying vec3 vWorldPos;
   varying vec3 vNormal;
   #ifdef OCEAN_SIMPLE
+    uniform vec3 uSunDirection;
     varying vec3 vShade;
   #else
     ${shadeChunk}
@@ -138,15 +141,21 @@ const fragmentShader = /* glsl */ `
 
 /**
  * 海面。カメラに追従する平面で、頂点をワールド座標の正弦波でゆっくり上下させる。
- * 色は真下が水の色、浅い角度ほど空の反射（フレネル風）。本格的な水面は 4-2
+ * 色は真下が水の色（反射率 × 太陽と空の光）、浅い角度ほど空の反射（フレネル）。空の色は大気散乱から取る。
+ * 本格的な水面は 4-2
  */
 export class Ocean {
   readonly mesh: Mesh<PlaneGeometry, ShaderMaterial>;
   private spacing = 1;
 
   private simple = false;
+  // 大気から入れる uniform の値（太陽を動かしたら書き換える）
+  private readonly sunDirection = new Vector3();
+  private readonly sunE = { value: 0 };
+  private readonly sunColor = new Color();
+  private readonly waterLight = new Color();
 
-  constructor(sunDirection: Readonly<Vec3>, drawDistance: number) {
+  constructor(atmosphere: Atmosphere, drawDistance: number) {
     const cfg = OCEAN_CONFIG;
     const waves = cfg.waves.map((w) => {
       const a = (w.direction * Math.PI) / 180;
@@ -166,12 +175,11 @@ export class Ocean {
           uRippleFadeEnd: { value: cfg.rippleFade.end },
           uDeepColor: { value: new Color(cfg.deepColor) },
           uShallowColor: { value: new Color(cfg.shallowColor) },
-          uZenithColor: { value: new Color(SKY_CONFIG.zenithColor) },
-          uHorizonColor: { value: new Color(SKY_CONFIG.horizonColor) },
-          uSkyExponent: { value: SKY_CONFIG.exponent },
           uReflectivity: { value: cfg.reflectivity },
-          uSunDirection: { value: new Vector3(sunDirection.x, sunDirection.y, sunDirection.z) },
-          uSunColor: { value: new Color(SKY_CONFIG.sun.color) },
+          uSunDirection: { value: this.sunDirection },
+          uSunE: this.sunE,
+          uSunColor: { value: this.sunColor },
+          uWaterLight: { value: this.waterLight },
           uSunShininess: { value: cfg.sunShininess },
           uSunSpecular: { value: cfg.sunSpecular },
         },
@@ -185,6 +193,27 @@ export class Ocean {
     // 平面はカメラの真下に置き直すので、カリングで消えないようにする
     this.mesh.frustumCulled = false;
     this.setDrawDistance(drawDistance);
+    this.applyAtmosphere(atmosphere);
+    atmosphere.onChange((a) => {
+      this.applyAtmosphere(a);
+    });
+  }
+
+  /** 太陽の向き・空の光を uniform に入れる（太陽を動かしたときも） */
+  private applyAtmosphere(atmosphere: Atmosphere): void {
+    const d = atmosphere.sun;
+    const l = atmosphere.lighting;
+    this.sunDirection.set(d.x, d.y, d.z);
+    this.sunE.value = SKY_CONFIG.sun.irradiance;
+    // 照り返しは地上に届く太陽光の色
+    this.sunColor.setRGB(l.sun[0], l.sun[1], l.sun[2]);
+    // 水の中で散乱して出てくる光 = 水平面の放射照度 / π（拡散面と同じ）
+    const sin = Math.max(d.y, 0);
+    this.waterLight.setRGB(
+      (l.sun[0] * sin + l.skyIrradiance[0]) / Math.PI,
+      (l.sun[1] * sin + l.skyIrradiance[1]) / Math.PI,
+      (l.sun[2] * sin + l.skyIrradiance[2]) / Math.PI,
+    );
   }
 
   /** 描画距離に合わせて平面の大きさを作り直す */

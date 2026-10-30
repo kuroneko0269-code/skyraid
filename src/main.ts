@@ -7,13 +7,7 @@ import { parseDebugFlags, parseSkipTitle } from './core/debug-flags';
 import { BOOT_TASKS, runBoot } from './core/boot';
 import { GameState, isSimulating, syncLoopWithState, usesDemoCamera } from './core/game-state';
 import { FrameStats } from './core/frame-stats';
-import { FpsWatch } from './core/fps-watch';
-import {
-  QualitySettings,
-  getBrowserStorage,
-  isTouchDevice,
-  resolveInitialQuality,
-} from './core/settings';
+import { getBrowserStorage } from './core/settings';
 import { parseFlightOptions } from './core/flight-options';
 import { ACTIONS } from './data/keybinds';
 import { QUALITY_CONFIG } from './data/quality';
@@ -26,14 +20,15 @@ import { HudLink } from './render/hud-link';
 import { applyInterpolatedPose, createPlaceholderAircraft } from './render/aircraft-mesh';
 import { ChaseCamera } from './render/chase-camera';
 import { DemoCamera } from './render/demo-camera';
-import { RenderPipeline, getGpuRendererName } from './render/pipeline';
+import { RenderPipeline } from './render/pipeline';
+import { QualityLink } from './render/quality-link';
 import { createWorldScene } from './render/scene';
+import { setShadowFlags } from './render/lighting';
 import { getGroundHeight } from './render/terrain-height';
 import { DamageOverlay } from './ui/damage-overlay';
 import { DebugOverlay } from './ui/debug-overlay';
 import { createEnemySettings } from './ui/enemy-settings';
 import { Hud } from './ui/hud';
-import { createQualitySelect } from './ui/quality-select';
 import {
   createFullscreenButton,
   createRotateHint,
@@ -56,6 +51,8 @@ container.appendChild(renderer.domElement);
 const { scene, camera, world } = createWorldScene(window.innerWidth / window.innerHeight);
 const pipeline = new RenderPipeline(renderer, scene, camera);
 const aircraftMesh = createPlaceholderAircraft();
+// 自機は影を落とし、自分の影（翼の影など）も受ける
+setShadowFlags(aircraftMesh, true, true);
 scene.add(aircraftMesh);
 const chaseCamera = new ChaseCamera(camera);
 const demoCamera = new DemoCamera(camera);
@@ -64,31 +61,13 @@ const demoCamera = new DemoCamera(camera);
 const game = new GameState();
 const screens = new Screens(document.body, game);
 
-// 品質設定: 保存された手動設定 > 自動ダウングレードの保存値 > 自動判定（ソフトウェア GPU は low、他は medium）
+// 品質設定（初期判定・切り替え・自動ダウングレード）と露出
 const storage = getBrowserStorage();
-const quality = new QualitySettings(
-  storage,
-  resolveInitialQuality(storage, {
-    touch: isTouchDevice(),
-    gpuRenderer: getGpuRendererName(renderer),
-  }),
-);
-pipeline.applyQuality(quality.preset);
-world.applyQuality(quality.preset);
-quality.onChange((_level, preset) => {
-  pipeline.applyQuality(preset);
-  world.applyQuality(preset);
-});
+const quality = new QualityLink(renderer, pipeline, world, storage);
 installTouchGuards(document);
 // 設定（画質・タッチ・HUD・全画面）はポーズメニューの中
 const settingsPanel = screens.pause.settings;
-const qualitySelect = createQualitySelect(settingsPanel, quality.level, (level) => {
-  quality.set(level);
-});
-// 自動ダウングレードで変わったときもセレクトの表示を合わせる
-quality.onChange((level) => {
-  qualitySelect.value = level;
-});
+quality.createSelect(settingsPanel);
 
 window.addEventListener('resize', () => {
   pipeline.resize(window.innerWidth, window.innerHeight);
@@ -134,8 +113,6 @@ window.addEventListener('blur', () => {
 const debugFlags = parseDebugFlags(window.location.search);
 const overlay = new DebugOverlay(document.body, debugFlags.overlay);
 const frameStats = new FrameStats();
-// 自動ダウングレード: 飛行開始から 5 秒間の平均 fps が 30 未満なら一段下げる（手動設定があれば行わない）
-const fpsWatch = new FpsWatch();
 let lastFrameMs: number | null = null;
 
 // フリーフライト: 島の沖合から巡航速度で島へ向かう。?autolevel=off / ?invert で操作設定を変える。
@@ -221,23 +198,27 @@ loop.onRender((alpha) => {
     p.respawnTimer,
     isSimulating(state) || state === 'pause',
   );
-  world.update(camera.position, worldTime);
+  // 影は機体のまわり（タイトル・モード選択ではカメラのまわり）
+  world.update(
+    camera.position,
+    worldTime,
+    aircraftMesh.visible ? aircraftMesh.position : camera.position,
+  );
   if (state === 'flight' && hud.visible)
     hudLink.update(alpha, window.innerWidth, window.innerHeight);
   pipeline.render();
-  if (state === 'flight' && lastFrameMs !== null && fpsWatch.record(frameSeconds)) {
-    if (quality.downgrade()) {
-      hud.showNotice(
-        QUALITY_CONFIG.autoDowngrade.notice,
-        QUALITY_CONFIG.autoDowngrade.noticeSeconds,
-      );
-    }
+  if (state === 'flight' && lastFrameMs !== null && quality.recordFlightFrame(frameSeconds)) {
+    const { notice, noticeSeconds } = QUALITY_CONFIG.autoDowngrade;
+    hud.showNotice(notice, noticeSeconds);
   }
   if (lastFrameMs !== null && frameStats.record(frameSeconds)) {
-    const { fps, frameMs } = frameStats.latest;
-    const { drawCalls, triangles } = pipeline.lastStats;
     const { triangleCount: terrainTriangles, visibleChunks: terrainChunks } = world.terrain;
-    overlay.update({ fps, frameMs, drawCalls, triangles, terrainTriangles, terrainChunks });
+    overlay.update({
+      ...frameStats.latest,
+      ...pipeline.lastStats,
+      terrainTriangles,
+      terrainChunks,
+    });
   }
   lastFrameMs = now;
 });
@@ -256,7 +237,7 @@ function startFreeFlight(): void {
   lastCrashCount = aircraft.crashCount;
   views.reset();
   chaseCamera.snap();
-  if (!quality.hasManual) fpsWatch.start();
+  quality.startWatch();
 }
 
 /** 飛行中・メニュー中どちらでも効くキー（F3 / H）と入力ログ。固定更新 1 回分の終わりに呼ぶ */

@@ -4,7 +4,7 @@ import { QUALITY_PRESETS } from '../src/data/quality';
 import { TERRAIN_CONFIG, WORLD_CONFIG } from '../src/data/terrain';
 import { Aircraft } from '../src/entities/aircraft';
 import { SimplexNoise2D, createRandom } from '../src/render/noise';
-import { sunDirection } from '../src/render/sky';
+import { sunDirection } from '../src/render/atmosphere-model';
 import { Terrain } from '../src/render/terrain';
 import { createHeightField, getGroundHeight, getHeight } from '../src/render/terrain-height';
 import {

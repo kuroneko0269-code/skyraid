@@ -6,7 +6,6 @@ import {
   IcosahedronGeometry,
   InstancedMesh,
   Matrix4,
-  MeshBasicMaterial,
   MeshStandardMaterial,
   Quaternion,
   Vector3,
@@ -21,6 +20,8 @@ import {
   SMOKE_CONFIG,
 } from '../data/effects';
 import type { Vec3 } from '../flight/math';
+import { EMISSIVE_CONFIG } from '../data/sky';
+import { createEmissiveMaterial } from './materials';
 import { ParticleSystem } from './particles';
 import { SmokeTrail } from './smoke';
 
@@ -65,7 +66,7 @@ export class MissileView {
 
     this.flares = new InstancedMesh(
       new IcosahedronGeometry(0.5, 0),
-      new MeshBasicMaterial({ color: FLARE_VIEW_CONFIG.color, fog: false, toneMapped: false }),
+      createEmissiveMaterial(FLARE_VIEW_CONFIG.color, EMISSIVE_CONFIG.flare),
       combat.flares.flares.capacity,
     );
     this.flares.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -76,7 +77,7 @@ export class MissileView {
     const e = EXPLOSION_CONFIG;
     this.flashes = new ParticleSystem(
       e.flashMax,
-      new MeshBasicMaterial({ color: e.flashColor, fog: false, toneMapped: false }),
+      createEmissiveMaterial(e.flashColor, EMISSIVE_CONFIG.explosion),
       { gravity: 0, shrinkFraction: 1, sizePerMeter: 0 },
       new IcosahedronGeometry(0.5, 1),
     );

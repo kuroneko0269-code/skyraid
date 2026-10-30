@@ -4,7 +4,7 @@ import {
   IcosahedronGeometry,
   InstancedMesh,
   Matrix4,
-  MeshLambertMaterial,
+  MeshStandardMaterial,
   Quaternion,
   Vector3,
 } from 'three';
@@ -29,8 +29,10 @@ export class SmokeTrail {
 
   constructor(capacity: number = SMOKE_CONFIG.max) {
     const c = SMOKE_CONFIG;
-    const material = new MeshLambertMaterial({
+    const material = new MeshStandardMaterial({
       color: c.color,
+      roughness: 1,
+      metalness: 0,
       transparent: true,
       opacity: c.opacity,
       depthWrite: false,

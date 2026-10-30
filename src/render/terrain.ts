@@ -1,4 +1,4 @@
-import { Group, Mesh, MeshLambertMaterial } from 'three';
+import { Group, Mesh, type Material } from 'three';
 import { TERRAIN_CONFIG } from '../data/terrain';
 import type { Vec3 } from '../flight/math';
 import {
@@ -24,6 +24,7 @@ import {
   stitchEdge,
   type Box3Like,
 } from './terrain-lod';
+import { createDetailedTerrainMaterial, createSimpleTerrainMaterial } from './terrain-material';
 
 // 高さ関数は Three.js に依存しない terrain-height.ts にある。ここからも使えるようにする
 export { createHeightField, getGroundHeight, getHeight };
@@ -47,7 +48,10 @@ export class Terrain {
   readonly object = new Group();
   private readonly chunks: Chunk[] = [];
   private readonly palette: TerrainPalette;
-  private readonly material = new MeshLambertMaterial({ vertexColors: true });
+  // 画質「中」以上は PBR + 近距離のディテール、「低」は Lambert（setDetail で切り替える）
+  private readonly detailedMaterial = createDetailedTerrainMaterial();
+  private readonly simpleMaterial = createSimpleTerrainMaterial();
+  private material: Material = this.detailedMaterial;
   private thresholds: number[];
   private minLevel = 0;
   private triangles = 0;
@@ -66,6 +70,8 @@ export class Terrain {
         const rect = { minX: -half + cx * size, minZ: -half + cz * size, size };
         const mesh = new Mesh(undefined, this.material);
         mesh.visible = false;
+        // 機体の影を受ける（地形自身は影を落とさない。影の範囲が狭く、山の影が途中で切れるため）
+        mesh.receiveShadow = true;
         mesh.matrixAutoUpdate = false;
         this.object.add(mesh);
         this.chunks.push({
@@ -92,6 +98,14 @@ export class Terrain {
   setQuality(drawDistance: number, minLevel: number): void {
     this.thresholds = lodThresholds(drawDistance, this.config.lod.distanceRatios);
     this.minLevel = minLevel;
+  }
+
+  /** 近距離のディテール（PBR + 三面マッピングのノイズ）を使うか。画質「低」は false */
+  setDetail(enabled: boolean): void {
+    const material = enabled ? this.detailedMaterial : this.simpleMaterial;
+    if (material === this.material) return;
+    this.material = material;
+    for (const chunk of this.chunks) chunk.mesh.material = material;
   }
 
   /** カメラ位置でチャンクごとの段を選び直す。描画フレームごとに呼ぶ */

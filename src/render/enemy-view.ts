@@ -50,6 +50,7 @@ export class EnemyView {
     );
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.mesh.frustumCulled = false;
+    this.mesh.castShadow = true;
     for (let i = 0; i < enemies.length; i++) this.mesh.setColorAt(i, this.baseColor);
     this.mesh.count = 0;
     this.mesh.visible = false;

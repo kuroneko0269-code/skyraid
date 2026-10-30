@@ -49,6 +49,7 @@ export class DroneView {
     this.mesh = new InstancedMesh(createDroneGeometry(), material, Math.max(1, drones.length));
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.mesh.frustumCulled = false;
+    this.mesh.castShadow = true;
     for (let i = 0; i < drones.length; i++) this.mesh.setColorAt(i, this.baseColor);
     scene.add(this.mesh);
   }

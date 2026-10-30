@@ -5,6 +5,8 @@ export interface DebugOverlayStats {
   frameMs: number;
   drawCalls: number;
   triangles: number;
+  /** 描画ステップ数（シャドウマップ・シーン・ポストエフェクトのパス） */
+  steps: number;
   /** 地形の三角形数（視錐台カリング前）と表示中のチャンク数 */
   terrainTriangles: number;
   terrainChunks: number;
@@ -54,6 +56,7 @@ export class DebugOverlay {
       `frame ${stats.frameMs.toFixed(2)} ms\n` +
       `draw calls ${stats.drawCalls}\n` +
       `triangles ${stats.triangles.toLocaleString('en-US')}\n` +
+      `steps ${stats.steps}\n` +
       `terrain ${stats.terrainTriangles.toLocaleString('en-US')} (${stats.terrainChunks} chunks)`;
   }
 }
