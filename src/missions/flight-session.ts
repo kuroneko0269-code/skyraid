@@ -135,6 +135,7 @@ export class FlightSession implements MissionWorld {
   /** フリーフライトを始める。起動位置・巡航速度・HP 満タン・弾満タン・的とドローン全部・敵の出し直し */
   startFree(): void {
     this.mode = 'free';
+    this.player.immortal = false;
     copyVec3(this.startPosition, this.freeStart);
     this.startOrientation.x = this.startOrientation.y = this.startOrientation.z = 0;
     this.startOrientation.w = 1;
@@ -148,9 +149,13 @@ export class FlightSession implements MissionWorld {
     else this.squadron.reset();
   }
 
-  /** ミッションを始める。start の位置・向きから、的・ドローン・敵機なし（出現物はランナーが spawn で出す） */
-  startMission(start: Readonly<Pose>): void {
+  /**
+   * ミッションを始める。start の位置・向きから、的・ドローン・敵機なし（出現物はランナーが spawn で出す）。
+   * practice（4-11。チュートリアル）なら撃墜されず、墜落は上空へ戻す
+   */
+  startMission(start: Readonly<Pose>, practice = false): void {
     this.mode = 'mission';
+    this.player.immortal = practice;
     this.startPosition.x = start.x;
     this.startPosition.y = start.y;
     this.startPosition.z = start.z;
@@ -202,6 +207,12 @@ export class FlightSession implements MissionWorld {
     if (a.crashCount === crashes) return;
     // Aircraft は墜落すると上空へ戻すので、残骸の位置に置き直す（撃墜中は動かさない）
     a.respawn(this.wreck, this.wreckOrientation);
+    // 練習（4-11）: 墜落にせず、その場の地表から 300m 上空へ戻す（HP・弾はそのまま）
+    if (this.player.immortal) {
+      this.respawnAboveWreck();
+      for (const fn of this.respawnListeners) fn();
+      return;
+    }
     this.player.crash();
     this.combat.notifyDestroyed(this.player);
   }
@@ -219,6 +230,10 @@ export class FlightSession implements MissionWorld {
 
   get playerPrevPosition(): Readonly<Vec3> {
     return this.aircraft.prevPosition;
+  }
+
+  get playerSpeed(): number {
+    return this.aircraft.state.speed;
   }
 
   get playerActive(): boolean {

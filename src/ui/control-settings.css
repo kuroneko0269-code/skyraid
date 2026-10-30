@@ -1,0 +1,107 @@
+/* 操作設定（4-11）。ポーズメニューの設定の 2 列のグリッドをまたいで置く */
+.control-settings {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: var(--ui-line-width) solid var(--ui-line-faint);
+}
+
+.control-settings-heading {
+  font: 600 13px/1.2 var(--ui-font-display);
+  letter-spacing: 0.2em;
+  color: var(--ui-accent-hud);
+}
+
+.pause-settings .control-slider {
+  justify-content: space-between;
+  gap: var(--ui-space-3);
+}
+
+.control-slider-name {
+  min-width: 9em;
+  text-align: left;
+}
+
+.control-slider input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--ui-accent);
+}
+
+.control-slider-value {
+  min-width: 4ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-text-dim);
+}
+
+.control-settings-toggles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.control-settings-toggles button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.keybind-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.keybind-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.keybind-list[hidden] {
+  display: none;
+}
+
+.keybind-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(7em, 1fr);
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 14px;
+}
+
+.keybind-name {
+  text-align: left;
+}
+
+.keybind-key {
+  min-height: 36px;
+  padding: 4px 8px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.keybind-key.is-waiting {
+  border-color: var(--ui-accent);
+  color: var(--ui-accent);
+}
+
+.keybind-warn {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--ui-warn-text);
+  text-align: right;
+}
+
+.keybind-warn[hidden] {
+  display: none;
+}
+
+.keybind-reset {
+  align-self: flex-end;
+  min-height: 36px;
+  font-size: 13px;
+}

@@ -5,8 +5,8 @@ import { GamepadInput, browserGamepads } from './core/gamepad';
 import { parseDebugFlags, parseSkipTitle } from './core/debug-flags';
 import { BOOT_TASKS, runBoot } from './core/boot';
 import { GameState, syncLoopWithState, usesDemoCamera } from './core/game-state';
-import { parseFlightOptions } from './core/flight-options';
-import { ACTIONS } from './data/keybinds';
+import { parseFlightOptions, parseFlightOverrides } from './core/flight-options';
+import { CommonKeys } from './core/common-keys';
 import { WORLD_CONFIG } from './data/terrain';
 import { MISSIONS } from './data/missions';
 import { createControls } from './entities/aircraft';
@@ -36,6 +36,9 @@ import { MissionHud } from './ui/mission-hud';
 import { installTouchGuards } from './ui/mobile';
 import { createDisplaySettings, createGameSettings } from './ui/settings-link';
 import { FlightFrame } from './render/flight-frame';
+import { createControlsLink } from './ui/controls-link';
+import { TutorialLink } from './ui/tutorial-link';
+import type { MissionDef } from './missions/types';
 import { openBrowserSave } from './ui/save-link';
 import { Screens } from './ui/screens';
 import { installAppShell } from './ui/app-shell';
@@ -111,6 +114,8 @@ const { touch, hudToggle } = createDisplaySettings(settingsParts);
 // ?debug でデバッグ表示を初期表示、?debug=input で押したアクション名をコンソールに出す
 const debugFlags = parseDebugFlags(window.location.search);
 const debug = new DebugLink(document.body, debugFlags.overlay, pipeline, world);
+const back = screens.navigateBack.bind(screens, game);
+const keys = new CommonKeys(input, gamepad, { debug, hud: hudToggle }, back, debugFlags.logInput);
 
 // 飛行: フリーフライトは島の沖合から、ミッション（2-4）は定義の開始位置から。?autolevel=off / ?invert で操作設定を変える。
 // 射撃（2-1）・ロックオンとミサイル（2-2）・敵機（2-3）。判定は固定ステップ、演出は描画フレーム
@@ -131,6 +136,13 @@ const views = new FlightViews(scene, aircraftMesh, session, fxEvents, camera.pos
   chaseCamera.addImpact(k);
 });
 const audio = createGameAudio(session, fxEvents, getGroundHeight, settingsPanel, save);
+// 操作設定（4-11）: 感度・デッドゾーン・反転・オートレベル（URL の ?invert / ?autolevel が優先）・左右入替・振動・大きさ・キー割当
+const overrides = parseFlightOverrides(window.location.search);
+createControlsLink(settingsPanel, save, input, touch.controls, session, fxEvents, overrides);
+// チュートリアル（4-11）の指示と、タッチ操作のヒント。指示の「中断」はモード選択へ
+const tutorial = new TutorialLink(document.body, save, input, touch, hud, () => {
+  screens.abortTutorial(game);
+});
 const frameFx = new FrameFx(pipeline, playerView, camera, audio);
 // 機体モデルの細かさ（4-3。画質「低」は LOD）と陽炎の屈折（4-4。「高」だけ）
 quality.onPreset((preset) => {
@@ -141,10 +153,15 @@ quality.onPreset((preset) => {
 const ringView = new RingView(scene);
 const missionLink = new MissionLink(missionHud, camera, aircraftMesh, play);
 play.onRunnerChange((runner) => {
+  const inTutorial = screens.inTutorial;
   missionHud.attach(runner);
-  screens.pause.setInMission(runner !== null);
-  // 成功の記録と報酬をセーブへ（3-2）
-  if (runner) bindMissionRewards(runner.bus, save, screens.progress);
+  screens.pause.setInMission(
+    runner !== null,
+    inTutorial ? screens.tutorialText.abortMenu : undefined,
+  );
+  tutorial.attach(runner, inTutorial);
+  // 成功の記録と報酬をセーブへ（3-2）。チュートリアルの報酬は初回だけ（TutorialLink）
+  if (runner && !inTutorial) bindMissionRewards(runner.bus, save, screens.progress);
 });
 // 撃墜（地面への墜落も）されたら揺らし、リスポーンしたら機体とカメラを新しい位置へすぐ移す（4-12b。
 // 次の描画を待つと、揺れ・地面の高さ・飛行機雲が撃墜された場所のまま 1 フレーム残る）
@@ -174,7 +191,7 @@ const loop = new GameLoop();
 // 固定ステップ更新は飛行中だけ（ポーズ・メニュー中は GameLoop ごと止める）
 syncLoopWithState(game, loop);
 game.onChange(({ from, to }) => {
-  if (to === 'flight' && from !== 'pause') startFlight(from === 'briefing' || from === 'result');
+  if (to === 'flight' && from !== 'pause') startFlight(screens.nextMission);
   if (to === 'pause') play.runner?.pause();
   else if (to === 'flight') play.runner?.resume();
   // 止めている間に押されたキー（再開に使った Esc など）を飛行に持ち込まない
@@ -186,6 +203,8 @@ game.onChange(({ from, to }) => {
   aircraftMesh.visible = !usesDemoCamera(to) && to !== 'hangar' && session.player.active;
   hangarStage.setShown(to === 'hangar');
   touch.refresh();
+  if (to === 'flight' && from !== 'pause')
+    tutorial.onFlightStart(screens.inTutorial ? 'tutorial' : play.runner ? 'mission' : 'free');
 });
 aircraftMesh.visible = false;
 const frame = new FlightFrame({
@@ -226,16 +245,17 @@ loop.onUpdate((dt) => {
   weaponInput.read(input, combatInput, dt);
   play.step(controls, combatInput, dt);
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
-  handleCommonKeys();
+  keys.handle();
   // ミッションが終わり、大きな文字を出し終えたらリザルトへ（固定更新もここで止まる）
   const runner = play.runner;
   if (runner?.readyForResult && runner.result) {
-    screens.showResult(runner.result);
+    screens.showResult(runner.result, tutorial.paid);
     game.transition('result');
   }
 });
 loop.onRender((alpha) => {
-  frame.render(game.state, alpha, menuTick);
+  frame.render(game.state, alpha, keys.menuTick);
+  tutorial.update(game.state === 'flight');
 });
 loop.start();
 
@@ -248,10 +268,9 @@ void runBoot(BOOT_TASKS, (progress) => {
 
 /**
  * 飛行を始める（モード選択・ブリーフィング・リザルトの「もう一度」から入るたび）。
- * フリーフライトは起動位置から、ミッションは選んだミッションの開始位置から
+ * フリーフライトは起動位置から、ミッション（チュートリアルも）は定義の開始位置から
  */
-function startFlight(mission: boolean): void {
-  const def = mission ? screens.selectedMission : null;
+function startFlight(def: MissionDef | null): void {
   applyPlayerLoadout();
   if (def) play.startMission(def);
   else play.startFree();
@@ -266,24 +285,4 @@ function applyPlayerLoadout(): void {
   const loadout = screens.hangar.loadout();
   session.applyLoadout(loadout);
   playerView.setModel(screens.hangar.selectedModel, loadout.missiles);
-}
-
-/** 飛行中・メニュー中どちらでも効くキー（F3 / H）と入力ログ。固定更新 1 回分の終わりに呼ぶ */
-function handleCommonKeys(): void {
-  if (input.wasPressed('debugToggle')) debug.toggle();
-  if (input.wasPressed('hudToggle')) hudToggle.toggle();
-  if (debugFlags.logInput) {
-    for (const action of ACTIONS) {
-      if (input.wasPressed(action)) console.info(`[input] ${action}`);
-    }
-  }
-  input.endStep();
-}
-
-/** 固定更新が止まっている間（タイトル・モード選択・ポーズ）の入力。描画フレームごとに呼ぶ */
-function menuTick(): void {
-  gamepad.poll();
-  // Esc / Start: ポーズ → 再開、モード選択 → タイトルなど 1 つ前の画面へ
-  if (input.wasPressed('pause')) screens.navigateBack(game);
-  handleCommonKeys();
 }

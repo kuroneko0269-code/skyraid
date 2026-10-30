@@ -30,7 +30,7 @@ export class GamePlay {
   }
 
   startMission(def: MissionDef): MissionRunner {
-    this.session.startMission(def.start);
+    this.session.startMission(def.start, def.practice === true);
     const runner = new MissionRunner(def, this.session);
     this.setRunner(runner);
     runner.start();

@@ -43,5 +43,52 @@
         "Downing the fighters is optional, but watch your six."
       ]
     }
+  },
+  "tutorial": {
+    "title": "Tutorial",
+    "note": "Learn the controls in 3–4 minutes",
+    "prompt": "Start the tutorial?",
+    "promptBody": "Practice flying and shooting in 5 short steps (3–4 minutes). You can also start it later from \"Tutorial\" in the mode select.",
+    "start": "Start",
+    "later": "Later",
+    "abort": "Quit",
+    "abortMenu": "Quit tutorial",
+    "complete": "TUTORIAL COMPLETE",
+    "reward": "First-clear reward",
+    "back": "Mode select",
+    "steps": {
+      "rings": {
+        "touch": "Tilt with the stick (bottom left) and pull to turn. Fly through the 3 yellow rings",
+        "keys": "Bank with {rollLeft}/{rollRight} and pull with {pitchUp} to turn ({pitchDown} pitches down). Fly through the 3 yellow rings",
+        "pad": "Bank with the left stick and pull it back to turn. Fly through the 3 yellow rings"
+      },
+      "speed": {
+        "touch": "Push the throttle (right edge) all the way up and hold AB to reach 360 m/s",
+        "keys": "Raise the throttle with {throttleUp} and hold {afterburner} (afterburner) to reach 360 m/s",
+        "pad": "Push the right stick up for throttle and hold LB to reach 360 m/s"
+      },
+      "targets": {
+        "touch": "Two red balloon targets. Point your nose at them and shoot them down with GUN (◇ marks a target)",
+        "keys": "Two red balloon targets. Point your nose at them and shoot with {fire} (◇ marks a target)",
+        "pad": "Two red balloon targets. Point your nose at them and shoot with RB (◇ marks a target)"
+      },
+      "drone": {
+        "touch": "Keep the drone near the center of the screen to LOCK, then fire a missile with MSL",
+        "keys": "Keep the drone near the center of the screen to LOCK, then fire a missile with {missile} (Tab switches target)",
+        "pad": "Keep the drone near the center of the screen to LOCK, then fire a missile with A (Y switches target)"
+      },
+      "bandit": {
+        "touch": "Last, one enemy fighter. Shoot it down with guns and missiles. Use FLR when a missile is incoming",
+        "keys": "Last, one enemy fighter. Shoot it down with guns and missiles. Press {flare} (flare) when a missile is incoming",
+        "pad": "Last, one enemy fighter. Shoot it down with guns and missiles. Press B (flare) when a missile is incoming"
+      }
+    },
+    "safety": "This is practice: you cannot be shot down, and hitting the ground puts you back in the air",
+    "hints": {
+      "speed": "Speed (m/s). Too slow and you stall",
+      "altitude": "Altitude (m). PULL UP when the ground is close",
+      "radar": "Radar. Up is where your nose points; red dots are enemies",
+      "ammo": "Ammo: missiles, flares and more"
+    }
   }
 }

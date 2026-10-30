@@ -60,8 +60,9 @@ describe('GameState の遷移', () => {
       [['title'], 'pause'],
       [['title', 'mode_select'], 'pause'],
       [['title', 'mode_select', 'flight'], 'title'],
-      [['title', 'mode_select', 'flight'], 'mode_select'],
-      [['title', 'mode_select', 'flight', 'pause'], 'mode_select'],
+      // 4-11: flight / pause → mode_select はチュートリアルの中断で許可。ミッション一覧・ハンガーへは行けない
+      [['title', 'mode_select', 'flight'], 'mission_select'],
+      [['title', 'mode_select', 'flight', 'pause'], 'hangar'],
       [['title'], 'boot'],
       [['title'], 'title'],
     ];

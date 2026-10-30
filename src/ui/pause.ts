@@ -52,9 +52,10 @@ export class PauseMenu {
     setScreenShown(this.root, shown);
   }
 
-  /** ミッション中か（「ミッションを中断」を出す） */
-  setInMission(inMission: boolean): void {
+  /** ミッション中か（「ミッションを中断」を出す）。label はチュートリアル（4-11）の「チュートリアルを中断」 */
+  setInMission(inMission: boolean, label = 'ミッションを中断'): void {
     this.abortButton.hidden = !inMission;
+    this.abortButton.textContent = label;
   }
 
   private setSettingsOpen(open: boolean): void {
@@ -77,9 +78,9 @@ export function createPauseButton(parent: HTMLElement, onPress: () => void): HTM
   const vars: Record<string, string> = {
     '--pause-size': `${c.size}px`,
     '--pause-margin': `${TOUCH_CONFIG.edgeMargin}px`,
-    // ヨーボタンと上下中央をそろえ、横に gap 空ける
-    '--pause-top': `${yaw.top + (yaw.size - c.size) / 2}px`,
-    '--pause-touch-right': `${TOUCH_CONFIG.edgeMargin + yaw.size + c.gap}px`,
+    // ヨーボタンと上下中央をそろえ、横に gap 空ける。ヨーボタンは操作設定の大きさ（--tc-scale。4-11）が掛かる
+    '--pause-top': `calc(${yaw.top - c.size / 2}px + ${yaw.size / 2}px * var(--tc-scale, 1))`,
+    '--pause-touch-right': `calc(${TOUCH_CONFIG.edgeMargin + c.gap}px + ${yaw.size}px * var(--tc-scale, 1))`,
   };
   for (const [name, value] of Object.entries(vars)) button.style.setProperty(name, value);
   return button;

@@ -179,7 +179,14 @@ export interface KaijuObjective extends ObjectiveBase {
   readonly damageRatio: number;
 }
 
+/** 速度到達（4-11。チュートリアル）: 目標が始まってから自機の速度が speed（m/s）に届く */
+export interface SpeedObjective extends ObjectiveBase {
+  readonly type: 'speed';
+  readonly speed: number;
+}
+
 export type ObjectiveDef =
+  | SpeedObjective
   | KillObjective
   | SurviveObjective
   | RingObjective
@@ -225,4 +232,9 @@ export interface MissionDef {
   readonly success: SuccessCondition;
   readonly failConditions: readonly FailCondition[];
   readonly reward: RewardDef;
+  /**
+   * 練習（4-11。チュートリアル）: 自機は撃墜されない（HP は 1 で止まる）。地面・海面に当たったら墜落せずに上空へ戻す。
+   * 省略で通常のミッション
+   */
+  readonly practice?: boolean;
 }

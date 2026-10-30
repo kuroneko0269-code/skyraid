@@ -6,6 +6,7 @@ import { KaijuObjective } from './kaiju';
 import { KillCountObjective } from './kill-count';
 import type { Objective } from './objective';
 import { RingPassObjective } from './ring-pass';
+import { SpeedObjective } from './speed';
 import { SurviveTimeObjective } from './survive-time';
 
 export function createObjective(def: ObjectiveDef): Objective {
@@ -22,6 +23,8 @@ export function createObjective(def: ObjectiveDef): Objective {
       return new DestroyObjective(def);
     case 'kaiju':
       return new KaijuObjective(def);
+    case 'speed':
+      return new SpeedObjective(def);
   }
 }
 
@@ -32,3 +35,4 @@ export { KillCountObjective } from './kill-count';
 export { EscortObjective } from './escort';
 export { DestroyObjective } from './destroy';
 export { KaijuObjective } from './kaiju';
+export { SpeedObjective } from './speed';

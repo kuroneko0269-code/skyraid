@@ -5,6 +5,7 @@ import { STARTER_AIRCRAFT, findAircraftModel } from '../data/aircraft';
 import { RANKS, type Rank } from '../data/ranking';
 import { SAVE_CONFIG } from '../data/save';
 import { UPGRADE_KINDS, UPGRADE_LEVELS, type UpgradeKind } from '../data/upgrades';
+import { defaultControls } from '../core/control-settings';
 import {
   defaultAssist,
   defaultSettings,
@@ -35,6 +36,18 @@ export interface MissionRecord {
 /** 所持機体ごとの強化レベル（3-3。Lv0 が未強化。v1 までは Lv1 が未強化だった） */
 export type UpgradeLevels = Record<UpgradeKind, number>;
 
+/**
+ * 一度だけの案内の記録（4-11。v5 から）。tutorialOffered: 初回の「チュートリアルを始めますか？」を出した /
+ * tutorialDone: チュートリアルを完了した（報酬は初回だけ）/ hintsFree・hintsMission: タッチ操作のヒントを出した
+ */
+export const SAVE_FLAGS = ['tutorialOffered', 'tutorialDone', 'hintsFree', 'hintsMission'] as const;
+export type SaveFlag = (typeof SAVE_FLAGS)[number];
+export type SaveFlags = Record<SaveFlag, boolean>;
+
+export function defaultFlags(): SaveFlags {
+  return { tutorialOffered: false, tutorialDone: false, hintsFree: false, hintsMission: false };
+}
+
 export interface SaveData {
   version: number;
   /** パイロット名（null は未入力 = 初回起動。タイトルの後に入力画面を出す） */
@@ -47,6 +60,7 @@ export interface SaveData {
     owned: Record<string, UpgradeLevels>;
   };
   settings: SaveSettings;
+  flags: SaveFlags;
 }
 
 export function initialUpgrades(): UpgradeLevels {
@@ -66,6 +80,7 @@ export function createInitialSave(): SaveData {
       owned: { [STARTER_AIRCRAFT.id]: initialUpgrades() },
     },
     settings: defaultSettings(),
+    flags: defaultFlags(),
   };
 }
 
@@ -80,6 +95,7 @@ const V1_STARTER_ID = 'starter';
  * - v1 → v2（3-3）: 強化 Lv を 1 つ下げる（v1 は Lv1〜5 で Lv1 が未強化、v2 は Lv0〜5）。初期機の id を starter → kestrel
  * - v2 → v3（4-4）: 設定に音量（settings.volume）を足す（初期値）
  * - v3 → v4（4-12）: 設定に操作補助（settings.assist）を足す（初期値）
+ * - v4 → v5（4-11）: 設定に操作（settings.controls）、案内の記録（flags）を足す（初期値。どれもまだ出していない扱い）
  * 難易度の一度だけの normal → easy（4-11 の事前修正）は版によらず normalizeSettings で（印 settings.difficultyEased）
  */
 export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
@@ -126,6 +142,15 @@ export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
   3: (d) => {
     if (!isObject(d.settings)) return d;
     return { ...d, version: 4, settings: { ...d.settings, assist: defaultAssist() } };
+  },
+  4: (d) => {
+    if (!isObject(d.settings)) return d;
+    return {
+      ...d,
+      version: 5,
+      settings: { ...d.settings, controls: defaultControls() },
+      flags: defaultFlags(),
+    };
   },
 };
 
@@ -187,6 +212,9 @@ export function normalizeSave(d: Json): SaveData | null {
   if (typeof selected === 'string' && selected in save.aircraft.owned)
     save.aircraft.selected = selected;
   save.settings = normalizeSettings(d.settings);
+  if (isObject(d.flags)) {
+    for (const k of SAVE_FLAGS) if (d.flags[k] === true) save.flags[k] = true;
+  }
   return save;
 }
 

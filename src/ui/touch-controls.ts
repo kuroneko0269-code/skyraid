@@ -4,16 +4,22 @@ import { sliderValueFromY } from '../core/analog';
 import type { Input } from '../core/input';
 import type { Action } from '../data/keybinds';
 import { TOUCH_CONFIG } from '../data/touch';
+import type { TouchPart } from '../data/tutorial';
 
 /**
  * 右下のボタン群。grid の並び順（左上・右上・左下・右下）。
  * MSL は secondary（短押しで今の兵装、長押しで切替）、AB は長押しで爆弾も（2-6。src/core/weapon-input.ts）
  */
-const BUTTONS: readonly { actions: readonly Action[]; label: string; className: string }[] = [
-  { actions: ['afterburner', 'bombHold'], label: 'AB', className: 'tc-ab' },
-  { actions: ['secondary'], label: 'MSL', className: 'tc-msl' },
-  { actions: ['flare'], label: 'FLR', className: 'tc-flr' },
-  { actions: ['fire'], label: 'GUN', className: 'tc-gun' },
+const BUTTONS: readonly {
+  actions: readonly Action[];
+  label: string;
+  className: string;
+  part: TouchPart;
+}[] = [
+  { actions: ['afterburner', 'bombHold'], label: 'AB', className: 'tc-ab', part: 'ab' },
+  { actions: ['secondary'], label: 'MSL', className: 'tc-msl', part: 'msl' },
+  { actions: ['flare'], label: 'FLR', className: 'tc-flr', part: 'flr' },
+  { actions: ['fire'], label: 'GUN', className: 'tc-gun', part: 'gun' },
 ];
 
 /** MSL ボタンの文字（今の兵装） */
@@ -22,10 +28,17 @@ const SECONDARY_LABELS = { missile: 'MSL', rocket: 'RKT' } as const;
 /** 指が離れた（キャンセル・キャプチャ喪失を含む）ことを表すイベント */
 const RELEASE_EVENTS = ['pointerup', 'pointercancel', 'lostpointercapture'] as const;
 
-function el(className: string, parent: HTMLElement, text?: string): HTMLDivElement {
+function el(
+  className: string,
+  parent: HTMLElement,
+  text?: string,
+  part?: TouchPart,
+): HTMLDivElement {
   const div = document.createElement('div');
   div.className = className;
   if (text) div.textContent = text;
+  // チュートリアルで光らせる部品（4-11）
+  if (part) div.dataset.part = part;
   parent.appendChild(div);
   return div;
 }
@@ -68,7 +81,7 @@ export class TouchControls {
     this.root = root;
 
     const zone = el('tc-stick-zone', root);
-    this.stickBase = el('tc-stick-base', root);
+    this.stickBase = el('tc-stick-base', root, undefined, 'stick');
     this.stickKnob = el('tc-stick-knob', this.stickBase);
     zone.addEventListener('pointerdown', this.onStickDown);
     zone.addEventListener('pointermove', this.onStickMove);
@@ -79,15 +92,15 @@ export class TouchControls {
     const buttons = el('tc-buttons', root);
     let secondary: HTMLElement | null = null;
     for (const b of BUTTONS) {
-      const e = el(`tc-button ${b.className}`, buttons, b.label);
+      const e = el(`tc-button ${b.className}`, buttons, b.label, b.part);
       if (b.actions.includes('secondary')) secondary = e;
       this.addHoldButton(e, b.actions);
     }
     this.secondaryButton = secondary;
-    this.addHoldButton(el('tc-button tc-yaw tc-yaw-left', root, '◀'), ['yawLeft']);
-    this.addHoldButton(el('tc-button tc-yaw tc-yaw-right', root, '▶'), ['yawRight']);
+    this.addHoldButton(el('tc-button tc-yaw tc-yaw-left', root, '◀', 'yaw'), ['yawLeft']);
+    this.addHoldButton(el('tc-button tc-yaw tc-yaw-right', root, '▶', 'yaw'), ['yawRight']);
 
-    const throttle = el('tc-throttle', root);
+    const throttle = el('tc-throttle', root, undefined, 'throttle');
     this.throttleTrack = el('tc-throttle-track', throttle);
     el('tc-throttle-fill', this.throttleTrack);
     el('tc-throttle-thumb', this.throttleTrack);
@@ -115,6 +128,23 @@ export class TouchControls {
     this.root.hidden = !visible;
     document.documentElement.classList.toggle('touch-active', visible);
     if (!visible) this.reset();
+  }
+
+  /**
+   * 操作設定（4-11）: スティックのデッドゾーン・左右入替（スティックとボタン群・スロットル）・ボタンの大きさの倍率
+   */
+  configure(deadzone: number, swapped: boolean, scale: number): void {
+    this.stick.setDeadzone(deadzone);
+    this.root.classList.toggle('is-swapped', swapped);
+    // ⏸ ボタン（ヨーボタンの隣）も合わせるので :root に置く
+    document.documentElement.style.setProperty('--tc-scale', String(scale));
+    this.reset();
+  }
+
+  /** チュートリアル（4-11）で使う部品を光らせる（空なら消す） */
+  highlight(parts: readonly TouchPart[]): void {
+    for (const e of this.root.querySelectorAll<HTMLElement>('[data-part]'))
+      e.classList.toggle('is-hint', parts.includes(e.dataset.part as TouchPart));
   }
 
   /** スロットル位置（0〜1）を表示に反映する。毎フレーム呼んでよい（変化したときだけ書く） */
@@ -243,13 +273,14 @@ function applyCssVariables(root: HTMLElement): void {
     '--tc-knob-size': `${c.stick.knobSize}px`,
     '--tc-zone-width': `${c.stick.zoneWidthRatio * 100}%`,
     '--tc-zone-top': `${c.stick.zoneTopRatio * 100}%`,
-    '--tc-button-size': `${c.buttons.size}px`,
-    '--tc-fire-size': `${c.buttons.fireSize}px`,
+    // ボタン・スロットル・ヨーは操作設定の大きさ（--tc-scale。4-11）を掛ける
+    '--tc-button-size': `calc(${c.buttons.size}px * var(--tc-scale, 1))`,
+    '--tc-fire-size': `calc(${c.buttons.fireSize}px * var(--tc-scale, 1))`,
     '--tc-gap': `${c.buttons.gap}px`,
     '--tc-slider-gap': `${c.buttons.sliderGap}px`,
-    '--tc-throttle-width': `${c.throttle.width}px`,
+    '--tc-throttle-width': `calc(${c.throttle.width}px * var(--tc-scale, 1))`,
     '--tc-throttle-height': `min(${c.throttle.heightRatio * 100}vh, ${c.throttle.maxHeight}px)`,
-    '--tc-yaw-size': `${c.yaw.size}px`,
+    '--tc-yaw-size': `calc(${c.yaw.size}px * var(--tc-scale, 1))`,
     '--tc-yaw-top': `${c.yaw.top}px`,
   };
   for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value);

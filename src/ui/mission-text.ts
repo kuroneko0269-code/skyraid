@@ -30,6 +30,7 @@ const OBJECTIVE_LABELS: Record<ObjectiveType, string> = {
   escort: '護衛',
   destroy: '目標破壊',
   kaiju: '怪獣撃退',
+  speed: '速度',
 };
 
 export const FAIL_REASON_TEXT: Record<FailCondition, string> = {
@@ -51,7 +52,13 @@ export function objectiveLabel(def: ObjectiveDef): string {
 /** 進み具合の表示。例「敵機撃墜 1 / 3」「生存 12 / 60 秒」 */
 export function objectiveProgressText(def: ObjectiveDef, current: number, target: number): string {
   const unit =
-    def.type === 'survive' ? ' 秒' : def.type === 'kaiju' || def.type === 'escort' ? ' %' : '';
+    def.type === 'survive'
+      ? ' 秒'
+      : def.type === 'speed'
+        ? ' m/s'
+        : def.type === 'kaiju' || def.type === 'escort'
+          ? ' %'
+          : '';
   return `${objectiveLabel(def)} ${current} / ${target}${unit}`;
 }
 
@@ -71,6 +78,8 @@ export function objectiveSummary(def: ObjectiveDef): string {
       return label;
     case 'kaiju':
       return `${label} ${Math.round(def.damageRatio * 100)} %`;
+    case 'speed':
+      return `${label} ${def.speed} m/s`;
   }
 }
 

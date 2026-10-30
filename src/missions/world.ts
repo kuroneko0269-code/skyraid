@@ -8,6 +8,8 @@ export interface MissionWorld {
   /** 自機の位置と、前ステップの位置（リングの通過判定に使う） */
   readonly playerPosition: Readonly<Vec3>;
   readonly playerPrevPosition: Readonly<Vec3>;
+  /** 自機の速度（m/s。4-11 の速度到達） */
+  readonly playerSpeed: number;
   /** 自機が飛んでいるか（撃墜されてリスポーン待ちなら false） */
   readonly playerActive: boolean;
   /** 自機が撃墜された回数（地面への墜落も） */

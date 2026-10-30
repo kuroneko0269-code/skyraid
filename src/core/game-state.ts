@@ -31,12 +31,12 @@ export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenStat
   mission_select: ['mode_select', 'briefing'],
   briefing: ['mission_select', 'flight', 'hangar'],
   hangar: ['mode_select', 'briefing'],
-  // ミッションが終わるとリザルトへ
-  flight: ['pause', 'result'],
-  // ミッション中はポーズから「ミッションを中断」でミッション一覧へ
-  pause: ['flight', 'title', 'mission_select'],
-  // 「もう一度」は飛行へ直接、「ミッション一覧へ」
-  result: ['flight', 'mission_select'],
+  // ミッションが終わるとリザルトへ。チュートリアル（4-11）は指示の「中断」でモード選択へ
+  flight: ['pause', 'result', 'mode_select'],
+  // ミッション中はポーズから「ミッションを中断」でミッション一覧へ（チュートリアルはモード選択へ）
+  pause: ['flight', 'title', 'mission_select', 'mode_select'],
+  // 「もう一度」は飛行へ直接、「ミッション一覧へ」（チュートリアルは「モード選択へ」）
+  result: ['flight', 'mission_select', 'mode_select'],
 };
 
 export interface StateChange {

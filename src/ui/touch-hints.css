@@ -1,0 +1,65 @@
+/* タッチ操作のヒントの吹き出し（4-11）。--hint-x / --hint-y が指す点（要素の下端の中央、または上端の中央） */
+.touch-hint {
+  position: fixed;
+  left: clamp(110px, var(--hint-x), calc(100vw - 110px));
+  top: var(--hint-y);
+  z-index: 24;
+  max-width: 220px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 220, 90, 0.9);
+  border-radius: 10px;
+  background: rgba(10, 16, 26, 0.88);
+  color: #fff;
+  font:
+    500 13px/1.4 system-ui,
+    sans-serif;
+  text-align: center;
+  pointer-events: none;
+  animation: touch-hint-in 0.25s ease-out;
+}
+
+.touch-hint[hidden] {
+  display: none;
+}
+
+.touch-hint.is-below {
+  transform: translateX(-50%);
+}
+
+.touch-hint.is-above {
+  transform: translate(-50%, -100%);
+}
+
+/* 矢印（指す要素の側） */
+.touch-hint::before {
+  content: '';
+  position: absolute;
+  left: calc(50% + var(--hint-x) - clamp(110px, var(--hint-x), calc(100vw - 110px)));
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+  transform: translateX(-50%);
+}
+
+.touch-hint.is-below::before {
+  bottom: 100%;
+  border-bottom-color: rgba(255, 220, 90, 0.9);
+}
+
+.touch-hint.is-above::before {
+  top: 100%;
+  border-top-color: rgba(255, 220, 90, 0.9);
+}
+
+:root:not([data-screen='flight']) .touch-hint {
+  display: none;
+}
+
+@keyframes touch-hint-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

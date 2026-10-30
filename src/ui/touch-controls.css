@@ -170,3 +170,60 @@
 .tc-throttle-label {
   opacity: 0.8;
 }
+
+/* 左右入替（4-11。操作設定）: スティックを右、スロットルとボタン群を左に。ボタンの並びも鏡に（機銃が左下） */
+.touch-controls.is-swapped .tc-stick-zone {
+  left: auto;
+  right: 0;
+}
+
+.touch-controls.is-swapped > .tc-stick-base {
+  left: calc(100% - var(--tc-right) - var(--tc-stick-size) / 2 - 16px);
+}
+
+.touch-controls.is-swapped .tc-buttons {
+  right: auto;
+  left: calc(var(--tc-left) + var(--tc-throttle-width) + var(--tc-slider-gap));
+  direction: rtl;
+}
+
+.touch-controls.is-swapped .tc-throttle {
+  right: auto;
+  left: var(--tc-left);
+}
+
+/* チュートリアル（4-11）で使う部品を光らせる */
+.touch-controls .is-hint {
+  border-color: rgba(255, 220, 90, 0.95);
+  animation: tc-hint 0.9s ease-in-out infinite alternate;
+}
+
+.tc-throttle.is-hint {
+  animation: none;
+}
+
+.tc-throttle.is-hint > .tc-throttle-track {
+  border-color: rgba(255, 220, 90, 0.95);
+  animation: tc-hint 0.9s ease-in-out infinite alternate;
+}
+
+.tc-stick-base.is-hint {
+  opacity: 1;
+}
+
+@keyframes tc-hint {
+  from {
+    box-shadow: 0 0 0 0 rgba(255, 220, 90, 0.2);
+  }
+  to {
+    box-shadow: 0 0 18px 6px rgba(255, 220, 90, 0.65);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .touch-controls .is-hint,
+  .tc-throttle.is-hint > .tc-throttle-track {
+    animation: none;
+    box-shadow: 0 0 14px 4px rgba(255, 220, 90, 0.6);
+  }
+}

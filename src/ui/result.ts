@@ -16,6 +16,8 @@ export interface ResultExtras {
   readonly pilotName: string | null;
   /** 報酬で新しい機体・強化が買える残高になった（3-3） */
   readonly newGear: boolean;
+  /** チュートリアル（4-11）の文: 見出しと「モード選択へ」。通常のミッションは省略 */
+  readonly tutorial?: { readonly title: string; readonly back: string };
 }
 
 /**
@@ -32,6 +34,7 @@ export class ResultScreen {
   private readonly rank: HTMLDivElement;
   private readonly gear: HTMLDivElement;
   private readonly retry: HTMLButtonElement;
+  private readonly back: HTMLButtonElement;
 
   constructor(parent: HTMLElement, handlers: { onRetry: () => void; onList: () => void }) {
     const root = createScreen(parent, 'campaign-screen result-screen');
@@ -46,7 +49,12 @@ export class ResultScreen {
     this.gear = el('div', 'result-gear', panel, 'ハンガーで新しい装備が買えます');
     this.gear.hidden = true;
     const buttons = el('div', 'campaign-buttons', panel);
-    createButton(buttons, 'ui-button is-ghost campaign-back', 'ミッション一覧へ', handlers.onList);
+    this.back = createButton(
+      buttons,
+      'ui-button is-ghost campaign-back',
+      'ミッション一覧へ',
+      handlers.onList,
+    );
     this.retry = createButton(
       buttons,
       'ui-button is-primary campaign-go',
@@ -59,7 +67,9 @@ export class ResultScreen {
   show(r: MissionResult, extras: ResultExtras): void {
     const success = r.outcome === 'success';
     this.root.classList.toggle('is-success', success);
-    this.outcome.textContent = success ? 'MISSION COMPLETE' : 'MISSION FAILED';
+    this.outcome.textContent =
+      extras.tutorial?.title ?? (success ? 'MISSION COMPLETE' : 'MISSION FAILED');
+    this.back.textContent = extras.tutorial?.back ?? 'ミッション一覧へ';
     this.pilot.textContent = extras.pilotName === null ? '' : `PILOT  ${extras.pilotName}`;
     this.pilot.hidden = extras.pilotName === null;
     this.reason.textContent = r.failReason ? FAIL_REASON_TEXT[r.failReason] : '';

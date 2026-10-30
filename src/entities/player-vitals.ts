@@ -19,6 +19,8 @@ export class PlayerVitals implements CombatTarget {
   downCount = 0;
   /** 受けたダメージの合計（ミッションの評価。2-4）。墜落は含めない */
   damageTaken = 0;
+  /** 練習（4-11。チュートリアル）: HP は 1 で止まり、撃墜されない（被弾の赤い光とダメージの記録はする） */
+  immortal = false;
   private health: Health;
 
   constructor(
@@ -59,8 +61,10 @@ export class PlayerVitals implements CombatTarget {
   applyDamage(amount: number): boolean {
     if (!this.active || !(amount > 0)) return false;
     this.flashTimer = this.flashSeconds;
-    this.damageTaken += Math.min(amount, this.health.hp);
-    const destroyed = this.health.applyDamage(amount);
+    const dealt = this.immortal ? Math.min(amount, this.health.hp - 1) : amount;
+    if (!(dealt > 0)) return false;
+    this.damageTaken += Math.min(dealt, this.health.hp);
+    const destroyed = this.health.applyDamage(dealt);
     if (destroyed) this.goDown();
     return destroyed;
   }

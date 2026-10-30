@@ -16,6 +16,8 @@ import { PilotNameScreen } from './pilot-name';
 import { ResultScreen } from './result';
 import { FadeCurtain, LoadingScreen, applyScreenFade } from './screen';
 import { TitleScreen } from './title';
+import { TUTORIAL_MISSION } from '../data/tutorial';
+import { tutorialStrings, type TutorialStrings } from './tutorial-text';
 
 /**
  * 画面（読み込み中・タイトル・モード選択・ミッション一覧・ブリーフィング・ハンガー・ポーズ・リザルト）の DOM をまとめ、
@@ -37,6 +39,10 @@ export class Screens {
   readonly pauseButton: HTMLButtonElement;
   /** ミッション一覧で選んだミッション（ブリーフィング・もう一度で使う） */
   selectedMission: MissionDef | null = null;
+  /** 次に飛行へ入るときのミッション（null はフリーフライト。チュートリアル（4-11）・ブリーフィングの出撃で決める） */
+  nextMission: MissionDef | null = null;
+  /** チュートリアルの文（4-11） */
+  readonly tutorialText: TutorialStrings;
   /** ミッションの解放とクリア済みのランク（2-5。3-1 からセーブに記録） */
   readonly progress: CampaignProgress;
   private readonly curtain: FadeCurtain;
@@ -51,11 +57,12 @@ export class Screens {
     /** セーブ（3-1）: 進み具合・残高・パイロット名 */
     private readonly save: SaveStore,
     /** ポーズメニューの「ミッションを中断」（遷移の前に呼ぶ） */
-    onAbortMission: () => void,
+    private readonly onAbortMission: () => void,
   ) {
     applyScreenFade(document.documentElement);
     const search = window.location.search;
     const locale = detectLocale(search, navigator.languages);
+    this.tutorialText = tutorialStrings(locale);
     this.progress = new CampaignProgress(
       missions.map((m) => m.id),
       save,
@@ -72,13 +79,20 @@ export class Screens {
       onSubmit: (name) => {
         this.title.setPilotName(save.setPilotName(name));
         game.transition('mode_select');
+        // 初回起動だけ「チュートリアルを始めますか？」（4-11。1 度だけ）
+        if (!save.flag('tutorialOffered')) {
+          save.setFlag('tutorialOffered');
+          this.modeSelect.showTutorialPrompt();
+        }
       },
     });
-    this.modeSelect = new ModeSelectScreen(parent, {
+    this.modeSelect = new ModeSelectScreen(parent, this.tutorialText, {
       // PvP・レイドは disabled
       onSelect: (mode) => {
-        if (mode === 'free') game.transition('flight');
-        else if (mode === 'campaign') game.transition('mission_select');
+        if (mode === 'free' || mode === 'tutorial') {
+          this.nextMission = mode === 'tutorial' ? TUTORIAL_MISSION : null;
+          game.transition('flight');
+        } else if (mode === 'campaign') game.transition('mission_select');
         else if (mode === 'hangar') this.openHangar(game, 'mode_select');
       },
       onBack: () => game.transition('title'),
@@ -99,7 +113,10 @@ export class Screens {
       },
     );
     this.briefing = new BriefingScreen(parent, locale, {
-      onLaunch: () => game.transition('flight'),
+      onLaunch: () => {
+        this.nextMission = this.selectedMission;
+        game.transition('flight');
+      },
       onBack: () => game.transition('mission_select'),
       onHangar: () => {
         this.openHangar(game, 'briefing');
@@ -120,14 +137,14 @@ export class Screens {
     });
     this.result = new ResultScreen(parent, {
       onRetry: () => game.transition('flight'),
-      onList: () => game.transition('mission_select'),
+      onList: () => game.transition(this.inTutorial ? 'mode_select' : 'mission_select'),
     });
     this.pause = new PauseMenu(parent, {
       onResume: () => game.transition('flight'),
       onTitle: () => game.transition('title'),
       onAbort: () => {
         onAbortMission();
-        game.transition('mission_select');
+        game.transition(this.inTutorial ? 'mode_select' : 'mission_select');
       },
     });
     this.pauseButton = createPauseButton(parent, () => game.transition('pause'));
@@ -142,6 +159,17 @@ export class Screens {
       if (cut) this.curtain.cut();
       this.show(to);
     });
+  }
+
+  /** チュートリアルの指示の「中断」（4-11）: ランナーを止めてモード選択へ */
+  abortTutorial(game: GameState): void {
+    this.onAbortMission();
+    game.transition('mode_select');
+  }
+
+  /** チュートリアル（4-11）を飛んでいる（または終えたばかり） */
+  get inTutorial(): boolean {
+    return this.nextMission?.id === TUTORIAL_MISSION.id;
   }
 
   /** ハンガーで見ている機体が変わったとき（展示の形） */
@@ -160,7 +188,9 @@ export class Screens {
   navigateBack(game: GameState): void {
     const state = game.state;
     if (state === 'pause') game.transition('flight');
-    else if (state === 'mode_select' || state === 'pilot_name') game.transition('title');
+    else if (state === 'mode_select') {
+      if (!this.modeSelect.closeDialog()) game.transition('title');
+    } else if (state === 'pilot_name') game.transition('title');
     else if (state === 'mission_select') game.transition('mode_select');
     else if (state === 'briefing') game.transition('mission_select');
     else if (state === 'hangar') this.closeHangar(game);
@@ -176,11 +206,20 @@ export class Screens {
    * リザルトを出す。クリアの記録と報酬はミッションの終わりのイベントでセーブに入っている
    * （progression/mission-rewards.ts）ので、ここは残高を読むだけ
    */
-  showResult(result: MissionResult): void {
+  showResult(result: MissionResult, tutorialPaid = 0): void {
     const balance = this.save.credits;
+    // チュートリアル（4-11）: 報酬は初回だけ（払った額を出す）。ランクは出さない
+    const tutorial = this.inTutorial;
+    const r = tutorial ? { ...result, credits: tutorialPaid, rank: null } : result;
     // 報酬で新しく機体・強化が買える残高になったら 1 行出す（3-3）
-    const newGear = this.hangar.newlyAffordable(balance - result.credits, balance);
-    this.result.show(result, { balance, pilotName: this.save.pilotName, newGear });
+    const newGear = this.hangar.newlyAffordable(balance - r.credits, balance);
+    const t = this.tutorialText;
+    this.result.show(r, {
+      balance,
+      pilotName: this.save.pilotName,
+      newGear,
+      tutorial: tutorial ? { title: t.complete, back: t.back } : undefined,
+    });
   }
 
   private show(state: ScreenState): void {

@@ -22,7 +22,16 @@ export class FloatingStick {
   /** デッドゾーン適用後の出力（-1〜+1） */
   readonly value = { x: 0, y: 0 };
 
-  constructor(private readonly options: FloatingStickOptions) {}
+  private readonly options: FloatingStickOptions;
+
+  constructor(options: Readonly<FloatingStickOptions>) {
+    this.options = { ...options };
+  }
+
+  /** デッドゾーンを変える（4-11。操作設定。半径に対する比） */
+  setDeadzone(deadzone: number): void {
+    this.options.deadzone = deadzone;
+  }
 
   get active(): boolean {
     return this.pointerId !== null;

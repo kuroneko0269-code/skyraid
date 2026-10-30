@@ -1,5 +1,6 @@
 // セーブデータの設定の部分（ポーズメニューの設定。Three.js・DOM 非依存）: 型・初期値・読み込んだ値の確認。
 // save.ts が 300 行を超えたので分けた（4-11 の事前修正）
+import { defaultControls, normalizeControls, type ControlSettings } from '../core/control-settings';
 import { DIFFICULTIES, FREE_FLIGHT_ENEMIES, type Difficulty } from '../data/ai';
 import { ASSIST_SETTINGS, type AssistKind } from '../data/assist';
 import { AUDIO_CONFIG } from '../data/audio';
@@ -27,6 +28,8 @@ export interface SaveSettings {
   volume: VolumeSettings;
   /** 操作補助（4-12。v4 から）: エイムアシスト / ターゲットカメラ / HUD 補助 */
   assist: AssistSettings;
+  /** 操作（4-11。v5 から）: 感度・デッドゾーン・反転・オートレベル・左右入替・振動・ボタンの大きさ・キー割当 */
+  controls: ControlSettings;
 }
 
 export type AssistSettings = Record<AssistKind, boolean>;
@@ -63,6 +66,7 @@ export function defaultSettings(): SaveSettings {
     hud: true,
     volume: defaultVolume(),
     assist: defaultAssist(),
+    controls: defaultControls(),
   };
 }
 
@@ -97,6 +101,7 @@ export function normalizeSettings(s: Json): SaveSettings {
       if (typeof v === 'boolean') set.assist[k] = v;
     }
   }
+  set.controls = normalizeControls(s.controls);
   return set;
 }
 

@@ -1,4 +1,5 @@
 import { ANALOG_INPUT } from '../data/input';
+import { applySensitivity } from './control-settings';
 import { ACTIONS, DEFAULT_KEYBINDS, type Action, type KeyBindings } from '../data/keybinds';
 
 /** キーイベントの発生源。ブラウザでは window、テストでは EventTarget を渡す */
@@ -14,6 +15,14 @@ interface KeyLike {
 /** 連続値（0〜1）を送ってくる入力系統 */
 export const ANALOG_SOURCES = ['touch', 'gamepad'] as const;
 export type AnalogSource = (typeof ANALOG_SOURCES)[number];
+
+/** スティック感度（4-11）を掛けるアクション（タッチのスティック・パッドの左スティックのピッチ・ロール） */
+const STICK_ACTIONS: ReadonlySet<Action> = new Set([
+  'pitchUp',
+  'pitchDown',
+  'rollLeft',
+  'rollRight',
+]);
 
 /** 最後に操作した入力系統（4-12。操作補助はタッチ・パッドのときだけ効かせる） */
 export type InputDevice = 'keyboard' | AnalogSource;
@@ -44,6 +53,8 @@ export class Input {
   private source: KeyEventSource | null = null;
   /** 最後に操作した入力系統。キーを押す・タッチやパッドの値が 0 より大きくなると切り替わる */
   lastDevice: InputDevice = 'keyboard';
+  /** スティック感度（4-11。操作設定）。タッチ・パッドのピッチ・ロールの値に掛け、1 で頭打ち。キーボードは ±1 のまま */
+  stickSensitivity = 1;
 
   constructor(bindings: KeyBindings = DEFAULT_KEYBINDS) {
     this.setBindings(bindings);
@@ -101,13 +112,16 @@ export class Input {
 
   /**
    * 軸の値（-1〜+1）。系統ごとに「正側 − 負側」を出して足し、±1 で頭打ち。
-   * キーボードだけなら +1 / 0 / -1 のまま
+   * キーボードだけなら +1 / 0 / -1 のまま。タッチ・パッドのピッチ・ロールにはスティック感度を掛ける（4-11）
    */
   axis(negative: Action, positive: Action): number {
     let sum = (this.isKeyDown(positive) ? 1 : 0) - (this.isKeyDown(negative) ? 1 : 0);
+    const k = STICK_ACTIONS.has(positive) ? this.stickSensitivity : 1;
     for (const src of ANALOG_SOURCES) {
       const values = this.analog[src].values;
-      sum += (values.get(positive) ?? 0) - (values.get(negative) ?? 0);
+      sum +=
+        applySensitivity(values.get(positive) ?? 0, k) -
+        applySensitivity(values.get(negative) ?? 0, k);
     }
     return Math.min(1, Math.max(-1, sum));
   }
