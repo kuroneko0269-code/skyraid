@@ -17,7 +17,7 @@
 - [x] 1-4 HUD（速度・高度・姿勢） — main 直接マージ: https://github.com/kuroneko0269-code/skyraid/commit/930f9d4b7eafab5295860e153e77216e3fc5cc32（事前修正: 画質「低」の海面の簡略化 https://github.com/kuroneko0269-code/skyraid/commit/7ce8767bf82f14cecd2d8cd7fdcdd4c27350a66a）
 - [x] 1-5 タッチ操作とゲームパッド対応（スマホ優先のため 1-3・1-4 より前倒し） — main 直接マージ: https://github.com/kuroneko0269-code/skyraid/commit/2c9d0345b7d6c600a1311dec6ffc0e674ade5cf9
 - [x] 1-6 フリーフライトモードとタイトル画面 — main 直接マージ: https://github.com/kuroneko0269-code/skyraid/commit/d01967ed712555b0042781bd0176190f5a995ab7
-- [ ] 1-7 操作感調整（人間がプレビューで試して数値を決める）
+- [x] 1-7 操作感調整（人間がプレビューで試して数値を決める） — 実機評価で問題なしのため完了扱い（数値の変更なし）
 
 ## フェーズ2: 戦闘
 
@@ -41,12 +41,15 @@
 - [x] 4-2 水面シェーダーと雲 — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/dd3d06d1406c2a3084b30cf3bf2d02abb284a509（事前修正: 正式名称を SkyRaid: Titan Skies に変更 https://github.com/kuroneko0269-code/skyraid/commit/c17a0601865d1f33d98cb1c24cf5592770e823c4）
 - [x] 4-2b 4-2 の実機確認の修正（雲がカメラと一緒に傾く・高高度で白く霞む・海の照り返しが白いノイズ） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/0c490abe416af8fed73241383aa78900e1f63e44
 - [x] 4-2c 実機確認の修正（敵 OFF なのに敵機が出る・島の海岸線がちらつく） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/87faca56f0c5358f20ceac65d482bdc2e743a088
-- [x] 4-3 機体モデル差し替え（CC0素材 or 自作）。Draco圧縮 → 手続き生成の自作モデル（4 機種・敵機・輸送機、操舵面・炎・飛行機雲、外部アセットなし） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/f2c3c91（事前修正: 300 行を超えた 3 ファイルの分割 https://github.com/kuroneko0269-code/skyraid/commit/87835b2）
-- [ ] 4-4 エフェクト（排気、ミサイル煙、爆発）
-- [ ] 4-5 コックピット視点
 - [x] 4-6 地形の写実化（生成時の水力浸食、傾斜と高さによる質感の層、木、風上は崖・風下は砂浜。方向性は「写真のような写実」） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/879b922（事前修正: 墜落後の復帰位置をフリーフライトとミッションで分ける https://github.com/kuroneko0269-code/skyraid/commit/60bd7e9）
 - [x] 4-7 地形の見た目の仕上げ（実機の画質「中」のスクリーンショット評価で判明した 5 点: 地形の面の粗さ・色の均一さ・雪・木の密度・地平線の霞） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/a886d46（事前修正: M2 の最初の 1 機を easy に https://github.com/kuroneko0269-code/skyraid/commit/e72f9c2・パッドの爆弾を Y 長押しに https://github.com/kuroneko0269-code/skyraid/commit/74fd877）
 - [x] 4-8 地形の残課題（画質「中」以上の山腹の階段状の縞・砂浜の面積・近景の木の色の個体差） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/5ac763a
+- [x] 4-3 機体モデル差し替え（CC0素材 or 自作）。Draco圧縮 → 手続き生成の自作モデル（4 機種・敵機・輸送機、操舵面・炎・飛行機雲、外部アセットなし） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/f2c3c91（事前修正: 300 行を超えた 3 ファイルの分割 https://github.com/kuroneko0269-code/skyraid/commit/87835b2）
+- [ ] 4-10 UI 刷新・ブランド素材の受け口・セキュリティヘッダー・PWA（デザインシステム、タイトルのロゴと展開アニメ、アイコン・favicon、`_headers` の CSP、innerHTML の点検、manifest と Service Worker、safe-area と iOS の「ホーム画面に追加」案内）
+- [ ] 4-4 エフェクト（排気、ミサイル煙、爆発）
+- [ ] 4-9 低地の色と木
+- [ ] 4-11 操作設定とチュートリアル
+- [ ] 4-5 コックピット視点
 
 ## フェーズ5: PvP
 
@@ -66,9 +69,11 @@
 
 ## フェーズ7: 追加コンテンツ
 
+- [ ] 7-5 天候・時間帯
 - [ ] 7-1 リングレース
 - [ ] 7-2 防衛戦
 - [ ] 7-3 スキン・デカール
 - [ ] 7-4 Supabase ランキング（匿名ログイン）
-- [ ] 7-5 天候・昼夜
 - [ ] 7-6 実績・デイリーミッション
+- [ ] 7-7 フォトモード
+- [ ] 7-8 リプレイ
