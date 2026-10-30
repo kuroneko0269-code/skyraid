@@ -83,12 +83,15 @@ export interface WorldScene {
   world: World;
 }
 
-/** 空・海・島と光源のシーンを作る。機体の環境マップ（4-10 事前修正）もここで 1 回だけ焼く */
+/** 空・海・島と光源のシーンを作る。機体・木の環境マップ（4-10 事前修正・4-9）もここで 1 回だけ焼く */
 export function createWorldScene(renderer: WebGLRenderer, aspect: number): WorldScene {
   const cfg = SCENE_CONFIG;
   const scene = new Scene();
   const world = new World(scene, cfg.camera.far);
-  setAircraftEnvironment(createSkyEnvironment(renderer, world.atmosphere));
+  // 4-9: 同じ環境マップを木にも付ける（影側が黒くつぶれないように）
+  const environment = createSkyEnvironment(renderer, world.atmosphere);
+  setAircraftEnvironment(environment);
+  world.vegetation.setEnvironment(environment);
 
   const camera = new PerspectiveCamera(cfg.camera.fov, aspect, cfg.camera.near, cfg.camera.far);
   camera.position.set(cfg.camera.position.x, cfg.camera.position.y, cfg.camera.position.z);

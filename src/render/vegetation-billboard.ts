@@ -1,22 +1,32 @@
-// 木の遠景（4-6 → 4-7）: カメラを向く十字ビルボード（縦の板 + 水平の板）を全部の束で 1 つのジオメトリに。
-// 画像を使わないので輪郭はフラグメントで捨てる。近景は src/render/vegetation.ts
-import { BufferAttribute, BufferGeometry, MeshLambertMaterial } from 'three';
+// 木の遠景（4-6 → 4-7 → 4-9）: カメラを向く十字ビルボード（縦の板 + 水平の板）を全部の束で 1 つのジオメトリに。
+// 4-9: 輪郭は尖った三角形から、手続き生成の樹冠のテクスチャ（vegetation-crowns.ts。種類を束ごとにランダム）に。
+// 光は空の環境マップ（4-10）も受ける（MeshStandardMaterial）。近景は src/render/vegetation.ts
+import { BufferAttribute, BufferGeometry, MeshStandardMaterial } from 'three';
 import { VEGETATION_CONFIG } from '../data/vegetation';
 import type { TreePlacement } from './terrain-gen/forest';
 import { terrainLinear } from './terrain-layers-glsl';
+import { CROWN_LUMA_SCALE, CROWN_MARGIN, createCrownTexture } from './vegetation-crowns';
 
 const f = (x: number): string => (Number.isInteger(x) ? `${x}.0` : String(x));
 
-/** 木ごとの大きさと色のばらつき（seed 0〜1 から決定的に） */
-export function treeShape(seed: number): { height: number; width: number; tint: number } {
+/**
+ * 木ごとの大きさと色のばらつき（seed 0〜1 から決定的に）。scale は森の縁の高さの倍率（4-9。
+ * TreePlacement.scales）。crown は遠景の樹冠の種類（0〜crowns.types − 1）
+ */
+export function treeShape(
+  seed: number,
+  scale = 1,
+): { height: number; width: number; tint: number; crown: number } {
   const v = VEGETATION_CONFIG;
   const a = seed;
   const b = (seed * 7.31) % 1;
   const c = (seed * 13.7) % 1;
+  const d = (seed * 29.3) % 1;
   return {
-    height: v.height.min + (v.height.max - v.height.min) * a,
+    height: v.height.mean * (1 + (a * 2 - 1) * v.height.variation) * scale,
     width: 2 * (v.crownRatio.min + (v.crownRatio.max - v.crownRatio.min) * b),
     tint: 1 + (c * 2 - 1) * v.colors.lightness,
+    crown: Math.min(v.crowns.types - 1, Math.floor(d * v.crowns.types)),
   };
 }
 
@@ -46,12 +56,12 @@ export function createBillboardGeometry(trees: TreePlacement): BufferGeometry {
     [-1, 1, 1],
   ];
   for (let t = 0; t < n; t++) {
-    const shape = treeShape(clumps.seeds[t] ?? 0);
+    const shape = treeShape(clumps.seeds[t] ?? 0, clumps.scales[t] ?? 1);
     const members = clumps.sizes[t] ?? 1;
     const x = clumps.positions[t * 3] ?? 0;
     const y = (clumps.positions[t * 3 + 1] ?? 0) - v.sink;
     const z = clumps.positions[t * 3 + 2] ?? 0;
-    // 束は木の広がり + 樹冠の半径。木の数だけ山のある輪郭を描く（フラグメント）
+    // 束は木の広がり + 樹冠の半径
     const crown = (shape.width * shape.height) / 2;
     const halfWidth = crown + (clumps.spreads[t] ?? 0);
     for (let k = 0; k < 8; k++) {
@@ -60,7 +70,8 @@ export function createBillboardGeometry(trees: TreePlacement): BufferGeometry {
       corners.set(quad[k] ?? [0, 0, 0], vi * 3);
       sizes[vi * 3] = halfWidth;
       sizes[vi * 3 + 1] = shape.height + v.sink;
-      sizes[vi * 3 + 2] = members;
+      // 束か（1 / 0）と樹冠の種類をまとめて 1 つの値に
+      sizes[vi * 3 + 2] = (members > 1 ? 1 : 0) + shape.crown * 2;
       colors.set([fr * shape.tint, fg * shape.tint, fb * shape.tint], vi * 3);
     }
     const b = t * 8;
@@ -71,23 +82,39 @@ export function createBillboardGeometry(trees: TreePlacement): BufferGeometry {
   geometry.setAttribute('corner', new BufferAttribute(corners, 3));
   geometry.setAttribute('treeSize', new BufferAttribute(sizes, 3));
   geometry.setAttribute('color', new BufferAttribute(colors, 3));
+  // 法線は頂点シェーダーで決めるが、属性がないと Three.js が平らな陰影（画面の微分の法線）に切り替え、
+  // 縦の板がカメラの向きの法線で照らされて黒くなっていた（4-8 まで）。中身は使わない
+  geometry.setAttribute('normal', new BufferAttribute(new Float32Array(n * 8 * 3), 3));
   geometry.setIndex(new BufferAttribute(index, 1));
   return geometry;
 }
 
-export function createBillboardMaterial(): MeshLambertMaterial {
+export function createBillboardMaterial(): MeshStandardMaterial {
   const v = VEGETATION_CONFIG;
-  const material = new MeshLambertMaterial({ vertexColors: true });
+  const { types, tileSize } = v.crowns;
+  const env = v.environment;
+  const crowns = { value: createCrownTexture() };
+  const material = new MeshStandardMaterial({
+    vertexColors: true,
+    roughness: env.roughness,
+    metalness: 0,
+  });
+  // タイルの中の余白を除いた範囲（アトラスの UV）
+  const cols = types + 1;
+  const inner = (tileSize - CROWN_MARGIN * 2) / tileSize;
+  const margin = CROWN_MARGIN / tileSize;
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uCrowns = crowns;
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
-        '#include <common>\nattribute vec3 corner;\nattribute vec3 treeSize;\nvarying vec3 vCorner;\nvarying float vMembers;',
+        '#include <common>\nattribute vec3 corner;\nattribute vec3 treeSize;\nvarying vec3 vCorner;\nvarying vec2 vTile;',
       )
       .replace(
         '#include <beginnormal_vertex>',
-        // 葉の塊として、上向きを少しカメラへ傾けた法線で照らす
-        `vec3 objectNormal = normalize(vec3(0.0, 1.0, 0.0) + 0.35 * normalize(cameraPosition - position));`,
+        // 葉の塊として、上向きをカメラへ傾けた法線で照らす。4-9: 傾きを 0.35 → towardCamera に
+        // （MeshStandardMaterial は法線と視線がほぼ直交すると拡散光が弱まる）
+        `vec3 objectNormal = normalize(vec3(0.0, 1.0, 0.0) + ${f(v.environment.towardCamera)} * normalize(cameraPosition - position));`,
       )
       .replace(
         '#include <begin_vertex>',
@@ -99,46 +126,24 @@ export function createBillboardMaterial(): MeshLambertMaterial {
         // 近く（InstancedMesh で描く距離）はつぶす
         if (length(toCam) < ${f(v.nearDistance)}) transformed = position;
         vCorner = corner;
-        vMembers = treeSize.z;`,
+        // タイル（列, 行）: 縦は樹冠の種類の列、水平は最後の列。行は束か
+        float clumpRow = mod(treeSize.z, 2.0);
+        vTile = vec2(corner.z < 0.5 ? floor(treeSize.z * 0.5 + 0.1) : ${f(types)}, clumpRow);`,
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
-        '#include <common>\nvarying vec3 vCorner;\nvarying float vMembers;',
+        '#include <common>\nuniform sampler2D uCrowns;\nvarying vec3 vCorner;\nvarying vec2 vTile;',
       )
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
-        float edge = ${f(v.billboardEdgeNoise)};
-        // 束（4-7）: 木の数が 2 本以上なら山を 3 つ（中央が高い）、1 本なら 1 つ
-        bool clump = vMembers > 1.5;
-        if (vCorner.z < 0.5) {
-          // 針葉樹の輪郭: 下が広い三角形の縁をぎざぎざに。根元は細い幹
-          float h = vCorner.y;
-          float wobble = 1.0 + edge * sin(h * 37.0 + vColor.r * 40.0);
-          float inside = (1.0 - h) * wobble * step(0.13, h) - abs(vCorner.x);
-          if (clump) {
-            // 3 つの山: 中心 x = -0.5 / 0 / 0.5、高さ 0.8 / 1 / 0.85、幅は束の半分
-            inside = max(max(
-              (0.8 - h) / 0.8 * 0.5 * wobble - abs(vCorner.x + 0.5),
-              (1.0 - h) * 0.55 * wobble - abs(vCorner.x)),
-              (0.85 - h) / 0.85 * 0.5 * wobble - abs(vCorner.x - 0.5)) * step(0.1, h);
-          }
-          float trunk = step(abs(vCorner.x), 0.07) * step(h, 0.2);
-          if (inside < 0.0 && trunk < 0.5) discard;
-          diffuseColor.rgb *= mix(0.5, 1.1, h) * mix(1.0, 0.45, trunk);
-        } else {
-          float r = length(vCorner.xy);
-          float a = atan(vCorner.y, vCorner.x);
-          float limit = 0.8 + edge * sin(a * 7.0 + vColor.g * 50.0);
-          // 束は上から見て 3 つの円
-          if (clump) {
-            vec2 q = vCorner.xy;
-            r = min(min(length(q - vec2(0.45, 0.0)), length(q - vec2(-0.25, 0.4))), length(q - vec2(-0.25, -0.4))) * 1.45;
-          }
-          if (r > limit) discard;
-          diffuseColor.rgb *= 1.1 - 0.45 * r;
-        }`,
+        // 樹冠のテクスチャ（4-9）: 縦の板は u -1〜1・v 0〜1、水平の板は -1〜1 の正方形
+        vec2 uv = vCorner.z < 0.5 ? vec2(vCorner.x * 0.5 + 0.5, vCorner.y) : vCorner.xy * 0.5 + 0.5;
+        vec2 atlas = (vTile + ${f(margin)} + uv * ${f(inner)}) / vec2(${f(cols)}, 2.0);
+        vec4 crown = texture2D(uCrowns, atlas);
+        if (crown.a < 0.5) discard;
+        diffuseColor.rgb *= crown.r * ${f(CROWN_LUMA_SCALE)};`,
       );
   };
   material.customProgramCacheKey = () => 'tree-billboard';

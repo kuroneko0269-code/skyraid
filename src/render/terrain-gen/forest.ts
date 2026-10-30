@@ -101,6 +101,8 @@ export interface TreePlacement {
   readonly positions: Float32Array;
   /** 木ごとの 0〜1 の乱数（大きさ・色のばらつき） */
   readonly seeds: Float32Array;
+  /** 木ごとの高さの倍率（4-9。森の縁ほど小さい。treeEdgeScale） */
+  readonly scales: Float32Array;
   /**
    * 束（4-7。遠景のビルボード 1 枚 = 束 1 つ）。束にしない配置では木 1 本 = 束 1 つ。
    * positions は束の木の根元の平均、spreads は束の中心から最も遠い木までの水平距離（m）、sizes は本数
@@ -111,7 +113,17 @@ export interface TreePlacement {
     readonly spreads: Float32Array;
     readonly sizes: Uint8Array;
     readonly seeds: Float32Array;
+    readonly scales: Float32Array;
   };
+}
+
+/** 森の縁の高さの倍率（4-9）: 密度 0 で edge.heightMin、edge.densityFull 以上で 1 */
+export function treeEdgeScale(
+  density: number,
+  config: VegetationConfig = VEGETATION_CONFIG,
+): number {
+  const e = config.edge;
+  return e.heightMin + (1 - e.heightMin) * smoothstep(0, e.densityFull, density);
 }
 
 /** 束の中の j 本目の木の 0〜1 の値（候補の乱数 variation から決定的に。salt で用途を分ける） */
@@ -120,7 +132,7 @@ function clumpHash(variation: number, j: number, salt: number): number {
 }
 
 /**
- * 森の層（高度 minHeight〜maxHeight・傾斜 maxSlopeDeg 以下）に、密度に比例して木を count 本まで撒く。
+ * 森の層（高度 minHeight〜maxHeight・傾斜 maxSlopeDeg 以下）に、密度 ^ edge.acceptPower の確率で木を count 本まで撒く。
  * clumped（4-7。画質「中」以上）なら 1 候補ごとに clump.min〜clump.max 本の束にする（束の木は中心から
  * clump.spacing m ほど離して輪に並べ、高度の範囲の外に出た木は置かない）。
  * 乱数はシード付きで、同じ count なら毎回同じ。少ない count は多い count の先頭と同じ並び
@@ -135,10 +147,12 @@ export function placeTrees(
   const random = createRandom(seed);
   const positions = new Float32Array(count * 3);
   const seeds = new Float32Array(count);
+  const scales = new Float32Array(count);
   const clumpPositions = new Float32Array(count * 3);
   const spreads = new Float32Array(count);
   const sizes = new Uint8Array(count);
   const clumpSeeds = new Float32Array(count);
+  const clumpScales = new Float32Array(count);
   const r = config.radius;
   const cl = config.clump;
   const maxAttempts = count * config.maxAttemptsPerTree;
@@ -151,7 +165,9 @@ export function placeTrees(
     const accept = random();
     const variation = random();
     if (x * x + z * z > r * r) continue;
-    if (accept >= forestDensity(x, z, config)) continue;
+    // 4-9: 置く確率は 密度 ^ acceptPower（縁ほど疎に）
+    const density = forestDensity(x, z, config);
+    if (accept >= density ** config.edge.acceptPower) continue;
     const h = height(x, z);
     if (h < config.minHeight || h > config.maxHeight) continue;
     if (slopeDeg(height, x, z, config.slopeStep, h) > config.maxSlopeDeg) continue;
@@ -181,6 +197,7 @@ export function placeTrees(
       positions[placed * 3 + 1] = th;
       positions[placed * 3 + 2] = tz;
       seeds[placed] = j === 0 ? variation : clumpHash(variation, j, 4);
+      scales[placed] = treeEdgeScale(density, config);
       sx += tx;
       sy += th;
       sz += tz;
@@ -200,18 +217,21 @@ export function placeTrees(
     spreads[clumps] = spread;
     sizes[clumps] = n;
     clumpSeeds[clumps] = variation;
+    clumpScales[clumps] = treeEdgeScale(density, config);
     clumps++;
   }
   return {
     count: placed,
     positions: placed < count ? positions.slice(0, placed * 3) : positions,
     seeds: placed < count ? seeds.slice(0, placed) : seeds,
+    scales: placed < count ? scales.slice(0, placed) : scales,
     clumps: {
       count: clumps,
       positions: clumpPositions.slice(0, clumps * 3),
       spreads: spreads.slice(0, clumps),
       sizes: sizes.slice(0, clumps),
       seeds: clumpSeeds.slice(0, clumps),
+      scales: clumpScales.slice(0, clumps),
     },
   };
 }

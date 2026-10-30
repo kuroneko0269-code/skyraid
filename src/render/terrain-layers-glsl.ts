@@ -41,6 +41,9 @@ export function terrainLayersGlsl(): string {
   const gr = c.grassRough;
   const sn = c.snow;
   const band = c.sandBand;
+  const mp = c.midPatches;
+  const wl = c.wetland;
+  const gs = c.grassySand;
   return /* glsl */ `
   varying vec3 vDetailPos;
   varying vec3 vDetailNormal;
@@ -129,10 +132,24 @@ export function terrainLayersGlsl(): string {
     albedo = mix(albedo, ${rgb(col.sand)}, wSand);
     float wGrass = max(smoothstep(sandWidth, sandWidth + ${f(band.transition)}, coastDist),
       smoothstep(sandTop - 1.0, sandTop + 2.5, h + bn * 1.5));
-    // 草地の大きなむら（4-7）: 乾いた草 ⇄ 湿った草、斜面に土
-    float dryWet = detailNoise(p.xz / ${f(pa.cellLarge)}) * 0.6 + detailNoise(p.xz / ${f(pa.cellSmall)} + 11.0) * 0.4;
+    // 草の生えた砂（4-9）: 砂浜の内側の端 grassySand.width m を砂と乾いた草の中間の色に（株のまだら）
+    float tuft = detailNoise(p.xz / ${f(gs.tuft)} + 23.0);
+    float wGrassySand = max(smoothstep(sandWidth - ${f(gs.width)}, sandWidth, coastDist),
+      smoothstep(sandTop - 3.5, sandTop - 1.0, h + bn * 1.5)) * smoothstep(-0.5, 0.5, h);
+    albedo = mix(albedo, mix(${rgb(col.sand)}, ${rgb(col.grassDry)}, ${f(gs.grass)} * (0.6 + 0.8 * tuft)), wGrassySand);
+    // 草地の大きなむら（4-7）: 乾いた草 ⇄ 湿った草、斜面に土。4-9 で 20〜60m の中間スケールを足した
+    float midFade = 1.0 - smoothstep(${f(mp.fadeStart)}, ${f(mp.fadeEnd)}, dist);
+    float midN = (detailNoise(p.xz / ${f(mp.cellLarge)} + 3.0) * 0.65 + detailNoise(p.xz / ${f(mp.cellSmall)} + 7.0) * 0.35 - 0.5) * midFade;
+    float dryWet = detailNoise(p.xz / ${f(pa.cellLarge)}) * 0.6 + detailNoise(p.xz / ${f(pa.cellSmall)} + 11.0) * 0.4
+      + midN * ${f(mp.weight)};
     vec3 grassColor = mix(${rgb(col.grassWet)}, ${rgb(col.grass)}, smoothstep(${f(pa.dryFrom)}, 0.5, dryWet));
-    grassColor = mix(grassColor, ${rgb(col.grassDry)}, smoothstep(0.5, ${f(pa.dryTo)}, dryWet));
+    grassColor = mix(grassColor, ${rgb(col.grassDry)}, smoothstep(${f(pa.dryStart)}, ${f(pa.dryTo)}, dryWet));
+    // 低地の湿地・濃い草地（4-9）: 平らな低地だけ、150〜400m のパッチ
+    float wWet = smoothstep(${f(wl.from)}, ${f(wl.to)}, detailNoise(p.xz / ${f(wl.cell)} + 19.0) + midN * 0.15)
+      * (1.0 - smoothstep(${f(wl.maxHeight - wl.heightBlend)}, ${f(wl.maxHeight + wl.heightBlend)}, hj))
+      * (1.0 - smoothstep(${f(wl.maxSlopeDeg - 3)}, ${f(wl.maxSlopeDeg + 3)}, sj));
+    grassColor = mix(grassColor, ${rgb(col.wetland)}, wWet * ${f(wl.max)});
+    grassColor *= 1.0 + midN * 2.0 * ${f(mp.brightness)};
     float soilW = smoothstep(${f(pa.soilSlopeFrom)}, ${f(pa.soilSlopeTo)}, sj)
       * smoothstep(${f(pa.soilFrom)}, ${f(pa.soilTo)}, detailNoise(p.xz / ${f(pa.cellSmall * 0.5)} + 29.0) + bn * 0.1);
     grassColor = mix(grassColor, ${rgb(col.soil)}, soilW * ${f(pa.soilMax)});
@@ -248,11 +265,32 @@ export function terrainLayersGlsl(): string {
   // 木の影の代わり（「高」）: 太陽の方へずらした点の森の密度 × まだら。0（影なし）〜strength
   float terrainTreeShade(vec3 sunDir) {
     vec3 p = vDetailPos;
-    float len = ${f((v.height.min + v.height.max) * 0.5 * v.shade.length)};
+    float len = ${f(v.height.mean * v.shade.length)};
     vec2 q = p.xz + sunDir.xz / max(sunDir.y, 0.25) * len;
-    float mottle = smoothstep(0.3, 0.7, detailNoise(q / ${f(v.shade.cell)}));
     float fade = 1.0 - smoothstep(${f(v.shade.fadeEnd * 0.6)}, ${f(v.shade.fadeEnd)}, distance(p, cameraPosition));
-    return forestDensity(q) * tlForestZone * mottle * fade * ${f(v.shade.strength)};
+    float density = forestDensity(q) * tlForestZone;
+    if (density * fade < 0.01) return 0.0;
+    // 木を置く確率は配置と同じ 密度 ^ edge.acceptPower
+    float occupancy = pow(density, ${f(v.edge.acceptPower)});
+    // 樹冠の形の影（4-9。4-6 はノイズのまだら）: 一辺 cell m の格子ごとにずらした点に、配置と同じ確率で木を置き、
+    // 太陽の向き（水平）へ 1 / sin(仰角) 倍に伸びた楕円の影を落とす。近い 3 × 3 マスの最大
+    vec2 along = normalize(sunDir.xz + vec2(1e-4, 0.0));
+    float stretch = 1.0 / max(sunDir.y, 0.25);
+    vec2 g = q / ${f(v.shade.cell)};
+    vec2 cell = floor(g);
+    float shade = 0.0;
+    for (int i = -1; i <= 1; i++) {
+      for (int j = -1; j <= 1; j++) {
+        vec2 c = cell + vec2(float(i), float(j));
+        if (detailHash(c + 71.0) > occupancy) continue;
+        vec2 d = g - c - vec2(detailHash(c), detailHash(c + 37.0)) * 0.8 - 0.1;
+        // 太陽の向きの成分を縮めて楕円に。半径は樹冠（crown）
+        float a = dot(d, along);
+        float r = length(vec2(a / stretch, dot(d, vec2(-along.y, along.x)))) / ${f(v.shade.crown)};
+        shade = max(shade, 1.0 - smoothstep(0.6, 1.0, r));
+      }
+    }
+    return shade * fade * ${f(v.shade.strength)};
   }
 `;
 }
