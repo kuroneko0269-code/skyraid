@@ -62,6 +62,7 @@ export class MissionSelectScreen {
       button.classList.toggle('is-locked', !unlocked);
       button.classList.toggle('is-cleared', rank !== null);
       status.textContent = rank !== null ? `CLEAR ${rank}` : unlocked ? '' : 'LOCKED';
+      status.classList.toggle('is-rank-s', rank === 'S');
     }
   }
 

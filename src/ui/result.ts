@@ -66,6 +66,7 @@ export class ResultScreen {
     this.reason.hidden = !r.failReason;
     this.rank.textContent = r.rank ?? '';
     this.rank.hidden = r.rank === null;
+    this.rank.classList.toggle('is-rank-s', r.rank === 'S');
     this.objectives.replaceChildren();
     for (const o of r.objectives) {
       const done = o.status === 'complete';

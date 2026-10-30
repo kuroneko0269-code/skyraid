@@ -24,6 +24,9 @@
   --ui-line-strong: rgba(110, 240, 255, 0.9);
   --ui-line-faint: rgba(255, 255, 255, 0.16);
   --ui-warn: rgb(255, 72, 60);
+  /* ランク S だけの金色（4-4 の事前修正。A 以下はシアン） */
+  --ui-gold: rgb(255, 200, 80);
+  --ui-gold-glow: 0 0 10px rgba(255, 200, 80, 0.5);
   --ui-warn-text: rgb(255, 150, 135);
   --ui-warn-fill: rgba(80, 12, 10, 0.6);
   --ui-warn-line: rgba(255, 90, 70, 0.65);
