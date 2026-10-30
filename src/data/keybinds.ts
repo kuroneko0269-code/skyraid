@@ -20,6 +20,7 @@ export const ACTIONS = [
   'bomb',
   'secondary',
   'bombHold',
+  'targetHold',
   'debugToggle',
   'hudToggle',
   'pause',
@@ -30,9 +31,10 @@ export type Action = (typeof ACTIONS)[number];
 /**
  * キーを割り当てないアクション（タッチ・パッドの長押しで使う。2-6）。
  * secondary: タッチの MSL ボタン（短く押すと今の兵装を撃ち、長押しでミサイル ⇄ ロケットを切替）。
- * bombHold: タッチの AB ボタン・パッドの RT（長押しで爆弾を投下。AB・ヨーと兼ねる）
+ * bombHold: タッチの AB ボタン（長押しで爆弾を投下。AB と兼ねる）。
+ * targetHold: パッドの Y（短く押して離すとターゲット切替、長押しで爆弾を投下。4-7 の事前修正で RT から移した）
  */
-export const ANALOG_ONLY_ACTIONS: readonly Action[] = ['secondary', 'bombHold'];
+export const ANALOG_ONLY_ACTIONS: readonly Action[] = ['secondary', 'bombHold', 'targetHold'];
 
 export type KeyBindings = Readonly<Record<Action, readonly string[]>>;
 
@@ -55,6 +57,7 @@ export const DEFAULT_KEYBINDS: KeyBindings = {
   bomb: ['KeyB'],
   secondary: [],
   bombHold: [],
+  targetHold: [],
   debugToggle: ['F3'],
   hudToggle: ['KeyH'],
   pause: ['Escape'],

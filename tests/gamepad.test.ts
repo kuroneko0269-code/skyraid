@@ -51,7 +51,7 @@ describe('mapGamepad', () => {
     );
     expect(valueOf(v, 'missile')).toBe(1); // A
     expect(valueOf(v, 'flare')).toBe(1); // B
-    expect(valueOf(v, 'targetNext')).toBe(1); // Y
+    expect(valueOf(v, 'targetHold')).toBe(1); // Y（短押しでターゲット切替・長押しで爆弾）
     expect(valueOf(v, 'afterburner')).toBe(1); // LB
     expect(valueOf(v, 'fire')).toBe(1); // RB
     expect(valueOf(v, 'yawLeft')).toBeCloseTo((0.5 - 0.05) / 0.95); // LT

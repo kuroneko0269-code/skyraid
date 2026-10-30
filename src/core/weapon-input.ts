@@ -1,8 +1,10 @@
 // 入力 → 戦闘の操作（CombatInput）の読み替え（2-6 で main.ts から分けた。Three.js 非依存）。
 // タッチ・パッドは武器のボタンが足りないので長押しを使う:
 // - タッチの MSL（secondary）: 短く押して離すと今の兵装（ミサイル / ロケット）を撃ち、holdSeconds 押し続けると兵装を切り替える（撃たない）
-// - タッチの AB・パッドの RT（bombHold）: holdSeconds 押し続けると爆弾を 1 発（押し直すまで次は落とさない）。
-//   AB・ヨーと兼ねるので、投下は着弾予測点が出ているときだけ（CombatSystem が bombHeld を見て判断する）
+// - タッチの AB（bombHold）: holdSeconds 押し続けると爆弾を 1 発（押し直すまで次は落とさない）。
+//   AB と兼ねるので、投下は着弾予測点が出ているときだけ（CombatSystem が bombHeld を見て判断する）
+// - パッドの Y（targetHold。4-7 の事前修正で RT から移した）: 短く押して離すとターゲット切替、holdSeconds 押し続けると
+//   爆弾を 1 発（ターゲットは切り替えない）。投下の条件は AB と同じ
 import type { CombatInput } from '../combat/combat-system';
 import { WEAPON_INPUT_CONFIG } from '../data/ordnance';
 import type { Action } from '../data/keybinds';
@@ -43,6 +45,7 @@ export class WeaponInput {
   secondary: SecondaryWeapon = 'missile';
   private readonly secondaryHold = new HoldTimer();
   private readonly bombHold = new HoldTimer();
+  private readonly targetHold = new HoldTimer();
 
   constructor(private readonly holdSeconds: number = WEAPON_INPUT_CONFIG.holdSeconds) {}
 
@@ -54,22 +57,35 @@ export class WeaponInput {
     out.targetNext = input.wasPressed('targetNext');
     out.rocket = input.wasPressed('rocket');
     out.bomb = input.wasPressed('bomb');
-    // ステップの間に押して離した短いタップも、押したステップに数える
-    const secondaryDown = input.isDown('secondary');
-    const tapped = !secondaryDown && input.wasPressed('secondary');
-    const s = this.secondaryHold.step(secondaryDown || tapped, dt, this.holdSeconds);
-    const s2 = tapped ? this.secondaryHold.step(false, dt, this.holdSeconds) : null;
+    const s = this.stepHold(this.secondaryHold, input, 'secondary', dt);
     if (s === 'hold') this.secondary = this.secondary === 'missile' ? 'rocket' : 'missile';
-    if (s === 'tap' || s2 === 'tap') {
+    if (s === 'tap') {
       if (this.secondary === 'missile') out.missile = true;
       else out.rocket = true;
     }
-    out.bombHeld = this.bombHold.step(input.isDown('bombHold'), dt, this.holdSeconds) === 'hold';
+    const t = this.stepHold(this.targetHold, input, 'targetHold', dt);
+    if (t === 'tap') out.targetNext = true;
+    out.bombHeld =
+      this.bombHold.step(input.isDown('bombHold'), dt, this.holdSeconds) === 'hold' || t === 'hold';
+  }
+
+  /** 長押しと短いタップを見分ける。ステップの間に押して離した短いタップも、押したステップに数える */
+  private stepHold(
+    timer: HoldTimer,
+    input: ActionReader,
+    action: Action,
+    dt: number,
+  ): 'hold' | 'tap' | null {
+    const down = input.isDown(action);
+    const tapped = !down && input.wasPressed(action);
+    const s = timer.step(down || tapped, dt, this.holdSeconds);
+    const s2 = tapped ? timer.step(false, dt, this.holdSeconds) : null;
+    return s ?? s2;
   }
 
   /** 押している時間を忘れる（飛行の開始・ポーズからの再開） */
   reset(): void {
-    for (const h of [this.secondaryHold, this.bombHold]) {
+    for (const h of [this.secondaryHold, this.bombHold, this.targetHold]) {
       h.held = 0;
       h.fired = false;
     }

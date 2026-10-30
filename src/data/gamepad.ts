@@ -38,12 +38,12 @@ export const DEFAULT_GAMEPAD_MAPPING: GamepadMapping = {
     0: 'missile',
     1: 'flare',
     2: 'rocket',
-    3: 'targetNext',
+    // Y: 短く押して離すとターゲット切替、長押しで爆弾（4-7 の事前修正。判定は src/core/weapon-input.ts）
+    3: 'targetHold',
     4: 'afterburner',
     5: 'fire',
     6: 'yawLeft',
-    // RT はヨー（右）と爆弾の長押し投下を兼ねる（2-6。長押しの判定は src/core/weapon-input.ts）
-    7: ['yawRight', 'bombHold'],
+    7: 'yawRight',
     8: 'cameraToggle',
     9: 'pause',
   },

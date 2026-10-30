@@ -255,7 +255,7 @@ describe('長押しの操作（タッチ・パッド）', () => {
     expect(tap?.missile).toBe(false);
   });
 
-  it('AB・RT（bombHold）を 0.4 秒押し続けると 1 回だけ bombHeld。離して押し直すとまた', () => {
+  it('AB（bombHold）を 0.4 秒押し続けると 1 回だけ bombHeld。離して押し直すとまた', () => {
     const w = new WeaponInput();
     const input = new FakeInput();
     input.press('bombHold');
@@ -269,7 +269,31 @@ describe('長押しの操作（タッチ・パッド）', () => {
     expect(steps(w, input, 30).filter((o) => o.bombHeld).length).toBe(1);
   });
 
-  it('キーは G = ロケット・B = 爆弾、パッドは X = ロケット・RT = ヨー右 + 爆弾の長押し', () => {
+  it('パッドの Y（targetHold）: 短く押して離すとターゲット切替、0.4 秒押し続けると 1 回だけ bombHeld（切替なし）', () => {
+    const w = new WeaponInput();
+    const input = new FakeInput();
+    input.press('targetHold');
+    const press = steps(w, input, 10);
+    expect(press.some((o) => o.targetNext || o.bombHeld)).toBe(false);
+    input.down.delete('targetHold');
+    const [release] = steps(w, input, 1);
+    expect(release?.targetNext).toBe(true);
+    expect(release?.bombHeld).toBe(false);
+
+    input.press('targetHold');
+    const outs = steps(w, input, 60);
+    expect(outs.findIndex((o) => o.bombHeld)).toBe(23);
+    expect(outs.filter((o) => o.bombHeld).length).toBe(1);
+    input.down.delete('targetHold');
+    expect(steps(w, input, 2).some((o) => o.targetNext || o.bombHeld)).toBe(false);
+
+    // ステップの間に押して離した短いタップでも切り替える
+    input.pressed.add('targetHold');
+    const [tap] = steps(w, input, 1);
+    expect(tap?.targetNext).toBe(true);
+  });
+
+  it('キーは G = ロケット・B = 爆弾、パッドは X = ロケット・Y = ターゲット切替 + 爆弾の長押し・RT = ヨー右だけ', () => {
     expect(DEFAULT_KEYBINDS.rocket).toEqual(['KeyG']);
     expect(DEFAULT_KEYBINDS.bomb).toEqual(['KeyB']);
     const buttons = Array.from({ length: 17 }, (_, i) => ({
@@ -279,7 +303,8 @@ describe('長押しの操作（タッチ・パッド）', () => {
     const v = mapGamepad({ connected: true, axes: [0, 0, 0, 0], buttons }, createActionValues());
     expect(v[actionIndex('rocket')]).toBe(1);
     expect(v[actionIndex('yawRight')]).toBe(1);
-    expect(v[actionIndex('bombHold')]).toBe(1);
+    expect(v[actionIndex('bombHold')]).toBe(0);
+    expect(DEFAULT_GAMEPAD_MAPPING.buttons[3]).toBe('targetHold');
     expect(DEFAULT_GAMEPAD_MAPPING.buttons[0]).toBe('missile');
   });
 });
