@@ -30,8 +30,8 @@
 
 ## フェーズ3: 成長
 
-- [x] 3-1 セーブ（localStorage、バージョン付きスキーマ） — main squash マージ: COMMIT_LINK（事前修正: 遠くの海面に少し上の空を映す PRE1・M2 のブリーフィング文 PRE2）
-- [x] 3-2 クレジットとリザルト評価（S〜C） — 3-1 と同じコミット: COMMIT_LINK
+- [x] 3-1 セーブ（localStorage、バージョン付きスキーマ） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/be76973（事前修正: 遠くの海面に少し上の空を映す https://github.com/kuroneko0269-code/skyraid/commit/5167817・M2 のブリーフィング文 https://github.com/kuroneko0269-code/skyraid/commit/d0fa4a1）
+- [x] 3-2 クレジットとリザルト評価（S〜C） — 3-1 と同じコミット: https://github.com/kuroneko0269-code/skyraid/commit/be76973
 - [ ] 3-3 ハンガー画面：機体選択と4系統の強化
 - [ ] 3-4 機体 4 種のデータとパラメータ差
 
