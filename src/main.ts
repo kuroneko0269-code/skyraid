@@ -40,6 +40,7 @@ import { createSaveSettings } from './ui/save-settings';
 import { openBrowserSave } from './ui/save-link';
 import { createTouchLink } from './ui/touch-link';
 import { Screens } from './ui/screens';
+import { installAppShell } from './ui/app-shell';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app が見つかりません');
@@ -75,6 +76,7 @@ screens.onAircraftView((model) => {
 // 品質設定（初期判定・切り替え・自動ダウングレード）と露出
 const quality = new QualityLink(renderer, pipeline, world, storage);
 installTouchGuards(document);
+installAppShell(document.body);
 // 設定（画質・タッチ・HUD・全画面）はポーズメニューの中
 const settingsPanel = screens.pause.settings;
 quality.createSelect(settingsPanel);

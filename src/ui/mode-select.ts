@@ -28,14 +28,14 @@ export class ModeSelectScreen {
   ) {
     const root = createScreen(parent, 'mode-select-screen');
     const heading = document.createElement('h2');
-    heading.className = 'mode-heading';
+    heading.className = 'ui-heading mode-heading';
     heading.textContent = 'モード選択';
     const list = document.createElement('div');
     list.className = 'mode-list';
     root.append(heading, list);
 
     for (const entry of MODE_ENTRIES) {
-      const button = createButton(list, 'menu-button mode-button', '', () => {
+      const button = createButton(list, 'ui-button ui-item mode-button', '', () => {
         handlers.onSelect(entry.mode);
       });
       const label = document.createElement('span');
@@ -49,7 +49,7 @@ export class ModeSelectScreen {
       button.disabled = !entry.enabled;
       if (entry.enabled) this.firstEnabled ??= button;
     }
-    createButton(root, 'menu-button mode-back', '← タイトルへ', handlers.onBack);
+    createButton(root, 'ui-button is-ghost mode-back', '← タイトルへ', handlers.onBack);
     this.root = root;
   }
 

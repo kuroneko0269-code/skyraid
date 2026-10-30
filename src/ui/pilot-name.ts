@@ -15,9 +15,9 @@ export class PilotNameScreen {
 
   constructor(parent: HTMLElement, handlers: { onSubmit: (name: string) => void }) {
     const root = createScreen(parent, 'campaign-screen pilot-name-screen');
-    const panel = el('div', 'campaign-panel', root);
-    el('div', 'campaign-kicker', panel, 'PILOT REGISTRATION');
-    el('h2', 'campaign-title', panel, 'パイロット名');
+    const panel = el('div', 'ui-panel campaign-panel', root);
+    el('div', 'ui-kicker campaign-kicker', panel, 'PILOT REGISTRATION');
+    el('h2', 'ui-title campaign-title', panel, 'パイロット名');
     el(
       'p',
       'briefing-text',
@@ -25,7 +25,7 @@ export class PilotNameScreen {
       `${SAVE_CONFIG.pilotNameMaxLength} 文字まで。リザルトとタイトルに表示します（空なら ${SAVE_CONFIG.defaultPilotName}）`,
     );
     const form = el('form', 'pilot-name-form', panel);
-    this.input = el('input', 'pilot-name-input', form);
+    this.input = el('input', 'ui-field pilot-name-input', form);
     this.input.type = 'text';
     this.input.placeholder = SAVE_CONFIG.defaultPilotName;
     this.input.autocomplete = 'off';
@@ -43,7 +43,12 @@ export class PilotNameScreen {
     this.input.addEventListener('compositionend', clip);
     isolateKeys(this.input);
     const buttons = el('div', 'campaign-buttons', form);
-    const submit = createButton(buttons, 'menu-button campaign-go', '決定', () => undefined);
+    const submit = createButton(
+      buttons,
+      'ui-button is-primary campaign-go',
+      '決定',
+      () => undefined,
+    );
     submit.type = 'submit';
     form.addEventListener('submit', (e) => {
       e.preventDefault();

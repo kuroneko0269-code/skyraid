@@ -34,7 +34,7 @@ export function createDifficultySelect(
   onSelect: (difficulty: Difficulty) => void,
 ): HTMLSelectElement {
   const label = document.createElement('label');
-  label.className = 'settings-item';
+  label.className = 'ui-toggle settings-item';
   label.textContent = '難易度 ';
   const select = document.createElement('select');
   for (const d of DIFFICULTIES) {

@@ -1,38 +1,34 @@
 /* キャンペーンの画面（ミッション一覧・ブリーフィング・リザルト。2-4） */
 .campaign-screen {
-  gap: 12px;
-  padding: 12px;
-  background: rgba(0, 10, 25, 0.55);
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-3);
+  background: var(--ui-scrim);
 }
 
-.campaign-heading {
-  margin: 0 0 4px;
-  font:
-    700 20px/1 system-ui,
-    sans-serif;
-  letter-spacing: 0.2em;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+/* 横画面のスマホで一覧が画面に収まらないときは上から並べてスクロール（中央寄せのままだと上が切れる）。
+   screen.css の .screen より後に読まれるとは限らないので詳細度を上げる */
+.screen.campaign-screen {
+  justify-content: safe center;
+  overflow-y: auto;
 }
 
 .mission-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--ui-space-2);
   width: min(420px, 100%);
 }
 
 .mission-entry {
-  display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  text-align: left;
 }
 
 .mission-entry-no {
-  font-size: 11px;
-  letter-spacing: 0.15em;
-  opacity: 0.7;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: var(--ui-text-dim);
 }
 
 /* 番号とクリア状態の行（2-5） */
@@ -44,13 +40,12 @@
 }
 
 .mission-entry-status {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
+  font-size: 12px;
+  letter-spacing: 0.2em;
 }
 
 .mission-entry.is-cleared .mission-entry-status {
-  color: #ffd75a;
+  color: var(--ui-accent);
 }
 
 .mission-entry.is-locked {
@@ -62,8 +57,6 @@
   min-width: 0;
   min-height: 44px;
   font-size: 15px;
-  background: rgba(0, 0, 0, 0.35);
-  border-color: rgba(255, 255, 255, 0.25);
 }
 
 /* ブリーフィング・リザルトの枠。横画面のスマホでも収まるよう、はみ出たら中だけスクロール */
@@ -73,38 +66,20 @@
   gap: 8px;
   width: min(560px, 100%);
   max-height: 100%;
-  padding: 16px 20px;
-  box-sizing: border-box;
   overflow-y: auto;
-  background: rgba(5, 20, 35, 0.75);
-  border: 1px solid rgba(160, 230, 255, 0.35);
-  border-radius: 10px;
-}
-
-.campaign-kicker {
-  font-size: 11px;
-  letter-spacing: 0.3em;
-  color: rgba(150, 230, 255, 0.85);
-}
-
-.campaign-title {
-  margin: 0;
-  font:
-    700 24px/1.2 system-ui,
-    sans-serif;
 }
 
 .briefing-text {
   margin: 0;
   white-space: pre-line;
-  opacity: 0.9;
+  color: var(--ui-text-dim);
 }
 
 .campaign-label {
-  margin-top: 4px;
-  font-size: 12px;
-  letter-spacing: 0.15em;
-  opacity: 0.7;
+  margin-top: var(--ui-space-1);
+  font: 600 13px/1.2 var(--ui-font-display);
+  letter-spacing: 0.2em;
+  color: var(--ui-accent-hud);
 }
 
 .briefing-objectives,
@@ -125,16 +100,15 @@
 }
 
 .tag {
-  padding: 1px 6px;
+  padding: 0 6px;
   font-size: 11px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 4px;
-  opacity: 0.8;
+  color: var(--ui-text-dim);
+  border: var(--ui-line-width) solid var(--ui-line-faint);
 }
 
 .tag.is-required {
-  border-color: rgba(255, 210, 90, 0.7);
-  color: #ffd25a;
+  border-color: var(--ui-line);
+  color: var(--ui-accent);
 }
 
 .campaign-facts {
@@ -152,16 +126,12 @@
 
 .campaign-fact-label {
   font-size: 12px;
-  opacity: 0.7;
+  color: var(--ui-text-dim);
 }
 
 .campaign-fact-value {
-  font:
-    600 16px/1.2 ui-monospace,
-    'SFMono-Regular',
-    Menlo,
-    Consolas,
-    monospace;
+  font: 600 16px/1.2 var(--ui-font-body);
+  font-variant-numeric: tabular-nums;
 }
 
 .campaign-buttons {
@@ -171,27 +141,25 @@
   margin-top: 6px;
 }
 
-.campaign-buttons .menu-button {
+.campaign-buttons .ui-button {
   min-width: 0;
   flex: 1 1 0;
-}
-
-.campaign-go {
-  background: rgba(30, 110, 60, 0.75);
-  border-color: rgba(150, 255, 180, 0.6);
+  padding-inline: var(--ui-space-3);
+  letter-spacing: 0.02em;
 }
 
 .result-outcome {
-  color: #ff6a5a;
+  color: var(--ui-warn);
   letter-spacing: 0.08em;
 }
 
 .result-screen.is-success .result-outcome {
-  color: #ffd25a;
+  color: var(--ui-accent);
+  text-shadow: var(--ui-glow);
 }
 
 .result-reason {
-  color: #ff9a8a;
+  color: var(--ui-warn-text);
 }
 
 .result-reason[hidden],
@@ -202,25 +170,32 @@
 .result-rank {
   align-self: flex-end;
   margin-top: -44px;
-  font:
-    900 52px/1 system-ui,
-    sans-serif;
-  color: #ffd25a;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  font: 600 56px/1 var(--ui-font-display);
+  color: var(--ui-text);
+  text-shadow: var(--ui-glow);
 }
 
 .result-mark {
   width: 1em;
-  color: #ff6a5a;
+  color: var(--ui-warn);
 }
 
 .result-objective.is-done .result-mark {
-  color: #7dff9a;
+  color: var(--ui-accent);
 }
 
 @media (max-height: 480px) {
+  .mission-list {
+    gap: 6px;
+  }
+
+  .mission-entry {
+    min-height: 44px;
+    padding: 5px 16px;
+  }
+
   .campaign-panel {
-    padding: 10px 14px;
+    padding: 10px 16px;
     gap: 5px;
   }
 
@@ -233,7 +208,7 @@
     font-size: 38px;
   }
 
-  .campaign-buttons .menu-button {
+  .campaign-buttons .ui-button {
     min-height: 44px;
   }
 }
@@ -242,7 +217,7 @@
 .result-gear {
   font-size: 13px;
   font-weight: 700;
-  color: #ffd75a;
+  color: var(--ui-accent);
 }
 
 .result-gear[hidden] {

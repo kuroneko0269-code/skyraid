@@ -35,10 +35,10 @@ export class ResultScreen {
 
   constructor(parent: HTMLElement, handlers: { onRetry: () => void; onList: () => void }) {
     const root = createScreen(parent, 'campaign-screen result-screen');
-    const panel = el('div', 'campaign-panel', root);
-    el('div', 'campaign-kicker', panel, 'RESULT');
+    const panel = el('div', 'ui-panel campaign-panel', root);
+    el('div', 'ui-kicker campaign-kicker', panel, 'RESULT');
     this.pilot = el('div', 'result-pilot', panel);
-    this.outcome = el('h2', 'campaign-title result-outcome', panel);
+    this.outcome = el('h2', 'ui-title campaign-title result-outcome', panel);
     this.reason = el('div', 'result-reason', panel);
     this.rank = el('div', 'result-rank', panel);
     this.objectives = el('ul', 'result-objectives', panel);
@@ -46,8 +46,13 @@ export class ResultScreen {
     this.gear = el('div', 'result-gear', panel, 'ハンガーで新しい装備が買えます');
     this.gear.hidden = true;
     const buttons = el('div', 'campaign-buttons', panel);
-    createButton(buttons, 'menu-button campaign-back', 'ミッション一覧へ', handlers.onList);
-    this.retry = createButton(buttons, 'menu-button campaign-go', 'もう一度', handlers.onRetry);
+    createButton(buttons, 'ui-button is-ghost campaign-back', 'ミッション一覧へ', handlers.onList);
+    this.retry = createButton(
+      buttons,
+      'ui-button is-primary campaign-go',
+      'もう一度',
+      handlers.onRetry,
+    );
     this.root = root;
   }
 

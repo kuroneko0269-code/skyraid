@@ -1,16 +1,93 @@
-/* タイトル画面。背景はゲームのシーンが見えるよう、上下だけ少し暗くする */
+/* タイトル画面（4-10 でデザインシステムに載せ替え）。背景はゲームのシーンが見えるよう、上下だけ少し暗くする */
 .title-screen {
   gap: clamp(24px, 9vh, 72px);
   cursor: pointer;
   background: linear-gradient(
     to bottom,
-    rgba(0, 10, 25, 0.35) 0%,
+    rgba(0, 10, 25, 0.4) 0%,
     rgba(0, 10, 25, 0) 40%,
     rgba(0, 10, 25, 0) 60%,
-    rgba(0, 10, 25, 0.45) 100%
+    rgba(0, 10, 25, 0.5) 100%
+  );
+  overflow: hidden;
+}
+
+/* ---- HUD の枠（safe-area の内側） ---- */
+.title-frame {
+  --inset: var(--ui-space-4);
+  --arm: clamp(20px, 5vmin, 40px);
+  position: absolute;
+  top: calc(var(--inset) + var(--ui-safe-top));
+  right: calc(var(--inset) + var(--ui-safe-right));
+  bottom: calc(var(--inset) + var(--ui-safe-bottom));
+  left: calc(var(--inset) + var(--ui-safe-left));
+  pointer-events: none;
+}
+
+.title-frame > span {
+  position: absolute;
+  display: block;
+}
+
+/* 上下の細い線（中央から両側へ伸びる） */
+.title-frame-rule-top,
+.title-frame-rule-bottom {
+  left: calc(var(--arm) + var(--ui-space-3));
+  right: calc(var(--arm) + var(--ui-space-3));
+  height: var(--ui-line-width);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--ui-line) 20%,
+    var(--ui-line) 80%,
+    transparent
   );
 }
 
+.title-frame-rule-top {
+  top: 0;
+}
+
+.title-frame-rule-bottom {
+  bottom: 0;
+}
+
+/* 四隅の括弧（L 字の 2 本の線） */
+.title-frame [class*='corner'] {
+  width: var(--arm);
+  height: var(--arm);
+  border: 0 solid var(--ui-accent-hud);
+}
+
+.title-frame .title-frame-corner-tl {
+  top: 0;
+  left: 0;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.title-frame .title-frame-corner-tr {
+  top: 0;
+  right: 0;
+  border-top-width: 2px;
+  border-right-width: 2px;
+}
+
+.title-frame .title-frame-corner-bl {
+  bottom: 0;
+  left: 0;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
+
+.title-frame .title-frame-corner-br {
+  bottom: 0;
+  right: 0;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+
+/* ---- ロゴ ---- */
 .title-logo {
   display: flex;
   flex-direction: column;
@@ -20,25 +97,45 @@
 }
 
 .title-logo-main {
-  font:
-    italic 900 clamp(56px, 14vw, 132px) / 1 system-ui,
-    sans-serif;
-  letter-spacing: -0.02em;
+  font: italic 600 clamp(60px, 15vw, 140px) / 1 var(--ui-font-display);
+  letter-spacing: 0.02em;
   padding: 0 0.12em;
   color: #fff;
-  background: linear-gradient(180deg, #ffffff 0%, #dff6ff 45%, #6fd4ff 55%, #2b7fc4 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #e6fbff 48%, var(--ui-accent) 54%, #2a8fb0 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
+/* 画像のロゴ: 横長を想定。画面の幅の 70% と高さの 36% に収める */
+.title-logo-image {
+  display: block;
+  max-width: min(70vw, 720px);
+  max-height: 36vh;
+  object-fit: contain;
+  pointer-events: none;
+}
+
 .title-prompt {
-  font:
-    600 clamp(15px, 2.6vw, 20px) / 1 system-ui,
-    sans-serif;
-  letter-spacing: 0.12em;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  font: 600 clamp(15px, 2.6vw, 20px) / 1 var(--ui-font-display);
+  letter-spacing: 0.24em;
+  color: var(--ui-accent-hud);
+  text-shadow: var(--ui-shadow-text);
   animation: title-blink 1.6s ease-in-out infinite;
+}
+
+/* ---- スキャンライン（3px ごとに薄い線） ---- */
+.title-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.035) 0,
+    rgba(255, 255, 255, 0.035) 1px,
+    transparent 1px,
+    transparent 3px
+  );
 }
 
 @keyframes title-blink {
@@ -48,5 +145,57 @@
   }
   50% {
     opacity: 0.35;
+  }
+}
+
+/* ---- 起動時の HUD 展開（合計 --title-deploy）: 線が伸びる → ロゴ → 文字 ---- */
+.title-screen.is-deploying .title-frame-rule-top,
+.title-screen.is-deploying .title-frame-rule-bottom {
+  animation: title-extend calc(var(--title-deploy) * 0.55) ease-out both;
+}
+
+.title-screen.is-deploying .title-frame [class*='corner'] {
+  animation: title-corner calc(var(--title-deploy) * 0.4) ease-out both;
+}
+
+.title-screen.is-deploying .title-logo {
+  animation: title-fade calc(var(--title-deploy) * 0.5) ease-out calc(var(--title-deploy) * 0.4)
+    both;
+}
+
+.title-screen.is-deploying .title-prompt {
+  animation:
+    title-fade calc(var(--title-deploy) * 0.4) ease-out calc(var(--title-deploy) * 0.6) both,
+    title-blink 1.6s ease-in-out var(--title-deploy) infinite;
+}
+
+.title-screen.is-deploying .title-pilot {
+  animation: title-fade calc(var(--title-deploy) * 0.4) ease-out calc(var(--title-deploy) * 0.6)
+    both;
+}
+
+@keyframes title-extend {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes title-corner {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+@keyframes title-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-screen.is-deploying * {
+    animation: none !important;
   }
 }

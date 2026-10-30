@@ -1,19 +1,8 @@
 /* 設定の部品（ポーズメニューの中に置く。配置・大きさは pause.css） */
 .settings-item {
   padding: 4px 8px;
-  font:
-    13px/1.4 system-ui,
-    sans-serif;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.45);
-  border: 0;
-  border-radius: 4px;
   user-select: none;
   -webkit-user-select: none;
-}
-
-.settings-item select {
-  font: inherit;
 }
 
 .settings-button {

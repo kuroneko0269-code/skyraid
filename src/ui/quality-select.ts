@@ -9,7 +9,7 @@ export function createQualitySelect(
   onSelect: (level: QualityLevel) => void,
 ): HTMLSelectElement {
   const label = document.createElement('label');
-  label.className = 'settings-item quality-select';
+  label.className = 'ui-toggle settings-item quality-select';
   label.textContent = '画質 ';
 
   const select = document.createElement('select');

@@ -7,13 +7,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
-    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  padding: var(--ui-safe-top) var(--ui-safe-right) var(--ui-safe-bottom) var(--ui-safe-left);
   box-sizing: border-box;
-  color: #fff;
-  font:
-    15px/1.4 system-ui,
-    sans-serif;
+  color: var(--ui-text);
+  color-scheme: dark;
+  font: var(--ui-font-size) / 1.45 var(--ui-font-body);
   opacity: 0;
   visibility: hidden;
   /* 消えるときは opacity が 0 になってから visibility を切る */
@@ -55,41 +53,7 @@
   opacity: 0;
 }
 
-/* ---- メニューのボタン（タッチで押しやすい大きさ） ---- */
-.menu-button {
-  min-width: 220px;
-  min-height: 48px;
-  padding: 10px 20px;
-  font:
-    600 17px/1.2 system-ui,
-    sans-serif;
-  color: #fff;
-  background: rgba(10, 30, 50, 0.6);
-  border: 1px solid rgba(160, 230, 255, 0.5);
-  border-radius: 8px;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
-}
-
-.menu-button:hover:not(:disabled),
-.menu-button:focus-visible {
-  background: rgba(40, 110, 160, 0.75);
-  border-color: rgba(200, 245, 255, 0.9);
-  outline: none;
-}
-
-.menu-button:active:not(:disabled) {
-  background: rgba(80, 160, 210, 0.85);
-}
-
-.menu-button:disabled {
-  cursor: default;
-  color: rgba(255, 255, 255, 0.45);
-  background: rgba(0, 0, 0, 0.4);
-  border-color: rgba(255, 255, 255, 0.15);
-}
+/* メニューのボタン・パネルなどの共通部品は theme.css（4-10） */
 
 /* ---- 読み込み中 ---- */
 .loading-screen {
@@ -99,22 +63,21 @@
 }
 
 .loading-text {
-  font-size: 16px;
-  letter-spacing: 0.1em;
-  opacity: 0.85;
+  font: 600 16px/1 var(--ui-font-display);
+  letter-spacing: 0.24em;
+  color: var(--ui-text-dim);
 }
 
 .loading-track {
   width: 200px;
   height: 3px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
+  background: var(--ui-line-faint);
   overflow: hidden;
 }
 
 .loading-bar {
   height: 100%;
-  background: rgba(150, 230, 255, 0.9);
+  background: var(--ui-accent);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.2s ease;

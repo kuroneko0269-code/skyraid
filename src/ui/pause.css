@@ -1,6 +1,6 @@
 .pause-screen {
   z-index: 55;
-  background: rgba(0, 8, 20, 0.55);
+  background: var(--ui-scrim);
 }
 
 .pause-panel {
@@ -9,17 +9,13 @@
   align-items: stretch;
   gap: 10px;
   max-height: 100%;
-  padding: 12px;
-  box-sizing: border-box;
+  padding: var(--ui-space-3) var(--ui-space-4);
   overflow-y: auto;
 }
 
 .pause-heading {
   margin: 0 0 4px;
   text-align: center;
-  font:
-    700 20px/1 system-ui,
-    sans-serif;
   letter-spacing: 0.3em;
   margin-right: -0.3em;
 }
@@ -41,21 +37,12 @@
   justify-content: center;
   gap: 6px;
   min-height: 44px;
-  font-size: 15px;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  box-sizing: border-box;
+  font-size: 14px;
 }
 
 .pause-settings select {
   min-height: 32px;
   font-size: 15px;
-}
-
-.pause-title {
-  background: rgba(60, 20, 20, 0.55);
-  border-color: rgba(255, 170, 150, 0.45);
 }
 
 /* ⏸ ボタン。飛行中だけ表示 */

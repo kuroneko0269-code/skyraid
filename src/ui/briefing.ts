@@ -23,18 +23,23 @@ export class BriefingScreen {
     handlers: { onLaunch: () => void; onBack: () => void; onHangar: () => void },
   ) {
     const root = createScreen(parent, 'campaign-screen briefing-screen');
-    const panel = el('div', 'campaign-panel', root);
-    el('div', 'campaign-kicker', panel, 'BRIEFING');
-    this.title = el('h2', 'campaign-title', panel);
+    const panel = el('div', 'ui-panel campaign-panel', root);
+    el('div', 'ui-kicker campaign-kicker', panel, 'BRIEFING');
+    this.title = el('h2', 'ui-title campaign-title', panel);
     this.text = el('p', 'briefing-text', panel);
     el('div', 'campaign-label', panel, '目標');
     this.objectives = el('ol', 'briefing-objectives', panel);
     this.facts = el('div', 'campaign-facts', panel);
     const buttons = el('div', 'campaign-buttons', panel);
-    createButton(buttons, 'menu-button campaign-back', '← ミッション一覧', handlers.onBack);
+    createButton(buttons, 'ui-button is-ghost campaign-back', '← ミッション一覧', handlers.onBack);
     // 3-3: 出撃する機体を変える（ハンガーから戻るとこの画面）
-    createButton(buttons, 'menu-button campaign-back', '機体変更', handlers.onHangar);
-    this.launch = createButton(buttons, 'menu-button campaign-go', '出撃', handlers.onLaunch);
+    createButton(buttons, 'ui-button is-ghost campaign-back', '機体変更', handlers.onHangar);
+    this.launch = createButton(
+      buttons,
+      'ui-button is-primary campaign-go',
+      '出撃',
+      handlers.onLaunch,
+    );
     this.root = root;
   }
 

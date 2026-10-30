@@ -32,13 +32,13 @@ export class MissionSelectScreen {
     handlers: { onSelect: (mission: MissionDef) => void; onBack: () => void },
   ) {
     const root = createScreen(parent, 'campaign-screen');
-    el('h2', 'campaign-heading', root, 'キャンペーン');
+    el('h2', 'ui-heading campaign-heading', root, 'キャンペーン');
     const balance = el('div', 'campaign-balance', root);
     el('span', '', balance, '残高');
     this.balance = el('span', 'campaign-balance-value', balance);
     const list = el('div', 'mission-list', root);
     missions.forEach((m, i) => {
-      const button = createButton(list, 'menu-button mission-entry', '', () => {
+      const button = createButton(list, 'ui-button ui-item mission-entry', '', () => {
         if (this.progress.isUnlocked(m.id)) handlers.onSelect(m);
       });
       const head = el('span', 'mission-entry-head', button);
@@ -47,7 +47,7 @@ export class MissionSelectScreen {
       el('span', 'mission-entry-title', button, missionStrings(m.id, locale).title);
       this.entries.push({ mission: m, button, status });
     });
-    createButton(root, 'menu-button campaign-back', '← モード選択', handlers.onBack);
+    createButton(root, 'ui-button is-ghost campaign-back', '← モード選択', handlers.onBack);
     this.root = root;
     this.refresh();
   }

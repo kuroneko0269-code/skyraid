@@ -9,7 +9,7 @@ export function createTouchModeSelect(
   onSelect: (mode: TouchMode) => void,
 ): HTMLSelectElement {
   const label = document.createElement('label');
-  label.className = 'settings-item';
+  label.className = 'ui-toggle settings-item';
   label.textContent = 'タッチ ';
   const select = document.createElement('select');
   for (const mode of TOUCH_MODES) {
@@ -37,7 +37,7 @@ export function createToggleButton(
 ): { button: HTMLButtonElement; sync: (on: boolean) => void } {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'settings-item settings-button';
+  button.className = 'ui-toggle settings-item settings-button';
   const sync = (on: boolean): void => {
     button.textContent = `${label} ${on ? 'ON' : 'OFF'}`;
     button.setAttribute('aria-pressed', String(on));
@@ -81,7 +81,7 @@ export function createFullscreenButton(parent: HTMLElement): HTMLButtonElement |
 
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'settings-item settings-button';
+  button.className = 'ui-toggle settings-item settings-button';
   const refresh = (): void => {
     button.textContent = fullscreenElement(doc) ? '全画面解除' : '全画面';
   };

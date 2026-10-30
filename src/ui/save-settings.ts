@@ -22,7 +22,7 @@ export function createSaveSettings(
   status.hidden = true;
 
   // 文字列の表示・入力欄（コピーできなかったときの手動コピーと、復元の貼り付けに使う）
-  const area = el('textarea', 'save-settings-text', box);
+  const area = el('textarea', 'ui-field save-settings-text', box);
   area.rows = 3;
   area.spellcheck = false;
   area.hidden = true;
@@ -33,7 +33,7 @@ export function createSaveSettings(
   const cancelRestore = button(restoreRow, 'やめる');
 
   // 削除（2 段階確認）
-  const remove = button(box, 'セーブデータを削除', 'save-settings-danger');
+  const remove = button(box, 'セーブデータを削除', 'is-danger save-settings-danger');
   const confirmBox = el('div', 'save-settings-confirm', box);
   confirmBox.hidden = true;
   el(
@@ -43,7 +43,7 @@ export function createSaveSettings(
     '進み具合・クレジット・設定がすべて消えます。元に戻せません',
   );
   const confirmRow = el('div', 'save-settings-row', confirmBox);
-  const confirmRemove = button(confirmRow, '削除する', 'save-settings-danger');
+  const confirmRemove = button(confirmRow, '削除する', 'is-danger save-settings-danger');
   const cancelRemove = button(confirmRow, 'やめる');
 
   const say = (text: string): void => {
@@ -113,7 +113,7 @@ export function createSaveSettings(
 }
 
 function button(parent: HTMLElement, label: string, extra = ''): HTMLButtonElement {
-  const b = el('button', `settings-item settings-button ${extra}`.trim(), parent, label);
+  const b = el('button', `ui-toggle settings-item settings-button ${extra}`.trim(), parent, label);
   b.type = 'button';
   return b;
 }

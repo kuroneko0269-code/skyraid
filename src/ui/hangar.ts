@@ -50,11 +50,11 @@ export class HangarScreen {
     const root = createScreen(parent, 'hangar-screen');
     const layout = el('div', 'hangar-layout', root);
 
-    const list = el('div', 'hangar-panel hangar-list', layout);
-    el('div', 'campaign-kicker', list, 'HANGAR');
+    const list = el('div', 'ui-panel hangar-panel hangar-list', layout);
+    el('div', 'ui-kicker campaign-kicker', list, 'HANGAR');
     const entries = el('div', 'hangar-entries', list);
     for (const m of hangar.models) {
-      const button = createButton(entries, 'menu-button hangar-entry', '', () => {
+      const button = createButton(entries, 'ui-button ui-item hangar-entry', '', () => {
         this.view(m.id);
       });
       el('span', 'hangar-entry-name', button, m.name);
@@ -62,20 +62,20 @@ export class HangarScreen {
       const status = el('span', 'hangar-entry-status', button);
       this.entries.set(m.id, { button, status });
     }
-    createButton(list, 'menu-button campaign-back hangar-back', '← 戻る', () => {
+    createButton(list, 'ui-button is-ghost campaign-back hangar-back', '← 戻る', () => {
       handlers.onBack();
     });
 
     // 中央は空けて、後ろのシーンの機体を見せる
     el('div', 'hangar-stage', layout);
 
-    const detail = el('div', 'hangar-panel hangar-detail', layout);
+    const detail = el('div', 'ui-panel hangar-panel hangar-detail', layout);
     this.balance = el('div', 'hangar-balance', detail);
-    this.name = el('h2', 'campaign-title hangar-name', detail);
+    this.name = el('h2', 'ui-title campaign-title hangar-name', detail);
     this.role = el('div', 'hangar-role', detail);
     this.bars = new StatBars(detail, maxStats(hangar.models));
     this.payload = el('div', 'hangar-payload', detail);
-    this.action = createButton(detail, 'menu-button campaign-go hangar-action', '', () => {
+    this.action = createButton(detail, 'ui-button is-primary campaign-go hangar-action', '', () => {
       this.buy();
     });
     this.notice = el('div', 'hangar-notice', detail);

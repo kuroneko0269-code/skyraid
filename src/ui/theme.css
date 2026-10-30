@@ -1,0 +1,335 @@
+/*
+ * デザインシステム（4-10）。部品のセレクタはすべて :where() で詳細度 0 にして、読み込み順によらず各画面の CSS で上書きできるようにする。方向性は「軍用コックピット風 × ミニマル」。
+ * 色・余白・角（チャンファー）・影・フォントはここの CSS 変数だけを使い、各画面の CSS は変数とクラスを組み合わせる。
+ * 共通部品: .ui-button（.is-primary / .is-ghost / .is-danger）/ .ui-panel / .ui-dialog / .ui-item / .ui-toggle /
+ * .ui-field / .ui-heading / .ui-title / .ui-kicker / .ui-toast
+ */
+:root {
+  /* 色: 半透明の濃紺〜黒のパネル、白文字、アクセントはシアン 1 色（HUD と同じ）、警告は赤 */
+  --ui-bg: rgba(4, 12, 22, 0.8);
+  --ui-bg-strong: rgba(3, 8, 15, 0.95);
+  --ui-bg-raised: rgba(8, 22, 36, 0.72);
+  --ui-bg-hover: rgba(14, 48, 66, 0.86);
+  --ui-bg-active: rgba(22, 78, 98, 0.92);
+  --ui-bg-sunken: rgba(0, 0, 0, 0.42);
+  --ui-scrim: rgba(0, 6, 14, 0.5);
+  --ui-text: #fff;
+  --ui-text-dim: rgba(255, 255, 255, 0.7);
+  --ui-text-faint: rgba(255, 255, 255, 0.42);
+  --ui-accent: rgb(110, 240, 255);
+  --ui-accent-hud: rgba(110, 240, 255, 0.85);
+  --ui-accent-fill: rgba(110, 240, 255, 0.16);
+  --ui-accent-fill-hover: rgba(110, 240, 255, 0.3);
+  --ui-line: rgba(110, 240, 255, 0.38);
+  --ui-line-strong: rgba(110, 240, 255, 0.9);
+  --ui-line-faint: rgba(255, 255, 255, 0.16);
+  --ui-warn: rgb(255, 72, 60);
+  --ui-warn-text: rgb(255, 150, 135);
+  --ui-warn-fill: rgba(80, 12, 10, 0.6);
+  --ui-warn-line: rgba(255, 90, 70, 0.65);
+
+  /* 余白（4px 刻み） */
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 24px;
+  --ui-space-6: 32px;
+
+  /* 角: 角丸の代わりに左上と右下を斜めに切る（clip-path） */
+  --ui-cut-sm: 6px;
+  --ui-cut: 10px;
+  --ui-cut-lg: 16px;
+  --ui-line-width: 1px;
+  /* ホバー・タップで走るラインの太さと速さ */
+  --ui-run-width: 2px;
+  --ui-run-time: 0.28s;
+
+  /* 影（clip-path の外には箱の影が出ないので、文字の影と光り方だけ） */
+  --ui-shadow-text: 0 1px 4px rgba(0, 0, 0, 0.75);
+  --ui-glow: 0 0 10px rgba(110, 240, 255, 0.45);
+
+  /* フォント: 見出しは Rajdhani（Google Fonts、latin・600 の 1 ファイル）、本文と数値は等幅のシステムフォント */
+  --ui-font-display: 'Rajdhani', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ui-font-body:
+    ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --ui-font-size: 14px;
+
+  /* safe-area（ホーム画面から standalone で起動したときのノッチ・ホームバー） */
+  --ui-safe-top: env(safe-area-inset-top, 0px);
+  --ui-safe-right: env(safe-area-inset-right, 0px);
+  --ui-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --ui-safe-left: env(safe-area-inset-left, 0px);
+}
+
+/* ---- チャンファーの枠: 内側の 1px の線 + 切った角の斜めの線（グラデーション）+ 塗り ---- */
+:where(.ui-button),
+:where(.ui-panel),
+:where(.ui-dialog),
+:where(.ui-toggle),
+:where(.ui-field),
+:where(.ui-toast) {
+  --cut: var(--ui-cut);
+  --fill: var(--ui-bg-raised);
+  --edge: var(--ui-line);
+  clip-path: polygon(
+    var(--cut) 0,
+    100% 0,
+    100% calc(100% - var(--cut)),
+    calc(100% - var(--cut)) 100%,
+    0 100%,
+    0 var(--cut)
+  );
+  background:
+    linear-gradient(
+        135deg,
+        transparent 50%,
+        var(--edge) 50%,
+        var(--edge) calc(50% + var(--ui-line-width)),
+        transparent calc(50% + var(--ui-line-width))
+      )
+      left top / var(--cut) var(--cut) no-repeat,
+    linear-gradient(
+        135deg,
+        transparent calc(50% - var(--ui-line-width)),
+        var(--edge) calc(50% - var(--ui-line-width)),
+        var(--edge) 50%,
+        transparent 50%
+      )
+      right bottom / var(--cut) var(--cut) no-repeat,
+    var(--fill);
+  box-shadow: inset 0 0 0 var(--ui-line-width) var(--edge);
+  border: 0;
+  border-radius: 0;
+  box-sizing: border-box;
+  color: var(--ui-text);
+}
+
+/* hidden 属性は部品・各画面の display より優先する（ここだけ :where にしない） */
+.ui-button[hidden],
+.ui-panel[hidden],
+.ui-dialog[hidden],
+.ui-toggle[hidden],
+.ui-field[hidden],
+.ui-toast[hidden] {
+  display: none;
+}
+
+/* ---- ボタン ---- */
+:where(.ui-button) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-2);
+  min-width: 200px;
+  min-height: 48px;
+  padding: 10px 20px;
+  font: 600 17px/1.2 var(--ui-font-display);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ホバー・フォーカス・タップで、下の辺を左から、上の辺を右から細いラインが走る */
+:where(.ui-button)::before,
+:where(.ui-button)::after {
+  content: '';
+  position: absolute;
+  height: var(--ui-run-width);
+  background: var(--run, var(--ui-accent));
+  transform: scaleX(0);
+  transition: transform var(--ui-run-time) ease-out;
+  pointer-events: none;
+}
+
+:where(.ui-button)::after {
+  left: 0;
+  right: var(--cut);
+  bottom: 0;
+  transform-origin: left;
+}
+
+:where(.ui-button)::before {
+  left: var(--cut);
+  right: 0;
+  top: 0;
+  transform-origin: right;
+}
+
+:where(.ui-button:hover:not(:disabled)),
+:where(.ui-button:focus-visible) {
+  --fill: var(--ui-bg-hover);
+  --edge: var(--ui-line-strong);
+  outline: none;
+}
+
+:where(.ui-button:hover:not(:disabled))::before,
+:where(.ui-button:hover:not(:disabled))::after,
+:where(.ui-button:focus-visible)::before,
+:where(.ui-button:focus-visible)::after,
+:where(.ui-button:active:not(:disabled))::before,
+:where(.ui-button:active:not(:disabled))::after {
+  transform: scaleX(1);
+}
+
+:where(.ui-button:active:not(:disabled)) {
+  --fill: var(--ui-bg-active);
+}
+
+:where(.ui-button:disabled) {
+  --fill: var(--ui-bg-sunken);
+  --edge: var(--ui-line-faint);
+  color: var(--ui-text-faint);
+  cursor: default;
+}
+
+:where(.ui-button.is-primary) {
+  --fill: var(--ui-accent-fill);
+  --edge: var(--ui-accent);
+}
+
+:where(.ui-button.is-primary:hover:not(:disabled)),
+:where(.ui-button.is-primary:focus-visible) {
+  --fill: var(--ui-accent-fill-hover);
+}
+
+:where(.ui-button.is-ghost) {
+  --fill: var(--ui-bg-sunken);
+  --edge: var(--ui-line-faint);
+  color: var(--ui-text-dim);
+}
+
+:where(.ui-button.is-ghost:hover:not(:disabled)),
+:where(.ui-button.is-ghost:focus-visible) {
+  color: var(--ui-text);
+}
+
+:where(.ui-button.is-danger) {
+  --fill: var(--ui-warn-fill);
+  --edge: var(--ui-warn-line);
+  --run: var(--ui-warn);
+}
+
+:where(.ui-button.is-danger:hover:not(:disabled)),
+:where(.ui-button.is-danger:focus-visible) {
+  --fill: var(--ui-warn-fill);
+  --edge: var(--ui-warn);
+}
+
+/* ---- リスト項目（ミッション・機体・モード）。ボタンと同じ枠で、文字は左寄せ ---- */
+:where(.ui-item) {
+  --cut: var(--ui-cut-sm);
+  justify-content: flex-start;
+  min-width: 0;
+  text-align: left;
+}
+
+:where(.ui-item.is-selected) {
+  --fill: var(--ui-accent-fill);
+  --edge: var(--ui-accent);
+}
+
+/* ---- パネル・ダイアログ ---- */
+:where(.ui-panel) {
+  --cut: var(--ui-cut-lg);
+  --fill: var(--ui-bg);
+  padding: var(--ui-space-4) var(--ui-space-5);
+}
+
+:where(.ui-dialog) {
+  --cut: var(--ui-cut-lg);
+  --fill: var(--ui-bg-strong);
+  --edge: var(--ui-line-strong);
+  padding: var(--ui-space-4) var(--ui-space-5);
+}
+
+/* ---- 設定のトグル・選択（ポーズメニュー）。押されている ON はアクセント ---- */
+:where(.ui-toggle) {
+  --cut: var(--ui-cut-sm);
+  --fill: var(--ui-bg-sunken);
+  --edge: var(--ui-line-faint);
+  font: 13px/1.4 var(--ui-font-body);
+}
+
+:where(button.ui-toggle) {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+:where(button.ui-toggle:hover),
+:where(button.ui-toggle:focus-visible),
+:where(.ui-toggle:focus-within) {
+  --edge: var(--ui-line-strong);
+  outline: none;
+}
+
+:where(.ui-toggle[aria-pressed='true']) {
+  --edge: var(--ui-line);
+  color: var(--ui-accent);
+}
+
+:where(.ui-toggle select) {
+  font: inherit;
+  color: var(--ui-text);
+  background: var(--ui-bg-strong);
+  border: var(--ui-line-width) solid var(--ui-line);
+  border-radius: 0;
+}
+
+:where(.ui-toggle.is-danger) {
+  --fill: var(--ui-warn-fill);
+  --edge: var(--ui-warn-line);
+}
+
+/* ---- 入力欄 ---- */
+:where(.ui-field) {
+  --cut: var(--ui-cut-sm);
+  --fill: var(--ui-bg-sunken);
+  font: 600 16px/1.3 var(--ui-font-body);
+  padding: var(--ui-space-2) var(--ui-space-3);
+}
+
+:where(.ui-field:focus) {
+  --edge: var(--ui-line-strong);
+  outline: none;
+}
+
+/* ---- 文字 ---- */
+:where(.ui-heading) {
+  margin: 0 0 var(--ui-space-1);
+  font: 600 22px/1 var(--ui-font-display);
+  letter-spacing: 0.24em;
+  text-shadow: var(--ui-shadow-text);
+}
+
+:where(.ui-title) {
+  margin: 0;
+  font: 600 26px/1.15 var(--ui-font-display);
+  letter-spacing: 0.04em;
+}
+
+:where(.ui-kicker) {
+  font: 600 12px/1 var(--ui-font-display);
+  letter-spacing: 0.32em;
+  color: var(--ui-accent-hud);
+}
+
+/* ---- 画面下部・上部のお知らせ（新しいバージョン・ホーム画面に追加の案内） ---- */
+:where(.ui-toast) {
+  --cut: var(--ui-cut-sm);
+  --fill: var(--ui-bg-strong);
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-2) var(--ui-space-3);
+  font: 13px/1.4 var(--ui-font-body);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.ui-button)::before,
+  :where(.ui-button)::after {
+    transition: none;
+  }
+}

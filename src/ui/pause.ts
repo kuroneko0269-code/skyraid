@@ -21,15 +21,15 @@ export class PauseMenu {
   ) {
     const root = createScreen(parent, 'pause-screen');
     const panel = document.createElement('div');
-    panel.className = 'pause-panel';
+    panel.className = 'ui-panel pause-panel';
     const heading = document.createElement('h2');
-    heading.className = 'pause-heading';
+    heading.className = 'ui-heading pause-heading';
     heading.textContent = 'ポーズ';
     panel.appendChild(heading);
     root.appendChild(panel);
 
-    createButton(panel, 'menu-button', '再開', handlers.onResume);
-    this.settingsButton = createButton(panel, 'menu-button', '設定', () => {
+    createButton(panel, 'ui-button', '再開', handlers.onResume);
+    this.settingsButton = createButton(panel, 'ui-button', '設定', () => {
       this.setSettingsOpen(!this.settingsOpen);
     });
     this.settings = document.createElement('div');
@@ -38,12 +38,12 @@ export class PauseMenu {
     // ミッション中だけ出す（2-4）
     this.abortButton = createButton(
       panel,
-      'menu-button pause-title',
+      'ui-button is-danger pause-title',
       'ミッションを中断',
       handlers.onAbort,
     );
     this.abortButton.hidden = true;
-    createButton(panel, 'menu-button pause-title', 'タイトルへ', handlers.onTitle);
+    createButton(panel, 'ui-button is-danger pause-title', 'タイトルへ', handlers.onTitle);
     this.setSettingsOpen(false);
     this.root = root;
   }

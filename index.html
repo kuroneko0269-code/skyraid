@@ -8,7 +8,22 @@
     />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="SkyRaid" />
+    <!-- standalone 起動時はステータスバーの下まで描き、safe-area で避ける（4-10） -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#050a12" />
     <title>SkyRaid: Titan Skies</title>
+    <!-- ブランド素材（public/brand/。README の「ブランド素材の差し替え」） -->
+    <link rel="icon" href="/brand/favicon.ico" sizes="any" />
+    <link rel="icon" href="/brand/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/brand/icon-192.png" />
+    <!-- 見出しのフォント（Rajdhani 600、latin のみ使う。失敗しても system-ui で崩れない） -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600&display=swap"
+    />
     <style>
       html,
       body {

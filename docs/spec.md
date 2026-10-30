@@ -503,6 +503,27 @@
 - HUD: 速度、高度、HP、武装残弾、ロックオン枠、レーダー、ミッション目標
 - 全画面DOM。文字は日本語・英語の2言語（i18n JSON）
 
+#### デザインシステム（4-10。`src/ui/theme.css`、数値は `src/data/app.ts`）
+
+- 方向性は「軍用コックピット風 × ミニマル」。色・余白・角・影・フォントは `theme.css` の CSS 変数（`--ui-*`）だけを使い、各画面の CSS は変数と共通クラスを組み合わせる。変数の有無と、UI の CSS が使う変数がすべて定義済みかをテストで確かめる（`tests/theme.test.ts`）
+- 色: パネルは半透明の濃紺〜黒（`--ui-bg` `rgba(4, 12, 22, 0.8)`・ダイアログ 0.95・ボタン `rgba(8, 22, 36, 0.72)`）、文字は白（補助は 70% / 42%）、アクセントは HUD と同じシアン `rgb(110, 240, 255)` の 1 色、警告は赤 `rgb(255, 72, 60)`。それまでの金色（残高・クリア・ランク）と緑（出撃ボタン）はシアンにまとめた
+- 角: 角丸をやめ、左上と右下を斜めに切る（`clip-path` のチャンファー。小 6px・中 10px・大 16px）。枠線は内側の 1px の線（`box-shadow: inset`）+ 切った角の斜めの線（角のグラデーション）で、スクロールする枠でも線が流れない
+- ボタンのホバー・フォーカス・タップで、下の辺を左から、上の辺を右から 2px のラインが 0.28 秒で走る（`prefers-reduced-motion` では即時）
+- 余白は 4px 刻み（4 / 8 / 12 / 16 / 24 / 32）。影は箱の影が clip-path で切れるので、文字の影とアクセントの光（`--ui-glow`）だけ
+- フォント: 見出し（画面名・タイトル・ボタン・ロゴ）は Google Fonts の Rajdhani 600 の 1 ファイル（`display=swap`。使う文字はラテン文字だけなので、Google の CSS のうち latin のファイルしか読まれない）。フォールバックは system-ui。本文と数値は等幅のシステムフォント（`ui-monospace` …）。読み込めなくても system-ui で同じ配置に収まる（ボタンは幅が足りなければ折り返す）
+- 共通クラス: `.ui-button`（`.is-primary` 決定・出撃 / `.is-ghost` 戻る / `.is-danger` タイトルへ・中断・削除）・`.ui-panel`・`.ui-dialog`・`.ui-item`（ミッション・機体・モードの一覧の項目）・`.ui-toggle`（ポーズメニューの設定）・`.ui-field`（入力欄）・`.ui-heading` / `.ui-title` / `.ui-kicker`・`.ui-toast`。部品のセレクタは `:where()` で詳細度 0（CSS の読み込み順によらず各画面の CSS で上書きできる）。`hidden` 属性は部品の `display` より優先
+- 載せ替えた画面: 読み込み中・タイトル・パイロット名・モード選択・ミッション一覧・ブリーフィング・ハンガー（確認ダイアログを含む）・ポーズ（設定・セーブデータ）・リザルト。飛行中の HUD・タッチ操作・⏸ ボタンの配置と挙動は変えていない（HUD はもともと同じシアン）
+- ミッション一覧などキャンペーンの画面は、横画面のスマホで収まらないとき上から並べてスクロールする（以前は中央寄せで上の見出しが切れていた）。高さ 480px 以下では一覧の項目を 44px に詰める
+
+#### タイトル・ブランド素材・PWA（4-10）
+
+- ロゴ: `public/brand/logo.png` があれば画像（画面の幅 70%・高さ 36% に収める）、無ければ「SkyRaid」のテキスト（Rajdhani の斜体、白 → シアンのグラデーション）。起動時に画像として読めるかを調べて切り替える（Cloudflare Pages は無いファイルに index.html を返すことがあるので、「画像として読めるか」で判定）
+- 起動して最初にタイトルを出したときだけ 0.6 秒の HUD 展開（上下の線が中央から伸びる 0.33 秒・四隅の括弧 0.24 秒 → ロゴ 0.24〜0.54 秒 → 「タップ / Enter で開始」とパイロット名 0.36〜0.6 秒でフェードイン）。2 回目以降（タイトルへ戻ったとき）は出さない。全体に 3px ごとの薄いスキャンライン
+- ブランド素材の受け口は `public/brand/`（`logo.png`・`icon-512.png`・`icon-192.png`・`favicon.ico`）。今は仮のアイコン（`icon.svg` と、そこから作った PNG・ICO）。差し替え方は README
+- PWA: `manifest.webmanifest`（名前 SkyRaid: Titan Skies・短縮名 SkyRaid・`standalone`・`landscape`・テーマ色 `#050a12`）と Service Worker（vite-plugin-pwa の generateSW。ビルド成果物（JS・CSS・HTML・画像・manifest）をプリキャッシュし、オフラインでも起動できる。Google Fonts はキャッシュしない）。SW は本番ビルドだけ登録する
+- 更新: 新しい SW は待機させ（skipWaiting しない）、全部のタブを閉じた次の起動で差し替わる。待機に入ったら画面下に「新しいバージョンがあります（次回の起動で更新）」を 12 秒（「今すぐ更新」で切り替えて読み込み直す・「閉じる」）。初めてのインストールでは出さない。判定は `src/core/sw-update.ts`（DOM 非依存・テストあり）
+- スマホ: standalone で起動したときはステータスバーの下まで描き（`black-translucent`）、画面の部品は safe-area の内側に置く（`--ui-safe-*`）。iOS の Safari でブラウザから開いたとき、2 回目以降の起動で 1 度だけ画面下に「共有ボタン →「ホーム画面に追加」で全画面で遊べます」を 10 秒（起動回数と表示済みは localStorage の `skyraid.launches` / `skyraid.installHintShown`。セーブデータとは別）
+
 #### HUD の決めた数値（1-4。値は `src/data/hud.ts`）
 
 - 色はシアン `rgba(110, 240, 255, 0.85)` の 1 色 + 警告の赤。箱・レーダーの背景は半透明で背景が見える。フォントは Web フォントなし（数字は等幅のシステムフォント、ラベルは system-ui）
@@ -523,7 +544,7 @@
 - 固定ステップ更新（ゲームの時間）は飛行中だけ進める。ポーズ・タイトル・モード選択では止め、止めている間の時間は貯めない（再開しても一気に進まない）。描画は続けるが、ポーズ中は機体・カメラ・海の波も止まる
 - 画面遷移は CSS transition のフェード 0.3 秒。カメラが切り替わる遷移（モード選択 → 飛行、ポーズ → タイトル）は一瞬黒にして 0.3 秒で明ける暗転で隠す
 - 読み込み中: 起動時に `BOOT_TASKS`（`src/core/boot.ts`）を順に Promise で待ち、進捗バーを出す。アセットはまだ無いので即完了
-- タイトル: 背景は実際のシーン。デモカメラが島の中心の周りを半径 3600m・高度 480m で 150 秒に 1 周（約 2.4°/秒）し、島の中心の高さ 800m を見る（2-5 の事前修正。それまでは高度 600m・注視点 200m。山頂（約 600m）を画面の中央より下に置き、山が画面の下半分に入るようにした）。開始位置は起動位置と同じ南側（+Z）。ロゴは「SkyRaid」のテキストと CSS のみ（サブタイトルなし。画像・Web フォントなし）。画面のどこをタップ / Enter で開始
+- タイトル: 背景は実際のシーン。デモカメラが島の中心の周りを半径 3600m・高度 480m で 150 秒に 1 周（約 2.4°/秒）し、島の中心の高さ 800m を見る（2-5 の事前修正。それまでは高度 600m・注視点 200m。山頂（約 600m）を画面の中央より下に置き、山が画面の下半分に入るようにした）。開始位置は起動位置と同じ南側（+Z）。ロゴは「SkyRaid」のテキストと CSS のみ（サブタイトルなし。4-10 から画像の受け口と見出しの Web フォント。上の「タイトル・ブランド素材・PWA」）。画面のどこをタップ / Enter で開始
 - モード選択: フリーフライトとキャンペーン（2-4）を選べる。PvP・レイドは「近日」と表示して押せない。Esc / 「← タイトルへ」で戻る
 - フリーフライト: モード選択から入るたびに起動位置・巡航速度から始める。墜落は撃墜と同じ扱い（2-4）。戦域の境界の外では「RETURN TO BATTLEFIELD」を出すだけ（カウント・失敗なし）
 - ポーズ: Esc / パッドの Start / 右上の ⏸ ボタン（一辺 44px。タッチ操作中は右上のヨーボタンの左隣、間隔 12px）。メニューは「再開」「設定 ▼」（画質・タッチ・HUD・全画面。開閉できる）「タイトルへ」。Esc / Start でも再開
@@ -533,6 +554,13 @@
 ## 12. データ保存と安全
 
 - フェーズ3まで: localStorage のみ
+
+#### セキュリティヘッダー（4-10。`public/_headers`、Cloudflare Pages の形式）
+
+- Content-Security-Policy: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`。ビルド後に `_headers` を付けて配信し、ヘッドレスのブラウザでタイトル → 飛行 → ポーズまで違反が 0 件なことを確かめた
+- X-Content-Type-Options: nosniff / Referrer-Policy: strict-origin-when-cross-origin / Permissions-Policy: camera・microphone・geolocation・payment・usb を無効 / X-Frame-Options: DENY（`frame-ancestors` を知らない古いブラウザ向け）
+- `sw.js` と `manifest.webmanifest` は `Cache-Control: no-cache`（更新をすぐ見つける）
+- DOM に文字を入れるのは `textContent` だけ（`innerHTML` は使わない。4-10 でタイトルの 1 か所（固定の文字列）もなくした）。パイロット名・セーブデータの復元の文字列も `textContent` / `value` で扱う
 
 #### セーブデータ（3-1。スキーマは `src/progression/save.ts`、読み書きは `src/progression/save-store.ts`、値は `src/data/save.ts`。Three.js・DOM 非依存）
 

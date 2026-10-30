@@ -75,7 +75,7 @@ export class UpgradeRow {
     for (let i = UPGRADE_LEVELS.min + 1; i <= UPGRADE_LEVELS.max; i++)
       this.pips.push(el('span', 'hangar-pip', pips));
     el('div', 'hangar-upgrade-effect', row, UPGRADE_INFO[kind].effect);
-    this.button = createButton(row, 'menu-button hangar-upgrade-button', '', () => {
+    this.button = createButton(row, 'ui-button hangar-upgrade-button', '', () => {
       onUpgrade(kind);
     });
   }
@@ -103,13 +103,13 @@ export class ConfirmDialog {
   constructor(parent: HTMLElement) {
     this.root = el('div', 'hangar-confirm', parent);
     this.root.hidden = true;
-    const box = el('div', 'hangar-confirm-box', this.root);
+    const box = el('div', 'ui-dialog hangar-confirm-box', this.root);
     this.text = el('p', 'hangar-confirm-text', box);
     const buttons = el('div', 'campaign-buttons', box);
-    createButton(buttons, 'menu-button campaign-back', 'やめる', () => {
+    createButton(buttons, 'ui-button is-ghost campaign-back', 'やめる', () => {
       this.close();
     });
-    this.ok = createButton(buttons, 'menu-button campaign-go', '購入する', () => {
+    this.ok = createButton(buttons, 'ui-button is-primary campaign-go', '購入する', () => {
       const fn = this.action;
       this.close();
       fn?.();

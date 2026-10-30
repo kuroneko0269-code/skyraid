@@ -1,3 +1,4 @@
+import './theme.css';
 import './screen.css';
 import { SCREEN_CONFIG } from '../data/screens';
 

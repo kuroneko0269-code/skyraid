@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- SkyRaid の仮アイコン（4-10）。public/brand/ の icon-192.png・icon-512.png・favicon.ico を差し替えれば使われなくなる -->
+  <rect width="512" height="512" fill="#050a12"/>
+  <path d="M136 96H416V376L376 416H96V136Z" fill="#0a1a2a" stroke="#6ef0ff" stroke-width="10" stroke-linejoin="miter"/>
+  <path d="M256 128 276 236 380 300V324L276 300 268 364 300 386V400L256 388 212 400V386L244 364 236 300 132 324V300L236 236Z" fill="#6ef0ff"/>
+  <path d="M120 440H200M312 72H392" stroke="#6ef0ff" stroke-width="6" opacity="0.6"/>
+</svg>
