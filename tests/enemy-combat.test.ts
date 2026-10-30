@@ -104,7 +104,7 @@ describe('陣営とミサイル', () => {
 });
 
 describe('プレイヤーの被弾とリスポーン', () => {
-  it('HP 0 で撃墜 → 操作を受け付けず、3 秒後に初期位置へ HP 満タンで戻る', () => {
+  it('HP 0 で撃墜 → 操作を受け付けず、3 秒後に撃墜地点の 300m 上空へ HP 満タンで戻る（フリーフライト）', () => {
     const ff = freeFlight();
     let downs = 0;
     let respawns = 0;
@@ -122,7 +122,10 @@ describe('プレイヤーの被弾とリスポーン', () => {
     expect(ff.player.isDestroyed).toBe(true);
     ff.step(LEVEL, NONE, DT);
     expect(ff.player.hp).toBe(ff.player.maxHp);
-    expect(ff.aircraft.state.position).toEqual({ x: 30000, y: 1500, z: 0 });
+    // 地形なし（地表 = 高度 0）なので、撃墜地点の真上 300m・水平
+    expect(ff.aircraft.state.position).toEqual({ x: at.x, y: 300, z: at.z });
+    const q = ff.aircraft.state.orientation;
+    expect(Math.abs(q.x) + Math.abs(q.z)).toBeLessThan(1e-9);
     expect(downs).toBe(1);
     expect(respawns).toBe(1);
   });

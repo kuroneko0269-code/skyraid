@@ -159,7 +159,7 @@ describe('仮ミッションのシミュレーション（シード固定）', (
 });
 
 describe('フリーフライト', () => {
-  it('墜落は撃墜と同じ扱い: 3 秒後に起動位置へ戻る（何度でも）', () => {
+  it('墜落は撃墜と同じ扱い: 3 秒後に墜落地点の 300m 上空へ戻る（4-6 の事前修正）', () => {
     const play = newPlay(15);
     play.startFree();
     const s = play.session;
@@ -174,9 +174,12 @@ describe('フリーフライト', () => {
     }
     expect(s.player.downCount).toBe(1);
     expect(s.player.active).toBe(false);
-    for (let i = 0; i < 3 * 60 + 2; i++) play.step(bot.controls, idle, DT);
+    const wreck = { ...s.aircraft.state.position };
+    for (let i = 0; i < 3 * 60 + 2 && !s.player.active; i++) play.step(bot.controls, idle, DT);
     expect(s.player.active).toBe(true);
-    expect(s.aircraft.state.position.z).toBeGreaterThan(4400);
+    const p = s.aircraft.state.position;
+    expect([p.x, p.z]).toEqual([wreck.x, wreck.z]);
+    expect(p.y).toBeCloseTo(getGroundHeight(wreck.x, wreck.z) + 300, 6);
   });
 
   it('戦域の外は警告だけで失敗しない。的・ドローン・敵機はフリーフライトの設定どおり', () => {

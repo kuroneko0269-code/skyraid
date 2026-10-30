@@ -1,11 +1,13 @@
 // 飛行 1 回分のゲーム状態（Three.js 非依存）: プレイヤー機・HP・戦闘（的・ドローン）・敵機（2-3）。
 // フリーフライト（startFree）とミッション（startMission。出現物はランナーが spawn で出す）で共用する（2-4）。
-// 固定ステップで step() を呼ぶ。撃墜（地面・海面への墜落も）されると playerRespawnSeconds 後に開始位置へ戻る
+// 固定ステップで step() を呼ぶ。撃墜（地面・海面への墜落も）されると playerRespawnSeconds 後に復帰する:
+// フリーフライトは墜落（撃墜）地点の地表から spawn.position.y（300m）上空に水平で、ミッションは開始位置へ（4-6 の事前修正）
 import { EnemySquadron, createEnemies } from '../ai/enemy-squadron';
 import { CombatSystem, createCombatInput, type CombatInput } from '../combat/combat-system';
 import type { Rng } from '../combat/gun';
 import type { CombatTarget } from '../combat/target';
 import { FREE_FLIGHT_ENEMIES, type Difficulty, type EnemyForceConfig } from '../data/ai';
+import { FLIGHT_CONFIG } from '../data/flight';
 import { ISLAND_MAP } from '../data/maps';
 import { WORLD_CONFIG } from '../data/terrain';
 import { Aircraft, type AircraftControls, type GroundHeightFn } from '../entities/aircraft';
@@ -14,7 +16,15 @@ import { PlayerVitals } from '../entities/player-vitals';
 import { TargetBalloon, TargetField } from '../entities/target-balloon';
 import { TargetDrone } from '../entities/target-drone';
 import type { FlightOptions } from '../flight/flight-model';
-import { copyQuat, copyVec3, quatIdentity, vec3, type Quat, type Vec3 } from '../flight/math';
+import {
+  copyQuat,
+  copyVec3,
+  quatIdentity,
+  rotateVec3,
+  vec3,
+  type Quat,
+  type Vec3,
+} from '../flight/math';
 import { BoundaryWatch } from './boundary';
 import type { DestroyableKind, Pose, SpawnDef } from './types';
 import type { MissionWorld } from './world';
@@ -32,6 +42,8 @@ export interface FlightSessionOptions {
 export type SessionMode = 'free' | 'mission';
 
 const NO_INPUT = createCombatInput();
+const FORWARD: Readonly<Vec3> = { x: 0, y: 0, z: -1 };
+const scratchForward: Vec3 = vec3();
 
 export class FlightSession implements MissionWorld {
   readonly aircraft: Aircraft;
@@ -39,6 +51,8 @@ export class FlightSession implements MissionWorld {
   readonly combat: CombatSystem;
   readonly squadron: EnemySquadron;
   readonly enemies: readonly EnemyAircraft[];
+  /** 地表の高さ（地形なしのテストでは FLIGHT_CONFIG.groundAltitude） */
+  private readonly ground: (x: number, z: number) => number;
   /** フリーフライトの戦域の境界（警告だけ。ミッションの境界はランナーが持つ） */
   readonly freeBoundary = new BoundaryWatch(ISLAND_MAP, false);
   mode: SessionMode = 'free';
@@ -62,6 +76,7 @@ export class FlightSession implements MissionWorld {
 
   constructor(options: FlightSessionOptions = {}) {
     const ground = options.groundHeight;
+    this.ground = ground ?? (() => FLIGHT_CONFIG.groundAltitude);
     const rng = options.rng ?? Math.random;
     this.freeStart = options.start ?? WORLD_CONFIG.start;
     copyVec3(this.startPosition, this.freeStart);
@@ -263,7 +278,8 @@ export class FlightSession implements MissionWorld {
   };
 
   private respawn(): void {
-    this.aircraft.respawn(this.startPosition, this.startOrientation);
+    if (this.mode === 'free') this.respawnAboveWreck();
+    else this.aircraft.respawn(this.startPosition, this.startOrientation);
     this.player.revive();
     this.player.step(1 / 60);
     // 補給（弾・フレアも満タンに戻す）
@@ -272,5 +288,21 @@ export class FlightSession implements MissionWorld {
     this.combat.gun.heat.reset();
     this.combat.targeting.reset();
     for (const fn of this.respawnListeners) fn();
+  }
+
+  /** フリーフライト: 墜落（撃墜）地点の地表から spawn.position.y 上空に、墜落前の機首方位のまま水平で戻す */
+  private respawnAboveWreck(): void {
+    const a = this.aircraft;
+    const p = a.state.position;
+    this.wreck.x = p.x;
+    this.wreck.y = this.ground(p.x, p.z) + FLIGHT_CONFIG.spawn.position.y;
+    this.wreck.z = p.z;
+    // 機首（-Z）の水平成分から方位を出す（真上・真下を向いていたら北向き = 0°）
+    const forward = rotateVec3(scratchForward, a.state.orientation, FORWARD);
+    const heading =
+      Math.abs(forward.x) + Math.abs(forward.z) < 1e-6
+        ? 0
+        : (Math.atan2(forward.x, -forward.z) * 180) / Math.PI;
+    a.respawn(this.wreck, headingQuat(this.wreckOrientation, heading));
   }
 }
