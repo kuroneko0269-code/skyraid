@@ -39,6 +39,12 @@ export interface QualityPreset {
   readonly cloudSteps: number;
   /** 雲の影（地形と海を雲の密度で暗くする。シャドウマップは使わない） */
   readonly cloudShadows: boolean;
+  /** 木の本数（4-6。src/render/vegetation.ts。配置は決定的で、少ない画質は多い画質の先頭の部分集合） */
+  readonly treeCount: number;
+  /** 岩・崖の法線の細部（4-6。手続きノイズで法線を揺らし、光の当たり方で凹凸を見せる。terrainDetail が true のときだけ） */
+  readonly terrainNormalDetail: boolean;
+  /** 森の地面に、木の影の代わりに太陽と反対側へずらした暗いまだらを描く（4-6。シャドウマップは使わない） */
+  readonly treeShade: boolean;
 }
 
 export const CLOUD_MODES = ['billboard', 'volume'] as const;
@@ -61,6 +67,9 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     cloudMode: 'billboard',
     cloudSteps: 0,
     cloudShadows: false,
+    treeCount: 3000,
+    terrainNormalDetail: false,
+    treeShade: false,
   },
   medium: {
     shadows: true,
@@ -77,6 +86,9 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     cloudMode: 'volume',
     cloudSteps: 8,
     cloudShadows: false,
+    treeCount: 12000,
+    terrainNormalDetail: true,
+    treeShade: false,
   },
   high: {
     shadows: true,
@@ -93,6 +105,9 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     cloudMode: 'volume',
     cloudSteps: 12,
     cloudShadows: true,
+    treeCount: 30000,
+    terrainNormalDetail: true,
+    treeShade: true,
   },
 };
 

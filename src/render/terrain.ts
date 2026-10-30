@@ -9,6 +9,7 @@ import {
 } from './terrain-geometry';
 import {
   createHeightField,
+  defaultHeightField,
   getGroundHeight,
   getHeight,
   type HeightField,
@@ -27,7 +28,8 @@ import {
 import {
   createDetailedTerrainMaterial,
   createSimpleTerrainMaterial,
-  setTerrainCloudShadow,
+  setTerrainShaderFlags,
+  type TerrainShaderFlags,
 } from './terrain-material';
 import type { CloudUniforms } from './cloud-field';
 
@@ -62,11 +64,11 @@ export class Terrain {
   private triangles = 0;
 
   constructor(
-    readonly field: HeightField = createHeightField(),
+    readonly field: HeightField = defaultHeightField,
     private readonly config: TerrainConfig = TERRAIN_CONFIG,
     cloud?: CloudUniforms,
   ) {
-    // cloud を渡すと、画質「高」で雲の影を付けられる（setCloudShadow）
+    // cloud を渡すと、画質「高」で雲の影を付けられる（setShaderFlags）
     this.detailedMaterial = createDetailedTerrainMaterial(cloud);
     this.material = this.detailedMaterial;
     this.object.name = 'terrain';
@@ -117,9 +119,12 @@ export class Terrain {
     for (const chunk of this.chunks) chunk.mesh.material = material;
   }
 
-  /** 雲の影（画質「高」）。コンストラクタに雲の uniform を渡していないと何もしない */
-  setCloudShadow(enabled: boolean): void {
-    setTerrainCloudShadow(this.detailedMaterial, enabled);
+  /**
+   * 層のシェーダーの切り替え: 雲の影（画質「高」。コンストラクタに雲の uniform を渡していないと何もしない）・
+   * 岩と崖の法線の細部・木の影の代わりのまだら（4-6）
+   */
+  setShaderFlags(flags: Partial<TerrainShaderFlags>): void {
+    setTerrainShaderFlags(this.detailedMaterial, flags);
   }
 
   /** カメラ位置でチャンクごとの段を選び直す。描画フレームごとに呼ぶ */

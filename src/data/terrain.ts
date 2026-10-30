@@ -32,6 +32,53 @@ export const TERRAIN_CONFIG = {
     /** 海岸から沖へ海底が下がる幅（t の単位）と最大深さ */
     shelfWidth: 0.35,
     seaDepth: 60,
+    /**
+     * 海岸の作り分け（4-6）。外洋側（風上。src/data/wind.ts の風が吹いてくる側）は崖、風下側は遠浅の砂浜。
+     * 風上らしさは「中心から見た向きと風向きの内積」をノイズで揺らして決める。どちらも海岸線（t = 1）の位置は変えない
+     */
+    coast: {
+      /** 内積がこの範囲で 0 → 1（風上・風下それぞれ）。境目をノイズでずらす量 */
+      sideFrom: -0.15,
+      sideTo: 0.55,
+      sideNoise: 0.3,
+      /** 風上の崖の高さ（m）と、海岸から内陸へ崖が立ち上がる幅（t の単位。0.012 × 2900m ≒ 35m） */
+      cliffHeight: 32,
+      cliffWidth: 0.012,
+      /** 風上の海底は棚の幅をこの割合だけ狭める（崖の下はすぐ深い） */
+      cliffShelf: 0.55,
+      /** 風下は t がこの値から海岸までの土地をなだらかにして（最大 beachFlatten の割合だけ低く）浜を広げる */
+      beachFrom: 0.8,
+      beachFlatten: 0.55,
+    },
+  },
+  /**
+   * 生成時の水力浸食（4-6。src/render/terrain-gen/erosion.ts）。島を覆う範囲を resolution × resolution の格子で
+   * 浸食し、元の高さとの差分を高さ関数に足す（細部は従来のノイズのまま）。海抜 minHeight m より下は変えない
+   * （海岸線・水深・泡の位置を 4-2c から動かさない）。minHeight〜fadeHeight で効きを 0 → 1
+   */
+  erosion: {
+    enabled: true,
+    /** 格子が覆う一辺（m、原点中心）。島の外周（約 3420m）+ 余裕 */
+    extent: 7400,
+    resolution: 256,
+    minHeight: 5,
+    fadeHeight: 20,
+    /** 乱数のシード（TERRAIN_CONFIG.seed に足す） */
+    seedOffset: 7,
+    droplets: 28000,
+    maxSteps: 30,
+    inertia: 0.05,
+    capacity: 8,
+    minCapacity: 0.01,
+    erodeRate: 0.4,
+    depositRate: 0.3,
+    evaporate: 0.02,
+    gravity: 4,
+    radius: 1,
+    heightScale: 600,
+    /** 風下の堆積を (1 + leeDeposit)、風上を (1 − windwardLoss) 倍に（波が土を運び去る / 浜に寄せる） */
+    leeDeposit: 0.6,
+    windwardLoss: 0.6,
   },
   /**
    * 高さ（と傾き）に応じた頂点カラー（sRGB）。各帯の境目は blend m かけてなめらかに混ぜる
@@ -40,14 +87,13 @@ export const TERRAIN_CONFIG = {
     seabed: 0x8a7d5c,
     sand: 0xd8c690,
     grass: 0x5d8a3c,
-    forest: 0x3f6a2e,
+    forest: 0x2c4a22,
     rock: 0x7a7266,
     snow: 0xf2f4f7,
-    /** 砂浜の上端・草地→森・森→岩・岩→雪 の高さ */
+    /** 砂浜の上端・岩→雪 の高さ。森は 4-6 から木の配置と同じ密度（src/data/vegetation.ts）、岩は森の上から */
     sandTop: 4,
-    forestStart: 90,
-    rockStart: 260,
-    snowStart: 470,
+    rockStart: 400,
+    snowStart: 515,
     blend: 25,
     /** 法線の y がこれより小さい（急斜面）と岩にする。0.75 で約 41° */
     steepNormalY: 0.75,
@@ -76,19 +122,80 @@ export const WORLD_CONFIG = {
 } as const;
 
 /**
- * 地形の近距離のディテール（4-1。画質「中」以上）。三面マッピング（triplanar）の手続きノイズで
- * 頂点カラーの明るさをばらつかせ、草・岩の粒を出す。テクスチャ画像は使わない。描画は src/render/terrain-material.ts
+ * 地形の質感（4-1 → 4-6。画質「中」以上。描画は src/render/terrain-material.ts / terrain-layers-glsl.ts）。
+ * 傾斜と高さで層（砂浜 / 草地 / 森 / 岩 / 崖 / 雪）をシェーダーの中で切り替え、層ごとに違う粒の大きさの
+ * 三面マッピングの手続きノイズで明るさをばらつかせる。テクスチャ画像は使わない。
+ * 「低」は従来どおり頂点カラー（TERRAIN_CONFIG.colors）の Lambert
  */
 export const TERRAIN_DETAIL_CONFIG = {
-  /** 細かい粒（草・小石）: ノイズの一辺（m）、明るさのばらつき（±割合）、消える距離（m） */
-  fine: { cell: 1.5, amplitude: 0.25, fadeStart: 120, fadeEnd: 380 },
-  /** 中くらいのまだら（草むら・岩の割れ目） */
-  medium: { cell: 8, amplitude: 0.2, fadeStart: 500, fadeEnd: 1400 },
+  /** 層の色（sRGB。PBR の反射率） */
+  colors: {
+    seabed: 0x8a7d5c,
+    sand: 0xd2bf8c,
+    grass: 0x587a36,
+    /** 森の地面（木の下の暗い緑）。forestLight とまだらに混ぜる */
+    forest: 0x1e3417,
+    forestLight: 0x30491f,
+    /** 森の上・岩の下の高原（草と岩屑） */
+    alpine: 0x7d8457,
+    rock: 0x77706a,
+    /** 崖の縞（地層）: 明るい層と暗い層 */
+    cliff: 0x9a8c7a,
+    cliffDark: 0x6e6254,
+    snow: 0xf2f4f7,
+  },
+  /** 砂浜の上端の高さ。風上（崖の海岸）は低く、風下（遠浅の浜）は高い */
+  sandTop: { windward: 2.5, leeward: 8 },
+  /** 森の層の色を出す範囲（木の配置 VEGETATION_CONFIG と同じ条件 + 境目のぼかし m・度） */
+  forestBlend: { height: 15, slopeDeg: 4 },
+  /** 高原（alpine）が始まる高さ・岩が始まる高さ */
+  alpineStart: 340,
+  rockStart: 400,
+  /** 傾斜で岩・崖にする角度（度）。境目は ±slopeBlend 度でぼかす */
+  rockSlopeDeg: 30,
+  cliffSlopeDeg: 50,
+  slopeBlendDeg: 3,
+  /** 境目を乱すノイズ: 大小 2 枚（一辺 m）。高さの境目は ±heightJitter m、傾斜の境目は ±slopeJitter 度ずらす */
+  boundaryNoise: { large: 37, small: 9, heightJitter: 14, slopeJitter: 5 },
+  /** 崖の縞: 間隔（m）、高さ方向のうねり（m）、明暗の強さ */
+  strata: { spacing: 4.5, warp: 3.5, contrast: 0.3 },
+  /**
+   * 雪: 雪線の高さ。北向き（+Z。太陽の反対側で日陰になる）の斜面ほど northBias m 下がり、境目はノイズで ±noise m。
+   * 傾斜 maxSlopeDeg を超える急斜面には積もらない
+   */
+  snow: { start: 515, northBias: 80, noise: 25, maxSlopeDeg: 45, north: { x: 0, z: 1 } },
+  /**
+   * 粒（三面マッピングの値ノイズ）: 細かい（一辺 fine m）・粗い（coarse m）・まだら（mottle m）の 3 枚を、
+   * 層ごとの強さ（± 割合）で混ぜる。岩は粗く、草は細かく。fade は消え始め〜消えきる距離
+   */
+  grain: {
+    fine: { cell: 0.8, fadeStart: 100, fadeEnd: 300 },
+    coarse: { cell: 3.5, fadeStart: 250, fadeEnd: 800 },
+    mottle: { cell: 14, fadeStart: 700, fadeEnd: 2000 },
+    /** 層ごとの [fine, coarse, mottle] の強さ */
+    sand: [0.12, 0.05, 0.08],
+    grass: [0.28, 0.08, 0.16],
+    forest: [0.1, 0.3, 0.35],
+    alpine: [0.2, 0.18, 0.15],
+    rock: [0.08, 0.35, 0.2],
+    cliff: [0.06, 0.25, 0.15],
+    snow: [0.03, 0.06, 0.05],
+  },
   /** 大きな色むら（真上から投影。遠くまで残す）。草地の黄緑〜深緑の揺らぎ */
   macro: { cell: 60, amplitude: 0.12, fadeStart: 2500, fadeEnd: 4500 },
-  /** 急斜面（岩）の粒を強くする倍率。法線の y が rockNormalY より小さいほど岩扱い */
-  rockBoost: 1.6,
-  rockNormalY: { from: 0.85, to: 0.65 },
-  /** 地形の粗さ（PBR）。草地・岩はほぼ完全な拡散面 */
+  /**
+   * 法線の細部（QualityPreset.terrainNormalDetail）: 岩・崖の面を手続きノイズの勾配で揺らす。
+   * 粗い凹凸（一辺 coarse m・高さ ±coarseDepth m）と細かい凹凸、崖は縞の段差（strataDepth m）も足す
+   */
+  normal: {
+    coarse: 4.5,
+    coarseDepth: 1.2,
+    fine: 1.3,
+    fineDepth: 0.25,
+    strataDepth: 0.25,
+    fadeStart: 250,
+    fadeEnd: 900,
+  },
+  /** 地形の粗さ（PBR）。草地・岩はほぼ完全な拡散面、雪は少しだけ艶 */
   roughness: 0.95,
 } as const;

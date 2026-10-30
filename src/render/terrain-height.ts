@@ -1,6 +1,8 @@
 // 島の高さ関数（Three.js 非依存）。地形メッシュの生成と、機体・カメラの地面判定の両方で使う
 import { TERRAIN_CONFIG } from '../data/terrain';
+import { WIND_CONFIG } from '../data/wind';
 import { SimplexNoise2D } from './noise';
+import { erode } from './terrain-gen/erosion';
 
 export type TerrainConfig = typeof TERRAIN_CONFIG;
 
@@ -12,6 +14,17 @@ export interface HeightField {
   getHeight: HeightFn;
   /** 衝突に使う地表の高さ。海の上では海面 */
   getGroundHeight: HeightFn;
+  /** 浸食する前の高さ（テスト・比較用） */
+  getBaseHeight: HeightFn;
+  /** 海岸の向き: 風上（崖）らしさ 0〜1 と風下（砂浜）らしさ 0〜1。どちらかは 0 */
+  coastSide(x: number, z: number): { windward: number; leeward: number };
+  /** 浸食にかかった時間（ms。浸食しない設定なら 0） */
+  readonly erosionMs: number;
+}
+
+export interface HeightFieldOptions {
+  /** false で浸食しない（TERRAIN_CONFIG.erosion.enabled より優先） */
+  erosion?: boolean;
 }
 
 function smoothstep(edge0: number, edge1: number, x: number): number {
@@ -19,17 +32,48 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
+/** Catmull-Rom の 1 次元の重み（p0..p3 の間、p1〜p2 を t で補間） */
+function catmull(p0: number, p1: number, p2: number, p3: number, t: number): number {
+  return (
+    p1 + 0.5 * t * (p2 - p0 + t * (2 * p0 - 5 * p1 + 4 * p2 - p3 + t * (3 * (p1 - p2) + p3 - p0)))
+  );
+}
+
 /**
  * 中央に山がある島の高さ関数を作る。
  * 中心からの距離を「海岸線の半径」（ノイズで出入り）で割った t（中心 0・海岸 1）で形を決め、
- * 山の中腹に丘と尾根のノイズを足す
+ * 山の中腹に丘と尾根のノイズを足す。海岸は風上を崖・風下を砂浜にし（4-6）、
+ * 最後に海抜 5m 以上へ水力浸食の差分を足す（4-6）
  */
-export function createHeightField(config: TerrainConfig = TERRAIN_CONFIG): HeightField {
+export function createHeightField(
+  config: TerrainConfig = TERRAIN_CONFIG,
+  options: HeightFieldOptions = {},
+): HeightField {
   const s = config.shape;
+  const c = s.coast;
   const noise = new SimplexNoise2D(config.seed);
   const coastOffset = Math.exp(-s.peakSharpness);
+  const windAngle = (WIND_CONFIG.direction * Math.PI) / 180;
+  const windX = Math.cos(windAngle);
+  const windZ = Math.sin(windAngle);
 
-  const getHeight = (x: number, z: number): number => {
+  const coastSide = (x: number, z: number): { windward: number; leeward: number } => {
+    const d = Math.sqrt(x * x + z * z);
+    // 中心から見た向きと風向き（吹いていく向き）の内積。正 = 風下、負 = 風上
+    const along = d > 1e-6 ? (x * windX + z * windZ) / d : 0;
+    const wobble = c.sideNoise * noise.noise(x / 2400 + 3.1, z / 2400 - 7.7);
+    const v = along + wobble;
+    return {
+      windward: smoothstep(c.sideFrom, c.sideTo, -v),
+      leeward: smoothstep(c.sideFrom, c.sideTo, v),
+    };
+  };
+
+  // 風上の崖の高さ（shapeHeight が書く）。浸食は崖を除いた形に掛け、崖は後から足す（格子より細い崖を浸食で崩さない）
+  let cliff = 0;
+
+  /** 崖を除いた形の高さ（m）。崖の高さは cliff に入れる */
+  const shapeHeight = (x: number, z: number): number => {
     const d = Math.sqrt(x * x + z * z);
     // ノイズごとに座標をずらして、海岸線・丘・尾根の模様が重ならないようにする
     const warp = noise.fbm(x * s.coastFrequency + 31.7, z * s.coastFrequency - 12.9, 3);
@@ -50,21 +94,106 @@ export function createHeightField(config: TerrainConfig = TERRAIN_CONFIG): Heigh
       h += s.ridgeAmplitude * (ridge - 0.5) * mountain;
     }
 
-    h -= s.seaDepth * smoothstep(1, 1 + s.shelfWidth, t);
+    // 海岸の作り分け（t = 1 では h = 0 のままなので海岸線は動かない）
+    cliff = 0;
+    const side = t > c.beachFrom - 0.05 && t < 1 + s.shelfWidth ? coastSide(x, z) : null;
+    let shelf = s.shelfWidth;
+    if (side) {
+      if (t < 1) {
+        // 風下: 海岸の手前を低くして遠浅の浜を広げる
+        h *= 1 - c.beachFlatten * side.leeward * smoothstep(c.beachFrom, 1, t);
+        // 風上: 内陸からゆるく上がった台地が、海岸の cliffWidth の幅で cliffHeight 切れ落ちる崖
+        const plateau = smoothstep(c.beachFrom, 1 - 6 * c.cliffWidth, t);
+        cliff = c.cliffHeight * side.windward * plateau * (1 - smoothstep(1 - c.cliffWidth, 1, t));
+      }
+      shelf *= 1 - c.cliffShelf * side.windward;
+    }
+
+    h -= s.seaDepth * smoothstep(1, 1 + shelf, t);
     return Math.max(h, config.seaLevel - s.seaDepth);
+  };
+
+  const getBaseHeight = (x: number, z: number): number => shapeHeight(x, z) + cliff;
+
+  // ---- 浸食（起動時に 1 回。格子の差分を Catmull-Rom で補間して足す） ----
+  const e = config.erosion;
+  const useErosion = options.erosion ?? e.enabled;
+  const res = e.resolution;
+  const cell = e.extent / (res - 1);
+  const half = e.extent / 2;
+  let delta: Float32Array | null = null;
+  let erosionMs = 0;
+  if (useErosion) {
+    const t0 = performance.now();
+    const heights = new Float32Array(res * res);
+    const mask = new Float32Array(res * res);
+    const depositScale = new Float32Array(res * res);
+    const maxCoast = s.coastRadius * (1 + s.coastWarp) + 100;
+    for (let j = 0; j < res; j++) {
+      for (let i = 0; i < res; i++) {
+        const x = -half + i * cell;
+        const z = -half + j * cell;
+        const k = i + j * res;
+        // 海岸線の最大半径より外は必ず海（浸食しない）。ノイズの計算を省く
+        if (x * x + z * z > maxCoast * maxCoast) {
+          heights[k] = config.seaLevel - s.seaDepth;
+          continue;
+        }
+        const h = shapeHeight(x, z);
+        heights[k] = h;
+        mask[k] = smoothstep(e.minHeight, e.fadeHeight, h);
+        const side = coastSide(x, z);
+        depositScale[k] = (1 + e.leeDeposit * side.leeward) * (1 - e.windwardLoss * side.windward);
+      }
+    }
+    const before = heights.slice();
+    erode({ resolution: res, heights, mask, depositScale }, e, config.seed + e.seedOffset);
+    delta = new Float32Array(res * res);
+    for (let k = 0; k < delta.length; k++) delta[k] = (heights[k] ?? 0) - (before[k] ?? 0);
+    erosionMs = performance.now() - t0;
+  }
+
+  const sampleDelta = (x: number, z: number): number => {
+    if (!delta) return 0;
+    const gx = (x + half) / cell;
+    const gz = (z + half) / cell;
+    const i = Math.floor(gx);
+    const j = Math.floor(gz);
+    if (i < 1 || j < 1 || i >= res - 2 || j >= res - 2) return 0;
+    const fx = gx - i;
+    const fz = gz - j;
+    const d = delta;
+    const row = (jj: number): number => {
+      const k = i + jj * res;
+      return catmull(d[k - 1] ?? 0, d[k] ?? 0, d[k + 1] ?? 0, d[k + 2] ?? 0, fx);
+    };
+    return catmull(row(j - 1), row(j), row(j + 1), row(j + 2), fz);
+  };
+
+  const getHeight = (x: number, z: number): number => {
+    const shape = shapeHeight(x, z);
+    const coastCliff = cliff;
+    if (!delta || shape <= e.minHeight) return shape + coastCliff;
+    // 補間の行き過ぎで海抜 5m 未満に効かないよう、元の高さでもう一度効きを掛ける。
+    // 削っても minHeight より下にはしない（海岸線と浅瀬の形を変えない）
+    const eroded = shape + sampleDelta(x, z) * smoothstep(e.minHeight, e.fadeHeight, shape);
+    return Math.max(eroded, e.minHeight) + coastCliff;
   };
 
   return {
     getHeight,
     getGroundHeight: (x, z) => Math.max(getHeight(x, z), config.seaLevel),
+    getBaseHeight,
+    coastSide,
+    erosionMs,
   };
 }
 
-/** 既定の島（TERRAIN_CONFIG のシード） */
-const defaultField = createHeightField();
+/** 既定の島（TERRAIN_CONFIG のシード。起動時に 1 回だけ浸食する） */
+export const defaultHeightField: HeightField = createHeightField();
 
 /** 既定の島の高さ（m）。海の下では負 */
-export const getHeight: HeightFn = defaultField.getHeight;
+export const getHeight: HeightFn = defaultHeightField.getHeight;
 
 /** 既定の島の、衝突に使う地表の高さ（海の上では海面） */
-export const getGroundHeight: HeightFn = defaultField.getGroundHeight;
+export const getGroundHeight: HeightFn = defaultHeightField.getGroundHeight;

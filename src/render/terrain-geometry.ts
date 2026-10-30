@@ -1,5 +1,7 @@
 import { BufferAttribute, BufferGeometry, Color } from 'three';
 import { TERRAIN_CONFIG } from '../data/terrain';
+import { VEGETATION_CONFIG } from '../data/vegetation';
+import { forestDensity } from './terrain-gen/forest';
 import type { HeightFn, TerrainConfig } from './terrain-height';
 
 export interface ChunkRect {
@@ -28,7 +30,19 @@ function hash2(x: number, z: number): number {
   return ((m ^ (m >>> 16)) >>> 0) / 4294967296;
 }
 
-/** 高さと傾きから地表の色を決める */
+const COS_FOREST_SLOPE = Math.cos((VEGETATION_CONFIG.maxSlopeDeg * Math.PI) / 180);
+
+/** 森の層（木を置く高度・傾斜の範囲）の重み 0〜1 */
+function forestZone(h: number, ny: number): number {
+  const v = VEGETATION_CONFIG;
+  return (
+    smoothstep(v.minHeight, v.minHeight + 15, h) *
+    (1 - smoothstep(v.maxHeight - 15, v.maxHeight, h)) *
+    smoothstep(COS_FOREST_SLOPE - 0.02, COS_FOREST_SLOPE + 0.02, ny)
+  );
+}
+
+/** 高さと傾きから地表の色を決める（画質「低」の頂点カラー） */
 export class TerrainPalette {
   private readonly seabed: Rgb;
   private readonly sand: Rgb;
@@ -53,7 +67,8 @@ export class TerrainPalette {
     const mixes: [Rgb, number][] = [
       [this.sand, smoothstep(-8, -1, h)],
       [this.grass, smoothstep(c.sandTop, c.sandTop + b * 0.25, h)],
-      [this.forest, smoothstep(c.forestStart - b, c.forestStart + b, h)],
+      // 森: 木の配置と同じ密度 × 森の層（高度・傾斜。4-6）
+      [this.forest, forestDensity(x, z) * forestZone(h, ny)],
       [
         this.rock,
         Math.max(

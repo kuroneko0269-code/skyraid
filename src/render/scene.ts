@@ -8,6 +8,8 @@ import { Clouds } from './clouds';
 import { SceneLights } from './lighting';
 import { Ocean } from './ocean';
 import { Terrain } from './terrain';
+import { defaultHeightField } from './terrain-height';
+import { Vegetation } from './vegetation';
 
 /** 空（大気散乱）・海・島・雲・太陽光をまとめて、カメラ位置と画質設定に合わせて更新する */
 export class World {
@@ -15,6 +17,8 @@ export class World {
   /** 雲の 3D ノイズと風（雲・地形・海の雲の影で共有） */
   readonly cloudField = new CloudField();
   readonly terrain = new Terrain(undefined, undefined, this.cloudField.uniforms);
+  /** 木（4-6）。本数は画質で決まる（applyQuality） */
+  readonly vegetation = new Vegetation(defaultHeightField.getHeight);
   readonly ocean: Ocean;
   readonly clouds: Clouds;
   readonly lights: SceneLights;
@@ -27,6 +31,7 @@ export class World {
       this.ocean.detailedMesh,
       this.ocean.simpleMesh,
       this.terrain.object,
+      this.vegetation.object,
       this.clouds.object,
     );
     // 空気遠近（Three.js の霧を大気散乱に読み替えたもの）
@@ -40,7 +45,12 @@ export class World {
     this.clouds.applyQuality(preset);
     this.terrain.setQuality(preset.drawDistance, preset.terrainMinLod);
     this.terrain.setDetail(preset.terrainDetail);
-    this.terrain.setCloudShadow(preset.cloudShadows);
+    this.terrain.setShaderFlags({
+      cloudShadow: preset.cloudShadows,
+      normalDetail: preset.terrainNormalDetail,
+      treeShade: preset.treeShade,
+    });
+    this.vegetation.setCount(preset.treeCount);
     this.lights.setShadows(preset.shadows, preset.shadowMapSize);
     // ブルームがあれば太陽のまぶしさはブルームに任せる
     this.atmosphere.setGlow(!(preset.postEffects && preset.bloom));
@@ -60,6 +70,7 @@ export class World {
     this.ocean.update(camera, time);
     this.clouds.update(camera, time);
     this.terrain.update(camera);
+    this.vegetation.update(camera, time);
     this.lights.follow(shadowCenter);
   }
 }

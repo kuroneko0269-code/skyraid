@@ -1,69 +1,33 @@
-// 地形のマテリアル（4-1）。画質「中」以上は PBR + 三面マッピングの手続きノイズで近距離のディテール、
-// 「低」は従来どおり Lambert（頂点カラーだけ）
+// 地形のマテリアル（4-1 → 4-6）。画質「中」以上は PBR + シェーダーの中の層（傾斜と高さで砂浜 / 草地 / 森 /
+// 岩 / 崖 / 雪。terrain-layers-glsl.ts）、「低」は従来どおり Lambert（頂点カラーだけ）
 import { MeshLambertMaterial, MeshStandardMaterial, type Material } from 'three';
 import { TERRAIN_DETAIL_CONFIG } from '../data/terrain';
 import { CLOUD_GLSL, type CloudUniforms } from './cloud-field';
+import { terrainLayersGlsl } from './terrain-layers-glsl';
 
-const f = (x: number): string => (Number.isInteger(x) ? `${x}.0` : String(x));
-
-function detailGlsl(): string {
-  const c = TERRAIN_DETAIL_CONFIG;
-  return /* glsl */ `
-  varying vec3 vDetailPos;
-  varying vec3 vDetailNormal;
-  // 正弦を使わないハッシュ（大きな座標でも精度が落ちにくい。Dave Hoskins の hash12）
-  float detailHash(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
-  }
-  float detailNoise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 u = fract(p);
-    u = u * u * (3.0 - 2.0 * u);
-    float a = detailHash(i);
-    float b = detailHash(i + vec2(1.0, 0.0));
-    float c = detailHash(i + vec2(0.0, 1.0));
-    float d = detailHash(i + vec2(1.0, 1.0));
-    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
-  }
-  // 三面マッピング: 法線の向きで 3 方向の投影を混ぜる（急斜面でも伸びない）
-  float detailTriplanar(vec3 p, vec3 w) {
-    return detailNoise(p.yz) * w.x + detailNoise(p.xz) * w.y + detailNoise(p.xy + 17.0) * w.z;
-  }
-  vec3 terrainDetail(vec3 albedo) {
-    float dist = distance(vDetailPos, cameraPosition);
-    vec3 n = normalize(vDetailNormal);
-    vec3 w = n * n;
-    w *= w;
-    w /= w.x + w.y + w.z;
-    float rock = 1.0 - smoothstep(${f(c.rockNormalY.to)}, ${f(c.rockNormalY.from)}, n.y);
-    float boost = mix(1.0, ${f(c.rockBoost)}, rock);
-    float k = 0.0;
-    float fine = 1.0 - smoothstep(${f(c.fine.fadeStart)}, ${f(c.fine.fadeEnd)}, dist);
-    if (fine > 0.0) {
-      k += (detailTriplanar(vDetailPos / ${f(c.fine.cell)}, w) - 0.5) * 2.0 * ${f(c.fine.amplitude)} * boost * fine;
-    }
-    float mid = 1.0 - smoothstep(${f(c.medium.fadeStart)}, ${f(c.medium.fadeEnd)}, dist);
-    if (mid > 0.0) {
-      k += (detailTriplanar(vDetailPos / ${f(c.medium.cell)}, w) - 0.5) * 2.0 * ${f(c.medium.amplitude)} * boost * mid;
-    }
-    float macroFade = 1.0 - smoothstep(${f(c.macro.fadeStart)}, ${f(c.macro.fadeEnd)}, dist);
-    float m = (detailNoise(vDetailPos.xz / ${f(c.macro.cell)}) - 0.5) * 2.0 * macroFade;
-    // 大きな色むら: 明るさ + 草の色相（黄緑 ⇄ 深緑）。岩・雪では色相を変えない
-    vec3 hue = mix(vec3(1.0), vec3(1.0 + 0.6 * m, 1.0 + 0.15 * m, 1.0 - 0.5 * m), (1.0 - rock) * ${f(c.macro.amplitude)});
-    return albedo * hue * max(0.0, 1.0 + k + m * ${f(c.macro.amplitude)} * 0.5);
-  }
-`;
+/** シェーダーの切り替え（define）。変えると再コンパイルする */
+export interface TerrainShaderFlags {
+  /** 雲の影（画質「高」） */
+  cloudShadow: boolean;
+  /** 岩・崖の法線の細部 */
+  normalDetail: boolean;
+  /** 木の影の代わりの暗いまだら（画質「高」） */
+  treeShade: boolean;
 }
 
+const FLAG_KEYS = ['cloudShadow', 'normalDetail', 'treeShade'] as const;
+const DEFINES: Record<(typeof FLAG_KEYS)[number], string> = {
+  cloudShadow: 'CLOUD_SHADOW',
+  normalDetail: 'TERRAIN_NORMAL_DETAIL',
+  treeShade: 'TREE_SHADE',
+};
+
 /**
- * 画質「中」以上: PBR（粗い拡散面）+ 近距離のディテール。影を受ける。
- * cloud を渡すと、define CLOUD_SHADOW（setCloudShadow）で雲の影（直射光だけを暗くする）を付けられる（4-2）
+ * 画質「中」以上: PBR（粗い拡散面）+ 層の質感。影を受ける。
+ * cloud を渡すと、define CLOUD_SHADOW で雲の影（直射光だけを暗くする）を付けられる（4-2）
  */
 export function createDetailedTerrainMaterial(cloud?: CloudUniforms): MeshStandardMaterial {
   const material = new MeshStandardMaterial({
-    vertexColors: true,
     roughness: TERRAIN_DETAIL_CONFIG.roughness,
     metalness: 0,
   });
@@ -83,11 +47,18 @@ export function createDetailedTerrainMaterial(cloud?: CloudUniforms): MeshStanda
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
-        `#include <common>\n${detailGlsl()}\n#ifdef CLOUD_SHADOW\n${CLOUD_GLSL}\n#endif`,
+        `#include <common>\n${terrainLayersGlsl()}\n#ifdef CLOUD_SHADOW\n${CLOUD_GLSL}\n#endif`,
       )
       .replace(
         '#include <color_fragment>',
-        '#include <color_fragment>\ndiffuseColor.rgb = terrainDetail(diffuseColor.rgb);',
+        '#include <color_fragment>\ndiffuseColor.rgb = terrainLayers();',
+      )
+      .replace(
+        '#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+        #ifdef TERRAIN_NORMAL_DETAIL
+          normal = normalize((viewMatrix * vec4(terrainDetailNormal(), 0.0)).xyz);
+        #endif`,
       )
       .replace(
         '#include <lights_fragment_end>',
@@ -96,21 +67,36 @@ export function createDetailedTerrainMaterial(cloud?: CloudUniforms): MeshStanda
           float cloudShade = cloudShadow(vDetailPos);
           reflectedLight.directDiffuse *= cloudShade;
           reflectedLight.directSpecular *= cloudShade;
+        #endif
+        #if defined(TREE_SHADE) && NUM_DIR_LIGHTS > 0
+          // 光の向きはビュー空間なので、ビュー行列の転置でワールドに戻す
+          vec3 sunWorld = normalize((vec4(directionalLights[0].direction, 0.0) * viewMatrix).xyz);
+          reflectedLight.directDiffuse *= 1.0 - terrainTreeShade(sunWorld);
         #endif`,
       );
   };
   // onBeforeCompile の中身が違うことをプログラムのキャッシュに伝える
-  material.customProgramCacheKey = () => 'terrain-detail';
+  material.customProgramCacheKey = () => 'terrain-layers';
   return material;
 }
 
-/** 雲の影の有無（define を付け外しして再コンパイル） */
-export function setTerrainCloudShadow(material: MeshStandardMaterial, enabled: boolean): void {
-  const defines = (material.defines ??= {});
-  if (enabled === 'CLOUD_SHADOW' in defines) return;
-  if (enabled) defines.CLOUD_SHADOW = '';
-  else delete defines.CLOUD_SHADOW;
-  material.needsUpdate = true;
+/** define を付け外しして再コンパイルする（変わったときだけ）。外すときは false（Three.js は書き出さない） */
+export function setTerrainShaderFlags(
+  material: MeshStandardMaterial,
+  flags: Partial<TerrainShaderFlags>,
+): void {
+  const defines: Record<string, unknown> = (material.defines ??= {});
+  let changed = false;
+  for (const key of FLAG_KEYS) {
+    const enabled = flags[key];
+    if (enabled === undefined) continue;
+    const name = DEFINES[key];
+    const current = defines[name] !== undefined && defines[name] !== false;
+    if (enabled === current) continue;
+    defines[name] = enabled ? '' : false;
+    changed = true;
+  }
+  if (changed) material.needsUpdate = true;
 }
 
 /** 画質「低」: 頂点カラーの Lambert（従来どおり。負荷を増やさない） */
