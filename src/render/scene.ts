@@ -1,11 +1,13 @@
-import { PerspectiveCamera, Scene } from 'three';
+import { PerspectiveCamera, Scene, type WebGLRenderer } from 'three';
 import { SCENE_CONFIG } from '../data/scene';
 import type { QualityPreset } from '../data/quality';
 import type { Vec3 } from '../flight/math';
+import { setAircraftEnvironment } from './aircraft-model/material';
 import { Atmosphere } from './atmosphere';
 import { CloudField } from './cloud-field';
 import { Clouds } from './clouds';
 import { SceneLights } from './lighting';
+import { createSkyEnvironment } from './sky-environment';
 import { Ocean } from './ocean';
 import { Terrain } from './terrain';
 import { defaultHeightField } from './terrain-height';
@@ -81,11 +83,12 @@ export interface WorldScene {
   world: World;
 }
 
-/** 空・海・島と光源のシーンを作る */
-export function createWorldScene(aspect: number): WorldScene {
+/** 空・海・島と光源のシーンを作る。機体の環境マップ（4-10 事前修正）もここで 1 回だけ焼く */
+export function createWorldScene(renderer: WebGLRenderer, aspect: number): WorldScene {
   const cfg = SCENE_CONFIG;
   const scene = new Scene();
   const world = new World(scene, cfg.camera.far);
+  setAircraftEnvironment(createSkyEnvironment(renderer, world.atmosphere));
 
   const camera = new PerspectiveCamera(cfg.camera.fov, aspect, cfg.camera.near, cfg.camera.far);
   camera.position.set(cfg.camera.position.x, cfg.camera.position.y, cfg.camera.position.z);

@@ -42,15 +42,13 @@ import { createTouchLink } from './ui/touch-link';
 import { Screens } from './ui/screens';
 
 const container = document.getElementById('app');
-if (!container) {
-  throw new Error('#app が見つかりません');
-}
+if (!container) throw new Error('#app が見つかりません');
 
 const renderer = new WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 container.appendChild(renderer.domElement);
 
-const { scene, camera, world } = createWorldScene(window.innerWidth / window.innerHeight);
+const { scene, camera, world } = createWorldScene(renderer, window.innerWidth / window.innerHeight);
 const pipeline = new RenderPipeline(renderer, scene, camera);
 const playerView = new PlayerView(scene);
 const aircraftMesh = playerView.mesh;

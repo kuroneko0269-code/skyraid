@@ -80,7 +80,11 @@ export const AIRCRAFT_MODEL_CONFIG = {
     radomeShade: 0.78,
     canopyOpaque: 0x14181d,
   },
-  paint: { metalness: 0.3, roughness: 0.62, normalScale: 0.4 },
+  /**
+   * envIntensity（4-10 事前修正）: 空の環境マップ（render/sky-environment.ts）の効き。影側を空の色で持ち上げる。
+   * 半球ライトの空の光と重なるので 1 より小さくする
+   */
+  paint: { metalness: 0.3, roughness: 0.62, normalScale: 0.4, envIntensity: 0.6 },
   /** キャノピー（自機・ハンガー）: 半透明の濃い色、反射はクリアコート */
   canopy: {
     color: 0x1d2a33,
@@ -89,6 +93,7 @@ export const AIRCRAFT_MODEL_CONFIG = {
     metalness: 0.2,
     clearcoat: 1,
     clearcoatRoughness: 0.05,
+    envIntensity: 1,
   },
   /** パネルラインと汚れの手続きテクスチャ（1 枚の濃さから色と法線マップを作る） */
   texture: {

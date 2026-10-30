@@ -5,6 +5,7 @@ import {
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   RGBADepthPacking,
+  type Texture,
   Vector2,
   Vector3,
   type WebGLProgramParametersWithUniforms,
@@ -93,11 +94,31 @@ function patch(
   }
 }
 
+/** 空の環境マップ（4-10 事前修正）を受ける機体のマテリアルと効きの強さ。地形・海には付けない */
+const envTargets = new Map<MeshStandardMaterial, number>();
+let environment: Texture | null = null;
+
+function useEnvironment<T extends MeshStandardMaterial>(material: T, intensity: number): T {
+  envTargets.set(material, intensity);
+  material.envMap = environment;
+  material.envMapIntensity = intensity;
+  return material;
+}
+
+/** 起動時に 1 回、空から作った環境マップを機体のマテリアル（作成済み・これから作るものすべて）に付ける */
+export function setAircraftEnvironment(texture: Texture): void {
+  environment = texture;
+  for (const [material, intensity] of envTargets) {
+    useEnvironment(material, intensity);
+    material.needsUpdate = true;
+  }
+}
+
 /** 機体の塗装（敵機・輸送機の InstancedMesh はこのまま。自機は animatePaint で動くパーツを付ける） */
 export function createPaintMaterial(): MeshStandardMaterial {
   const t = panelTextures();
   const p = AIRCRAFT_MODEL_CONFIG.paint;
-  return new MeshStandardMaterial({
+  const material = new MeshStandardMaterial({
     vertexColors: true,
     map: t.map,
     normalMap: t.normalMap,
@@ -105,6 +126,7 @@ export function createPaintMaterial(): MeshStandardMaterial {
     metalness: p.metalness,
     roughness: p.roughness,
   });
+  return useEnvironment(material, p.envIntensity);
 }
 
 /** 塗装と影のマテリアルに操舵面・ミサイルのシェーダーを付ける（自機・ハンガー） */
@@ -126,7 +148,7 @@ export function animatePaint(
 
 export function createCanopyMaterial(): MeshPhysicalMaterial {
   const c = AIRCRAFT_MODEL_CONFIG.canopy;
-  return new MeshPhysicalMaterial({
+  const material = new MeshPhysicalMaterial({
     color: c.color,
     transparent: true,
     opacity: c.opacity,
@@ -135,4 +157,5 @@ export function createCanopyMaterial(): MeshPhysicalMaterial {
     clearcoat: c.clearcoat,
     clearcoatRoughness: c.clearcoatRoughness,
   });
+  return useEnvironment(material, c.envIntensity);
 }

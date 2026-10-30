@@ -88,6 +88,11 @@ export const SKY_CONFIG = {
   radius: 1000,
   /** 空のドームの分割数（経度・緯度）。散乱は画素ごとに計算するので細かくなくてよい */
   domeSegments: { width: 32, height: 16 },
+  /**
+   * 機体の環境マップ（4-10 事前修正）: 起動時に 1 回、この高さ（m）から見た空を一辺 size のキューブに描いて
+   * PMREM にする。太陽の円盤とまぶしさは入れない（太陽の光は平行光源が受け持つ）
+   */
+  environment: { size: 64, height: 500 },
 } as const;
 
 /**
