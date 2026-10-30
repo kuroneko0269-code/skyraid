@@ -190,6 +190,14 @@ export class SaveStore {
     this.persist();
   }
 
+  /** データを書き換える（ハンガーの購入・強化・選択。3-3）。fn が true を返したら保存する */
+  transact(fn: (data: SaveData) => boolean): boolean {
+    if (!fn(this.data)) return false;
+    this.data.credits = clampCredits(this.data.credits);
+    this.persist();
+    return true;
+  }
+
   /** エクスポート用の文字列（base64） */
   exportString(): string {
     return encodeSave(this.data);

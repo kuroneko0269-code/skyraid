@@ -14,6 +14,8 @@ import { createButton, createScreen, setScreenShown } from './screen';
 export interface ResultExtras {
   readonly balance: number;
   readonly pilotName: string | null;
+  /** 報酬で新しい機体・強化が買える残高になった（3-3） */
+  readonly newGear: boolean;
 }
 
 /**
@@ -28,6 +30,7 @@ export class ResultScreen {
   private readonly objectives: HTMLUListElement;
   private readonly facts: HTMLDivElement;
   private readonly rank: HTMLDivElement;
+  private readonly gear: HTMLDivElement;
   private readonly retry: HTMLButtonElement;
 
   constructor(parent: HTMLElement, handlers: { onRetry: () => void; onList: () => void }) {
@@ -40,6 +43,8 @@ export class ResultScreen {
     this.rank = el('div', 'result-rank', panel);
     this.objectives = el('ul', 'result-objectives', panel);
     this.facts = el('div', 'campaign-facts', panel);
+    this.gear = el('div', 'result-gear', panel, 'ハンガーで新しい装備が買えます');
+    this.gear.hidden = true;
     const buttons = el('div', 'campaign-buttons', panel);
     createButton(buttons, 'menu-button campaign-back', 'ミッション一覧へ', handlers.onList);
     this.retry = createButton(buttons, 'menu-button campaign-go', 'もう一度', handlers.onRetry);
@@ -73,6 +78,7 @@ export class ResultScreen {
     fact('時間', formatClock(r.elapsedSeconds));
     fact('被弾', `${Math.round(r.damageTaken)} / ${r.maxHp}`);
     fact('報酬', `獲得 +${formatCredits(r.credits)} / 残高 ${formatCredits(extras.balance)}`);
+    this.gear.hidden = !extras.newGear;
   }
 
   setShown(shown: boolean): void {

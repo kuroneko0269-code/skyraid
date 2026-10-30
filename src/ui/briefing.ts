@@ -14,11 +14,13 @@ export class BriefingScreen {
   private readonly objectives: HTMLOListElement;
   private readonly facts: HTMLDivElement;
   private readonly launch: HTMLButtonElement;
+  private aircraftName = '';
+  private aircraftValue: HTMLSpanElement | null = null;
 
   constructor(
     parent: HTMLElement,
     private readonly locale: Locale,
-    handlers: { onLaunch: () => void; onBack: () => void },
+    handlers: { onLaunch: () => void; onBack: () => void; onHangar: () => void },
   ) {
     const root = createScreen(parent, 'campaign-screen briefing-screen');
     const panel = el('div', 'campaign-panel', root);
@@ -30,6 +32,8 @@ export class BriefingScreen {
     this.facts = el('div', 'campaign-facts', panel);
     const buttons = el('div', 'campaign-buttons', panel);
     createButton(buttons, 'menu-button campaign-back', '← ミッション一覧', handlers.onBack);
+    // 3-3: 出撃する機体を変える（ハンガーから戻るとこの画面）
+    createButton(buttons, 'menu-button campaign-back', '機体変更', handlers.onHangar);
     this.launch = createButton(buttons, 'menu-button campaign-go', '出撃', handlers.onLaunch);
     this.root = root;
   }
@@ -49,13 +53,20 @@ export class BriefingScreen {
     });
     const multipliers = m.reward.rankMultipliers ?? DEFAULT_RANK_MULTIPLIERS;
     this.facts.replaceChildren();
-    const fact = (label: string, value: string): void => {
+    const fact = (label: string, value: string): HTMLSpanElement => {
       const row = el('div', 'campaign-fact', this.facts);
       el('span', 'campaign-fact-label', row, label);
-      el('span', 'campaign-fact-value', row, value);
+      return el('span', 'campaign-fact-value', row, value);
     };
     fact('制限時間', m.timeLimitSeconds === undefined ? 'なし' : formatClock(m.timeLimitSeconds));
     fact('報酬', `${formatCredits(m.reward.baseCredits)}（S ×${multipliers.S}）`);
+    this.aircraftValue = fact('機体', this.aircraftName);
+  }
+
+  /** 出撃する機体の名前（3-3。ハンガーから戻ったときも書き換える） */
+  setAircraftName(name: string): void {
+    this.aircraftName = name;
+    if (this.aircraftValue) this.aircraftValue.textContent = name;
   }
 
   setShown(shown: boolean): void {

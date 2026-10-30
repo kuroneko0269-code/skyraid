@@ -201,5 +201,8 @@ export const ENEMY_GUN_CONFIG: GunSpec = {
   maxBullets: 64,
 };
 
-/** 同時に飛べるミサイルの数（自機と敵機で共有のプール）。自機 4 発 + 敵 4 機 × 2 発に余裕 */
-export const MISSILE_POOL_SIZE = 16;
+/**
+ * 同時に飛べるミサイルの数（自機と敵機で共有のプール）。3-3 で 16 → 24: 自機は最大 11 発
+ * （Bastion 6 + 武装 Lv5 の +5）になったので、自機 11 + 敵 4 機 × 2 発に余裕
+ */
+export const MISSILE_POOL_SIZE = 24;

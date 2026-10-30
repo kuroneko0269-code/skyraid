@@ -21,6 +21,8 @@ const DEG = Math.PI / 180;
 export class RocketPod {
   readonly rockets: Pool<Projectile>;
   private remaining: number;
+  /** 満タンの発数（3-3 から機体の積載で変わる。既定は spec.ammo） */
+  private capacity: number;
   private cooldown = 0;
   private readonly impact: Impact = { x: 0, y: 0, z: 0, target: null };
   private readonly f = vec3();
@@ -36,6 +38,7 @@ export class RocketPod {
     readonly spec: RocketSpec = ROCKET_CONFIG,
   ) {
     this.rockets = new Pool(spec.maxRockets, newProjectile);
+    this.capacity = spec.ammo;
     this.remaining = spec.ammo;
     this.spreadTan = Math.tan(spec.spreadDeg * DEG);
   }
@@ -45,8 +48,14 @@ export class RocketPod {
     return this.remaining;
   }
 
+  /** 満タンの発数を変えて満タンにする（3-3） */
+  setCapacity(capacity: number): void {
+    this.capacity = Math.max(0, Math.floor(capacity));
+    this.refill();
+  }
+
   refill(): void {
-    this.remaining = this.spec.ammo;
+    this.remaining = this.capacity;
     this.cooldown = 0;
   }
 

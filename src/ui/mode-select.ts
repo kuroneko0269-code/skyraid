@@ -1,7 +1,7 @@
 import './mode-select.css';
 import { createButton, createScreen, setScreenShown } from './screen';
 
-export const GAME_MODES = ['free', 'campaign', 'pvp', 'raid'] as const;
+export const GAME_MODES = ['free', 'campaign', 'hangar', 'pvp', 'raid'] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
 /** フリーフライトの説明（ポーズメニューの「敵」設定に合わせて書き換える） */
@@ -11,11 +11,12 @@ const FREE_FLIGHT_NOTES = { on: '敵機と空戦・自由に飛ぶ', off: '敵�
 const MODE_ENTRIES: readonly { mode: GameMode; label: string; note: string; enabled: boolean }[] = [
   { mode: 'free', label: 'フリーフライト', note: FREE_FLIGHT_NOTES.on, enabled: true },
   { mode: 'campaign', label: 'キャンペーン', note: 'ミッションを順にクリア', enabled: true },
+  { mode: 'hangar', label: 'ハンガー', note: '機体の購入・強化', enabled: true },
   { mode: 'pvp', label: 'PvP', note: '2〜4 人で空戦', enabled: false },
   { mode: 'raid', label: 'レイド', note: '巨大怪獣を協力撃破', enabled: false },
 ];
 
-/** モード選択画面。今はフリーフライトとキャンペーン（2-4）を選べる */
+/** モード選択画面。今はフリーフライトとキャンペーン（2-4）とハンガー（3-3）を選べる */
 export class ModeSelectScreen {
   readonly root: HTMLDivElement;
   private firstEnabled: HTMLButtonElement | null = null;

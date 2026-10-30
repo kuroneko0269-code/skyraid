@@ -106,6 +106,11 @@ export class Aircraft {
     if (hitsGround(p, this.groundHeight(p.x, p.z))) this.crash();
   }
 
+  /** 機体の数値を差し替える（3-3。次の respawn から巡航速度・スロットルも新しい値） */
+  setSpec(spec: AircraftSpec): void {
+    this.flight.spec = spec;
+  }
+
   /** 指定位置に初期姿勢（または orientation）・巡航速度で置き直す（補間しない） */
   respawn(position: Readonly<Vec3>, orientation: Readonly<Quat> | null = null): void {
     this.flight.reset(position);

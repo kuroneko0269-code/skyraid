@@ -3,9 +3,12 @@ import { usesDemoCamera, type GameState, type ScreenState } from '../core/game-s
 import { detectLocale } from '../core/locale';
 import type { MissionResult } from '../missions/runner';
 import type { MissionDef } from '../missions/types';
+import type { AircraftModel } from '../data/aircraft';
 import { CampaignProgress } from '../progression/campaign-progress';
+import { Hangar } from '../progression/hangar';
 import type { SaveStore } from '../progression/save-store';
 import { BriefingScreen } from './briefing';
+import { HangarScreen } from './hangar';
 import { MissionSelectScreen } from './mission-select';
 import { ModeSelectScreen } from './mode-select';
 import { PauseMenu, createPauseButton } from './pause';
@@ -15,7 +18,7 @@ import { FadeCurtain, LoadingScreen, applyScreenFade } from './screen';
 import { TitleScreen } from './title';
 
 /**
- * 画面（読み込み中・タイトル・モード選択・ミッション一覧・ブリーフィング・ポーズ・リザルト）の DOM をまとめ、
+ * 画面（読み込み中・タイトル・モード選択・ミッション一覧・ブリーフィング・ハンガー・ポーズ・リザルト）の DOM をまとめ、
  * GameState の遷移に合わせて切り替える。ボタンは GameState.transition を呼ぶだけで、
  * 遷移後の処理（飛行・ミッションの開始など）は main がイベントで行う
  */
@@ -27,6 +30,9 @@ export class Screens {
   readonly missionSelect: MissionSelectScreen;
   readonly briefing: BriefingScreen;
   readonly result: ResultScreen;
+  readonly hangarScreen: HangarScreen;
+  /** 機体の所持・強化・選択（3-3） */
+  readonly hangar: Hangar;
   readonly pause: PauseMenu;
   readonly pauseButton: HTMLButtonElement;
   /** ミッション一覧で選んだミッション（ブリーフィング・もう一度で使う） */
@@ -34,6 +40,9 @@ export class Screens {
   /** ミッションの解放とクリア済みのランク（2-5。3-1 からセーブに記録） */
   readonly progress: CampaignProgress;
   private readonly curtain: FadeCurtain;
+  /** ハンガーを閉じたら戻る画面（モード選択かブリーフィング） */
+  private hangarReturn: 'mode_select' | 'briefing' = 'mode_select';
+  private readonly viewListeners: ((model: AircraftModel) => void)[] = [];
 
   constructor(
     parent: HTMLElement,
@@ -52,6 +61,8 @@ export class Screens {
       save,
       parseUnlockAll(search),
     );
+    this.hangar = new Hangar(save, (id) => this.progress.isCleared(id));
+    const missionIds = missions.map((m) => m.id);
     // 初回起動（パイロット名がまだない）はタイトルの後に名前の入力（3-1）
     this.title = new TitleScreen(parent, () =>
       game.transition(save.needsPilotName ? 'pilot_name' : 'mode_select'),
@@ -68,6 +79,7 @@ export class Screens {
       onSelect: (mode) => {
         if (mode === 'free') game.transition('flight');
         else if (mode === 'campaign') game.transition('mission_select');
+        else if (mode === 'hangar') this.openHangar(game, 'mode_select');
       },
       onBack: () => game.transition('title'),
     });
@@ -89,6 +101,22 @@ export class Screens {
     this.briefing = new BriefingScreen(parent, locale, {
       onLaunch: () => game.transition('flight'),
       onBack: () => game.transition('mission_select'),
+      onHangar: () => {
+        this.openHangar(game, 'briefing');
+      },
+    });
+    this.briefing.setAircraftName(this.hangar.selectedModel.name);
+    this.hangarScreen = new HangarScreen(parent, this.hangar, {
+      onBack: () => {
+        this.closeHangar(game);
+      },
+      onView: (model) => {
+        for (const fn of this.viewListeners) fn(model);
+      },
+      unlockText: (id) => {
+        const i = missionIds.indexOf(id);
+        return i >= 0 ? `M${i + 1} クリアで解放` : '未解放';
+      },
     });
     this.result = new ResultScreen(parent, {
       onRetry: () => game.transition('flight'),
@@ -116,12 +144,33 @@ export class Screens {
     });
   }
 
+  /** ハンガーで見ている機体が変わったとき（展示の形） */
+  onAircraftView(fn: (model: AircraftModel) => void): void {
+    this.viewListeners.push(fn);
+  }
+
+  /** ハンガーを開く。閉じると from へ戻る */
+  openHangar(game: GameState, from: 'mode_select' | 'briefing'): void {
+    this.hangarReturn = from;
+    game.transition('hangar');
+  }
+
+  /** ハンガーを閉じる（← 戻る・Esc）。確認ダイアログが開いていればそれだけ閉じる */
+  closeHangar(game: GameState): void {
+    if (this.hangarScreen.closeDialog()) return;
+    this.briefing.setAircraftName(this.hangar.selectedModel.name);
+    game.transition(this.hangarReturn);
+  }
+
   /**
    * リザルトを出す。クリアの記録と報酬はミッションの終わりのイベントでセーブに入っている
    * （progression/mission-rewards.ts）ので、ここは残高を読むだけ
    */
   showResult(result: MissionResult): void {
-    this.result.show(result, { balance: this.save.credits, pilotName: this.save.pilotName });
+    const balance = this.save.credits;
+    // 報酬で新しく機体・強化が買える残高になったら 1 行出す（3-3）
+    const newGear = this.hangar.newlyAffordable(balance - result.credits, balance);
+    this.result.show(result, { balance, pilotName: this.save.pilotName, newGear });
   }
 
   private show(state: ScreenState): void {
@@ -134,5 +183,6 @@ export class Screens {
     this.briefing.setShown(state === 'briefing');
     this.pause.setShown(state === 'pause');
     this.result.setShown(state === 'result');
+    this.hangarScreen.setShown(state === 'hangar');
   }
 }

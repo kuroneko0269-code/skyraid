@@ -65,10 +65,13 @@ export interface AircraftSpec {
   };
 }
 
-/** 初期機（バランス型の練習機） */
+/**
+ * 初期機 Kestrel（バランス型。3-4 で名前を付けた。1-1〜2-3 の数値のまま）。
+ * ハンガーの機体（AIRCRAFT_MODELS）はこの値に倍率を掛けて作る（src/progression/loadout.ts）
+ */
 export const STARTER_AIRCRAFT: AircraftSpec = {
-  id: 'starter',
-  name: 'SR-1 Swallow',
+  id: 'kestrel',
+  name: 'Kestrel',
   speed: {
     stall: 80,
     cruise: 250,
@@ -152,3 +155,119 @@ export const AIRCRAFT_COMBAT = {
   /** 敵機が被弾で白く光る時間 */
   enemyHitFlashSeconds: 0.08,
 } as const;
+
+// ---- 3-4: ハンガーの機体 4 種。数値は Kestrel（STARTER_AIRCRAFT・初期機の武装）に対する倍率 ----
+
+/**
+ * 4 パラメータ（Kestrel = 1）。変換は src/progression/loadout.ts
+ * - speed: 最高速（military / afterburner / limit と巡航より上の turnCurve の速度）とエンジンの加速
+ * - turn: ピッチ・ロール・ヨーの最大角速度
+ * - durability: 最大 HP
+ * - payload: ミサイル・ロケット・爆弾・フレアの数
+ */
+export interface AircraftStats {
+  readonly speed: number;
+  readonly turn: number;
+  readonly durability: number;
+  readonly payload: number;
+}
+
+/** プレースホルダーの形（4-3 でモデルに置き換えるまで）。省略した部分は src/data/scene.ts の形のまま */
+export interface AircraftShape {
+  /** 胴体の長さ（m）。尾翼の位置も同じ比で前後する */
+  readonly fuselageLength: number;
+  /** 主翼の幅・翼弦（m）と後退角（度。0 は直線翼の板 1 枚） */
+  readonly wingSpan: number;
+  readonly wingChord: number;
+  readonly wingSweepDeg: number;
+  readonly bodyColor: number;
+  readonly accentColor: number;
+}
+
+export interface AircraftModel {
+  readonly id: string;
+  readonly name: string;
+  /** ハンガーの一覧に出す一言 */
+  readonly role: string;
+  readonly stats: AircraftStats;
+  /** 購入価格（CR）。0 は初期所持 */
+  readonly price: number;
+  /** 解放条件: このミッションをクリアすると買える（null は最初から買える） */
+  readonly unlockMission: string | null;
+  readonly shape: AircraftShape;
+}
+
+/** ハンガーの機体の並び順。先頭が初期機 */
+export const AIRCRAFT_MODELS: readonly AircraftModel[] = [
+  {
+    id: STARTER_AIRCRAFT.id,
+    name: 'Kestrel',
+    role: 'バランス型',
+    stats: { speed: 1, turn: 1, durability: 1, payload: 1 },
+    price: 0,
+    unlockMission: null,
+    shape: {
+      fuselageLength: 9,
+      wingSpan: 10,
+      wingChord: 2.8,
+      wingSweepDeg: 0,
+      bodyColor: 0x9aa4ad,
+      accentColor: 0xd04a2a,
+    },
+  },
+  {
+    // 最高速 +12%・旋回 +15%。HP 140（敵の機銃 28 発）、ミサイル 3・ロケット 8・爆弾 3・フレア 4
+    id: 'swift',
+    name: 'Swift',
+    role: '軽量・高速',
+    stats: { speed: 1.12, turn: 1.15, durability: 0.7, payload: 0.7 },
+    price: 8000,
+    unlockMission: null,
+    shape: {
+      fuselageLength: 8,
+      wingSpan: 8.4,
+      wingChord: 2.4,
+      wingSweepDeg: 35,
+      bodyColor: 0xb7c3c9,
+      accentColor: 0x2a8fd0,
+    },
+  },
+  {
+    // 最高速 −8%・旋回 −15%。HP 320（敵の機銃 64 発）、ミサイル 6・ロケット 18・爆弾 6・フレア 9
+    id: 'bastion',
+    name: 'Bastion',
+    role: '重武装・高耐久',
+    stats: { speed: 0.92, turn: 0.85, durability: 1.6, payload: 1.5 },
+    price: 12000,
+    unlockMission: null,
+    shape: {
+      fuselageLength: 11,
+      wingSpan: 13,
+      wingChord: 3.4,
+      wingSweepDeg: 0,
+      bodyColor: 0x6f7a5e,
+      accentColor: 0xd0a02a,
+    },
+  },
+  {
+    // 最高速 +15%・旋回 +12%。HP 250、ミサイル 5・ロケット 14・爆弾 5・フレア 7。M4（strike）クリアで解放
+    id: 'vector',
+    name: 'Vector',
+    role: '高性能',
+    stats: { speed: 1.15, turn: 1.12, durability: 1.25, payload: 1.2 },
+    price: 25000,
+    unlockMission: 'strike',
+    shape: {
+      fuselageLength: 10,
+      wingSpan: 9.6,
+      wingChord: 3.6,
+      wingSweepDeg: 50,
+      bodyColor: 0x3d4450,
+      accentColor: 0xe0e0e0,
+    },
+  },
+];
+
+export function findAircraftModel(id: string): AircraftModel | null {
+  return AIRCRAFT_MODELS.find((m) => m.id === id) ?? null;
+}

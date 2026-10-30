@@ -21,7 +21,13 @@ import { FlightViews } from './render/flight-views';
 import { HudLink } from './render/hud-link';
 import { MissionLink } from './render/mission-link';
 import { RingView } from './render/ring-view';
-import { applyInterpolatedPose, createPlaceholderAircraft } from './render/aircraft-mesh';
+import {
+  applyInterpolatedPose,
+  createPlaceholderAircraft,
+  rebuildPlaceholderAircraft,
+} from './render/aircraft-mesh';
+import { HangarStage } from './render/hangar-stage';
+import type { AircraftModel } from './data/aircraft';
 import { ChaseCamera } from './render/chase-camera';
 import { DemoCamera } from './render/demo-camera';
 import { RenderPipeline } from './render/pipeline';
@@ -57,6 +63,10 @@ const aircraftMesh = createPlaceholderAircraft();
 setShadowFlags(aircraftMesh, true, true);
 scene.add(aircraftMesh);
 const chaseCamera = new ChaseCamera(camera);
+// ハンガー（3-3）の機体の展示。表示中はカメラを展示の前に置く
+const hangarStage = new HangarStage(scene, camera);
+// 自機の見た目の形（出撃する機体が変わったら作り直す）
+let playerShapeOf: AircraftModel | null = null;
 const demoCamera = new DemoCamera(camera);
 
 // セーブ（3-1）: 進み具合・クレジット・パイロット名・設定。壊れていたら初期値にしてお知らせ
@@ -64,10 +74,14 @@ const save = openBrowserSave(document.body);
 // 設定の部品は今までどおり StorageLike で読み書きし、セーブの設定に振り分ける
 const storage = save.settingsStorage;
 
-// 画面状態（タイトル →（初回: パイロット名 →）モード選択 →（ミッション一覧 → ブリーフィング →）飛行 ⇄ ポーズ →（リザルト））
+// 画面状態（タイトル →（初回: パイロット名 →）モード選択 →（ミッション一覧 → ブリーフィング →）飛行 ⇄ ポーズ →（リザルト））。
+// ハンガー（3-3）はモード選択・ブリーフィングから
 const game = new GameState();
 const screens = new Screens(document.body, game, MISSIONS, save, () => {
   play.abortMission();
+});
+screens.onAircraftView((model) => {
+  hangarStage.setShape(model.shape);
 });
 
 // 品質設定（初期判定・切り替え・自動ダウングレード）と露出
@@ -161,8 +175,9 @@ game.onChange(({ from, to }) => {
     input.endStep();
     weaponInput.reset();
   }
-  // 撃墜されたまま（ミッション失敗）のリザルトでは機体を隠す
-  aircraftMesh.visible = !usesDemoCamera(to) && session.player.active;
+  // 撃墜されたまま（ミッション失敗）のリザルトでは機体を隠す。ハンガーでは展示の機体だけ
+  aircraftMesh.visible = !usesDemoCamera(to) && to !== 'hangar' && session.player.active;
+  hangarStage.setShown(to === 'hangar');
   touch.refresh();
 });
 aircraftMesh.visible = false;
@@ -200,6 +215,7 @@ loop.onRender((alpha) => {
   if (!isSimulating(state)) menuTick();
   if (state !== 'pause') worldTime += frameSeconds;
   if (usesDemoCamera(state)) demoCamera.update(frameSeconds);
+  else if (state === 'hangar') hangarStage.update(frameSeconds);
   else if (state === 'flight') updateFlightView(alpha, frameSeconds);
   views.update(alpha, state === 'flight' ? frameSeconds : 0, camera.position);
   ringView.update(play.runner?.running ? play.runner.activeRings : null);
@@ -214,7 +230,11 @@ loop.onRender((alpha) => {
   world.update(
     camera.position,
     worldTime,
-    aircraftMesh.visible ? aircraftMesh.position : camera.position,
+    state === 'hangar'
+      ? hangarStage.mesh.position
+      : aircraftMesh.visible
+        ? aircraftMesh.position
+        : camera.position,
   );
   if (state === 'flight' && hud.visible)
     hudLink.update(alpha, window.innerWidth, window.innerHeight);
@@ -250,11 +270,22 @@ void runBoot(BOOT_TASKS, (progress) => {
  */
 function startFlight(mission: boolean): void {
   const def = mission ? screens.selectedMission : null;
+  applyPlayerLoadout();
   if (def) play.startMission(def);
   else play.startFree();
   views.reset();
   chaseCamera.snap();
   quality.startWatch();
+}
+
+/** ハンガーで選んだ機体と強化を自機に入れる（3-3）。飛行を始めるたびに呼ぶ。見た目も機体の形に */
+function applyPlayerLoadout(): void {
+  session.applyLoadout(screens.hangar.loadout());
+  const model = screens.hangar.selectedModel;
+  if (playerShapeOf === model) return;
+  playerShapeOf = model;
+  rebuildPlaceholderAircraft(aircraftMesh, model.shape);
+  setShadowFlags(aircraftMesh, true, true);
 }
 
 /** 飛行中・メニュー中どちらでも効くキー（F3 / H）と入力ログ。固定更新 1 回分の終わりに呼ぶ */
@@ -278,6 +309,7 @@ function menuTick(): void {
     else if (game.state === 'mode_select' || game.state === 'pilot_name') game.transition('title');
     else if (game.state === 'mission_select') game.transition('mode_select');
     else if (game.state === 'briefing') game.transition('mission_select');
+    else if (game.state === 'hangar') screens.closeHangar(game);
   }
   handleCommonKeys();
 }

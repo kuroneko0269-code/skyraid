@@ -105,7 +105,8 @@ export class FlightModel {
   private readonly dq = quatIdentity();
 
   constructor(
-    readonly spec: AircraftSpec,
+    /** 機体の数値。ハンガーで機体・強化を変えたら Aircraft.setSpec で差し替える（3-3） */
+    public spec: AircraftSpec,
     options: Partial<FlightOptions> = {},
     readonly config: FlightConfig = FLIGHT_CONFIG,
   ) {

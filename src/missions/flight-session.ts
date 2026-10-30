@@ -16,6 +16,7 @@ import { headingDegOf, headingQuat, type EnemyAircraft } from '../entities/enemy
 import { PlayerVitals } from '../entities/player-vitals';
 import { TargetField } from '../entities/target-balloon';
 import type { FlightOptions } from '../flight/flight-model';
+import type { Loadout } from '../progression/loadout';
 import { copyQuat, copyVec3, quatIdentity, vec3, type Quat, type Vec3 } from '../flight/math';
 import { BoundaryWatch } from './boundary';
 import { DestroyTally } from './destroy-tally';
@@ -113,6 +114,16 @@ export class FlightSession implements MissionWorld {
   configureEnemies(enabled: boolean, difficulty: Difficulty, count?: number): void {
     if (this.mode === 'free') this.squadron.configure(enabled, difficulty, count);
     else this.pendingEnemies = { enabled, difficulty, count };
+  }
+
+  /**
+   * 機体と強化の装備に差し替える（3-3）: 飛行モデル・HP・武装。startFree / startMission の前に呼ぶ
+   * （開始で巡航速度・HP 満タン・弾満タンになる）
+   */
+  applyLoadout(l: Readonly<Loadout>): void {
+    this.aircraft.setSpec(l.flight);
+    this.player.setMaxHp(l.flight.hull.maxHp);
+    this.combat.applyLoadout(l);
   }
 
   /** フリーフライトを初めから（startFree と同じ） */

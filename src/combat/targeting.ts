@@ -65,7 +65,8 @@ export class Targeting<T extends Trackable> {
   private readonly cosines: number[] = [];
   private readonly forward = vec3();
 
-  constructor(readonly spec: TargetingSpec = TARGETING_CONFIG) {}
+  /** spec は電子装備の強化で差し替える（3-3） */
+  constructor(public spec: TargetingSpec = TARGETING_CONFIG) {}
 
   get locked(): boolean {
     return this.selected !== null && this.lockProgress >= 1;

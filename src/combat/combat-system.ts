@@ -6,6 +6,7 @@ import { HUD_CONFIG } from '../data/hud';
 import { BOMB_CONFIG, ROCKET_CONFIG } from '../data/ordnance';
 import { GUN_CONFIG, MISSILE_CONFIG, MISSILE_POOL_SIZE, type GunSpec } from '../data/weapons';
 import { TargetField } from '../entities/target-balloon';
+import type { Loadout } from '../progression/loadout';
 import { createDrones, type TargetDrone } from '../entities/target-drone';
 import { vec3 } from '../flight/math';
 import { blastDamage } from './blast';
@@ -73,6 +74,8 @@ export class CombatSystem {
   /** 選択中の対象の予測照準点（機銃の射程内のときだけ leadValid） */
   readonly lead = vec3();
   leadValid = false;
+  /** プレイヤーの機銃 1 発のダメージ（3-3 から武装の強化で変わる。弾道は gun.spec のまま） */
+  gunDamage: number;
   /** 撃墜数 */
   kills = 0;
   /** ヒットマーカーの残り表示時間（秒） */
@@ -98,6 +101,7 @@ export class CombatSystem {
     allies: readonly CombatTarget[] = [],
   ) {
     this.gun = new Gun<CombatTarget>(spec, this.handleHit, groundHeight, rng);
+    this.gunDamage = spec.damage;
     this.missiles = new MissileSystem<CombatTarget>(
       MISSILE_CONFIG,
       this.handleDetonation,
@@ -166,6 +170,20 @@ export class CombatSystem {
     this.rockets.reset();
     this.bombs.reset();
     this.leadValid = false;
+  }
+
+  /**
+   * 機体と強化の装備に合わせる（3-3）: 機銃のダメージ、ミサイル・ロケット・爆弾・フレアの数（満タンにする）、
+   * 索敵・ロック。飛行を始める前に呼ぶ
+   */
+  applyLoadout(l: Readonly<Loadout>): void {
+    this.gunDamage = l.gunDamage;
+    this.missileAmmo.setCapacity(l.missiles);
+    this.rockets.setCapacity(l.rockets);
+    this.bombs.magazine.setCapacity(l.bombs);
+    this.flares.magazine.setCapacity(l.flares);
+    this.targeting.spec = l.targeting;
+    this.targeting.reset();
   }
 
   /** 補給（リスポーン）: ミサイル・フレア・ロケット・爆弾を満タンにし、機銃の熱とロックを戻す */
@@ -266,7 +284,7 @@ export class CombatSystem {
     this.reportImpact(hit.x, hit.y, hit.z, target !== null);
     if (!target) return;
     this.hitMarkerTimer = this.hitMarkerSeconds;
-    this.dealDamage(target, this.gun.spec.damage, TEAM_PLAYER);
+    this.dealDamage(target, this.gunDamage, TEAM_PLAYER);
   };
 
   private readonly handleRocketImpact = (i: Readonly<Impact>): void => {

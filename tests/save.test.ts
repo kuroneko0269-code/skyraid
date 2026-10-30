@@ -66,9 +66,9 @@ describe('セーブの保存と読み込み', () => {
     expect(b.mission('m2')).toEqual({ unlocked: true, bestRank: null });
     expect(b.settings.hud).toBe(false);
     expect(b.settings.quality).toBe('high');
-    // 所持機体は初期機だけ、強化は Lv1
-    expect(Object.keys(b.snapshot.aircraft.owned)).toEqual(['starter']);
-    expect(b.snapshot.aircraft.owned.starter?.engine).toBe(1);
+    // 所持機体は初期機だけ、強化は Lv0（3-3 の v2 から）
+    expect(Object.keys(b.snapshot.aircraft.owned)).toEqual(['kestrel']);
+    expect(b.snapshot.aircraft.owned.kestrel?.engine).toBe(0);
   });
 
   it('パイロット名は 8 文字まで（漢字・絵文字も 1 文字）、空なら既定の名前', () => {
@@ -112,7 +112,10 @@ describe('壊れたセーブデータの復旧', () => {
     data.credits = -50;
     data.missions = { m1: { unlocked: true, bestRank: 'Z' }, m2: 'bad' };
     data.settings = { quality: 'ultra', touchControls: 'on', hud: 'yes' };
-    data.aircraft = { selected: 'ghost', owned: { starter: { engine: 9, weapons: 0 } } };
+    data.aircraft = {
+      selected: 'ghost',
+      owned: { kestrel: { engine: 9, weapons: -1 }, ghost: { engine: 1 } },
+    };
     const save = migrateSave(data);
     expect(save).not.toBeNull();
     expect(save?.credits).toBe(0);
@@ -120,21 +123,24 @@ describe('壊れたセーブデータの復旧', () => {
     expect(save?.settings.quality).toBeNull();
     expect(save?.settings.touchControls).toBe('on');
     expect(save?.settings.hud).toBe(true);
-    expect(save?.aircraft.selected).toBe('starter');
-    expect(save?.aircraft.owned.starter).toEqual({
+    expect(save?.aircraft.selected).toBe('kestrel');
+    // 知らない機体は捨て、範囲外の Lv は 0〜5 に収める
+    expect(Object.keys(save?.aircraft.owned ?? {})).toEqual(['kestrel']);
+    expect(save?.aircraft.owned.kestrel).toEqual({
       engine: 5,
-      airframe: 1,
-      weapons: 1,
-      avionics: 1,
+      airframe: 0,
+      weapons: 0,
+      avionics: 0,
     });
   });
 });
 
 describe('バージョン移行の仕組み', () => {
-  it('版番号のない v0（ダミー）を v1 に移行して読む', () => {
+  it('版番号のない v0（ダミー）を v1 → v2 に移行して読む', () => {
     const v0 = { credits: 2500, ranks: { training: 'S', 'first-sortie': 'B' } };
     const save = migrateSave(v0);
-    expect(save?.version).toBe(1);
+    expect(save?.version).toBe(2);
+    expect(save?.aircraft).toEqual(createInitialSave().aircraft);
     expect(save?.credits).toBe(2500);
     expect(save?.missions.training).toEqual({ unlocked: true, bestRank: 'S' });
     expect(save?.missions['first-sortie']?.bestRank).toBe('B');
@@ -146,8 +152,8 @@ describe('バージョン移行の仕組み', () => {
       0: (d: Record<string, unknown>) => (calls.push(0), { ...d, a: 1 }),
       1: (d: Record<string, unknown>) => (calls.push(1), { ...createInitialSave(), credits: d.a }),
     };
-    // 今の版を 2 とみなす。v0 → v1 → v2 の順に通り、最後に normalize（版 1 として）されるので null
-    expect(migrateSave({ version: 0 }, migrations, 2)).toBeNull();
+    // 今の版を 3 とみなす。v0 → v1 → v2 の順に通り、v2 → v3 の移行がないので null
+    expect(migrateSave({ version: 0 }, migrations, 3)).toBeNull();
     expect(calls).toEqual([0, 1]);
     expect(migrateSave({ version: 0 }, {}, 1)).toBeNull();
   });

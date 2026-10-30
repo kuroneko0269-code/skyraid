@@ -2,10 +2,11 @@
 // 古い版から SAVE_MIGRATIONS を順に通して今の版にし、normalizeSave で形と値を確かめる。
 // 壊れていたら null（呼ぶ側で初期値に戻す）。書き込み・イベントは save-store.ts
 import { DIFFICULTIES, FREE_FLIGHT_ENEMIES, type Difficulty } from '../data/ai';
-import { STARTER_AIRCRAFT } from '../data/aircraft';
+import { STARTER_AIRCRAFT, findAircraftModel } from '../data/aircraft';
 import { QUALITY_LEVELS, type QualityLevel } from '../data/quality';
 import { RANKS, type Rank } from '../data/ranking';
-import { SAVE_CONFIG, UPGRADE_KINDS, UPGRADE_LEVELS, type UpgradeKind } from '../data/save';
+import { SAVE_CONFIG } from '../data/save';
+import { UPGRADE_KINDS, UPGRADE_LEVELS, type UpgradeKind } from '../data/upgrades';
 import { TOUCH_MODES, type TouchMode } from '../data/touch';
 
 /** ミッションごとの記録 */
@@ -16,7 +17,7 @@ export interface MissionRecord {
   bestRank: Rank | null;
 }
 
-/** 所持機体ごとの強化レベル（3-3 で使う。今は初期機の Lv1 だけ） */
+/** 所持機体ごとの強化レベル（3-3。Lv0 が未強化。v1 までは Lv1 が未強化だった） */
 export type UpgradeLevels = Record<UpgradeKind, number>;
 
 /** 設定（ポーズメニューの設定。1-6 / 2-3 の別キーから統合） */
@@ -39,6 +40,7 @@ export interface SaveData {
   pilotName: string | null;
   credits: number;
   missions: Record<string, MissionRecord>;
+  /** 所持機体（3-3）: 選択中の機体 id と、所持している機体 id → 4 系統の強化 Lv。初期機は常に所持 */
   aircraft: {
     selected: string;
     owned: Record<string, UpgradeLevels>;
@@ -79,9 +81,13 @@ export function createInitialSave(): SaveData {
 
 type Json = Record<string, unknown>;
 
+/** v1 までの初期機の id（v2 で kestrel に改名） */
+const V1_STARTER_ID = 'starter';
+
 /**
- * 版ごとの移行: キーの版 → 次の版のデータを返す関数。今は v1 だけなので、実際に使われる移行はない。
- * v0 は仕組みの確認用のダミー（版番号がなく、ランクを { id: ランク } で持つ想定の形。tests/save.test.ts）
+ * 版ごとの移行: キーの版 → 次の版のデータを返す関数。
+ * - v0 → v1: 仕組みの確認用のダミー（版番号がなく、ランクを { id: ランク } で持つ想定の形。tests/save.test.ts）
+ * - v1 → v2（3-3）: 強化 Lv を 1 つ下げる（v1 は Lv1〜5 で Lv1 が未強化、v2 は Lv0〜5）。初期機の id を starter → kestrel
  */
 export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
   0: (d) => {
@@ -90,7 +96,35 @@ export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
     for (const [id, rank] of Object.entries(ranks))
       missions[id] = { unlocked: true, bestRank: isRank(rank) ? rank : null };
     const base = createInitialSave();
-    return { ...base, version: 1, credits: d.credits ?? 0, missions };
+    const v1Levels = { engine: 1, airframe: 1, weapons: 1, avionics: 1 };
+    return {
+      ...base,
+      version: 1,
+      credits: d.credits ?? 0,
+      missions,
+      aircraft: { selected: V1_STARTER_ID, owned: { [V1_STARTER_ID]: v1Levels } },
+    };
+  },
+  1: (d) => {
+    if (!isObject(d.aircraft)) return d;
+    const rename = (id: string): string => (id === V1_STARTER_ID ? STARTER_AIRCRAFT.id : id);
+    const owned: Json = {};
+    const oldOwned = isObject(d.aircraft.owned) ? d.aircraft.owned : {};
+    for (const [id, levels] of Object.entries(oldOwned)) {
+      if (!isObject(levels)) continue;
+      const next: Json = {};
+      for (const k of UPGRADE_KINDS) {
+        const v = levels[k];
+        next[k] = typeof v === 'number' ? v - 1 : v;
+      }
+      owned[rename(id)] = next;
+    }
+    const selected = d.aircraft.selected;
+    return {
+      ...d,
+      version: 2,
+      aircraft: { selected: typeof selected === 'string' ? rename(selected) : selected, owned },
+    };
   },
 };
 
@@ -138,7 +172,8 @@ export function normalizeSave(d: Json): SaveData | null {
   }
   const owned = isObject(d.aircraft.owned) ? d.aircraft.owned : {};
   for (const [id, levels] of Object.entries(owned)) {
-    if (!isObject(levels)) continue;
+    // 知らない機体（データから消えた機体など）は捨てる。初期機は createInitialSave で必ず持っている
+    if (!isObject(levels) || !findAircraftModel(id)) continue;
     const up = initialUpgrades();
     for (const k of UPGRADE_KINDS) {
       const v = levels[k];

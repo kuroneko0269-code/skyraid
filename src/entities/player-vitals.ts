@@ -19,7 +19,7 @@ export class PlayerVitals implements CombatTarget {
   downCount = 0;
   /** 受けたダメージの合計（ミッションの評価。2-4）。墜落は含めない */
   damageTaken = 0;
-  private readonly health: Health;
+  private health: Health;
 
   constructor(
     readonly aircraft: Aircraft,
@@ -87,6 +87,12 @@ export class PlayerVitals implements CombatTarget {
     this.velocity.x = this.velocity.y = this.velocity.z = 0;
     this.respawnTimer -= dt;
     return this.respawnTimer <= 1e-9;
+  }
+
+  /** 最大 HP を差し替えて満タンにする（3-3。機体・強化を変えたとき。飛行を始める前に呼ぶ） */
+  setMaxHp(maxHp: number): void {
+    if (maxHp !== this.health.maxHp) this.health = new Health(maxHp);
+    this.health.reset();
   }
 
   /** HP 満タンで生き返る（位置は呼び出し側で Aircraft.respawn） */

@@ -3,7 +3,8 @@ import { EventBus } from './event-bus';
 /**
  * 画面の状態。boot は読み込み中（起動直後だけ）。
  * docs/spec.md「UI」: タイトル → モード選択 → （キャンペーン: ミッション一覧 → ブリーフィング）→ プレイ → リザルト（2-4）。
- * 初回起動（セーブにパイロット名がない）はタイトルの後にパイロット名の入力（3-1）。ハンガーは 3-3 で足す
+ * 初回起動（セーブにパイロット名がない）はタイトルの後にパイロット名の入力（3-1）。
+ * ハンガー（3-3）はモード選択とブリーフィング（機体変更）から開き、開いた画面へ戻る
  */
 export const SCREEN_STATES = [
   'boot',
@@ -15,6 +16,7 @@ export const SCREEN_STATES = [
   'flight',
   'pause',
   'result',
+  'hangar',
 ] as const;
 export type ScreenState = (typeof SCREEN_STATES)[number];
 
@@ -25,9 +27,10 @@ export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenStat
   // 初回起動はパイロット名の入力を挟む（3-1）。入力から Esc でタイトルへ戻れる
   title: ['mode_select', 'pilot_name'],
   pilot_name: ['mode_select', 'title'],
-  mode_select: ['title', 'flight', 'mission_select'],
+  mode_select: ['title', 'flight', 'mission_select', 'hangar'],
   mission_select: ['mode_select', 'briefing'],
-  briefing: ['mission_select', 'flight'],
+  briefing: ['mission_select', 'flight', 'hangar'],
+  hangar: ['mode_select', 'briefing'],
   // ミッションが終わるとリザルトへ
   flight: ['pause', 'result'],
   // ミッション中はポーズから「ミッションを中断」でミッション一覧へ
@@ -55,7 +58,10 @@ export function isSimulating(state: ScreenState): boolean {
   return state === 'flight';
 }
 
-/** 背景をデモカメラ（島の周回）で描く状態か。飛行・ポーズ・リザルトは追従カメラ（リザルトは止まった飛行の画面の上に出す） */
+/**
+ * 背景をデモカメラ（島の周回）で描く状態か。飛行・ポーズ・リザルトは追従カメラ（リザルトは止まった飛行の画面の上に出す）。
+ * ハンガーは機体の展示のカメラ（render/hangar-stage.ts）
+ */
 export function usesDemoCamera(state: ScreenState): boolean {
   return (
     state === 'boot' ||

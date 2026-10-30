@@ -237,3 +237,14 @@
     min-height: 44px;
   }
 }
+
+/* リザルトの「ハンガーで新しい装備が買えます」（3-3） */
+.result-gear {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffd75a;
+}
+
+.result-gear[hidden] {
+  display: none;
+}

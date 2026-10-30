@@ -5,11 +5,22 @@ export class Magazine {
   private cooldownLeft = 0;
 
   constructor(
-    readonly capacity: number,
+    private size: number,
     /** 1 回使ってから次に使えるまでの時間（秒） */
     readonly interval: number,
   ) {
-    this.remaining = capacity;
+    this.remaining = size;
+  }
+
+  /** 満タンの数 */
+  get capacity(): number {
+    return this.size;
+  }
+
+  /** 満タンの数を変えて満タンにする（3-3。機体の積載・強化） */
+  setCapacity(capacity: number): void {
+    this.size = Math.max(0, Math.floor(capacity));
+    this.refill();
   }
 
   get count(): number {
