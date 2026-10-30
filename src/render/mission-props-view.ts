@@ -1,4 +1,4 @@
-// ミッションの出現物（2-5）の描画: 輸送機・怪獣の仮実装。どちらもプリミティブのプレースホルダーで、
+// ミッションの出現物（2-5）の描画: 輸送機（4-3 の機体モデルの生成器。太い胴体・高翼・4 発）と怪獣の仮実装（プリミティブ）。
 // 種類ごとに InstancedMesh / Mesh 1 つ（追加の draw call は最大 2。出ていないものは描かない）。
 // 怪獣は 6-1 で作り直す。地上目標（2-6）は ground-target-view.ts
 import {
@@ -16,32 +16,26 @@ import {
   type Scene,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import {
-  KAIJU_PLACEHOLDER_CONFIG as KAIJU,
-  TRANSPORT_CONFIG as TRANSPORT,
-} from '../data/mission-props';
+import { KAIJU_PLACEHOLDER_CONFIG as KAIJU } from '../data/mission-props';
 import type { MissionProps } from '../missions/mission-props';
+import type { AircraftDetail } from '../data/aircraft-model';
+import { TRANSPORT_SHAPE } from '../data/aircraft-shapes';
+import { hitFlashScale } from './aircraft-model/accumulator';
+import { buildAircraft } from './aircraft-model/build';
+import { createPaintMaterial } from './aircraft-model/material';
 
 const WHITE = new Color(0xffffff);
 const FLASH = 0.75;
-const color = new Color();
+const TRANSPORT_FLASH = new Color().setScalar(hitFlashScale(TRANSPORT_SHAPE.bodyColor, FLASH));
 const matrix = new Matrix4();
 const forward = new Vector3();
 const up = new Vector3(0, 1, 0);
 const right = new Vector3();
 const back = new Vector3();
 
-/** 輸送機: 胴体・主翼・水平尾翼・垂直尾翼（前方 -Z、翼幅 30m・長さ 26m） */
-function createTransportGeometry(): BufferGeometry {
-  const parts = [
-    new BoxGeometry(4.2, 4.2, 26),
-    new BoxGeometry(30, 0.6, 5).translate(0, 1.2, -1),
-    new BoxGeometry(11, 0.4, 3).translate(0, 1.8, 11),
-    new BoxGeometry(0.5, 6, 4).translate(0, 4.5, 11),
-  ];
-  const merged = mergeGeometries(parts);
-  for (const p of parts) p.dispose();
-  return merged;
+/** 輸送機: 機体モデルの生成器（キャノピーも機体に入れる。ミサイルなし） */
+function createTransportGeometry(detail: AircraftDetail): BufferGeometry {
+  return buildAircraft(TRANSPORT_SHAPE, { detail, missiles: 0, mergeCanopy: true }).body;
 }
 
 /** 怪獣: 胴（箱）+ 頭（円錐）。足元が原点、前方 -Z。頭だけ色を変える（頂点カラー） */
@@ -69,11 +63,7 @@ function createKaijuGeometry(): BufferGeometry {
 }
 
 function createInstanced(geometry: BufferGeometry, hex: number, count: number): InstancedMesh {
-  const mesh = new InstancedMesh(
-    geometry,
-    new MeshStandardMaterial({ roughness: 0.6, metalness: 0.2 }),
-    count,
-  );
+  const mesh = new InstancedMesh(geometry, createPaintMaterial(), count);
   mesh.instanceMatrix.setUsage(DynamicDrawUsage);
   mesh.frustumCulled = false;
   mesh.castShadow = true;
@@ -88,15 +78,16 @@ export class MissionPropsView {
   private readonly transports: InstancedMesh;
   private readonly kaiju: Mesh;
   private readonly kaijuMaterial: MeshStandardMaterial;
-  private readonly transportColor = new Color(TRANSPORT.color);
+  private detail: AircraftDetail = 'high';
 
   constructor(
     scene: Scene,
     private readonly props: MissionProps,
   ) {
+    // 色は頂点の色（TRANSPORT_SHAPE）。インスタンスの色は被弾の光だけ
     this.transports = createInstanced(
-      createTransportGeometry(),
-      TRANSPORT.color,
+      createTransportGeometry('high'),
+      0xffffff,
       props.transports.length,
     );
     this.kaijuMaterial = new MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
@@ -104,6 +95,14 @@ export class MissionPropsView {
     this.kaiju.castShadow = true;
     this.kaiju.visible = false;
     scene.add(this.transports, this.kaiju);
+  }
+
+  /** 画質（「低」は LOD）。変わったら輸送機のジオメトリを作り直す */
+  setDetail(detail: AircraftDetail): void {
+    if (detail === this.detail) return;
+    this.detail = detail;
+    this.transports.geometry.dispose();
+    this.transports.geometry = createTransportGeometry(detail);
   }
 
   /** 描画フレームごとに呼ぶ。動くもの（輸送機・怪獣）は前ステップとの間を補間する */
@@ -132,8 +131,7 @@ export class MissionPropsView {
           q.z + (p.z - q.z) * alpha,
         );
       mesh.setMatrixAt(n, matrix);
-      const flash = t.flashTimer > 0 ? FLASH : 0;
-      mesh.setColorAt(n, color.copy(this.transportColor).lerp(WHITE, flash));
+      mesh.setColorAt(n, t.flashTimer > 0 ? TRANSPORT_FLASH : WHITE);
       n++;
     }
     finish(mesh, n);

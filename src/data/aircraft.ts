@@ -1,5 +1,14 @@
 // 機体ごとの飛行パラメータ。速度は m/s 相当、角速度は 度/秒
 // docs/spec.md「4. 飛行モデル」に各数値の意味を書いている
+import {
+  BASTION_SHAPE,
+  KESTREL_SHAPE,
+  SWIFT_SHAPE,
+  VECTOR_SHAPE,
+  type AircraftShape,
+} from './aircraft-shapes';
+
+export type { AircraftShape } from './aircraft-shapes';
 
 /** 速度 → 旋回率の係数（折れ線）。speed は昇順 */
 export interface TurnCurvePoint {
@@ -172,18 +181,6 @@ export interface AircraftStats {
   readonly payload: number;
 }
 
-/** プレースホルダーの形（4-3 でモデルに置き換えるまで）。省略した部分は src/data/scene.ts の形のまま */
-export interface AircraftShape {
-  /** 胴体の長さ（m）。尾翼の位置も同じ比で前後する */
-  readonly fuselageLength: number;
-  /** 主翼の幅・翼弦（m）と後退角（度。0 は直線翼の板 1 枚） */
-  readonly wingSpan: number;
-  readonly wingChord: number;
-  readonly wingSweepDeg: number;
-  readonly bodyColor: number;
-  readonly accentColor: number;
-}
-
 export interface AircraftModel {
   readonly id: string;
   readonly name: string;
@@ -194,6 +191,7 @@ export interface AircraftModel {
   readonly price: number;
   /** 解放条件: このミッションをクリアすると買える（null は最初から買える） */
   readonly unlockMission: string | null;
+  /** 機体モデルの形（4-3。src/data/aircraft-shapes.ts） */
   readonly shape: AircraftShape;
 }
 
@@ -206,14 +204,7 @@ export const AIRCRAFT_MODELS: readonly AircraftModel[] = [
     stats: { speed: 1, turn: 1, durability: 1, payload: 1 },
     price: 0,
     unlockMission: null,
-    shape: {
-      fuselageLength: 9,
-      wingSpan: 10,
-      wingChord: 2.8,
-      wingSweepDeg: 0,
-      bodyColor: 0x9aa4ad,
-      accentColor: 0xd04a2a,
-    },
+    shape: KESTREL_SHAPE,
   },
   {
     // 最高速 +12%・旋回 +15%。HP 140（敵の機銃 28 発）、ミサイル 3・ロケット 8・爆弾 3・フレア 4
@@ -223,14 +214,7 @@ export const AIRCRAFT_MODELS: readonly AircraftModel[] = [
     stats: { speed: 1.12, turn: 1.15, durability: 0.7, payload: 0.7 },
     price: 8000,
     unlockMission: null,
-    shape: {
-      fuselageLength: 8,
-      wingSpan: 8.4,
-      wingChord: 2.4,
-      wingSweepDeg: 35,
-      bodyColor: 0xb7c3c9,
-      accentColor: 0x2a8fd0,
-    },
+    shape: SWIFT_SHAPE,
   },
   {
     // 最高速 −8%・旋回 −15%。HP 320（敵の機銃 64 発）、ミサイル 6・ロケット 18・爆弾 6・フレア 9
@@ -240,14 +224,7 @@ export const AIRCRAFT_MODELS: readonly AircraftModel[] = [
     stats: { speed: 0.92, turn: 0.85, durability: 1.6, payload: 1.5 },
     price: 12000,
     unlockMission: null,
-    shape: {
-      fuselageLength: 11,
-      wingSpan: 13,
-      wingChord: 3.4,
-      wingSweepDeg: 0,
-      bodyColor: 0x6f7a5e,
-      accentColor: 0xd0a02a,
-    },
+    shape: BASTION_SHAPE,
   },
   {
     // 最高速 +15%・旋回 +12%。HP 250、ミサイル 5・ロケット 14・爆弾 5・フレア 7。M4（strike）クリアで解放
@@ -257,14 +234,7 @@ export const AIRCRAFT_MODELS: readonly AircraftModel[] = [
     stats: { speed: 1.15, turn: 1.12, durability: 1.25, payload: 1.2 },
     price: 25000,
     unlockMission: 'strike',
-    shape: {
-      fuselageLength: 10,
-      wingSpan: 9.6,
-      wingChord: 3.6,
-      wingSweepDeg: 50,
-      bodyColor: 0x3d4450,
-      accentColor: 0xe0e0e0,
-    },
+    shape: VECTOR_SHAPE,
   },
 ];
 

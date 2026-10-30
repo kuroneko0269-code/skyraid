@@ -1,4 +1,5 @@
 // 品質設定（低/中/高）のパラメータ。適用は src/render/pipeline.ts、選択ロジックは src/core/settings.ts
+import type { AircraftDetail } from './aircraft-model';
 
 export const QUALITY_LEVELS = ['low', 'medium', 'high'] as const;
 
@@ -51,6 +52,11 @@ export interface QualityPreset {
   readonly treeClumps: boolean;
   /** 岩・崖の法線の細部（4-6。手続きノイズで法線を揺らし、光の当たり方で凹凸を見せる。terrainDetail が true のときだけ） */
   readonly terrainNormalDetail: boolean;
+  /**
+   * 機体モデルの細かさ（4-3。src/data/aircraft-model.ts）。「低」は LOD（1 機 3000 三角形以下）。
+   * ハンガーの展示は画質によらず high
+   */
+  readonly aircraftDetail: AircraftDetail;
   /** 森の地面に、木の影の代わりに太陽と反対側へずらした暗いまだらを描く（4-6。シャドウマップは使わない） */
   readonly treeShade: boolean;
 }
@@ -79,6 +85,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     treeClumps: false,
     terrainNormalDetail: false,
     treeShade: false,
+    aircraftDetail: 'low',
   },
   medium: {
     shadows: true,
@@ -99,6 +106,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     treeClumps: true,
     terrainNormalDetail: true,
     treeShade: false,
+    aircraftDetail: 'high',
   },
   high: {
     shadows: true,
@@ -119,6 +127,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     treeClumps: true,
     terrainNormalDetail: true,
     treeShade: true,
+    aircraftDetail: 'high',
   },
 };
 

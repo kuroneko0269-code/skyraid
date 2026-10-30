@@ -2,6 +2,7 @@
 // 地上目標とロケット・爆弾（2-6））。main.ts は update / reset を呼ぶだけ
 import type { Object3D, Scene } from 'three';
 import type { Vec3 } from '../flight/math';
+import type { AircraftDetail } from '../data/aircraft-model';
 import type { FlightSession } from '../missions/flight-session';
 import { CombatView } from './combat-view';
 import { AAA_CONFIG } from '../data/ground-targets';
@@ -42,6 +43,12 @@ export class FlightViews {
     this.props.update(alpha);
     this.groundTargets.update(frameSeconds);
     this.ordnance.update(alpha);
+  }
+
+  /** 敵機・輸送機のモデルの細かさ（画質。4-3） */
+  setAircraftDetail(detail: AircraftDetail): void {
+    this.enemies.setDetail(detail);
+    this.props.setDetail(detail);
   }
 
   /** 演出を全部消す（フリーフライトのやり直し） */

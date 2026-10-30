@@ -71,7 +71,7 @@ const screens = new Screens(document.body, game, MISSIONS, save, () => {
   play.abortMission();
 });
 screens.onAircraftView((model) => {
-  hangarStage.setShape(model.shape);
+  hangarStage.setModel(model, screens.hangar.loadout(model.id).missiles);
 });
 
 // 品質設定（初期判定・切り替え・自動ダウングレード）と露出
@@ -130,6 +130,11 @@ createSaveSettings(settingsPanel, save);
 const damageOverlay = new DamageOverlay(document.body);
 const controls = createControls();
 const views = new FlightViews(scene, aircraftMesh, session);
+// 機体モデルの細かさ（4-3。画質「低」は LOD）
+quality.onPreset((preset) => {
+  playerView.setDetail(preset.aircraftDetail);
+  views.setAircraftDetail(preset.aircraftDetail);
+});
 const ringView = new RingView(scene);
 const missionLink = new MissionLink(missionHud, camera, aircraftMesh, play);
 play.onRunnerChange((runner) => {
@@ -250,14 +255,16 @@ function startFlight(mission: boolean): void {
   if (def) play.startMission(def);
   else play.startFree();
   views.reset();
+  playerView.reset();
   chaseCamera.snap();
   quality.startWatch();
 }
 
 /** ハンガーで選んだ機体と強化を自機に入れる（3-3）。飛行を始めるたびに呼ぶ。見た目も機体の形に */
 function applyPlayerLoadout(): void {
-  session.applyLoadout(screens.hangar.loadout());
-  playerView.setModel(screens.hangar.selectedModel);
+  const loadout = screens.hangar.loadout();
+  session.applyLoadout(loadout);
+  playerView.setModel(screens.hangar.selectedModel, loadout.missiles);
 }
 
 /** 飛行中・メニュー中どちらでも効くキー（F3 / H）と入力ログ。固定更新 1 回分の終わりに呼ぶ */
@@ -284,7 +291,7 @@ function menuTick(): void {
 function updateFlightView(alpha: number, frameSeconds: number): void {
   // 撃墜されている間は機体を隠す（破片は combat の撃墜の演出）
   aircraftMesh.visible = session.player.active;
-  playerView.updatePose(aircraft, alpha);
+  playerView.update(aircraft, controls, session.combat.missileAmmo.count, alpha, frameSeconds);
   // カメラが地面にめり込まないよう、前フレームのカメラ位置の地表の高さを渡す
   const groundUnderCamera = getGroundHeight(camera.position.x, camera.position.z);
   chaseCamera.update(aircraftMesh, aircraft.state, groundUnderCamera, frameSeconds);

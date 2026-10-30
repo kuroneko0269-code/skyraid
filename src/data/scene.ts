@@ -10,21 +10,8 @@ export const SCENE_CONFIG = {
   },
 } as const;
 
-// プレースホルダー機体の寸法（m）。前方は -Z。フェーズ4でモデルに差し替える
-export const PLACEHOLDER_AIRCRAFT_CONFIG = {
-  bodyColor: 0x9aa4ad,
-  accentColor: 0xd04a2a,
-  fuselage: { width: 1.6, height: 1.4, length: 9 },
-  nose: { radius: 0.8, length: 3.5 },
-  wing: { span: 10, chord: 2.8, thickness: 0.15, z: 0.5 },
-  tailplane: { span: 4.4, chord: 1.6, thickness: 0.12, z: 3.8 },
-  fin: { height: 2.6, chord: 2, thickness: 0.12, z: 3.7 },
-} as const;
-
-// 敵機（2-3）の見た目。形はプレースホルダー機体と同じで、色だけ変える（src/render/enemy-view.ts）
+// 敵機（2-3）の見た目。形と色は src/data/aircraft-shapes.ts の ENEMY_SHAPE（4-3）（src/render/enemy-view.ts）
 export const ENEMY_VIEW_CONFIG = {
-  /** 胴体の色（機首・垂直尾翼はこの 45% の明るさ） */
-  color: 0xc8322a,
-  /** 被弾で白く光るときの白の混ぜ具合 */
+  /** 被弾で白く光るときの白の混ぜ具合（機体の色の明るさをこの割合だけ白へ。輸送機も同じ） */
   hitFlash: 0.75,
 } as const;

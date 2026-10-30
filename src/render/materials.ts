@@ -13,6 +13,11 @@ function exposure(): number {
   return baseExposure;
 }
 
+/** 露出後の明るさ intensity にするための、マテリアルの色に掛ける値（MeshBasicMaterial の発光など） */
+export function emissiveScale(intensity: number): number {
+  return intensity / exposure();
+}
+
 /**
  * 光を受けず自分で光るマテリアル（基本色は黒、emissive = 色 × intensity ÷ 露出）。intensity は露出後の
  * 明るさ（1 で色そのまま）。大きくするとトーンマッピング後に白く飛び、画質「高」ではブルームで光る。

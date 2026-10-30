@@ -19,5 +19,10 @@ export const HANGAR_CONFIG = {
     yawDegPerSecond: 20,
     /** 機首の上げ角（度。少し傾けて上面の翼の形を見せる） */
     pitchDeg: 8,
+    /**
+     * 機体の影を受ける床（4-3）: 機体の中心から depth だけ下の水平の円。半透明で、下の海が透けて見える。
+     * 影は画質「中」以上（シャドウマップ）だけ
+     */
+    floor: { radius: 11, depth: 2.2, color: 0x9aa3ab, opacity: 0.55, roughness: 0.85 },
   },
 } as const;

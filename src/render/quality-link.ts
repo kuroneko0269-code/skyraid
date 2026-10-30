@@ -7,6 +7,7 @@ import {
   resolveInitialQuality,
   type StorageLike,
 } from '../core/settings';
+import type { QualityPreset } from '../data/quality';
 import { createQualitySelect } from '../ui/quality-select';
 import { getGpuRendererName, type RenderPipeline } from './pipeline';
 import type { World } from './scene';
@@ -50,6 +51,14 @@ export class QualityLink {
     });
     this.settings.onChange((level) => {
       select.value = level;
+    });
+  }
+
+  /** 画質の設定を今すぐと、変わるたびに fn に渡す */
+  onPreset(fn: (preset: QualityPreset) => void): void {
+    fn(this.settings.preset);
+    this.settings.onChange((_level, preset) => {
+      fn(preset);
     });
   }
 
