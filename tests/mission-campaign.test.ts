@@ -59,11 +59,18 @@ describe('初期ミッション 5 本のデータ', () => {
     }
   });
 
-  it('M2: 敵機 3 機（normal）が 2 機 → 1 機の時間差で出る', () => {
+  it('M2: 敵機 3 機（normal）が 1 機ずつ 20 秒差（0 / 20 / 40 秒）で出る（2-6 の事前修正）', () => {
     const fighters = FIRST_SORTIE_MISSION.spawns.filter((s) => s.kind === 'enemyFighter');
-    expect(fighters.map((s) => [s.count, s.difficulty, s.trigger.type])).toEqual([
-      [2, 'normal', 'start'],
-      [1, 'normal', 'time'],
+    expect(
+      fighters.map((s) => [
+        s.count,
+        s.difficulty,
+        s.trigger.type === 'time' ? s.trigger.seconds : s.trigger.type,
+      ]),
+    ).toEqual([
+      [1, 'normal', 'start'],
+      [1, 'normal', 20],
+      [1, 'normal', 40],
     ]);
   });
 
@@ -151,10 +158,10 @@ function runIdle(def: MissionDef, seed: number): MissionRunner {
 
 describe('初期ミッションの通し（シード固定のボット）', () => {
   it('M2 初陣: 敵機を順に追って 3 機とも落とせば成功', () => {
-    const play = newPlay(6);
+    const play = newPlay(3);
     const s = play.session;
     const runner = play.startMission(FIRST_SORTIE_MISSION);
-    const bot = new PilotBot(s, AVERAGE, createRandom(506), undefined, getGroundHeight);
+    const bot = new PilotBot(s, VETERAN, createRandom(503), undefined, getGroundHeight);
     runUntilEnd(play, runner, 450, () => {
       bot.think(DT);
       return bot;
@@ -214,6 +221,31 @@ describe('初期ミッションの通し（シード固定のボット）', () =
     expect(s.destroyedCount('groundTarget', 'depots')).toBe(4);
     expect(s.player.downCount).toBe(0);
   });
+
+  it('M2 初陣（1 機ずつ 20 秒差）の成功率: 8 シードで 熟練者役 1/8・平均的 0/8（docs/decisions.md の 2-6 に記録）', () => {
+    const rate = (skill: typeof VETERAN): number => {
+      let ok = 0;
+      for (let seed = 1; seed <= 8; seed++) {
+        const play = newPlay(seed);
+        const runner = play.startMission(FIRST_SORTIE_MISSION);
+        const bot = new PilotBot(
+          play.session,
+          skill,
+          createRandom(500 + seed),
+          undefined,
+          getGroundHeight,
+        );
+        runUntilEnd(play, runner, 450, () => {
+          bot.think(DT);
+          return bot;
+        });
+        if (runner.status === 'success') ok++;
+      }
+      return ok;
+    };
+    expect([rate(VETERAN), rate(AVERAGE)]).toEqual([1, 0]);
+    // 16 回 × 最大 450 秒のシミュレーション（全体の実行中は 5 秒を超えることがある）
+  }, 30000);
 
   it('M5 遭遇: 敵機と戦い、怪獣が出たら怪獣を撃って 20% 削れば、怪獣が海へ引き返して成功', () => {
     const play = newPlay(2);
