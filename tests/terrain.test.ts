@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Mesh, type Object3D } from 'three';
 import { FLIGHT_CONFIG } from '../src/data/flight';
 import { QUALITY_PRESETS } from '../src/data/quality';
 import { TERRAIN_CONFIG, WORLD_CONFIG } from '../src/data/terrain';
@@ -104,12 +105,27 @@ describe('getHeight', () => {
   });
 });
 
+// instanceof だけだと型引数が any になるため、既定の型引数で絞り込む
+function isMesh(obj: Object3D): obj is Mesh {
+  return obj instanceof Mesh;
+}
+
 describe('LOD', () => {
-  const thresholds = lodThresholds(3000, TERRAIN_CONFIG.lod.distanceRatios);
+  const thresholds = lodThresholds(3000, [0.12, 0.3, 0.6]);
 
   it('段の境目は描画距離に比例し、最後は描画距離', () => {
     expect(thresholds).toEqual([360, 900, 1800, 3000]);
     expect(lodThresholds(6000, [0.1, 0.5])).toEqual([600, 3000, 6000]);
+  });
+
+  it('最も細かい段は描画距離に依らない距離まで。列は単調に増える（4-7）', () => {
+    const { distanceRatios, fineDistance } = TERRAIN_CONFIG.lod;
+    expect(lodThresholds(5000, distanceRatios, fineDistance)).toEqual([
+      800, 1200, 2400, 3500, 5000,
+    ]);
+    expect(lodThresholds(3000, distanceRatios, fineDistance)).toEqual([800, 800, 1440, 2100, 3000]);
+    // 段 0 は約 8m 間隔
+    expect(TERRAIN_CONFIG.lod.blockSize / TERRAIN_CONFIG.lod.segments[0]).toBeCloseTo(7.8, 1);
   });
 
   it('距離が遠いほど粗い段になり、描画距離の外は描かない', () => {
@@ -192,8 +208,53 @@ describe('LOD', () => {
     }
     expect(max).toBeGreaterThan(0);
     expect(max).toBeLessThanOrEqual(100_000);
-    // 最も細かい段を 4 チャンクで使っても予算内（チャンクの角の真上）
-    expect(4 * chunkTriangles(TERRAIN_CONFIG.lod.segments[1])).toBeLessThan(100_000);
+    // 「低」の最も細かい段は約 31m（4-7 の前と同じ）
+    expect(
+      TERRAIN_CONFIG.lod.blockSize / (TERRAIN_CONFIG.lod.segments[low.terrainMinLod] ?? 1),
+    ).toBeCloseTo(31.25);
+    expect(chunkTriangles(TERRAIN_CONFIG.lod.segments[0])).toBe(8192);
+  });
+
+  it('画質「中」では、どこを飛んでも地形の三角形は 25 万以下で、Mesh（draw call）はチャンクの数のまま（4-7）', () => {
+    const medium = QUALITY_PRESETS.medium;
+    const terrain = new Terrain();
+    terrain.setQuality(medium.drawDistance, medium.terrainMinLod);
+    let max = 0;
+    for (let x = -4000; x <= 4000; x += 500) {
+      for (let z = -4000; z <= 4000; z += 500) {
+        for (const above of [5, 300, 1500]) {
+          terrain.update({ x, y: getGroundHeight(x, z) + above, z });
+          max = Math.max(max, terrain.triangleCount);
+        }
+      }
+    }
+    expect(max).toBeGreaterThan(100_000);
+    expect(max).toBeLessThanOrEqual(250_000);
+    expect(terrain.object.children.length).toBe(TERRAIN_CONFIG.chunks ** 2);
+  }, 30000);
+
+  it('ブロックをまとめたチャンクの頂点の高さは、継ぎ目以外は getHeight と一致する（4-7）', () => {
+    const terrain = new Terrain();
+    terrain.setQuality(5000, 0);
+    terrain.update({ x: 300, y: 700, z: 200 });
+    let checked = 0;
+    for (const child of terrain.object.children) {
+      if (!isMesh(child) || !child.visible) continue;
+      const position = child.geometry.getAttribute('position');
+      for (let v = 0; v < position.count; v += 31) {
+        const x = position.getX(v);
+        const z = position.getZ(v);
+        // 継ぎ合わせで寄せた縁の頂点は、隣の粗い段の直線上にあるので数 m ずれる
+        if (
+          Math.abs(position.getY(v) - getHeight(x, z)) > 1e-3 &&
+          (x + 4000) % 500 !== 0 &&
+          (z + 4000) % 500 !== 0
+        )
+          throw new Error(`ずれ ${x} ${z}`);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(1000);
   });
 });
 

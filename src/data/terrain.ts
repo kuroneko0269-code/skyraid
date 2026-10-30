@@ -101,13 +101,24 @@ export const TERRAIN_CONFIG = {
     jitter: 0.06,
   },
   lod: {
-    /** LOD 段ごとのチャンク一辺の分割数（0 が最も細かい）。2000m / 128 = 約 16m 間隔 */
-    segments: [128, 64, 32, 16],
     /**
-     * 段 i を使う距離の上限（描画距離に対する比）。最後の段は描画距離まで、その先は描かない。
-     * 距離はカメラからチャンクの箱（高さの範囲を含む）までの最短距離
+     * LOD を選ぶブロックの一辺（4-7）。チャンク（2000m）を 4 × 4 に分け、ブロックごとに段を選んで
+     * チャンク 1 枚のジオメトリにまとめる（draw call はチャンクの数のまま）
      */
-    distanceRatios: [0.12, 0.3, 0.6],
+    blockSize: 500,
+    /**
+     * LOD 段ごとのブロック一辺の分割数（0 が最も細かい）。500m / 64 = 約 7.8m 間隔。
+     * 4-6 まではチャンク 2000m を [128, 64, 32, 16]（約 16 / 31 / 62 / 125m）で、4-7 で約 8m の段を足した
+     */
+    segments: [64, 32, 16, 8, 4],
+    /** 段 0（約 8m）を使う距離（描画距離に依らない。4-7） */
+    fineDistance: 800,
+    /**
+     * 段 1 以降を使う距離の上限（描画距離に対する比）。最後の段は描画距離まで、その先は描かない。
+     * 距離はカメラからブロックの箱（高さの範囲を含む）までの最短距離。画質「中」（5000m）で
+     * 1200 / 2400 / 3500m。地表 30m の最悪の場所で地形の三角形が約 23 万（予算 25 万）
+     */
+    distanceRatios: [0.24, 0.48, 0.7],
     /** 段が変わる境目で行ったり来たりしないよう、粗くするときだけこの距離だけ余分に待つ */
     hysteresis: 100,
   },
@@ -128,7 +139,12 @@ export const WORLD_CONFIG = {
  * 「低」は従来どおり頂点カラー（TERRAIN_CONFIG.colors）の Lambert
  */
 export const TERRAIN_DETAIL_CONFIG = {
-  /** 層の色（sRGB。PBR の反射率） */
+  /**
+   * 層の色の彩度（4-7）。下の colors を輝度のまわりにこの割合へ縮めて使う（0.65 = 35% 下げる）。
+   * 実機で草地・森が鮮やかすぎて写真に見えなかった
+   */
+  saturation: 0.65,
+  /** 層の色（sRGB。PBR の反射率。saturation を掛ける前の値） */
   colors: {
     seabed: 0x8a7d5c,
     sand: 0xd2bf8c,
@@ -143,6 +159,38 @@ export const TERRAIN_DETAIL_CONFIG = {
     cliff: 0x9a8c7a,
     cliffDark: 0x6e6254,
     snow: 0xf2f4f7,
+    /** 草地のむら（4-7）: 乾いた草（黄茶）・湿った草（濃緑）・土が出た斜面（茶） */
+    grassDry: 0x8a8550,
+    grassWet: 0x3b5a2a,
+    soil: 0x5b4834,
+  },
+  /**
+   * 草地の大きなむら（4-7）。一辺 cellLarge m と cellSmall m の値ノイズを混ぜた値で 乾いた草 ⇄ 湿った草 を
+   * dryFrom〜dryTo で切り替え、傾斜 soilSlopeFrom〜soilSlopeTo 度の斜面で別のノイズが soilFrom を超える所に土を出す
+   */
+  patches: {
+    cellLarge: 800,
+    cellSmall: 300,
+    dryFrom: 0.3,
+    dryTo: 0.7,
+    soilSlopeFrom: 10,
+    soilSlopeTo: 26,
+    soilFrom: 0.45,
+    soilTo: 0.7,
+    /** 土の最大の混ぜ具合（斜面でも草が少し残る） */
+    soilMax: 0.85,
+  },
+  /**
+   * 草地の細かい荒れ（4-7）: 一辺 cell m の明暗（± amplitude）と、ノイズが soilFrom を超える所の土の点。
+   * fadeStart〜fadeEnd m で消す
+   */
+  grassRough: {
+    cell: 1.6,
+    amplitude: 0.22,
+    soilFrom: 0.72,
+    soilAmount: 0.6,
+    fadeStart: 150,
+    fadeEnd: 400,
   },
   /** 砂浜の上端の高さ。風上（崖の海岸）は低く、風下（遠浅の浜）は高い */
   sandTop: { windward: 2.5, leeward: 8 },
@@ -163,7 +211,30 @@ export const TERRAIN_DETAIL_CONFIG = {
    * 雪: 雪線の高さ。北向き（+Z。太陽の反対側で日陰になる）の斜面ほど northBias m 下がり、境目はノイズで ±noise m。
    * 傾斜 maxSlopeDeg を超える急斜面には積もらない
    */
-  snow: { start: 515, northBias: 80, noise: 25, maxSlopeDeg: 45, north: { x: 0, z: 1 } },
+  snow: {
+    start: 515,
+    northBias: 80,
+    noise: 25,
+    maxSlopeDeg: 45,
+    north: { x: 0, z: 1 },
+    /**
+     * 4-7: 傾斜 rockFrom〜rockTo 度で雪が薄くなり、ノイズ（一辺 rockCell m）に沿って岩が透ける。
+     * 風下（src/data/wind.ts の風が吹いていく向きを向く斜面）は吹きだまりで雪線が driftLower m 下がり、
+     * 岩が透けにくく（driftCover の割合だけ）、積もる傾斜の上限も driftSlope 度上がる
+     */
+    rockFrom: 20,
+    rockTo: 40,
+    rockCell: 6,
+    driftLower: 60,
+    driftCover: 0.6,
+    driftSlope: 8,
+    /**
+     * 色: 日陰（太陽の向きとの内積が shadeTo より小さい）は青みがかった灰色、日向は少し暖色（反射率に掛ける）
+     */
+    shadeTint: [0.8, 0.86, 0.98],
+    sunTint: [1.0, 0.98, 0.93],
+    shadeTo: 0.3,
+  },
   /**
    * 粒（三面マッピングの値ノイズ）: 細かい（一辺 fine m）・粗い（coarse m）・まだら（mottle m）の 3 枚を、
    * 層ごとの強さ（± 割合）で混ぜる。岩は粗く、草は細かく。fade は消え始め〜消えきる距離
@@ -188,6 +259,19 @@ export const TERRAIN_DETAIL_CONFIG = {
    * 粗い凹凸（一辺 coarse m・高さ ±coarseDepth m）と細かい凹凸、崖は縞の段差（strataDepth m）も足す
    */
   normal: {
+    /**
+     * 4-7: すべての層に 2 段の凹凸（真上から投影）。大: 一辺 large m・高さ ±largeDepth m（largeFade m で消す）、
+     * 小: 一辺 small m・±smallDepth m（smallFade m で消す）。雪は一辺 snow m の細かい凹凸も足す
+     */
+    large: 30,
+    largeDepth: 2.5,
+    largeFade: [900, 2000],
+    small: 3,
+    smallDepth: 0.22,
+    smallFade: [150, 450],
+    snow: 1.7,
+    snowDepth: 0.1,
+    snowFade: [100, 350],
     coarse: 4.5,
     coarseDepth: 1.2,
     fine: 1.3,

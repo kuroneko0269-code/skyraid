@@ -29,6 +29,7 @@ const float ATMO_MS = ${f(a.multiScatter / (4 * Math.PI))};
 const vec3 ATMO_SUN_COLOR = ${v3(color)};
 const float ATMO_DIST_SCALE = ${f(SKY_CONFIG.aerial.distanceScale)};
 const float ATMO_AERIAL_H = ${f(SKY_CONFIG.aerial.heightFalloff)};
+const vec3 ATMO_AERIAL_LOW = vec3(${f(SKY_CONFIG.aerial.lowFactor)}, ${f(SKY_CONFIG.aerial.lowFrom)}, ${f(SKY_CONFIG.aerial.lowTo)});
 const vec3 ATMO_SEA_ALBEDO = ${v3([sea.r, sea.g, sea.b])};
 const float ATMO_SEA_REFLECT = ${f(OCEAN_CONFIG.reflectivity)};
 
@@ -73,10 +74,12 @@ float atmoAvgDensity(float h0, float h1, float H) {
 }
 
 // 高さ h0 → h1 の線分の空気遠近の消散係数（距離の倍率込み）。倍率はカメラの高さ h0 で減らす
-// （地表付近は距離 3 倍、上空では霞が薄くなる。atmosphere-model.ts の aerialDistanceScale）
+// （地表付近は距離 3 倍、上空では霞が薄くなる。高度 500m 以下はさらに 0.8 倍（4-7）。
+// atmosphere-model.ts の aerialDistanceScale）
 vec3 atmoAerialDensity(float h0, float h1) {
   vec3 density = ATMO_BETA_R * atmoAvgDensity(h0, h1, ATMO_H_R) + ATMO_BETA_M_EXT * atmoAvgDensity(h0, h1, ATMO_H_M);
-  return density * ATMO_DIST_SCALE * exp(-h0 / ATMO_AERIAL_H);
+  float low = mix(ATMO_AERIAL_LOW.x, 1.0, smoothstep(ATMO_AERIAL_LOW.y, ATMO_AERIAL_LOW.z, h0));
+  return density * ATMO_DIST_SCALE * exp(-h0 / ATMO_AERIAL_H) * low;
 }
 
 // 地平線より下の背景（描画距離の外の海面を空気遠近ごしに見た色）。上は空そのもの。

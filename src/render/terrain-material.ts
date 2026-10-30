@@ -51,7 +51,13 @@ export function createDetailedTerrainMaterial(cloud?: CloudUniforms): MeshStanda
       )
       .replace(
         '#include <color_fragment>',
-        '#include <color_fragment>\ndiffuseColor.rgb = terrainLayers();',
+        `#include <color_fragment>
+        // 光の向きはビュー空間なので、ビュー行列の転置でワールドに戻す
+        vec3 terrainSun = vec3(0.0, 1.0, 0.0);
+        #if NUM_DIR_LIGHTS > 0
+          terrainSun = normalize((vec4(directionalLights[0].direction, 0.0) * viewMatrix).xyz);
+        #endif
+        diffuseColor.rgb = terrainLayers(terrainSun);`,
       )
       .replace(
         '#include <normal_fragment_maps>',
@@ -69,9 +75,7 @@ export function createDetailedTerrainMaterial(cloud?: CloudUniforms): MeshStanda
           reflectedLight.directSpecular *= cloudShade;
         #endif
         #if defined(TREE_SHADE) && NUM_DIR_LIGHTS > 0
-          // 光の向きはビュー空間なので、ビュー行列の転置でワールドに戻す
-          vec3 sunWorld = normalize((vec4(directionalLights[0].direction, 0.0) * viewMatrix).xyz);
-          reflectedLight.directDiffuse *= 1.0 - terrainTreeShade(sunWorld);
+          reflectedLight.directDiffuse *= 1.0 - terrainTreeShade(terrainSun);
         #endif`,
       );
   };

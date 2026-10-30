@@ -148,7 +148,7 @@ describe('海岸の作り分け（4-6）', () => {
 });
 
 describe('getHeight と描画メッシュ', () => {
-  it('チャンクの頂点の高さは getHeight と一致する（継ぎ合わせ前）', () => {
+  it('ブロックの頂点の高さは getHeight と一致する（継ぎ合わせ前）', () => {
     const palette = new TerrainPalette();
     for (const [minX, minZ] of [
       [-2000, -2000],
@@ -156,7 +156,7 @@ describe('getHeight と描画メッシュ', () => {
       [-4000, 2000],
     ] as const) {
       for (const segments of TERRAIN_CONFIG.lod.segments) {
-        const chunk = buildChunkGeometry({ minX, minZ, size: 2000 }, segments, getHeight, palette);
+        const chunk = buildChunkGeometry({ minX, minZ, size: 500 }, segments, getHeight, palette);
         const p = chunk.positions;
         for (let v = 0; v < p.length / 3; v += 7) {
           const x = p[v * 3] ?? 0;
@@ -195,8 +195,51 @@ describe('木の配置（4-6）', () => {
     }
   });
 
-  it('画質「高」の 30000 本も置ける', () => {
-    expect(placeTrees(getHeight, 30000).count).toBe(30000);
+  it('画質「高」の 90000 本（4-7 で 3 倍）も束で置ける', () => {
+    expect(placeTrees(getHeight, 90000, undefined, undefined, true).count).toBe(90000);
+  });
+
+  it('束（4-7）: 1 候補が 3〜5 本で、束の木は中心から spacing の範囲。同じ本数なら毎回同じ・少ない本数は先頭と同じ', () => {
+    const a = placeTrees(getHeight, 20000, undefined, undefined, true);
+    const b = placeTrees(getHeight, 20000, undefined, undefined, true);
+    const small = placeTrees(getHeight, 6000, undefined, undefined, true);
+    expect(a.count).toBe(20000);
+    expect(Array.from(a.positions)).toEqual(Array.from(b.positions));
+    expect(Array.from(a.positions.subarray(0, small.count * 3))).toEqual(
+      Array.from(small.positions),
+    );
+    const { clumps } = a;
+    let total = 0;
+    let t = 0;
+    for (let c = 0; c < clumps.count; c++) {
+      const n = clumps.sizes[c] ?? 0;
+      // 高度の範囲の外に出た木は置かないので 1〜5 本。最後の束は本数の上限で切れることがある
+      expect(n).toBeGreaterThanOrEqual(1);
+      expect(n).toBeLessThanOrEqual(v.clump.max);
+      const fx = a.positions[t * 3] ?? 0;
+      const fz = a.positions[t * 3 + 2] ?? 0;
+      for (let j = 0; j < n; j++, t++) {
+        const x = a.positions[t * 3] ?? 0;
+        const z = a.positions[t * 3 + 2] ?? 0;
+        expect(Math.hypot(x - fx, z - fz)).toBeLessThanOrEqual(v.clump.spacing.max + 1e-3);
+        expect(a.positions[t * 3 + 1]).toBeCloseTo(getHeight(x, z), 3);
+        expect(
+          Math.hypot(x - (clumps.positions[c * 3] ?? 0), z - (clumps.positions[c * 3 + 2] ?? 0)),
+        ).toBeLessThanOrEqual((clumps.spreads[c] ?? 0) + 1e-3);
+      }
+      total += n;
+    }
+    expect(total).toBe(a.count);
+    // 平均は 3〜5 本の真ん中あたり（森の縁で欠ける木があるので少し下がる）
+    expect(a.count / clumps.count).toBeGreaterThan(3.5);
+    expect(a.count / clumps.count).toBeLessThanOrEqual(4);
+  });
+
+  it('束にしない配置（画質「低」）は木 1 本 = 束 1 つで 4-6 と同じ', () => {
+    const a = placeTrees(getHeight, 3000);
+    expect(a.clumps.count).toBe(3000);
+    expect(Array.from(a.clumps.positions)).toEqual(Array.from(a.positions));
+    expect(Array.from(a.clumps.sizes).every((n) => n === 1)).toBe(true);
   });
 
   it('GLSL の森の密度は同じ定数（ハッシュの乗数・格子の大きさ）を使う', () => {

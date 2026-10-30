@@ -200,9 +200,13 @@ describe('品質フラグ', () => {
 });
 
 describe('空気遠近の高さによる減衰（4-2b）', () => {
-  const ground = aerialDistanceScale(0);
-  it('地表では距離 3 倍のまま', () => {
-    expect(ground).toBe(SKY_CONFIG.aerial.distanceScale);
+  // 4-2b の基準（地表の距離 3 倍）。4-7 で高度 500m 以下だけ 0.8 倍にした
+  const ground = SKY_CONFIG.aerial.distanceScale;
+  it('地表では距離 3 倍の 0.8 倍、500m までは 4-2b の 0.8 倍、700m から上は 4-2b のまま（4-7）', () => {
+    expect(aerialDistanceScale(0)).toBeCloseTo(ground * 0.8, 10);
+    expect(aerialDistanceScale(500)).toBeCloseTo(ground * Math.exp(-500 / 1960) * 0.8, 10);
+    expect(aerialDistanceScale(700)).toBeCloseTo(ground * Math.exp(-700 / 1960), 10);
+    expect(aerialDistanceScale(600)).toBeGreaterThan(aerialDistanceScale(500));
   });
   it('カメラ高度 1000m で地上の約 60%、2000m で約 35%', () => {
     expect(aerialDistanceScale(1000) / ground).toBeCloseTo(0.6, 1);

@@ -95,9 +95,11 @@ export class TerrainPalette {
 }
 
 export interface ChunkGeometry {
-  readonly geometry: BufferGeometry;
   /** position 属性の配列（xyz の並び） */
   readonly positions: Float32Array;
+  readonly normals: Float32Array;
+  /** 頂点カラー（線形 RGB。画質「低」の Lambert だけが使う） */
+  readonly colors: Float32Array;
   readonly segments: number;
   /** 頂点の元の高さ（縁の継ぎ合わせで書き換えた高さを戻すため） */
   readonly baseHeights: Float32Array;
@@ -106,7 +108,8 @@ export interface ChunkGeometry {
 }
 
 /**
- * チャンク 1 枚の地形ジオメトリ（ワールド座標）。一辺 segments 分割の格子で、法線は高さの中心差分。
+ * 地形の 1 区画（4-7 からはチャンクの中のブロック）の頂点（ワールド座標）。一辺 segments 分割の格子。
+ * 法線は高さの 3×3 の Sobel（中心差分を隣の列と平均したもの）で、格子の向きの癖と面の段差を目立たせない（4-7）。
  * LOD の違う隣とのひび割れは terrain-lod.ts の stitchEdge で縁の高さを寄せて塞ぐ
  */
 export function buildChunkGeometry(
@@ -118,7 +121,7 @@ export function buildChunkGeometry(
   const n = segments;
   const step = rect.size / n;
   const row = n + 1;
-  // 法線の中心差分のため、周囲に 1 列ずつ余分に高さを取る
+  // 法線の差分のため、周囲に 1 列ずつ余分に高さを取る
   const sampleRow = n + 3;
   const samples = new Float32Array(sampleRow * sampleRow);
   for (let j = 0; j < sampleRow; j++) {
@@ -144,9 +147,22 @@ export function buildChunkGeometry(
       positions[v * 3] = x;
       positions[v * 3 + 1] = h;
       positions[v * 3 + 2] = z;
-      const nx = sample(i - 1, j) - sample(i + 1, j);
-      const nz = sample(i, j - 1) - sample(i, j + 1);
-      const ny = 2 * step;
+      // Sobel: (左 − 右) と (奥 − 手前) を 1:2:1 で重み付け（合計 8 × 2 step で割ると勾配）
+      const nx =
+        sample(i - 1, j - 1) +
+        2 * sample(i - 1, j) +
+        sample(i - 1, j + 1) -
+        sample(i + 1, j - 1) -
+        2 * sample(i + 1, j) -
+        sample(i + 1, j + 1);
+      const nz =
+        sample(i - 1, j - 1) +
+        2 * sample(i, j - 1) +
+        sample(i + 1, j - 1) -
+        sample(i - 1, j + 1) -
+        2 * sample(i, j + 1) -
+        sample(i + 1, j + 1);
+      const ny = 8 * step;
       const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
       normals[v * 3] = nx / len;
       normals[v * 3 + 1] = ny / len;
@@ -154,27 +170,60 @@ export function buildChunkGeometry(
       palette.write(colors, v * 3, x, z, h, ny / len);
     }
   }
+  return { positions, normals, colors, segments, baseHeights, edgeSteps: [1, 1, 1, 1] };
+}
 
-  // 上から見て反時計回り（表が +Y）
-  const indices = new Uint32Array(6 * n * n);
-  let k = 0;
-  for (let j = 0; j < n; j++) {
-    for (let i = 0; i < n; i++) {
-      const a = j * row + i;
+/** 一辺 segments 分割の格子の三角形の番号（上から見て反時計回り = 表が +Y）を offset から書く */
+function writeGridIndices(out: Uint32Array, at: number, segments: number, base: number): number {
+  const row = segments + 1;
+  let k = at;
+  for (let j = 0; j < segments; j++) {
+    for (let i = 0; i < segments; i++) {
+      const a = base + j * row + i;
       const b = a + 1;
       const c = a + row;
       const d = c + 1;
-      indices.set([a, c, b, c, d, b], k);
+      out[k] = a;
+      out[k + 1] = c;
+      out[k + 2] = b;
+      out[k + 3] = c;
+      out[k + 4] = d;
+      out[k + 5] = b;
       k += 6;
     }
   }
+  return k;
+}
 
+/**
+ * 複数のブロックの頂点を 1 つのジオメトリにまとめる（4-7。チャンク 1 枚 = draw call 1 のまま、
+ * 中のブロックごとに LOD の段を変える）。ブロックの段や縁の継ぎ合わせが変わったときに作り直す
+ */
+export function mergeChunkGeometries(parts: readonly ChunkGeometry[]): BufferGeometry {
+  let vertices = 0;
+  let indexCount = 0;
+  for (const p of parts) {
+    vertices += p.baseHeights.length;
+    indexCount += 6 * p.segments * p.segments;
+  }
+  const positions = new Float32Array(vertices * 3);
+  const normals = new Float32Array(vertices * 3);
+  const colors = new Float32Array(vertices * 3);
+  const indices = new Uint32Array(indexCount);
+  let base = 0;
+  let k = 0;
+  for (const p of parts) {
+    positions.set(p.positions, base * 3);
+    normals.set(p.normals, base * 3);
+    colors.set(p.colors, base * 3);
+    k = writeGridIndices(indices, k, p.segments, base);
+    base += p.baseHeights.length;
+  }
   const geometry = new BufferGeometry();
-  // BufferAttribute は配列をコピーしないので、positions を書き換えれば縁の継ぎ合わせが効く
   geometry.setAttribute('position', new BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new BufferAttribute(normals, 3));
   geometry.setAttribute('color', new BufferAttribute(colors, 3));
   geometry.setIndex(new BufferAttribute(indices, 1));
   geometry.computeBoundingSphere();
-  return { geometry, positions, segments, baseHeights, edgeSteps: [1, 1, 1, 1] };
+  return geometry;
 }

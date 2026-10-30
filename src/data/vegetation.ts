@@ -23,8 +23,13 @@ export const VEGETATION_CONFIG = {
   nearDistance: 600,
   /** 近くの木の集合は、カメラが nearRefresh 動くごとに nearDistance + nearRefresh の範囲で選び直す */
   nearRefresh: 50,
-  /** 木の大きさ: 高さ（幅は高さ × crownRatio）。木ごとにばらつかせる */
-  height: { min: 11, max: 23 },
+  /**
+   * 束（4-7。画質「中」以上 = QualityPreset.treeClumps）: 1 候補ごとに min〜max 本を、中心から spacing m
+   * ほど離して輪に並べる。近景で木が「点」ではなく「面」に見えるように
+   */
+  clump: { min: 3, max: 5, spacing: { min: 5, max: 9 } },
+  /** 木の大きさ: 高さ（幅は高さ × crownRatio）。木ごとにばらつかせる。4-7 で 1.3 倍（11〜23 → 14.3〜29.9m） */
+  height: { min: 14.3, max: 29.9 },
   crownRatio: { min: 0.32, max: 0.45 },
   /** 根元を地面に沈める深さ（地形の LOD の直線補間で浮かないように） */
   sink: 1.5,
@@ -33,6 +38,11 @@ export const VEGETATION_CONFIG = {
     foliage: 0x30492a,
     foliageLight: 0x5c7c3c,
     trunk: 0x4a3a2a,
+    /**
+     * 遠景のビルボードの葉の色（4-7。4-6 までは foliageLight）。地形の森の層（TERRAIN_DETAIL_CONFIG.colors の
+     * forest / forestLight）と同じ系統の暗い緑にし、彩度も地形と同じだけ下げる
+     */
+    billboard: 0x34502a,
     lightness: 0.18,
   },
   /** 風の揺れ（近くの木だけ）: 梢の振れ幅（m）と速さ（rad/s）。向きは src/data/wind.ts */

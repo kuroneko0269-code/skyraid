@@ -50,7 +50,7 @@ export class World {
       normalDetail: preset.terrainNormalDetail,
       treeShade: preset.treeShade,
     });
-    this.vegetation.setCount(preset.treeCount);
+    this.vegetation.setCount(preset.treeCount, preset.treeClumps);
     this.lights.setShadows(preset.shadows, preset.shadowMapSize);
     // ブルームがあれば太陽のまぶしさはブルームに任せる
     this.atmosphere.setGlow(!(preset.postEffects && preset.bloom));

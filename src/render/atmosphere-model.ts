@@ -233,7 +233,16 @@ export function computeExposure(
  */
 export function aerialDistanceScale(
   h: number,
-  cfg: { distanceScale: number; heightFalloff: number } = SKY_CONFIG.aerial,
+  cfg: {
+    distanceScale: number;
+    heightFalloff: number;
+    lowFactor: number;
+    lowFrom: number;
+    lowTo: number;
+  } = SKY_CONFIG.aerial,
 ): number {
-  return cfg.distanceScale * Math.exp(-Math.max(h, 0) / cfg.heightFalloff);
+  const y = Math.max(h, 0);
+  const t = Math.min(1, Math.max(0, (y - cfg.lowFrom) / (cfg.lowTo - cfg.lowFrom)));
+  const low = cfg.lowFactor + (1 - cfg.lowFactor) * t * t * (3 - 2 * t);
+  return cfg.distanceScale * Math.exp(-y / cfg.heightFalloff) * low;
 }

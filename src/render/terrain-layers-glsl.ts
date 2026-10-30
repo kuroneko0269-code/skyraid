@@ -9,10 +9,20 @@ import { forestGlsl } from './terrain-gen/forest';
 
 const f = (x: number): string => (Number.isInteger(x) ? `${x}.0` : String(x));
 
-/** sRGB の 16 進 → GLSL の線形 RGB の vec3 */
+/** sRGB の 16 進 → GLSL の線形 RGB の vec3。彩度を TERRAIN_DETAIL_CONFIG.saturation に下げる（4-7） */
 function rgb(hex: number): string {
+  const [r, g, b] = terrainLinear(hex);
+  return `vec3(${f(r)}, ${f(g)}, ${f(b)})`;
+}
+
+/** 層の色（sRGB の 16 進）を、彩度を下げた線形 RGB に（木の遠景の色を森の層と揃えるのにも使う） */
+export function terrainLinear(
+  hex: number,
+  saturation: number = TERRAIN_DETAIL_CONFIG.saturation,
+): [number, number, number] {
   const c = new Color(hex);
-  return `vec3(${f(c.r)}, ${f(c.g)}, ${f(c.b)})`;
+  const y = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  return [y + (c.r - y) * saturation, y + (c.g - y) * saturation, y + (c.b - y) * saturation];
 }
 
 const vec3Of = (a: readonly number[]): string => `vec3(${a.map(f).join(', ')})`;
@@ -27,6 +37,9 @@ export function terrainLayersGlsl(): string {
   const wind = (WIND_CONFIG.direction * Math.PI) / 180;
   const nm = c.normal;
   const strataK = (2 * Math.PI) / c.strata.spacing;
+  const pa = c.patches;
+  const gr = c.grassRough;
+  const sn = c.snow;
   return /* glsl */ `
   varying vec3 vDetailPos;
   varying vec3 vDetailNormal;
@@ -76,10 +89,12 @@ export function terrainLayersGlsl(): string {
   // 層の重み（法線の細部・森の影で使う）
   float tlRock;
   float tlCliff;
+  float tlSnow;
   float tlForestZone;
   float tlStrataPhase;
 
-  vec3 terrainLayers() {
+  // sunDir: 太陽の向き（ワールド。雪の日向・日陰の色に使う）
+  vec3 terrainLayers(vec3 sunDir) {
     vec3 p = vDetailPos;
     float dist = distance(p, cameraPosition);
     vec3 n = normalize(vDetailNormal);
@@ -106,7 +121,22 @@ export function terrainLayersGlsl(): string {
     float wSand = smoothstep(-8.0, -1.0, h);
     albedo = mix(albedo, ${rgb(col.sand)}, wSand);
     float wGrass = smoothstep(sandTop - 1.0, sandTop + 2.5, h + bn * 1.5);
-    albedo = mix(albedo, ${rgb(col.grass)}, wGrass);
+    // 草地の大きなむら（4-7）: 乾いた草 ⇄ 湿った草、斜面に土
+    float dryWet = detailNoise(p.xz / ${f(pa.cellLarge)}) * 0.6 + detailNoise(p.xz / ${f(pa.cellSmall)} + 11.0) * 0.4;
+    vec3 grassColor = mix(${rgb(col.grassWet)}, ${rgb(col.grass)}, smoothstep(${f(pa.dryFrom)}, 0.5, dryWet));
+    grassColor = mix(grassColor, ${rgb(col.grassDry)}, smoothstep(0.5, ${f(pa.dryTo)}, dryWet));
+    float soilW = smoothstep(${f(pa.soilSlopeFrom)}, ${f(pa.soilSlopeTo)}, sj)
+      * smoothstep(${f(pa.soilFrom)}, ${f(pa.soilTo)}, detailNoise(p.xz / ${f(pa.cellSmall * 0.5)} + 29.0) + bn * 0.1);
+    grassColor = mix(grassColor, ${rgb(col.soil)}, soilW * ${f(pa.soilMax)});
+    // 細かい荒れ（4-7）: 1〜2m の明暗と土の点（近くだけ）
+    float roughFade = 1.0 - smoothstep(${f(gr.fadeStart)}, ${f(gr.fadeEnd)}, dist);
+    float rough = 0.0;
+    if (roughFade > 0.01) {
+      float r1 = detailNoise(p.xz / ${f(gr.cell)} + 3.1) * 0.65 + detailNoise(p.xz / ${f(gr.cell * 0.45)} + 8.3) * 0.35;
+      rough = (r1 - 0.5) * 2.0 * ${f(gr.amplitude)} * roughFade;
+      grassColor = mix(grassColor, ${rgb(col.soil)}, smoothstep(${f(gr.soilFrom)}, ${f(gr.soilFrom + 0.12)}, r1) * ${f(gr.soilAmount)} * roughFade);
+    }
+    albedo = mix(albedo, grassColor * (1.0 + rough), wGrass);
     amp = mix(amp, ${vec3Of(g.grass)}, wGrass);
 
     // 森: 木の配置と同じ密度 × 高度 × 傾斜。地面は暗い緑のまだら
@@ -140,16 +170,26 @@ export function terrainLayersGlsl(): string {
 
     // 雪: 山頂付近、北向きの斜面ほど低くまで。急斜面には積もらない
     float horiz = length(n.xz);
-    float north = dot(n.xz, vec2(${f(c.snow.north.x)}, ${f(c.snow.north.z)})) / max(horiz, 0.15)
-      * smoothstep(0.05, 0.25, horiz);
-    float snowLine = ${f(c.snow.start)} - ${f(c.snow.northBias)} * max(north, 0.0)
-      - ${f(c.snow.northBias * 0.3)} * min(north, 0.0);
-    float wSnow = smoothstep(snowLine - 12.0, snowLine + 12.0, h + bn * ${f(c.snow.noise)})
-      * (1.0 - smoothstep(${f(c.snow.maxSlopeDeg)} - 6.0, ${f(c.snow.maxSlopeDeg)} + 4.0, sj));
-    albedo = mix(albedo, ${rgb(col.snow)}, wSnow);
+    float facing = smoothstep(0.05, 0.25, horiz) / max(horiz, 0.15);
+    float north = dot(n.xz, vec2(${f(sn.north.x)}, ${f(sn.north.z)})) * facing;
+    // 風下を向く斜面（4-7）: 吹きだまり
+    float leeSlope = max(dot(n.xz, vec2(${f(Math.cos(wind))}, ${f(Math.sin(wind))})) * facing, 0.0);
+    float snowLine = ${f(sn.start)} - ${f(sn.northBias)} * max(north, 0.0)
+      - ${f(sn.northBias * 0.3)} * min(north, 0.0) - ${f(sn.driftLower)} * leeSlope;
+    float snowMax = ${f(sn.maxSlopeDeg)} + ${f(sn.driftSlope)} * leeSlope;
+    float wSnow = smoothstep(snowLine - 12.0, snowLine + 12.0, h + bn * ${f(sn.noise)})
+      * (1.0 - smoothstep(snowMax - 6.0, snowMax + 4.0, sj));
+    // 傾斜 20° から雪が薄くなり、岩が透ける（4-7）。風下は透けにくい
+    float thin = smoothstep(${f(sn.rockFrom)}, ${f(sn.rockTo)}, sj) * (1.0 - ${f(sn.driftCover)} * leeSlope);
+    float rockNoise = detailNoise(p.xz / ${f(sn.rockCell)} + 41.0) * 0.6 + detailNoise(p.xz / ${f(sn.rockCell * 0.3)} + 7.0) * 0.4;
+    wSnow *= 1.0 - smoothstep(0.3, 0.7, thin + (rockNoise - 0.5) * 0.9);
+    // 日陰は青みがかった灰色、日向は少し暖色（4-7）
+    vec3 snowTint = mix(${vec3Of(sn.shadeTint)}, ${vec3Of(sn.sunTint)}, smoothstep(-0.05, ${f(sn.shadeTo)}, dot(n, sunDir)));
+    albedo = mix(albedo, ${rgb(col.snow)} * snowTint, wSnow);
     amp = mix(amp, ${vec3Of(g.snow)}, wSnow);
     tlRock *= 1.0 - wSnow;
     tlCliff *= 1.0 - wSnow;
+    tlSnow = wSnow;
 
     // 層ごとの粒: 細かい / 粗い / まだら の 3 枚を層の強さで混ぜる（遠くは消す）
     vec3 fade = vec3(
@@ -170,19 +210,29 @@ export function terrainLayersGlsl(): string {
     return albedo * hue * max(0.0, 1.0 + k + m * ${f(c.macro.amplitude)} * 0.5);
   }
 
-  // 法線の細部（岩・崖）。ワールド座標の法線を返す
+  // 法線の細部（4-7 からすべての層に 2 段の凹凸 + 雪の細かい凹凸、岩・崖はさらに粗い凹凸と縞の段差）。
+  // ワールド座標の法線を返す
   vec3 terrainDetailNormal() {
     vec3 n = normalize(vDetailNormal);
-    float s = (tlRock + tlCliff * 0.5) * (1.0 - smoothstep(${f(nm.fadeStart)}, ${f(nm.fadeEnd)}, distance(vDetailPos, cameraPosition)));
-    if (s < 0.01) return n;
-    vec3 w = n * n;
-    w *= w;
-    w /= w.x + w.y + w.z;
-    vec3 grad = detailTriplanarGrad(vDetailPos / ${f(nm.coarse)}, w) * ${f(nm.coarseDepth / nm.coarse)}
-      + detailTriplanarGrad(vDetailPos / ${f(nm.fine)}, w) * ${f(nm.fineDepth / nm.fine)};
-    grad *= s;
-    // 崖の縞の段差（高さ方向の勾配）
-    grad.y += cos(tlStrataPhase) * ${f(nm.strataDepth * strataK)} * tlCliff;
+    float dist = distance(vDetailPos, cameraPosition);
+    vec3 grad = vec3(0.0);
+    // すべての層: 真上から投影した大小 2 段の凹凸（高さの勾配 = ノイズの偏微分 × 高さ / 一辺）
+    float fl = 1.0 - smoothstep(${f(nm.largeFade[0])}, ${f(nm.largeFade[1])}, dist);
+    if (fl > 0.01) grad.xz += detailNoiseD(vDetailPos.xz / ${f(nm.large)} + 13.0).yz * ${f((2 * nm.largeDepth) / nm.large)} * fl;
+    float fsm = 1.0 - smoothstep(${f(nm.smallFade[0])}, ${f(nm.smallFade[1])}, dist);
+    if (fsm > 0.01) grad.xz += detailNoiseD(vDetailPos.xz / ${f(nm.small)} + 3.7).yz * ${f((2 * nm.smallDepth) / nm.small)} * fsm;
+    float fsn = tlSnow * (1.0 - smoothstep(${f(nm.snowFade[0])}, ${f(nm.snowFade[1])}, dist));
+    if (fsn > 0.01) grad.xz += detailNoiseD(vDetailPos.xz / ${f(nm.snow)} + 21.0).yz * ${f((2 * nm.snowDepth) / nm.snow)} * fsn;
+    float s = (tlRock + tlCliff * 0.5) * (1.0 - smoothstep(${f(nm.fadeStart)}, ${f(nm.fadeEnd)}, dist));
+    if (s >= 0.01) {
+      vec3 w = n * n;
+      w *= w;
+      w /= w.x + w.y + w.z;
+      grad += (detailTriplanarGrad(vDetailPos / ${f(nm.coarse)}, w) * ${f(nm.coarseDepth / nm.coarse)}
+        + detailTriplanarGrad(vDetailPos / ${f(nm.fine)}, w) * ${f(nm.fineDepth / nm.fine)}) * s;
+      // 崖の縞の段差（高さ方向の勾配）
+      grad.y += cos(tlStrataPhase) * ${f(nm.strataDepth * strataK)} * tlCliff;
+    }
     grad -= n * dot(grad, n);
     return normalize(n - grad);
   }

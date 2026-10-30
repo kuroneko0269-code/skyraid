@@ -22,7 +22,10 @@ export interface QualityPreset {
   readonly terrainDetail: boolean;
   /** 描画距離（m）。カメラの far と霧の範囲に使う */
   readonly drawDistance: number;
-  /** 地形の LOD で使う最も細かい段（0 が最も細かい。src/data/terrain.ts の lod.segments） */
+  /**
+   * 地形の LOD で使う最も細かい段（0 が最も細かい。src/data/terrain.ts の lod.segments）。
+   * 「低」は 2（約 31m。4-7 で約 8m の段を足す前の 1 と同じ間隔）
+   */
   readonly terrainMinLod: number;
   /** 海面を簡易版（カメラ追従の平面・うねり 1 本・水の色と空の色は頂点で計算）で描くか */
   readonly oceanSimple: boolean;
@@ -39,8 +42,13 @@ export interface QualityPreset {
   readonly cloudSteps: number;
   /** 雲の影（地形と海を雲の密度で暗くする。シャドウマップは使わない） */
   readonly cloudShadows: boolean;
-  /** 木の本数（4-6。src/render/vegetation.ts。配置は決定的で、少ない画質は多い画質の先頭の部分集合） */
+  /**
+   * 木の本数（4-6。src/render/vegetation.ts。配置は決定的で、少ない画質は多い画質の先頭の部分集合）。
+   * 4-7 で森の密度を 3 倍に: 「高」は 30000 → 90000、「中」は上限の 20000（12000 から）。「低」は据え置き
+   */
   readonly treeCount: number;
+  /** 木を 3〜5 本の束で置く（4-7。src/data/vegetation.ts の clump。遠景のビルボードは束ごとに 1 枚） */
+  readonly treeClumps: boolean;
   /** 岩・崖の法線の細部（4-6。手続きノイズで法線を揺らし、光の当たり方で凹凸を見せる。terrainDetail が true のときだけ） */
   readonly terrainNormalDetail: boolean;
   /** 森の地面に、木の影の代わりに太陽と反対側へずらした暗いまだらを描く（4-6。シャドウマップは使わない） */
@@ -60,7 +68,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     bloom: false,
     terrainDetail: false,
     drawDistance: 3000,
-    terrainMinLod: 1,
+    terrainMinLod: 2,
     oceanSimple: true,
     oceanLayers: 1,
     oceanBoost: false,
@@ -68,6 +76,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     cloudSteps: 0,
     cloudShadows: false,
     treeCount: 3000,
+    treeClumps: false,
     terrainNormalDetail: false,
     treeShade: false,
   },
@@ -86,7 +95,8 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     cloudMode: 'volume',
     cloudSteps: 8,
     cloudShadows: false,
-    treeCount: 12000,
+    treeCount: 20000,
+    treeClumps: true,
     terrainNormalDetail: true,
     treeShade: false,
   },
@@ -105,7 +115,8 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     cloudMode: 'volume',
     cloudSteps: 12,
     cloudShadows: true,
-    treeCount: 30000,
+    treeCount: 90000,
+    treeClumps: true,
     terrainNormalDetail: true,
     treeShade: true,
   },

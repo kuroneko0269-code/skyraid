@@ -1,9 +1,10 @@
-import { Group, Mesh, type Material, type MeshStandardMaterial } from 'three';
+import { BufferGeometry, Group, Mesh, type Material, type MeshStandardMaterial } from 'three';
 import { TERRAIN_CONFIG } from '../data/terrain';
 import type { Vec3 } from '../flight/math';
 import {
   TerrainPalette,
   buildChunkGeometry,
+  mergeChunkGeometries,
   type ChunkGeometry,
   type ChunkRect,
 } from './terrain-geometry';
@@ -36,24 +37,34 @@ import type { CloudUniforms } from './cloud-field';
 // 高さ関数は Three.js に依存しない terrain-height.ts にある。ここからも使えるようにする
 export { createHeightField, getGroundHeight, getHeight };
 
-interface Chunk {
+/** チャンクの中の LOD を選ぶ単位（4-7）。段ごとの頂点は必要になったときに作り、今と直前の段だけ残す */
+interface Block {
   readonly rect: ChunkRect;
   readonly box: Box3Like;
-  readonly mesh: Mesh;
-  /** LOD 段ごとのジオメトリ。必要になったときに作って使い回す */
   readonly geometries: (ChunkGeometry | undefined)[];
-  /** 隣のチャンク（CHUNK_EDGES の順。範囲外は null） */
-  readonly neighbors: (Chunk | null)[];
+  /** 隣のブロック（CHUNK_EDGES の順。範囲外は null。チャンクの境をまたぐ） */
+  readonly neighbors: (Block | null)[];
+  readonly chunk: Chunk;
   level: number;
 }
 
+/** 描画の単位（Mesh 1 つ = draw call 1）。中のブロックの頂点をまとめたジオメトリを持つ */
+interface Chunk {
+  readonly mesh: Mesh;
+  readonly blocks: Block[];
+  /** ブロックの段・縁の継ぎ合わせが変わり、まとめ直しが要る */
+  dirty: boolean;
+}
+
 /**
- * ハイトマップの島。chunks × chunks のチャンクに分け、カメラからの距離で
- * チャンクごとに LOD の段（分割数）を切り替える。描画距離より遠いチャンクは描かない
+ * ハイトマップの島。chunks × chunks のチャンク（Mesh）に分け、各チャンクをさらに blockSize m 四方の
+ * ブロックに分けて、カメラからの距離でブロックごとに LOD の段（分割数）を選ぶ（4-7。draw call は
+ * チャンクの数のまま）。描画距離より遠いブロックは描かない
  */
 export class Terrain {
   readonly object = new Group();
   private readonly chunks: Chunk[] = [];
+  private readonly blocks: Block[] = [];
   private readonly palette: TerrainPalette;
   // 画質「中」以上は PBR + 近距離のディテール、「低」は Lambert（setDetail で切り替える）
   private readonly detailedMaterial: MeshStandardMaterial;
@@ -73,41 +84,53 @@ export class Terrain {
     this.material = this.detailedMaterial;
     this.object.name = 'terrain';
     this.palette = new TerrainPalette(config.colors);
-    this.thresholds = lodThresholds(5000, config.lod.distanceRatios);
-    const size = config.size / config.chunks;
+    this.thresholds = lodThresholds(5000, config.lod.distanceRatios, config.lod.fineDistance);
+    const lod = config.lod;
     const half = config.size / 2;
-    for (let cz = 0; cz < config.chunks; cz++) {
-      for (let cx = 0; cx < config.chunks; cx++) {
-        const rect = { minX: -half + cx * size, minZ: -half + cz * size, size };
-        const mesh = new Mesh(undefined, this.material);
-        mesh.visible = false;
-        // 機体の影を受ける（地形自身は影を落とさない。影の範囲が狭く、山の影が途中で切れるため）
-        mesh.receiveShadow = true;
-        mesh.matrixAutoUpdate = false;
-        this.object.add(mesh);
-        this.chunks.push({
+    // ブロックの格子（全体で n × n）。チャンクは perChunk × perChunk 個のブロックを持つ
+    const perChunk = Math.max(1, Math.round(config.size / config.chunks / lod.blockSize));
+    const n = config.chunks * perChunk;
+    const size = config.size / n;
+    for (let c = 0; c < config.chunks * config.chunks; c++) {
+      const mesh = new Mesh(undefined, this.material);
+      mesh.visible = false;
+      // 機体の影を受ける（地形自身は影を落とさない。影の範囲が狭く、山の影が途中で切れるため）
+      mesh.receiveShadow = true;
+      mesh.matrixAutoUpdate = false;
+      this.object.add(mesh);
+      this.chunks.push({ mesh, blocks: [], dirty: false });
+    }
+    for (let bz = 0; bz < n; bz++) {
+      for (let bx = 0; bx < n; bx++) {
+        const rect = { minX: -half + bx * size, minZ: -half + bz * size, size };
+        const chunk = this.chunks[
+          Math.floor(bz / perChunk) * config.chunks + Math.floor(bx / perChunk)
+        ] as Chunk;
+        const block: Block = {
           rect,
           box: this.measureBox(rect),
-          mesh,
           geometries: [],
           neighbors: [],
+          chunk,
           level: LOD_HIDDEN,
-        });
+        };
+        chunk.blocks.push(block);
+        this.blocks.push(block);
       }
     }
-    const n = config.chunks;
-    const at = (cx: number, cz: number): Chunk | null =>
-      cx < 0 || cz < 0 || cx >= n || cz >= n ? null : (this.chunks[cz * n + cx] ?? null);
-    this.chunks.forEach((chunk, index) => {
-      const cx = index % n;
-      const cz = Math.floor(index / n);
-      chunk.neighbors.push(at(cx, cz - 1), at(cx + 1, cz), at(cx, cz + 1), at(cx - 1, cz));
+    const at = (bx: number, bz: number): Block | null =>
+      bx < 0 || bz < 0 || bx >= n || bz >= n ? null : (this.blocks[bz * n + bx] ?? null);
+    this.blocks.forEach((block, index) => {
+      const bx = index % n;
+      const bz = Math.floor(index / n);
+      block.neighbors.push(at(bx, bz - 1), at(bx + 1, bz), at(bx, bz + 1), at(bx - 1, bz));
     });
   }
 
-  /** 画質設定の描画距離と、使う最も細かい段（画質「低」は 1） */
+  /** 画質設定の描画距離と、使う最も細かい段（画質「低」は 2） */
   setQuality(drawDistance: number, minLevel: number): void {
-    this.thresholds = lodThresholds(drawDistance, this.config.lod.distanceRatios);
+    const lod = this.config.lod;
+    this.thresholds = lodThresholds(drawDistance, lod.distanceRatios, lod.fineDistance);
     this.minLevel = minLevel;
   }
 
@@ -127,24 +150,25 @@ export class Terrain {
     setTerrainShaderFlags(this.detailedMaterial, flags);
   }
 
-  /** カメラ位置でチャンクごとの段を選び直す。描画フレームごとに呼ぶ */
+  /** カメラ位置でブロックごとの段を選び直す。描画フレームごとに呼ぶ */
   update(camera: Readonly<Vec3>): void {
     const segments = this.config.lod.segments;
     let triangles = 0;
-    for (const chunk of this.chunks) {
-      const distance = distanceToBox(camera.x, camera.y, camera.z, chunk.box);
+    for (const block of this.blocks) {
+      const distance = distanceToBox(camera.x, camera.y, camera.z, block.box);
       const level = selectLod(
         distance,
         this.thresholds,
         this.minLevel,
-        chunk.level,
+        block.level,
         this.config.lod.hysteresis,
       );
-      if (level !== chunk.level) this.applyLevel(chunk, level);
+      if (level !== block.level) this.applyLevel(block, level);
       const seg = segments[level];
       if (seg !== undefined) triangles += chunkTriangles(seg);
     }
-    for (const chunk of this.chunks) this.stitch(chunk);
+    for (const block of this.blocks) this.stitch(block);
+    for (const chunk of this.chunks) if (chunk.dirty) this.rebuild(chunk);
     this.triangles = triangles;
   }
 
@@ -153,56 +177,64 @@ export class Terrain {
     return this.triangles;
   }
 
-  /** 表示中のチャンク数 */
+  /** 表示中のチャンク数（= 地形の draw call の上限） */
   get visibleChunks(): number {
-    return this.chunks.filter((c) => c.level !== LOD_HIDDEN).length;
+    return this.chunks.filter((c) => c.mesh.visible).length;
   }
 
-  private applyLevel(chunk: Chunk, level: number): void {
-    chunk.level = level;
-    if (level === LOD_HIDDEN) {
-      chunk.mesh.visible = false;
-      return;
-    }
-    let lod = chunk.geometries[level];
-    if (!lod) {
-      lod = buildChunkGeometry(
-        chunk.rect,
-        this.config.lod.segments[level] ?? 16,
-        this.field.getHeight,
-        this.palette,
-      );
-      chunk.geometries[level] = lod;
-    }
-    chunk.mesh.geometry = lod.geometry;
-    chunk.mesh.visible = true;
+  private applyLevel(block: Block, level: number): void {
+    const previous = block.level;
+    block.level = level;
+    block.chunk.dirty = true;
+    // 今と直前の段だけ残す（ヒステリシスで行き来するとき作り直さない。メモリを増やし続けない）
+    block.geometries.forEach((_, i) => {
+      if (i !== level && i !== previous) block.geometries[i] = undefined;
+    });
+    if (level === LOD_HIDDEN || block.geometries[level]) return;
+    block.geometries[level] = buildChunkGeometry(
+      block.rect,
+      this.config.lod.segments[level] ?? 4,
+      this.field.getHeight,
+      this.palette,
+    );
   }
 
   /** 隣が粗い段の縁は、頂点の高さを隣の縁の直線上に寄せてひび割れを塞ぐ */
-  private stitch(chunk: Chunk): void {
-    const lod = chunk.geometries[chunk.level];
+  private stitch(block: Block): void {
+    const lod = block.geometries[block.level];
     if (!lod) return;
-    let changed = false;
     for (const edge of CHUNK_EDGES) {
-      const neighbor = chunk.neighbors[edge];
+      const neighbor = block.neighbors[edge];
       const neighborLod = neighbor ? neighbor.geometries[neighbor.level] : undefined;
       // 隣が描かれていない・同じか細かい段なら元のまま（細かい側が合わせる）
       const step =
-        neighbor && neighbor.level > chunk.level && neighborLod
+        neighbor && neighbor.level > block.level && neighborLod
           ? lod.segments / neighborLod.segments
           : 1;
       if (lod.edgeSteps[edge] === step) continue;
       stitchEdge(lod.positions, lod.baseHeights, lod.segments, edge, step);
       lod.edgeSteps[edge] = step;
-      changed = true;
+      block.chunk.dirty = true;
     }
-    const position = lod.geometry.getAttribute('position');
-    if (changed) position.needsUpdate = true;
   }
 
-  /** チャンクの高さの範囲を粗く測る（LOD の距離計算用）。取りこぼし分の余裕を足す */
+  /** チャンクの中の描くブロックを 1 つのジオメトリにまとめ直す */
+  private rebuild(chunk: Chunk): void {
+    chunk.dirty = false;
+    const parts: ChunkGeometry[] = [];
+    for (const block of chunk.blocks) {
+      const lod = block.geometries[block.level];
+      if (lod) parts.push(lod);
+    }
+    const old = chunk.mesh.geometry;
+    chunk.mesh.visible = parts.length > 0;
+    chunk.mesh.geometry = parts.length > 0 ? mergeChunkGeometries(parts) : new BufferGeometry();
+    old.dispose();
+  }
+
+  /** ブロックの高さの範囲を粗く測る（LOD の距離計算用）。取りこぼし分の余裕を足す */
   private measureBox(rect: ChunkRect): Box3Like {
-    const samples = 32;
+    const samples = 16;
     let minY = Infinity;
     let maxY = -Infinity;
     for (let j = 0; j <= samples; j++) {

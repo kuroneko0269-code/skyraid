@@ -13,11 +13,19 @@ export interface Box3Like {
 }
 
 /**
- * 段 i を使う距離の上限の列。ratios は段 0..n-2 の上限（描画距離に対する比）で、
- * 最後の段は描画距離まで使う
+ * 段 i を使う距離の上限の列。ratios は段の上限（描画距離に対する比）で、最後の段は描画距離まで使う。
+ * fine を渡すと、その前に最も細かい段を描画距離に依らない fine m まで使う（4-7）。
+ * 列は単調に増える（描画距離が短いと前の段の上限に揃える）
  */
-export function lodThresholds(drawDistance: number, ratios: readonly number[]): number[] {
-  return [...ratios.map((r) => r * drawDistance), drawDistance];
+export function lodThresholds(
+  drawDistance: number,
+  ratios: readonly number[],
+  fine?: number,
+): number[] {
+  const list = [...(fine === undefined ? [] : [fine]), ...ratios.map((r) => r * drawDistance)];
+  list.push(drawDistance);
+  for (let i = 1; i < list.length; i++) list[i] = Math.max(list[i] ?? 0, list[i - 1] ?? 0);
+  return list;
 }
 
 /**
@@ -51,7 +59,7 @@ export function distanceToBox(x: number, y: number, z: number, box: Readonly<Box
   return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-/** 一辺 segments 分割のチャンク 1 枚の三角形数 */
+/** 一辺 segments 分割のブロック 1 枚の三角形数 */
 export function chunkTriangles(segments: number): number {
   return 2 * segments * segments;
 }
