@@ -46,7 +46,7 @@
 - [ ] 4-5 コックピット視点
 - [x] 4-6 地形の写実化（生成時の水力浸食、傾斜と高さによる質感の層、木、風上は崖・風下は砂浜。方向性は「写真のような写実」） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/879b922（事前修正: 墜落後の復帰位置をフリーフライトとミッションで分ける https://github.com/kuroneko0269-code/skyraid/commit/60bd7e9）
 - [x] 4-7 地形の見た目の仕上げ（実機の画質「中」のスクリーンショット評価で判明した 5 点: 地形の面の粗さ・色の均一さ・雪・木の密度・地平線の霞） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/a886d46（事前修正: M2 の最初の 1 機を easy に https://github.com/kuroneko0269-code/skyraid/commit/e72f9c2・パッドの爆弾を Y 長押しに https://github.com/kuroneko0269-code/skyraid/commit/74fd877）
-- [ ] 4-8 地形の残課題（画質「中」以上の山腹の階段状の縞・砂浜の面積・近景の木の色の個体差）
+- [x] 4-8 地形の残課題（画質「中」以上の山腹の階段状の縞・砂浜の面積・近景の木の色の個体差） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/5ac763a
 
 ## フェーズ5: PvP
 
