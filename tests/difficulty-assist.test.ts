@@ -55,14 +55,38 @@ describe('難易度（4-12）', () => {
 describe('操作補助の設定（スキーマ v4）', () => {
   it('v3 のセーブを v4 に移行すると操作補助が初期値（すべて ON）で入り、難易度など ほかの設定は残る', () => {
     const v4 = createInitialSave();
-    const settings: Record<string, unknown> = { ...v4.settings, difficulty: 'normal', hud: false };
+    const settings: Record<string, unknown> = { ...v4.settings, difficulty: 'hard', hud: false };
     delete settings.assist;
+    delete settings.difficultyEased;
     const save = migrateSave({ ...v4, version: 3, settings });
-    expect(save?.version).toBe(4);
+    expect(save?.version).toBe(SAVE_CONFIG.version);
     expect(save?.settings.assist).toEqual({ aim: true, camera: true, hud: true });
-    // 保存済みの難易度はそのまま（新しい初期値 easy にはしない）
-    expect(save?.settings.difficulty).toBe('normal');
+    // normal 以外の難易度はそのまま
+    expect(save?.settings.difficulty).toBe('hard');
     expect(save?.settings.hud).toBe(false);
+  });
+
+  it('4-11 の事前修正: 難易度が normal なら一度だけ easy にし、印を立てて書き戻す。以後 normal に戻しても触らない', () => {
+    const storage = new FakeStorage();
+    const old = createInitialSave();
+    const settings: Record<string, unknown> = { ...old.settings, difficulty: 'normal' };
+    delete settings.difficultyEased;
+    storage.map.set(KEY, JSON.stringify({ ...old, settings }));
+    const store = SaveStore.open(storage).store;
+    expect(store.settings.difficulty).toBe('easy');
+    expect(store.settings.difficultyEased).toBe(true);
+    // 開いた時点で書き戻している（次の起動で同じ直しを繰り返さない）
+    const written = JSON.parse(storage.map.get(KEY) ?? '{}') as {
+      settings: Record<string, unknown>;
+    };
+    expect(written.settings.difficulty).toBe('easy');
+    expect(written.settings.difficultyEased).toBe(true);
+    // プレイヤーが normal に戻したら、そのまま
+    store.setSetting('difficulty', 'normal');
+    expect(SaveStore.open(storage).store.settings.difficulty).toBe('normal');
+    // v3 からの移行でも同じ（印のない normal は easy）
+    delete settings.assist;
+    expect(migrateSave({ ...old, version: 3, settings })?.settings.difficulty).toBe('easy');
   });
 
   it('新しいセーブの難易度は easy。設定の部品は古いキー名（skyraid.assist.*）で on / off を読み書きできる', () => {

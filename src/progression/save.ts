@@ -1,15 +1,28 @@
 // セーブデータのスキーマ（3-1、Three.js・DOM 非依存）: 版番号つきの JSON。読み込むときは
 // 古い版から SAVE_MIGRATIONS を順に通して今の版にし、normalizeSave で形と値を確かめる。
 // 壊れていたら null（呼ぶ側で初期値に戻す）。書き込み・イベントは save-store.ts
-import { DIFFICULTIES, FREE_FLIGHT_ENEMIES, type Difficulty } from '../data/ai';
-import { ASSIST_SETTINGS, type AssistKind } from '../data/assist';
-import { AUDIO_CONFIG } from '../data/audio';
 import { STARTER_AIRCRAFT, findAircraftModel } from '../data/aircraft';
-import { QUALITY_LEVELS, type QualityLevel } from '../data/quality';
 import { RANKS, type Rank } from '../data/ranking';
 import { SAVE_CONFIG } from '../data/save';
 import { UPGRADE_KINDS, UPGRADE_LEVELS, type UpgradeKind } from '../data/upgrades';
-import { TOUCH_MODES, type TouchMode } from '../data/touch';
+import {
+  defaultAssist,
+  defaultSettings,
+  defaultVolume,
+  isObject,
+  isOneOf,
+  normalizeSettings,
+  type SaveSettings,
+} from './save-settings';
+
+export {
+  defaultAssist,
+  defaultSettings,
+  defaultVolume,
+  type AssistSettings,
+  type SaveSettings,
+  type VolumeSettings,
+} from './save-settings';
 
 /** ミッションごとの記録 */
 export interface MissionRecord {
@@ -21,44 +34,6 @@ export interface MissionRecord {
 
 /** 所持機体ごとの強化レベル（3-3。Lv0 が未強化。v1 までは Lv1 が未強化だった） */
 export type UpgradeLevels = Record<UpgradeKind, number>;
-
-/** 設定（ポーズメニューの設定。1-6 / 2-3 の別キーから統合） */
-export interface SaveSettings {
-  /** 手動で選んだ画質（null は自動判定） */
-  quality: QualityLevel | null;
-  /** 自動ダウングレードで下げた画質（手動設定があれば使わない） */
-  qualityAuto: QualityLevel | null;
-  touchControls: TouchMode;
-  /** フリーフライトの敵の有無と難易度 */
-  enemies: boolean;
-  difficulty: Difficulty;
-  /** HUD の表示（H キー / 設定の HUD ON/OFF） */
-  hud: boolean;
-  /** 音量（4-4。v3 から）: マスター / 効果音 / BGM。0〜1 */
-  volume: VolumeSettings;
-  /** 操作補助（4-12。v4 から）: エイムアシスト / ターゲットカメラ / HUD 補助 */
-  assist: AssistSettings;
-}
-
-export type AssistSettings = Record<AssistKind, boolean>;
-
-export function defaultAssist(): AssistSettings {
-  return {
-    aim: ASSIST_SETTINGS.aim.defaultOn,
-    camera: ASSIST_SETTINGS.camera.defaultOn,
-    hud: ASSIST_SETTINGS.hud.defaultOn,
-  };
-}
-
-export interface VolumeSettings {
-  master: number;
-  sfx: number;
-  bgm: number;
-}
-
-export function defaultVolume(): VolumeSettings {
-  return { ...AUDIO_CONFIG.defaultVolumes };
-}
 
 export interface SaveData {
   version: number;
@@ -79,19 +54,6 @@ export function initialUpgrades(): UpgradeLevels {
   return { engine: min, airframe: min, weapons: min, avionics: min };
 }
 
-export function defaultSettings(): SaveSettings {
-  return {
-    quality: null,
-    qualityAuto: null,
-    touchControls: 'auto',
-    enemies: true,
-    difficulty: FREE_FLIGHT_ENEMIES.defaultDifficulty,
-    hud: true,
-    volume: defaultVolume(),
-    assist: defaultAssist(),
-  };
-}
-
 /** 初期値（初回起動・壊れていたとき・削除の後） */
 export function createInitialSave(): SaveData {
   return {
@@ -109,8 +71,6 @@ export function createInitialSave(): SaveData {
 
 type Json = Record<string, unknown>;
 
-const ASSIST_KINDS: readonly AssistKind[] = ['aim', 'camera', 'hud'];
-
 /** v1 までの初期機の id（v2 で kestrel に改名） */
 const V1_STARTER_ID = 'starter';
 
@@ -119,7 +79,8 @@ const V1_STARTER_ID = 'starter';
  * - v0 → v1: 仕組みの確認用のダミー（版番号がなく、ランクを { id: ランク } で持つ想定の形。tests/save.test.ts）
  * - v1 → v2（3-3）: 強化 Lv を 1 つ下げる（v1 は Lv1〜5 で Lv1 が未強化、v2 は Lv0〜5）。初期機の id を starter → kestrel
  * - v2 → v3（4-4）: 設定に音量（settings.volume）を足す（初期値）
- * - v3 → v4（4-12）: 設定に操作補助（settings.assist）を足す（初期値）。難易度は保存した値のまま
+ * - v3 → v4（4-12）: 設定に操作補助（settings.assist）を足す（初期値）
+ * 難易度の一度だけの normal → easy（4-11 の事前修正）は版によらず normalizeSettings で（印 settings.difficultyEased）
  */
 export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
   0: (d) => {
@@ -225,31 +186,7 @@ export function normalizeSave(d: Json): SaveData | null {
   const selected = d.aircraft.selected;
   if (typeof selected === 'string' && selected in save.aircraft.owned)
     save.aircraft.selected = selected;
-  const s = d.settings;
-  const set = save.settings;
-  if (s.quality === null || isOneOf(QUALITY_LEVELS, s.quality)) set.quality = s.quality;
-  if (s.qualityAuto === null || isOneOf(QUALITY_LEVELS, s.qualityAuto))
-    set.qualityAuto = s.qualityAuto;
-  if (isOneOf(TOUCH_MODES, s.touchControls)) set.touchControls = s.touchControls;
-  if (typeof s.enemies === 'boolean') set.enemies = s.enemies;
-  if (isOneOf(DIFFICULTIES, s.difficulty)) set.difficulty = s.difficulty;
-  if (typeof s.hud === 'boolean') set.hud = s.hud;
-  if (isObject(s.volume)) {
-    const v = s.volume;
-    const d = set.volume;
-    set.volume = {
-      master: volumeOr(v.master, d.master),
-      sfx: volumeOr(v.sfx, d.sfx),
-      bgm: volumeOr(v.bgm, d.bgm),
-    };
-  }
-  if (isObject(s.assist)) {
-    const a = s.assist;
-    for (const k of ASSIST_KINDS) {
-      const v = a[k];
-      if (typeof v === 'boolean') set.assist[k] = v;
-    }
-  }
+  save.settings = normalizeSettings(d.settings);
   return save;
 }
 
@@ -311,19 +248,6 @@ export function decodeSave(text: string): SaveData | null {
   }
 }
 
-/** 音量（0〜1 に収める。数でなければ既定値） */
-function volumeOr(v: unknown, fallback: number): number {
-  return typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback;
-}
-
-function isObject(v: unknown): v is Json {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
-
 function isRank(v: unknown): v is Rank {
   return isOneOf(RANKS, v);
-}
-
-function isOneOf<T extends string>(list: readonly T[], v: unknown): v is T {
-  return typeof v === 'string' && (list as readonly string[]).includes(v);
 }

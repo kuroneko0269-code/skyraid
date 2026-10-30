@@ -139,7 +139,11 @@ export class SaveStore {
     if (text !== null) {
       const data = parseSave(text);
       const store = new SaveStore(storage, data ?? createInitialSave());
-      if (data) return { store, status: 'loaded' };
+      if (data) {
+        // 移行・値の直し（難易度の一度だけの easy など）で中身が変わったら書き戻す
+        if (JSON.stringify(data) !== text) store.persist();
+        return { store, status: 'loaded' };
+      }
       store.persist();
       return { store, status: 'reset' };
     }
