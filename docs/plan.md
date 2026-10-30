@@ -47,7 +47,7 @@
 - [x] 4-3 機体モデル差し替え（CC0素材 or 自作）。Draco圧縮 → 手続き生成の自作モデル（4 機種・敵機・輸送機、操舵面・炎・飛行機雲、外部アセットなし） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/f2c3c91（事前修正: 300 行を超えた 3 ファイルの分割 https://github.com/kuroneko0269-code/skyraid/commit/87835b2）
 - [x] 4-10 UI 刷新・ブランド素材の受け口・セキュリティヘッダー・PWA（デザインシステム、タイトルのロゴと展開アニメ、アイコン・favicon、`_headers` の CSP、innerHTML の点検、manifest と Service Worker、safe-area と iOS の「ホーム画面に追加」案内） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/07deb07（事前修正: 機体の環境マップ https://github.com/kuroneko0269-code/skyraid/commit/a2090e5・plan.md の並べ替え https://github.com/kuroneko0269-code/skyraid/commit/3a0f536）
 - [x] 4-4 エフェクト（排気、ミサイル煙、爆発）と音（Web Audio の合成・BGM の受け口・音量の設定） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/c340ea1（事前修正: ランク S を金色に https://github.com/kuroneko0269-code/skyraid/commit/54eaa50・アイコンの生成とロゴの表示サイズ https://github.com/kuroneko0269-code/skyraid/commit/e10ce5b）
-- [ ] 4-9 低地の色と木
+- [x] 4-9 低地の色と木（乾いた草の割合と色・中間スケールのむら・低地の湿地・草の生えた砂の帯、葉の明度と空の環境マップ・ビルボードの法線、近景の円錐 3 段 + 丸めた頂点、遠景の手続きの樹冠テクスチャ、森の縁の高さと疎密、「高」の樹冠の影） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/b56d43d
 - [ ] 4-11 操作設定とチュートリアル
 - [ ] 4-5 コックピット視点
 
