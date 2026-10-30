@@ -20,6 +20,7 @@ import type { Loadout } from '../progression/loadout';
 import { copyQuat, copyVec3, quatIdentity, vec3, type Quat, type Vec3 } from '../flight/math';
 import { BoundaryWatch } from './boundary';
 import { DestroyTally } from './destroy-tally';
+import { configureDrones, spawnInSession } from './session-spawn';
 import { MissionProps, type EscortState } from './mission-props';
 import type { DestroyableKind, Pose, SpawnDef } from './types';
 import type { MissionWorld } from './world';
@@ -139,7 +140,7 @@ export class FlightSession implements MissionWorld {
     this.startOrientation.w = 1;
     this.begin();
     this.combat.targets.configure(this.combat.targets.balloons.length, true);
-    this.configureDrones(this.combat.drones.length, true);
+    configureDrones(this.combat.drones, this.combat.drones.length, true);
     this.squadron.respawns = true;
     const pending = this.pendingEnemies;
     this.pendingEnemies = null;
@@ -156,7 +157,7 @@ export class FlightSession implements MissionWorld {
     headingQuat(this.startOrientation, start.headingDeg);
     this.begin();
     this.combat.targets.configure(0, false);
-    this.configureDrones(0, false);
+    configureDrones(this.combat.drones, 0, false);
     this.squadron.respawns = false;
     this.squadron.withdrawAll();
     this.destroyed.clearGroups();
@@ -249,44 +250,16 @@ export class FlightSession implements MissionWorld {
   }
 
   spawn(def: SpawnDef): void {
-    switch (def.kind) {
-      case 'enemyFighter':
-        for (let i = 0; i < def.count; i++) {
-          const at = def.positions[i % def.positions.length];
-          if (!at) break;
-          const preferAllies = def.attack === 'transport';
-          const index = this.squadron.deploy(at, def.patrol, def.difficulty, preferAllies);
-          if (index >= 0) this.destroyed.setEnemyGroup(index, def.group);
-        }
-        break;
-      case 'targets':
-        this.combat.targets.configure(def.count, false);
-        break;
-      case 'drones':
-        this.configureDrones(def.count, false);
-        break;
-      case 'groundTarget':
-        this.props.spawnGroundTargets(def);
-        break;
-      case 'transport':
-        this.props.spawnTransport(def);
-        break;
-      case 'kaiju':
-        this.props.spawnKaiju(def);
-        break;
-    }
+    spawnInSession(def, {
+      squadron: this.squadron,
+      combat: this.combat,
+      props: this.props,
+      destroyed: this.destroyed,
+    });
   }
 
   destroyedCount(kind: DestroyableKind, group?: string): number {
     return this.destroyed.get(kind, group);
-  }
-
-  private configureDrones(count: number, respawns: boolean): void {
-    this.combat.drones.forEach((d, i) => {
-      d.reset();
-      d.deployed = i < count;
-      d.respawns = respawns;
-    });
   }
 
   private respawn(): void {

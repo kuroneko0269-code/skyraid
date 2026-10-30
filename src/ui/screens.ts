@@ -156,6 +156,16 @@ export class Screens {
   }
 
   /** ハンガーを閉じる（← 戻る・Esc）。確認ダイアログが開いていればそれだけ閉じる */
+  /** Esc / Start（メニュー中）: ポーズ → 再開、モード選択 → タイトルなど 1 つ前の画面へ */
+  navigateBack(game: GameState): void {
+    const state = game.state;
+    if (state === 'pause') game.transition('flight');
+    else if (state === 'mode_select' || state === 'pilot_name') game.transition('title');
+    else if (state === 'mission_select') game.transition('mode_select');
+    else if (state === 'briefing') game.transition('mission_select');
+    else if (state === 'hangar') this.closeHangar(game);
+  }
+
   closeHangar(game: GameState): void {
     if (this.hangarScreen.closeDialog()) return;
     this.briefing.setAircraftName(this.hangar.selectedModel.name);

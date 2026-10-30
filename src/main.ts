@@ -5,7 +5,6 @@ import { GamepadInput, browserGamepads } from './core/gamepad';
 import { parseDebugFlags, parseSkipTitle } from './core/debug-flags';
 import { BOOT_TASKS, runBoot } from './core/boot';
 import { GameState, isSimulating, syncLoopWithState, usesDemoCamera } from './core/game-state';
-import { FrameStats } from './core/frame-stats';
 import { parseFlightOptions } from './core/flight-options';
 import { ACTIONS } from './data/keybinds';
 import { QUALITY_CONFIG } from './data/quality';
@@ -14,6 +13,7 @@ import { MISSIONS } from './data/missions';
 import { createControls } from './entities/aircraft';
 import { createCombatInput } from './combat/combat-system';
 import { WeaponInput } from './core/weapon-input';
+import { readFlightControls } from './core/flight-input';
 import { FlightSession } from './missions/flight-session';
 import { GamePlay } from './missions/game-play';
 import { bindMissionRewards } from './progression/mission-rewards';
@@ -21,22 +21,16 @@ import { FlightViews } from './render/flight-views';
 import { HudLink } from './render/hud-link';
 import { MissionLink } from './render/mission-link';
 import { RingView } from './render/ring-view';
-import {
-  applyInterpolatedPose,
-  createPlaceholderAircraft,
-  rebuildPlaceholderAircraft,
-} from './render/aircraft-mesh';
 import { HangarStage } from './render/hangar-stage';
-import type { AircraftModel } from './data/aircraft';
+import { DebugLink } from './render/debug-link';
+import { PlayerView } from './render/player-view';
 import { ChaseCamera } from './render/chase-camera';
 import { DemoCamera } from './render/demo-camera';
 import { RenderPipeline } from './render/pipeline';
 import { QualityLink } from './render/quality-link';
 import { createWorldScene } from './render/scene';
-import { setShadowFlags } from './render/lighting';
 import { getGroundHeight } from './render/terrain-height';
 import { DamageOverlay } from './ui/damage-overlay';
-import { DebugOverlay } from './ui/debug-overlay';
 import { createEnemySettings } from './ui/enemy-settings';
 import { Hud } from './ui/hud';
 import { createHudToggle } from './ui/hud-toggle';
@@ -58,15 +52,11 @@ container.appendChild(renderer.domElement);
 
 const { scene, camera, world } = createWorldScene(window.innerWidth / window.innerHeight);
 const pipeline = new RenderPipeline(renderer, scene, camera);
-const aircraftMesh = createPlaceholderAircraft();
-// 自機は影を落とし、自分の影（翼の影など）も受ける
-setShadowFlags(aircraftMesh, true, true);
-scene.add(aircraftMesh);
+const playerView = new PlayerView(scene);
+const aircraftMesh = playerView.mesh;
 const chaseCamera = new ChaseCamera(camera);
 // ハンガー（3-3）の機体の展示。表示中はカメラを展示の前に置く
 const hangarStage = new HangarStage(scene, camera);
-// 自機の見た目の形（出撃する機体が変わったら作り直す）
-let playerShapeOf: AircraftModel | null = null;
 const demoCamera = new DemoCamera(camera);
 
 // セーブ（3-1）: 進み具合・クレジット・パイロット名・設定。壊れていたら初期値にしてお知らせ
@@ -118,8 +108,7 @@ createFullscreenButton(settingsPanel);
 
 // ?debug でデバッグ表示を初期表示、?debug=input で押したアクション名をコンソールに出す
 const debugFlags = parseDebugFlags(window.location.search);
-const overlay = new DebugOverlay(document.body, debugFlags.overlay);
-const frameStats = new FrameStats();
+const debug = new DebugLink(document.body, debugFlags.overlay, pipeline, world);
 let lastFrameMs: number | null = null;
 
 // 飛行: フリーフライトは島の沖合から、ミッション（2-4）は定義の開始位置から。?autolevel=off / ?invert で操作設定を変える。
@@ -191,12 +180,7 @@ loop.onUpdate((dt) => {
     game.transition('pause');
     return;
   }
-  controls.pitch = input.axis('pitchDown', 'pitchUp');
-  controls.roll = input.axis('rollLeft', 'rollRight');
-  controls.yaw = input.axis('yawLeft', 'yawRight');
-  controls.throttle = input.axis('throttleDown', 'throttleUp');
-  controls.afterburner = input.isDown('afterburner');
-  controls.throttleTarget = input.takeThrottleTarget();
+  readFlightControls(input, controls);
   weaponInput.read(input, combatInput, dt);
   play.step(controls, combatInput, dt);
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
@@ -244,15 +228,7 @@ loop.onRender((alpha) => {
     const { notice, noticeSeconds } = QUALITY_CONFIG.autoDowngrade;
     hud.showNotice(notice, noticeSeconds);
   }
-  if (lastFrameMs !== null && frameStats.record(frameSeconds)) {
-    const { triangleCount: terrainTriangles, visibleChunks: terrainChunks } = world.terrain;
-    overlay.update({
-      ...frameStats.latest,
-      ...pipeline.lastStats,
-      terrainTriangles,
-      terrainChunks,
-    });
-  }
+  if (lastFrameMs !== null) debug.record(frameSeconds);
   lastFrameMs = now;
 });
 loop.start();
@@ -281,16 +257,12 @@ function startFlight(mission: boolean): void {
 /** ハンガーで選んだ機体と強化を自機に入れる（3-3）。飛行を始めるたびに呼ぶ。見た目も機体の形に */
 function applyPlayerLoadout(): void {
   session.applyLoadout(screens.hangar.loadout());
-  const model = screens.hangar.selectedModel;
-  if (playerShapeOf === model) return;
-  playerShapeOf = model;
-  rebuildPlaceholderAircraft(aircraftMesh, model.shape);
-  setShadowFlags(aircraftMesh, true, true);
+  playerView.setModel(screens.hangar.selectedModel);
 }
 
 /** 飛行中・メニュー中どちらでも効くキー（F3 / H）と入力ログ。固定更新 1 回分の終わりに呼ぶ */
 function handleCommonKeys(): void {
-  if (input.wasPressed('debugToggle')) overlay.toggle();
+  if (input.wasPressed('debugToggle')) debug.toggle();
   if (input.wasPressed('hudToggle')) hudToggle.toggle();
   if (debugFlags.logInput) {
     for (const action of ACTIONS) {
@@ -303,14 +275,8 @@ function handleCommonKeys(): void {
 /** 固定更新が止まっている間（タイトル・モード選択・ポーズ）の入力。描画フレームごとに呼ぶ */
 function menuTick(): void {
   gamepad.poll();
-  if (input.wasPressed('pause')) {
-    // Esc / Start: ポーズ → 再開、モード選択 → タイトル
-    if (game.state === 'pause') game.transition('flight');
-    else if (game.state === 'mode_select' || game.state === 'pilot_name') game.transition('title');
-    else if (game.state === 'mission_select') game.transition('mode_select');
-    else if (game.state === 'briefing') game.transition('mission_select');
-    else if (game.state === 'hangar') screens.closeHangar(game);
-  }
+  // Esc / Start: ポーズ → 再開、モード選択 → タイトルなど 1 つ前の画面へ
+  if (input.wasPressed('pause')) screens.navigateBack(game);
   handleCommonKeys();
 }
 
@@ -318,14 +284,7 @@ function menuTick(): void {
 function updateFlightView(alpha: number, frameSeconds: number): void {
   // 撃墜されている間は機体を隠す（破片は combat の撃墜の演出）
   aircraftMesh.visible = session.player.active;
-  applyInterpolatedPose(
-    aircraftMesh,
-    aircraft.prevPosition,
-    aircraft.state.position,
-    aircraft.prevOrientation,
-    aircraft.state.orientation,
-    alpha,
-  );
+  playerView.updatePose(aircraft, alpha);
   // カメラが地面にめり込まないよう、前フレームのカメラ位置の地表の高さを渡す
   const groundUnderCamera = getGroundHeight(camera.position.x, camera.position.z);
   chaseCamera.update(aircraftMesh, aircraft.state, groundUnderCamera, frameSeconds);
