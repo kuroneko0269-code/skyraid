@@ -1,198 +1,166 @@
+// 海面（4-2）。画質「中」以上はカメラ中心の同心リングにゲルストナー波 + さざ波の法線ノイズ、
+// 水深による色・泡・太陽の照り返し（GGX）・水面下の散乱。「低」は平面 + うねり 1 本の簡易版。
+// 見た目だけ波打たせ、衝突判定は「海面 = 高度 0」のまま
 import {
   Color,
+  DataTexture,
+  DataUtils,
+  HalfFloatType,
+  LinearFilter,
   Mesh,
-  PlaneGeometry,
+  RedFormat,
   ShaderMaterial,
   UniformsLib,
   UniformsUtils,
+  Vector2,
   Vector3,
   Vector4,
+  type BufferGeometry,
+  type IUniform,
 } from 'three';
-import { OCEAN_CONFIG, TERRAIN_CONFIG } from '../data/terrain';
+import { OCEAN_CONFIG } from '../data/ocean';
+import type { QualityPreset } from '../data/quality';
 import { SKY_CONFIG } from '../data/sky';
+import { TERRAIN_CONFIG } from '../data/terrain';
+import { WIND_CONFIG } from '../data/wind';
 import type { Vec3 } from '../flight/math';
 import type { Atmosphere } from './atmosphere';
-import { ATMOSPHERE_GLSL } from './atmosphere-glsl';
+import type { CloudField } from './cloud-field';
+import { buildGerstnerWaves, maxWaveHeight } from './gerstner';
+import { bakeDepthField } from './ocean-depth';
+import {
+  detailedFragmentShader,
+  detailedVertexShader,
+  simpleFragmentShader,
+  simpleVertexShader,
+} from './ocean-glsl';
+import { createPlaneGeometry, createRingGeometry } from './ocean-mesh';
+import { getHeight } from './terrain-height';
 
-// 平面の一辺 = 描画距離 × この値。画面の端（視線から斜め）でも縁が霧の外に出るように
-const SIZE_PER_DRAW_DISTANCE = 2.5;
+const DEG = Math.PI / 180;
 
-// 頂点・フラグメントの両方で使う色の計算（水の色 + フレネルで空の反射）。
-// 空の反射は空のドームと同じ大気散乱（atmoSky）、水の色は反射率 × 地形と同じ光（太陽 + 空）
-const shadeChunk = /* glsl */ `
-  uniform vec3 uDeepColor;
-  uniform vec3 uShallowColor;
-  uniform vec3 uSunDirection;
-  uniform float uSunE;
-  uniform vec3 uWaterLight;
-  uniform float uReflectivity;
-  ${ATMOSPHERE_GLSL}
+/** 地形の高さを水深の格子に焼いて、浮動小数点のテクスチャ（線形補間）にする */
+function createDepthTexture(): DataTexture {
+  const res = OCEAN_CONFIG.depthMap.resolution;
+  const field = bakeDepthField(getHeight, TERRAIN_CONFIG.size, res, TERRAIN_CONFIG.seaLevel);
+  const half = new Uint16Array(field.data.length);
+  for (let i = 0; i < half.length; i++) half[i] = DataUtils.toHalfFloat(field.data[i] ?? 0);
+  const texture = new DataTexture(half, res, res, RedFormat, HalfFloatType);
+  texture.minFilter = LinearFilter;
+  texture.magFilter = LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
 
-  vec3 skyColor(vec3 dir) {
-    return atmoSky(dir, uSunDirection, uSunE, cameraPosition.y);
-  }
+/** さざ波の層の uniform（流れる速度・1 / 大きさ・傾き、消える距離） */
+function normalLayerUniforms(): { layers: Vector4[]; fades: Vector2[] } {
+  const layers = OCEAN_CONFIG.normalLayers.map((l) => {
+    const a = (WIND_CONFIG.direction + l.angle) * DEG;
+    return new Vector4(Math.cos(a) * l.speed, Math.sin(a) * l.speed, 1 / l.cell, l.slope);
+  });
+  const fades = OCEAN_CONFIG.normalLayers.map((l) => new Vector2(l.fade.start, l.fade.end));
+  return { layers, fades };
+}
 
-  // n: 法線、toEye: 目への向き（どちらも単位ベクトル）
-  vec3 waterShade(vec3 n, vec3 toEye) {
-    float facing = clamp(dot(n, toEye), 0.0, 1.0);
-    // Schlick 近似のフレネル: 浅い角度ほど空を映す
-    float f = 1.0 - facing;
-    float f2 = f * f;
-    float fresnel = 0.02 + 0.98 * f2 * f2 * f;
-    vec3 r = reflect(-toEye, n);
-    r.y = abs(r.y);
-    vec3 water = mix(uShallowColor, uDeepColor, facing) * uWaterLight;
-    return mix(water, skyColor(r), fresnel * uReflectivity);
-  }
-`;
-
-// OCEAN_SIMPLE（画質「低」）: 頂点の波を減らし、さざ波なし・水の色とフレネルを頂点で計算する
-const vertexShader = /* glsl */ `
-  #define WAVE_COUNT ${OCEAN_CONFIG.waves.length}
-  #ifdef OCEAN_SIMPLE
-    #define ACTIVE_WAVES ${OCEAN_CONFIG.simple.waveCount}
-  #else
-    #define ACTIVE_WAVES WAVE_COUNT
-  #endif
-  uniform float uTime;
-  // xy = 進行方向（単位ベクトル）、z = 波数 2π/波長、w = 振幅
-  uniform vec4 uWaves[WAVE_COUNT];
-  // 角振動数（波数 × 速さ）
-  uniform float uOmega[WAVE_COUNT];
-  varying vec3 vWorldPos;
-  varying vec3 vNormal;
-  #ifdef OCEAN_SIMPLE
-    varying vec3 vShade;
-    ${shadeChunk}
-  #endif
-  #include <common>
-  #include <fog_pars_vertex>
-  void main() {
-    vec4 wp = modelMatrix * vec4(position, 1.0);
-    float h = 0.0;
-    vec2 grad = vec2(0.0);
-    for (int i = 0; i < ACTIVE_WAVES; i++) {
-      vec4 w = uWaves[i];
-      float phase = dot(w.xy, wp.xz) * w.z - uTime * uOmega[i];
-      h += w.w * sin(phase);
-      grad += w.w * w.z * cos(phase) * w.xy;
-    }
-    wp.y += h;
-    vWorldPos = wp.xyz;
-    vNormal = normalize(vec3(-grad.x, 1.0, -grad.y));
-    #ifdef OCEAN_SIMPLE
-      vShade = waterShade(vNormal, normalize(cameraPosition - wp.xyz));
-    #endif
-    vec4 mvPosition = viewMatrix * wp;
-    gl_Position = projectionMatrix * mvPosition;
-    #include <fog_vertex>
-  }
-`;
-
-const fragmentShader = /* glsl */ `
-  #define RIPPLE_COUNT ${OCEAN_CONFIG.rippleWavelengths.length}
-  uniform float uTime;
-  uniform float uRippleK[RIPPLE_COUNT];
-  uniform float uRippleStrength;
-  uniform float uRippleFadeStart;
-  uniform float uRippleFadeEnd;
-  uniform vec3 uSunColor;
-  uniform float uSunShininess;
-  uniform float uSunSpecular;
-  varying vec3 vWorldPos;
-  varying vec3 vNormal;
-  #ifdef OCEAN_SIMPLE
-    uniform vec3 uSunDirection;
-    varying vec3 vShade;
-  #else
-    ${shadeChunk}
-  #endif
-  #include <common>
-  #include <fog_pars_fragment>
-
-  void main() {
-    vec3 eyeVec = cameraPosition - vWorldPos;
-    vec3 toEye = normalize(eyeVec);
-    #ifdef OCEAN_SIMPLE
-      vec3 n = normalize(vNormal);
-      vec3 color = vShade;
-    #else
-      // さざ波: 頂点は動かさず、向きの違う細かい波で法線だけ揺らす
-      vec2 g = vec2(0.0);
-      for (int i = 0; i < RIPPLE_COUNT; i++) {
-        float a = float(i) * 2.1 + 0.4;
-        vec2 dir = vec2(cos(a), sin(a));
-        float k = uRippleK[i];
-        g += cos(dot(dir, vWorldPos.xz) * k - uTime * k * 1.5) * dir;
-      }
-      // 遠くのさざ波は画素より細かくなってちらつく（モアレ）ので、距離で消す
-      float fade = 1.0 - smoothstep(uRippleFadeStart, uRippleFadeEnd, length(eyeVec));
-      vec3 n = normalize(vNormal + vec3(-g.x, 0.0, -g.y) * uRippleStrength * fade);
-      vec3 color = waterShade(n, toEye);
-    #endif
-    vec3 r = reflect(-toEye, n);
-    color += uSunColor * pow(max(dot(r, uSunDirection), 0.0), uSunShininess) * uSunSpecular;
-    gl_FragColor = vec4(color, 1.0);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-    #include <fog_fragment>
-  }
-`;
-
-/**
- * 海面。カメラに追従する平面で、頂点をワールド座標の正弦波でゆっくり上下させる。
- * 色は真下が水の色（反射率 × 太陽と空の光）、浅い角度ほど空の反射（フレネル）。空の色は大気散乱から取る。
- * 本格的な水面は 4-2
- */
 export class Ocean {
-  readonly mesh: Mesh<PlaneGeometry, ShaderMaterial>;
-  private spacing = 1;
-
+  /** 画質「中」以上（同心リング） */
+  readonly detailedMesh: Mesh<BufferGeometry, ShaderMaterial>;
+  /** 画質「低」（平面） */
+  readonly simpleMesh: Mesh<BufferGeometry, ShaderMaterial>;
   private simple = false;
-  // 大気から入れる uniform の値（太陽を動かしたら書き換える）
-  private readonly sunDirection = new Vector3();
-  private readonly sunE = { value: 0 };
-  private readonly sunColor = new Color();
-  private readonly waterLight = new Color();
+  private spacing = 1;
+  private drawDistance = 0;
 
-  constructor(atmosphere: Atmosphere, drawDistance: number) {
+  // 大気から入れる値（太陽を動かしたら書き換える。両方のマテリアルで共有）
+  private readonly shared: Record<string, IUniform> = {
+    uTime: { value: 0 },
+    uSunDirection: { value: new Vector3() },
+    uSunE: { value: 0 },
+    uSunColor: { value: new Color() },
+    uSunIrr: { value: new Color() },
+    uSkyIrr: { value: new Color() },
+    uReflectivity: { value: OCEAN_CONFIG.reflectivity },
+    uDeepColor: { value: new Color(OCEAN_CONFIG.deepColor) },
+  };
+
+  constructor(atmosphere: Atmosphere, drawDistance: number, clouds: CloudField) {
     const cfg = OCEAN_CONFIG;
-    const waves = cfg.waves.map((w) => {
-      const a = (w.direction * Math.PI) / 180;
-      return new Vector4(Math.cos(a), Math.sin(a), (2 * Math.PI) / w.wavelength, w.amplitude);
-    });
-    const omega = cfg.waves.map((w) => ((2 * Math.PI) / w.wavelength) * w.speed);
-    const material = new ShaderMaterial({
-      uniforms: UniformsUtils.merge([
-        UniformsLib.fog,
-        {
-          uTime: { value: 0 },
-          uWaves: { value: waves },
-          uOmega: { value: omega },
-          uRippleK: { value: cfg.rippleWavelengths.map((l) => (2 * Math.PI) / l) },
-          uRippleStrength: { value: cfg.rippleStrength },
-          uRippleFadeStart: { value: cfg.rippleFade.start },
-          uRippleFadeEnd: { value: cfg.rippleFade.end },
-          uDeepColor: { value: new Color(cfg.deepColor) },
-          uShallowColor: { value: new Color(cfg.shallowColor) },
-          uReflectivity: { value: cfg.reflectivity },
-          uSunDirection: { value: this.sunDirection },
-          uSunE: this.sunE,
-          uSunColor: { value: this.sunColor },
-          uWaterLight: { value: this.waterLight },
-          uSunShininess: { value: cfg.sunShininess },
-          uSunSpecular: { value: cfg.sunSpecular },
+    const waves = buildGerstnerWaves();
+    const { layers, fades } = normalLayerUniforms();
+    const ripples = { uLayers: { value: layers }, uLayerFade: { value: fades } };
+    const depthTex = createDepthTexture();
+
+    const detailed = new ShaderMaterial({
+      uniforms: {
+        ...UniformsUtils.clone(UniformsLib.fog),
+        ...this.shared,
+        ...ripples,
+        ...clouds.uniforms,
+        uWaves: { value: waves.map((w) => new Vector4(w.dirX, w.dirZ, w.k, w.amplitude)) },
+        uWaveB: { value: waves.map((w) => new Vector2(w.omega, w.steepness / w.k)) },
+        uSpacingK: { value: (2 * Math.PI) / cfg.rings.angularSegments },
+        uMinSpacing: { value: (2 * Math.PI * cfg.rings.innerRadius) / cfg.rings.angularSegments },
+        uDepthTex: { value: depthTex },
+        uDepthSize: { value: TERRAIN_CONFIG.size },
+        uShoal: { value: new Vector2(cfg.shoal.minDepth, cfg.shoal.fullDepth) },
+        uLayerCount: { value: 2 },
+        uShallowColor: { value: new Color(cfg.shallowColor) },
+        uDepthScale: { value: cfg.depthScale },
+        uGlint: {
+          value: new Vector3(
+            cfg.sunGlint.roughnessNear,
+            cfg.sunGlint.roughnessFar,
+            cfg.sunGlint.strength,
+          ),
         },
-      ]),
-      vertexShader,
-      fragmentShader,
+        uSss: {
+          value: new Vector4(...new Color(cfg.subsurface.color).toArray(), cfg.subsurface.strength),
+        },
+        uMaxAmp: { value: maxWaveHeight(waves) },
+        uFoam: {
+          value: new Vector4(
+            cfg.foam.width,
+            cfg.foam.swing,
+            (2 * Math.PI) / cfg.foam.period,
+            1 / cfg.foam.cell,
+          ),
+        },
+        uFoamAlbedo: { value: cfg.foam.albedo },
+        uFoamMaxDepth: { value: cfg.foam.maxDepth },
+        uWind: { value: new Vector2(layers[0]?.x ?? 0, layers[0]?.y ?? 0) },
+      },
+      vertexShader: detailedVertexShader,
+      fragmentShader: detailedFragmentShader,
       fog: true,
     });
-    this.mesh = new Mesh(new PlaneGeometry(1, 1), material);
-    this.mesh.name = 'ocean';
-    // 平面はカメラの真下に置き直すので、カリングで消えないようにする
-    this.mesh.frustumCulled = false;
+
+    const swell = waves[0];
+    const simple = new ShaderMaterial({
+      uniforms: {
+        ...UniformsUtils.clone(UniformsLib.fog),
+        ...this.shared,
+        ...ripples,
+        uSimpleWave: {
+          value: new Vector4(swell?.dirX ?? 1, swell?.dirZ ?? 0, swell?.k ?? 0, swell?.amplitude),
+        },
+        uSimpleOmega: { value: swell?.omega ?? 0 },
+        uSunShininess: { value: cfg.simple.sunShininess },
+        uSunSpecular: { value: cfg.simple.sunSpecular },
+      },
+      vertexShader: simpleVertexShader,
+      fragmentShader: simpleFragmentShader,
+      fog: true,
+    });
+
+    this.detailedMesh = new Mesh(createRingGeometry(1, 2, 8), detailed);
+    this.simpleMesh = new Mesh(createPlaneGeometry(1, 1), simple);
+    for (const mesh of [this.detailedMesh, this.simpleMesh]) {
+      mesh.name = 'ocean';
+      // カメラの真下に置き直すので、カリングで消えないようにする
+      mesh.frustumCulled = false;
+    }
     this.setDrawDistance(drawDistance);
+    this.setSimple(false);
     this.applyAtmosphere(atmosphere);
     atmosphere.onChange((a) => {
       this.applyAtmosphere(a);
@@ -203,49 +171,77 @@ export class Ocean {
   private applyAtmosphere(atmosphere: Atmosphere): void {
     const d = atmosphere.sun;
     const l = atmosphere.lighting;
-    this.sunDirection.set(d.x, d.y, d.z);
-    this.sunE.value = SKY_CONFIG.sun.irradiance;
+    const u = this.shared;
+    (u.uSunDirection?.value as Vector3).set(d.x, d.y, d.z);
+    if (u.uSunE) u.uSunE.value = SKY_CONFIG.sun.irradiance;
     // 照り返しは地上に届く太陽光の色
-    this.sunColor.setRGB(l.sun[0], l.sun[1], l.sun[2]);
-    // 水の中で散乱して出てくる光 = 水平面の放射照度 / π（拡散面と同じ）
+    (u.uSunColor?.value as Color).setRGB(l.sun[0], l.sun[1], l.sun[2]);
+    // 水平面の放射照度（太陽と空を分けて渡す。雲の影は太陽だけを暗くする）
     const sin = Math.max(d.y, 0);
-    this.waterLight.setRGB(
-      (l.sun[0] * sin + l.skyIrradiance[0]) / Math.PI,
-      (l.sun[1] * sin + l.skyIrradiance[1]) / Math.PI,
-      (l.sun[2] * sin + l.skyIrradiance[2]) / Math.PI,
-    );
+    (u.uSunIrr?.value as Color).setRGB(l.sun[0] * sin, l.sun[1] * sin, l.sun[2] * sin);
+    (u.uSkyIrr?.value as Color).setRGB(l.skyIrradiance[0], l.skyIrradiance[1], l.skyIrradiance[2]);
   }
 
-  /** 描画距離に合わせて平面の大きさを作り直す */
+  /** 描画距離に合わせてメッシュを作り直す */
   setDrawDistance(drawDistance: number): void {
-    const size = drawDistance * SIZE_PER_DRAW_DISTANCE;
-    const segments = OCEAN_CONFIG.segments;
-    const geometry = new PlaneGeometry(size, size, segments, segments);
-    geometry.rotateX(-Math.PI / 2);
-    this.mesh.geometry.dispose();
-    this.mesh.geometry = geometry;
-    this.spacing = size / segments;
-  }
-
-  /** 画質「低」用の簡略シェーダーに切り替える（切り替えたときだけ再コンパイル） */
-  setSimple(simple: boolean): void {
-    if (simple === this.simple) return;
-    this.simple = simple;
-    const material = this.mesh.material;
-    if (simple) material.defines.OCEAN_SIMPLE = '';
-    else delete material.defines.OCEAN_SIMPLE;
-    material.needsUpdate = true;
-  }
-
-  /** time は秒。カメラの真下へ格子間隔単位で動かす（頂点の位置がずれて波が揺れないように） */
-  update(camera: Readonly<Vec3>, time: number): void {
-    const s = this.spacing;
-    this.mesh.position.set(
-      Math.round(camera.x / s) * s,
-      TERRAIN_CONFIG.seaLevel,
-      Math.round(camera.z / s) * s,
+    if (drawDistance === this.drawDistance) return;
+    this.drawDistance = drawDistance;
+    const r = OCEAN_CONFIG.rings;
+    this.detailedMesh.geometry.dispose();
+    this.detailedMesh.geometry = createRingGeometry(
+      r.innerRadius,
+      drawDistance * r.outerRatio,
+      r.angularSegments,
     );
-    const uTime = this.mesh.material.uniforms.uTime;
-    if (uTime) uTime.value = time;
+    const s = OCEAN_CONFIG.simple;
+    const size = drawDistance * s.planeSizeRatio;
+    this.simpleMesh.geometry.dispose();
+    this.simpleMesh.geometry = createPlaneGeometry(size, s.segments);
+    this.spacing = size / s.segments;
+  }
+
+  /** 画質の切り替え（簡易版か・さざ波の層数・反射の強化・雲の影） */
+  applyQuality(preset: QualityPreset): void {
+    this.setDrawDistance(preset.drawDistance);
+    this.setSimple(preset.oceanSimple);
+    const material = this.detailedMesh.material;
+    const u = material.uniforms;
+    if (u.uLayerCount) u.uLayerCount.value = Math.max(1, preset.oceanLayers);
+    const boost = OCEAN_CONFIG.highBoost;
+    if (this.shared.uReflectivity)
+      this.shared.uReflectivity.value =
+        OCEAN_CONFIG.reflectivity * (preset.oceanBoost ? boost.reflectivity : 1);
+    (u.uGlint?.value as Vector3).z =
+      OCEAN_CONFIG.sunGlint.strength * (preset.oceanBoost ? boost.sunGlint : 1);
+    const hasShadow = 'CLOUD_SHADOW' in material.defines;
+    if (hasShadow !== preset.cloudShadows) {
+      if (preset.cloudShadows) material.defines.CLOUD_SHADOW = '';
+      else delete material.defines.CLOUD_SHADOW;
+      material.needsUpdate = true;
+    }
+  }
+
+  private setSimple(simple: boolean): void {
+    this.simple = simple;
+    this.simpleMesh.visible = simple;
+    this.detailedMesh.visible = !simple;
+  }
+
+  /** time は秒（ポーズ中は止まる） */
+  update(camera: Readonly<Vec3>, time: number): void {
+    const seaLevel = TERRAIN_CONFIG.seaLevel;
+    if (this.simple) {
+      // 平面は格子間隔単位で動かす（頂点の位置がずれて波が揺れないように）
+      const s = this.spacing;
+      this.simpleMesh.position.set(
+        Math.round(camera.x / s) * s,
+        seaLevel,
+        Math.round(camera.z / s) * s,
+      );
+    } else {
+      // リングはカメラの真下。遠くの頂点の間隔は波長の 1/4 より広く、その波はシェーダーで消している
+      this.detailedMesh.position.set(camera.x, seaLevel, camera.z);
+    }
+    if (this.shared.uTime) this.shared.uTime.value = time;
   }
 }

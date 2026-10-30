@@ -24,9 +24,26 @@ export interface QualityPreset {
   readonly drawDistance: number;
   /** 地形の LOD で使う最も細かい段（0 が最も細かい。src/data/terrain.ts の lod.segments） */
   readonly terrainMinLod: number;
-  /** 海面を簡略シェーダー（波 1 本・さざ波なし・頂点でフレネル）で描くか */
+  /** 海面を簡易版（カメラ追従の平面・うねり 1 本・水の色と空の色は頂点で計算）で描くか */
   readonly oceanSimple: boolean;
+  /**
+   * 海面のさざ波の法線ノイズの層数（フラグメント。src/data/ocean.ts の normalLayers の先頭から）。
+   * 簡易版は 1、「中」2、「高」3
+   */
+  readonly oceanLayers: number;
+  /** 画面空間の反射の代わりに、海の空の反射と太陽の照り返しを少し強める（OCEAN_CONFIG.highBoost） */
+  readonly oceanBoost: boolean;
+  /** 雲の方式。volume = 板 1 枚の疑似体積（レイマーチング）、billboard = InstancedMesh の板 */
+  readonly cloudMode: CloudMode;
+  /** 疑似体積の歩数（CLOUD_CONFIG.volume.maxSteps 以下。billboard では使わない） */
+  readonly cloudSteps: number;
+  /** 雲の影（地形と海を雲の密度で暗くする。シャドウマップは使わない） */
+  readonly cloudShadows: boolean;
 }
+
+export const CLOUD_MODES = ['billboard', 'volume'] as const;
+
+export type CloudMode = (typeof CLOUD_MODES)[number];
 
 export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
   low: {
@@ -39,6 +56,11 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     drawDistance: 3000,
     terrainMinLod: 1,
     oceanSimple: true,
+    oceanLayers: 1,
+    oceanBoost: false,
+    cloudMode: 'billboard',
+    cloudSteps: 0,
+    cloudShadows: false,
   },
   medium: {
     shadows: true,
@@ -50,6 +72,11 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     drawDistance: 5000,
     terrainMinLod: 0,
     oceanSimple: false,
+    oceanLayers: 2,
+    oceanBoost: false,
+    cloudMode: 'volume',
+    cloudSteps: 8,
+    cloudShadows: false,
   },
   high: {
     shadows: true,
@@ -61,6 +88,11 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     drawDistance: 8000,
     terrainMinLod: 0,
     oceanSimple: false,
+    oceanLayers: 3,
+    oceanBoost: true,
+    cloudMode: 'volume',
+    cloudSteps: 12,
+    cloudShadows: true,
   },
 };
 

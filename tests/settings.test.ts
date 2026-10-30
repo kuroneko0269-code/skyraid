@@ -11,6 +11,8 @@ import {
 } from '../src/core/settings';
 import { FpsWatch } from '../src/core/fps-watch';
 import { QUALITY_CONFIG, QUALITY_LEVELS, QUALITY_PRESETS } from '../src/data/quality';
+import { CLOUD_CONFIG } from '../src/data/clouds';
+import { OCEAN_CONFIG } from '../src/data/ocean';
 
 function memoryStorage(initial: Record<string, string> = {}): StorageLike & {
   data: Map<string, string>;
@@ -236,5 +238,35 @@ describe('QUALITY_PRESETS', () => {
   it('霧は描画距離の内側に収まる', () => {
     expect(QUALITY_CONFIG.fogNearRatio).toBeLessThan(QUALITY_CONFIG.fogFarRatio);
     expect(QUALITY_CONFIG.fogFarRatio).toBeLessThanOrEqual(1);
+  });
+
+  it('雲の方式・海の層数・雲の影: 低はビルボード 1 層、中は疑似体積 2 層、高は 3 層 + 雲の影', () => {
+    const { low, medium, high } = QUALITY_PRESETS;
+    expect(low.cloudMode).toBe('billboard');
+    expect(medium.cloudMode).toBe('volume');
+    expect(high.cloudMode).toBe('volume');
+    expect([low.oceanLayers, medium.oceanLayers, high.oceanLayers]).toEqual([1, 2, 3]);
+    expect([low.cloudShadows, medium.cloudShadows, high.cloudShadows]).toEqual([
+      false,
+      false,
+      true,
+    ]);
+    expect([low.oceanBoost, medium.oceanBoost, high.oceanBoost]).toEqual([false, false, true]);
+    expect(low.oceanSimple).toBe(true);
+    expect(medium.oceanSimple || high.oceanSimple).toBe(false);
+  });
+
+  it('雲の歩数はシェーダーの上限（定数）以下で、画質が上がるほど増える。海の層数は定義の数以下', () => {
+    for (const level of QUALITY_LEVELS) {
+      const p = QUALITY_PRESETS[level];
+      expect(p.oceanLayers).toBeGreaterThanOrEqual(1);
+      expect(p.oceanLayers).toBeLessThanOrEqual(OCEAN_CONFIG.normalLayers.length);
+      if (p.cloudMode === 'volume') {
+        expect(p.cloudSteps).toBeGreaterThanOrEqual(8);
+        expect(p.cloudSteps).toBeLessThanOrEqual(CLOUD_CONFIG.volume.maxSteps);
+      }
+    }
+    expect(CLOUD_CONFIG.volume.maxSteps).toBeLessThanOrEqual(12);
+    expect(QUALITY_PRESETS.high.cloudSteps).toBeGreaterThan(QUALITY_PRESETS.medium.cloudSteps);
   });
 });

@@ -1,4 +1,4 @@
-import { Group, Mesh, type Material } from 'three';
+import { Group, Mesh, type Material, type MeshStandardMaterial } from 'three';
 import { TERRAIN_CONFIG } from '../data/terrain';
 import type { Vec3 } from '../flight/math';
 import {
@@ -24,7 +24,12 @@ import {
   stitchEdge,
   type Box3Like,
 } from './terrain-lod';
-import { createDetailedTerrainMaterial, createSimpleTerrainMaterial } from './terrain-material';
+import {
+  createDetailedTerrainMaterial,
+  createSimpleTerrainMaterial,
+  setTerrainCloudShadow,
+} from './terrain-material';
+import type { CloudUniforms } from './cloud-field';
 
 // 高さ関数は Three.js に依存しない terrain-height.ts にある。ここからも使えるようにする
 export { createHeightField, getGroundHeight, getHeight };
@@ -49,9 +54,9 @@ export class Terrain {
   private readonly chunks: Chunk[] = [];
   private readonly palette: TerrainPalette;
   // 画質「中」以上は PBR + 近距離のディテール、「低」は Lambert（setDetail で切り替える）
-  private readonly detailedMaterial = createDetailedTerrainMaterial();
+  private readonly detailedMaterial: MeshStandardMaterial;
   private readonly simpleMaterial = createSimpleTerrainMaterial();
-  private material: Material = this.detailedMaterial;
+  private material: Material;
   private thresholds: number[];
   private minLevel = 0;
   private triangles = 0;
@@ -59,7 +64,11 @@ export class Terrain {
   constructor(
     readonly field: HeightField = createHeightField(),
     private readonly config: TerrainConfig = TERRAIN_CONFIG,
+    cloud?: CloudUniforms,
   ) {
+    // cloud を渡すと、画質「高」で雲の影を付けられる（setCloudShadow）
+    this.detailedMaterial = createDetailedTerrainMaterial(cloud);
+    this.material = this.detailedMaterial;
     this.object.name = 'terrain';
     this.palette = new TerrainPalette(config.colors);
     this.thresholds = lodThresholds(5000, config.lod.distanceRatios);
@@ -106,6 +115,11 @@ export class Terrain {
     if (material === this.material) return;
     this.material = material;
     for (const chunk of this.chunks) chunk.mesh.material = material;
+  }
+
+  /** 雲の影（画質「高」）。コンストラクタに雲の uniform を渡していないと何もしない */
+  setCloudShadow(enabled: boolean): void {
+    setTerrainCloudShadow(this.detailedMaterial, enabled);
   }
 
   /** カメラ位置でチャンクごとの段を選び直す。描画フレームごとに呼ぶ */

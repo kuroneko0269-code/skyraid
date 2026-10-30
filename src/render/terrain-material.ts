@@ -2,6 +2,7 @@
 // 「低」は従来どおり Lambert（頂点カラーだけ）
 import { MeshLambertMaterial, MeshStandardMaterial, type Material } from 'three';
 import { TERRAIN_DETAIL_CONFIG } from '../data/terrain';
+import { CLOUD_GLSL, type CloudUniforms } from './cloud-field';
 
 const f = (x: number): string => (Number.isInteger(x) ? `${x}.0` : String(x));
 
@@ -56,14 +57,18 @@ function detailGlsl(): string {
 `;
 }
 
-/** 画質「中」以上: PBR（粗い拡散面）+ 近距離のディテール。影を受ける */
-export function createDetailedTerrainMaterial(): MeshStandardMaterial {
+/**
+ * 画質「中」以上: PBR（粗い拡散面）+ 近距離のディテール。影を受ける。
+ * cloud を渡すと、define CLOUD_SHADOW（setCloudShadow）で雲の影（直射光だけを暗くする）を付けられる（4-2）
+ */
+export function createDetailedTerrainMaterial(cloud?: CloudUniforms): MeshStandardMaterial {
   const material = new MeshStandardMaterial({
     vertexColors: true,
     roughness: TERRAIN_DETAIL_CONFIG.roughness,
     metalness: 0,
   });
   material.onBeforeCompile = (shader) => {
+    if (cloud) Object.assign(shader.uniforms, cloud);
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
@@ -76,15 +81,36 @@ export function createDetailedTerrainMaterial(): MeshStandardMaterial {
         vDetailNormal = mat3(modelMatrix) * objectNormal;`,
       );
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>\n${detailGlsl()}`)
+      .replace(
+        '#include <common>',
+        `#include <common>\n${detailGlsl()}\n#ifdef CLOUD_SHADOW\n${CLOUD_GLSL}\n#endif`,
+      )
       .replace(
         '#include <color_fragment>',
         '#include <color_fragment>\ndiffuseColor.rgb = terrainDetail(diffuseColor.rgb);',
+      )
+      .replace(
+        '#include <lights_fragment_end>',
+        `#include <lights_fragment_end>
+        #ifdef CLOUD_SHADOW
+          float cloudShade = cloudShadow(vDetailPos);
+          reflectedLight.directDiffuse *= cloudShade;
+          reflectedLight.directSpecular *= cloudShade;
+        #endif`,
       );
   };
   // onBeforeCompile の中身が違うことをプログラムのキャッシュに伝える
   material.customProgramCacheKey = () => 'terrain-detail';
   return material;
+}
+
+/** 雲の影の有無（define を付け外しして再コンパイル） */
+export function setTerrainCloudShadow(material: MeshStandardMaterial, enabled: boolean): void {
+  const defines = (material.defines ??= {});
+  if (enabled === 'CLOUD_SHADOW' in defines) return;
+  if (enabled) defines.CLOUD_SHADOW = '';
+  else delete defines.CLOUD_SHADOW;
+  material.needsUpdate = true;
 }
 
 /** 画質「低」: 頂点カラーの Lambert（従来どおり。負荷を増やさない） */

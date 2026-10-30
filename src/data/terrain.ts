@@ -1,5 +1,5 @@
-// 島の地形・海面のパラメータ（1-3）。空は src/data/sky.ts（4-1）。高さの計算は src/render/terrain-height.ts、
-// メッシュと LOD は src/render/terrain.ts。距離・高さは m
+// 島の地形のパラメータ（1-3）。空は src/data/sky.ts（4-1）、海は src/data/ocean.ts、雲は src/data/clouds.ts（4-2）。
+// 高さの計算は src/render/terrain-height.ts、メッシュと LOD は src/render/terrain.ts。距離・高さは m
 
 export const TERRAIN_CONFIG = {
   /** ノイズのシード。同じシードなら同じ島になる */
@@ -65,34 +65,6 @@ export const TERRAIN_CONFIG = {
     /** 段が変わる境目で行ったり来たりしないよう、粗くするときだけこの距離だけ余分に待つ */
     hysteresis: 100,
   },
-} as const;
-
-export const OCEAN_CONFIG = {
-  /** 平面の分割数（一辺）。平面の一辺は描画距離 × 2 */
-  segments: 64,
-  /** 波（ワールド座標で計算）。振幅 m・波長 m・速さ m/s・向き（度、+X から +Z へ） */
-  waves: [
-    { amplitude: 0.9, wavelength: 260, speed: 6, direction: 20 },
-    { amplitude: 0.6, wavelength: 170, speed: 4.5, direction: 75 },
-    { amplitude: 0.35, wavelength: 110, speed: 3.5, direction: -40 },
-  ],
-  /** 細かいさざ波は頂点を動かさず、法線だけ揺らす（波長 m） */
-  rippleWavelengths: [23, 13, 7.5],
-  rippleStrength: 0.08,
-  /** さざ波を距離で消す範囲（m）。遠くでモアレ・ちらつきにならないように */
-  rippleFade: { start: 150, end: 700 },
-  /** 真下を見たときの水の色と、フレネルで混ぜる空の反射の強さ（0〜1） */
-  deepColor: 0x0f3a55,
-  shallowColor: 0x1d6378,
-  reflectivity: 0.85,
-  /** 太陽の照り返しの鋭さと強さ */
-  sunShininess: 500,
-  sunSpecular: 1.0,
-  /**
-   * 画質「低」（QualityPreset.oceanSimple）の簡略版: 頂点の波は waves の先頭 waveCount 本だけ、
-   * さざ波なし、水の色とフレネルは頂点で計算（太陽の照り返しだけ画素ごと）
-   */
-  simple: { waveCount: 1 },
 } as const;
 
 export const WORLD_CONFIG = {
