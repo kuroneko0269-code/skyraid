@@ -126,6 +126,12 @@ export class MissileSystem<T extends FuseTarget> {
     this.side = 1;
   }
 
+  /** owner の撃ったミサイルだけ消す（敵を OFF にしたとき） */
+  removeOwnedBy(owner: number): void {
+    const pool = this.missiles;
+    for (let i = pool.count - 1; i >= 0; i--) if (pool.get(i).owner === owner) pool.release(i);
+  }
+
   /** 燃焼中か */
   isBurning(m: Readonly<Missile>): boolean {
     return m.age < this.spec.burnSeconds;

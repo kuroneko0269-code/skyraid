@@ -131,6 +131,9 @@ export class EnemySquadron {
     this.enabledFlag = enabled;
     this.difficultyValue = difficulty;
     this.countValue = Math.max(0, Math.min(count, this.enemies.length));
+    // 出し直す前の敵のミサイル・フレアは残さない（OFF にした瞬間に消える）
+    this.combat.missiles.removeOwnedBy(TEAM_ENEMY);
+    this.combat.flares.removeOwnedBy(TEAM_ENEMY);
     this.reset();
   }
 

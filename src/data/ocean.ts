@@ -32,6 +32,12 @@ export const OCEAN_CONFIG = {
    */
   rings: { angularSegments: 160, innerRadius: 2, outerRatio: 1.1 },
   /**
+   * 画質「中」以上の海面の深度オフセット（4-2c、polygonOffset。負で手前へ）。海岸線の近くは海面と
+   * 海底の深度が精度より近く、どちらが見えるかがカメラの動きでちらつくので、海面の勝ちに固定する。
+   * 陸の上（水深 < 0）の海面はシェーダーで描かないので、地形の上に海がかぶることはない
+   */
+  depthOffset: { factor: -1, units: -4 },
+  /**
    * さざ波の法線（フラグメントの手続きノイズ。テクスチャ画像なし）。cell は模様の大きさ、
    * speed は流れる速さ（m/s）、angle は流れる向き（風向きからの差）、slope は傾きの強さ、
    * fade は消える距離（遠くでモアレにならないように）。画質「中」は先頭 2 層、「高」は 3 層
@@ -84,7 +90,8 @@ export const OCEAN_CONFIG = {
   /**
    * 海岸の泡: 海岸線からの距離（水深 ÷ 水深の勾配で見積もる。遠浅でも急でも帯の幅が揃う）が
    * width m より近いところに白い帯。帯の端は period 秒の周期で ±swing の割合だけ寄せては返す。
-   * ノイズ（一辺 cell m）でちぎる。水深 maxDepth より深いところには出さない。albedo は泡の反射率
+   * ノイズ（一辺 cell m）でちぎる。水深 maxDepth より深いところには出さない。albedo は泡の反射率。
+   * ちぎれのノイズは、さざ波と同じ ripplePixel の割合で画素より細かくなると平均に寄せる（4-2c）
    */
   foam: { width: 26, swing: 0.35, period: 7, cell: 3.5, maxDepth: 3, albedo: 0.8 },
   /**

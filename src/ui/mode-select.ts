@@ -4,9 +4,12 @@ import { createButton, createScreen, setScreenShown } from './screen';
 export const GAME_MODES = ['free', 'campaign', 'pvp', 'raid'] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
+/** フリーフライトの説明（ポーズメニューの「敵」設定に合わせて書き換える） */
+const FREE_FLIGHT_NOTES = { on: '敵機と空戦・自由に飛ぶ', off: '敵なしで自由に飛ぶ' } as const;
+
 /** 表示するモード。enabled でないものは「近日」と出して選べない */
 const MODE_ENTRIES: readonly { mode: GameMode; label: string; note: string; enabled: boolean }[] = [
-  { mode: 'free', label: 'フリーフライト', note: '敵なしで自由に飛ぶ', enabled: true },
+  { mode: 'free', label: 'フリーフライト', note: FREE_FLIGHT_NOTES.on, enabled: true },
   { mode: 'campaign', label: 'キャンペーン', note: 'ミッションを順にクリア', enabled: false },
   { mode: 'pvp', label: 'PvP', note: '2〜4 人で空戦', enabled: false },
   { mode: 'raid', label: 'レイド', note: '巨大怪獣を協力撃破', enabled: false },
@@ -16,6 +19,7 @@ const MODE_ENTRIES: readonly { mode: GameMode; label: string; note: string; enab
 export class ModeSelectScreen {
   readonly root: HTMLDivElement;
   private firstEnabled: HTMLButtonElement | null = null;
+  private freeNote: HTMLSpanElement | null = null;
 
   constructor(
     parent: HTMLElement,
@@ -40,11 +44,17 @@ export class ModeSelectScreen {
       note.className = 'mode-note';
       note.textContent = entry.enabled ? entry.note : '近日';
       button.append(label, note);
+      if (entry.mode === 'free') this.freeNote = note;
       button.disabled = !entry.enabled;
       if (entry.enabled) this.firstEnabled ??= button;
     }
     createButton(root, 'menu-button mode-back', '← タイトルへ', handlers.onBack);
     this.root = root;
+  }
+
+  /** フリーフライトの説明を敵の設定（ON/OFF）に合わせる */
+  setEnemiesEnabled(enabled: boolean): void {
+    if (this.freeNote) this.freeNote.textContent = FREE_FLIGHT_NOTES[enabled ? 'on' : 'off'];
   }
 
   setShown(shown: boolean): void {

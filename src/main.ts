@@ -126,6 +126,7 @@ const { aircraft, combat } = freeFlight;
 // 敵の有無・難易度（ポーズメニューの設定。localStorage に保存）
 createEnemySettings(settingsPanel, storage, (enabled, difficulty) => {
   freeFlight.configureEnemies(enabled, difficulty);
+  screens.modeSelect.setEnemiesEnabled(enabled);
 });
 const damageOverlay = new DamageOverlay(document.body);
 const controls = createControls();

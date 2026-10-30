@@ -114,6 +114,17 @@ export class FlareField {
     }
   }
 
+  /** owner の撒いたフレアだけ消す（敵を OFF にしたとき） */
+  removeOwnedBy(owner: number): void {
+    const pool = this.flares;
+    for (let i = pool.count - 1; i >= 0; i--) {
+      const fl = pool.get(i);
+      if (fl.owner !== owner) continue;
+      fl.active = false;
+      pool.release(i);
+    }
+  }
+
   /** 漂っているフレアを消し、回数を満タンに戻す */
   reset(): void {
     for (let i = 0; i < this.flares.count; i++) this.flares.get(i).active = false;

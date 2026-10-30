@@ -175,6 +175,11 @@ export class Ocean {
       // カメラの真下に置き直すので、カリングで消えないようにする
       mesh.frustumCulled = false;
     }
+    // 浅瀬は海面と海底がほぼ同じ深度で重なるので、深度が近いところは海面の勝ちに固定する（4-2c）。
+    // 陸の上の海面はシェーダーで捨てるので、海岸線は水深の格子だけで決まる
+    detailed.polygonOffset = true;
+    detailed.polygonOffsetFactor = cfg.depthOffset.factor;
+    detailed.polygonOffsetUnits = cfg.depthOffset.units;
     this.setDrawDistance(drawDistance);
     this.setSimple(false);
     this.applyAtmosphere(atmosphere);

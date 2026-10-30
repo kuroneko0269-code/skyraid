@@ -107,12 +107,17 @@ export const detailedFragmentShader = /* glsl */ `
   #include <fog_pars_fragment>
 
   void main() {
+    vec2 xz = vWorldPos.xz;
+    float depth = texture(uDepthTex, xz / uDepthSize + 0.5).r;
+    // 陸の上は描かない（4-2c）。海岸線を深度の比べ合い（浅い角度で交わるので精度が足りずちらつく）
+    // ではなく、ワールドに固定した水深の格子の等高線で決める
+    if (depth < 0.0) discard;
     vec3 eyeVec = cameraPosition - vWorldPos;
     float dist = length(eyeVec);
     vec3 V = eyeVec / dist;
-    vec2 xz = vWorldPos.xz;
     float near;
-    vec2 slope = oceanRipples(xz, dist, oceanFootprint(xz), uTime, uLayerCount, near);
+    float footprint = oceanFootprint(xz);
+    vec2 slope = oceanRipples(xz, dist, footprint, uTime, uLayerCount, near);
     vec3 n = normalize(normalize(vNormal) + vec3(-slope.x, 0.0, -slope.y));
     #ifdef CLOUD_SHADOW
       float shade = cloudShadow(vWorldPos);
@@ -121,7 +126,6 @@ export const detailedFragmentShader = /* glsl */ `
     #endif
 
     // 水の色: 浅瀬はターコイズ、沖は濃紺。下から出てくる光は太陽（雲の影で暗く）+ 空
-    float depth = texture(uDepthTex, xz / uDepthSize + 0.5).r;
     float shallow = exp(-max(depth, 0.0) / uDepthScale);
     vec3 irr = (uSunIrr * shade + uSkyIrr) / PI;
     vec3 body = mix(uDeepColor, uShallowColor, shallow) * irr;
@@ -160,8 +164,14 @@ export const detailedFragmentShader = /* glsl */ `
       float edge = uFoam.x * (1.0 + uFoam.y * swing);
       float band = 1.0 - smoothstep(edge * 0.25, edge, shoreDist);
       if (band > 0.0) {
-        vec2 p = (xz - uWind * uTime) * uFoam.w;
-        float breakup = 0.5 + 0.65 * oceanNoise(p).x + 0.35 * oceanNoise(p * 2.7 + 5.1).x;
+        // ちぎれ具合のノイズ。画素より細かくなる遠くでは平均（0.5）にする（4-2c）。
+        // 細かいまま描くと、画素ごとにまだらになってカメラが少し動くだけでちらつく
+        float fine = smoothstep(uRipplePixel.x / uFoam.w, uRipplePixel.y / uFoam.w, footprint);
+        float breakup = 0.5;
+        if (fine < 1.0) {
+          vec2 p = (xz - uWind * uTime) * uFoam.w;
+          breakup += (0.65 * oceanNoise(p).x + 0.35 * oceanNoise(p * 2.7 + 5.1).x) * (1.0 - fine);
+        }
         foam = smoothstep(0.45, 0.8, band * breakup + band * 0.25);
       }
     }
