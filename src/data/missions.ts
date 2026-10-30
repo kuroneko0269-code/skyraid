@@ -88,7 +88,7 @@ export const ISLAND_PATROL = [
 ] as const;
 
 /**
- * M2 初陣: 敵機 3 機（normal）を撃墜する。1 機ずつ 20 秒差で来る: 開始時に北西、20 秒後に北東、40 秒後に北西（2-6 の事前修正。
+ * M2 初陣: 敵機 3 機を撃墜する。1 機ずつ 20 秒差で来る: 開始時に北西（easy。4-7 の事前修正）、20 秒後に北東、40 秒後に北西（normal。2-6 の事前修正。
  * それまでは開始時に 2 機同時）。
  * 開始位置は起動位置と同じ島の南の沖合
  */
@@ -103,7 +103,7 @@ export const FIRST_SORTIE_MISSION: MissionDef = {
       kind: 'enemyFighter',
       group: 'first-sortie-bandits',
       count: 1,
-      difficulty: 'normal',
+      difficulty: 'easy',
       trigger: { type: 'start' },
       positions: [{ x: -3000, y: 1100, z: -2500, headingDeg: 120 }],
       patrol: ISLAND_PATROL,

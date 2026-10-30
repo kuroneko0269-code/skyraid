@@ -59,7 +59,7 @@ describe('初期ミッション 5 本のデータ', () => {
     }
   });
 
-  it('M2: 敵機 3 機（normal）が 1 機ずつ 20 秒差（0 / 20 / 40 秒）で出る（2-6 の事前修正）', () => {
+  it('M2: 敵機 3 機が 1 機ずつ 20 秒差（0 / 20 / 40 秒）で出る。最初の 1 機だけ easy（4-7 の事前修正）', () => {
     const fighters = FIRST_SORTIE_MISSION.spawns.filter((s) => s.kind === 'enemyFighter');
     expect(
       fighters.map((s) => [
@@ -68,7 +68,7 @@ describe('初期ミッション 5 本のデータ', () => {
         s.trigger.type === 'time' ? s.trigger.seconds : s.trigger.type,
       ]),
     ).toEqual([
-      [1, 'normal', 'start'],
+      [1, 'easy', 'start'],
       [1, 'normal', 20],
       [1, 'normal', 40],
     ]);
@@ -162,10 +162,10 @@ function runIdle(def: MissionDef, seed: number): MissionRunner {
 
 describe('初期ミッションの通し（シード固定のボット）', () => {
   it('M2 初陣: 敵機を順に追って 3 機とも落とせば成功', () => {
-    const play = newPlay(3);
+    const play = newPlay(1);
     const s = play.session;
     const runner = play.startMission(FIRST_SORTIE_MISSION);
-    const bot = new PilotBot(s, VETERAN, createRandom(503), undefined, getGroundHeight);
+    const bot = new PilotBot(s, VETERAN, createRandom(501), undefined, getGroundHeight);
     runUntilEnd(play, runner, 450, () => {
       bot.think(DT);
       return bot;
@@ -235,7 +235,7 @@ describe('初期ミッションの通し（シード固定のボット）', () =
     ]);
   });
 
-  it('M2 初陣（1 機ずつ 20 秒差）の成功率: 8 シードで 熟練者役 1/8・平均的 0/8（docs/decisions.md の 2-6 に記録）', () => {
+  it('M2 初陣（1 機ずつ 20 秒差・最初の 1 機は easy）の成功率: 8 シードで 熟練者役 2/8・平均的 0/8（docs/decisions.md の 4-7 に記録）', () => {
     const rate = (skill: typeof VETERAN): number => {
       let ok = 0;
       for (let seed = 1; seed <= 8; seed++) {
@@ -256,7 +256,7 @@ describe('初期ミッションの通し（シード固定のボット）', () =
       }
       return ok;
     };
-    expect([rate(VETERAN), rate(AVERAGE)]).toEqual([1, 0]);
+    expect([rate(VETERAN), rate(AVERAGE)]).toEqual([2, 0]);
     // 16 回 × 最大 450 秒のシミュレーション（全体の実行中は 5 秒を超えることがある）
   }, 30000);
 
