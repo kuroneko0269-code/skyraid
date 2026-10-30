@@ -37,7 +37,7 @@
 
 ## フェーズ4: 見栄え
 
-- [ ] 4-1 PBR + HDRスカイ + ブルーム
+- [x] 4-1 PBR + 物理ベースの空（大気散乱。HDR 画像は使わない）+ ブルーム（フェーズ2 の途中で前倒し） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/4daf5f2e2495c9e1c5133915b4099da43f3d22ac（事前修正: 画質の自動判定・自動ダウングレード・MISSILE 警告の位置 https://github.com/kuroneko0269-code/skyraid/commit/7b6aa009911a000a97ccabe94963aee4057ce300）
 - [ ] 4-2 水面シェーダーと雲
 - [ ] 4-3 機体モデル差し替え（CC0素材 or 自作）。Draco圧縮
 - [ ] 4-4 エフェクト（排気、ミサイル煙、爆発）
