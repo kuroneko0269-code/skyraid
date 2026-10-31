@@ -46,6 +46,8 @@ export interface Detonation<T> {
   target: T | null;
   /** 撃った機体の陣営 */
   owner: number;
+  /** 起爆したミサイルの発射の通し番号（PvP の表示でミサイルを見分ける。5-3） */
+  serial: number;
 }
 
 const DEG = Math.PI / 180;
@@ -66,7 +68,14 @@ export class MissileSystem<T extends FuseTarget> {
   readonly missiles: Pool<Missile>;
   private serial = 0;
   private side = 1;
-  private readonly detonation: Detonation<T> = { x: 0, y: 0, z: 0, target: null, owner: 0 };
+  private readonly detonation: Detonation<T> = {
+    x: 0,
+    y: 0,
+    z: 0,
+    target: null,
+    owner: 0,
+    serial: 0,
+  };
   private readonly dir = vec3();
   private readonly offset = vec3();
   private readonly hardpoint = vec3();
@@ -126,6 +135,11 @@ export class MissileSystem<T extends FuseTarget> {
     this.side = 1;
   }
 
+  /** 次の発射の通し番号を取る（PvP の表示用のミサイルに付ける。5-3。発射の演出がこの番号の増加で拾う） */
+  nextSerial(): number {
+    return ++this.serial;
+  }
+
   /** owner の撃ったミサイルだけ消す（敵を OFF にしたとき） */
   removeOwnedBy(owner: number): void {
     const pool = this.missiles;
@@ -180,7 +194,7 @@ export class MissileSystem<T extends FuseTarget> {
 
     if (m.age >= s.armSeconds && this.fuse(m, targets)) return true;
     if (this.groundHeight && p.y <= this.groundHeight(p.x, p.z)) {
-      this.report(p.x, p.y, p.z, null, m.owner);
+      this.report(p.x, p.y, p.z, null, m);
       return true;
     }
     return false;
@@ -245,17 +259,18 @@ export class MissileSystem<T extends FuseTarget> {
     if (!hit) return false;
     // 起爆点は球にかかった位置ではなく、線分上で対象に最も近い点（爆心が対象に近いほど大きい）
     const k = closestOnSegment(a, b, hit.position);
-    this.report(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k, a.z + (b.z - a.z) * k, hit, m.owner);
+    this.report(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k, a.z + (b.z - a.z) * k, hit, m);
     return true;
   }
 
-  private report(x: number, y: number, z: number, target: T | null, owner: number): void {
+  private report(x: number, y: number, z: number, target: T | null, m: Readonly<Missile>): void {
     const d = this.detonation;
     d.x = x;
     d.y = y;
     d.z = z;
     d.target = target;
-    d.owner = owner;
+    d.owner = m.owner;
+    d.serial = m.serial;
     this.onDetonate(d);
   }
 }

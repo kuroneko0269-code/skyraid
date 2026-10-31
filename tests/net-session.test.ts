@@ -3,12 +3,14 @@ import { AIRCRAFT_MODELS } from '../src/data/aircraft';
 import { Aircraft, createControls, type AircraftControls } from '../src/entities/aircraft';
 import { ClientGame } from '../src/net/client-game';
 import { HostGame } from '../src/net/host-game';
+import { createLocalCombat } from '../src/net/net-game';
 import { resolveLoadout } from '../src/progression/loadout';
 import { rotateVec3, type Vec3 } from '../src/flight/math';
 import { createLobby } from './net-helpers';
 
 const DT = 1 / 60;
 const TICK_MS = 1000 / 60;
+const IDLE = createLocalCombat();
 
 function kestrel(): Aircraft {
   const model = AIRCRAFT_MODELS[0];
@@ -73,7 +75,7 @@ async function simulate(
     });
   });
   host.start();
-  const hostGame = new HostGame(host, { own: hostOwn, ownHp: () => 100 }, () => lobby.net.now);
+  const hostGame = new HostGame(host, { own: hostOwn }, () => lobby.net.now);
   // ホストの正: tick ごとの全機の位置、参加者の機体に使った入力の seq ごとの位置
   const truth: Vec3[][] = [[], [], [], []];
   const hostBySeq = [0, 1, 2, 3].map(() => new Map<number, Vec3>());
@@ -89,7 +91,7 @@ async function simulate(
     host.tick();
     for (const c of clients) c.tick();
     const t = k * DT;
-    hostGame.step(fly(controls[0] ?? createControls(), hostOwn, 0, t), DT);
+    hostGame.step(fly(controls[0] ?? createControls(), hostOwn, 0, t), IDLE, DT);
     for (let id = 0; id < 4; id++) {
       const a = hostGame.aircraftOf(id);
       if (a) (truth[id] ?? [])[hostGame.tick] = copy(a.state.position);
@@ -97,7 +99,7 @@ async function simulate(
     }
     games.forEach((g, i) => {
       if (!g) return;
-      g.step(fly(controls[i + 1] ?? createControls(), owns[i] ?? hostOwn, i + 1, t), DT);
+      g.step(fly(controls[i + 1] ?? createControls(), owns[i] ?? hostOwn, i + 1, t), IDLE, DT);
       clientBySeq[i]?.set(g.seq, copy(owns[i]?.state.position ?? { x: 0, y: 0, z: 0 }));
     });
     if (k < warmup) continue;

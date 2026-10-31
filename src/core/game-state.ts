@@ -5,7 +5,8 @@ import { EventBus } from './event-bus';
  * docs/spec.md「UI」: タイトル → モード選択 → （キャンペーン: ミッション一覧 → ブリーフィング）→ プレイ → リザルト（2-4）。
  * 初回起動（セーブにパイロット名がない）はタイトルの後にパイロット名の入力（3-1）。
  * ハンガー（3-3）はモード選択とブリーフィング（機体変更）から開き、開いた画面へ戻る。
- * PvP（5-1）はモード選択 → ロビー → 飛行。飛行からはモード選択へ（退出・ホストの切断）。PvP の飛行にポーズはない
+ * PvP（5-1）はモード選択 → ロビー → 飛行。飛行からはモード選択へ（退出・ホストの切断）、対戦が終わるとロビーへ（5-3）。
+ * PvP の飛行にポーズはない
  */
 export const SCREEN_STATES = [
   'boot',
@@ -35,7 +36,8 @@ export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenStat
   briefing: ['mission_select', 'flight', 'hangar'],
   hangar: ['mode_select', 'briefing'],
   // ミッションが終わるとリザルトへ。チュートリアル（4-11）は指示の「中断」でモード選択へ
-  flight: ['pause', 'result', 'mode_select'],
+  // PvP の対戦が終わるとロビー（のリザルト）へ（5-3）
+  flight: ['pause', 'result', 'mode_select', 'lobby'],
   // ミッション中はポーズから「ミッションを中断」でミッション一覧へ（チュートリアルはモード選択へ）
   pause: ['flight', 'title', 'mission_select', 'mode_select'],
   // 「もう一度」は飛行へ直接、「ミッション一覧へ」（チュートリアルは「モード選択へ」）

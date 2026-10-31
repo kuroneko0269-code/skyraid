@@ -2,8 +2,11 @@
 // 見た目は 4-10 のデザインシステム。通信はしない（ui/pvp-link.ts が呼ぶ）。文字は textContent だけで入れる
 import './lobby.css';
 import { NET_CONFIG } from '../data/net';
-import type { PlayerInfo } from '../net/protocol';
+import { PVP_SCORE_LIMITS, PVP_TIME_LIMITS } from '../data/pvp';
+import type { GameSettings, PlayerInfo } from '../net/protocol';
+import { renderResult, type ResultView } from './pvp-result';
 import { el } from './hud-dom';
+import { playerColorCss } from './lobby-colors';
 import { isolateKeys } from './pilot-name';
 import { createButton, createScreen, setScreenShown } from './screen';
 
@@ -15,6 +18,10 @@ export interface LobbyHandlers {
   onLeave: () => void;
   /** モード選択へ戻る */
   onBack: () => void;
+  /** ホストがルール（撃墜数・制限時間）を変えた（5-3） */
+  onSettings: (scoreLimit: number, timeLimitSeconds: number) => void;
+  /** リザルトの「もう一度」（ロビーへ。5-3） */
+  onAgain: () => void;
 }
 
 export interface LobbyRoomView {
@@ -23,15 +30,31 @@ export interface LobbyRoomView {
   localId: number;
   players: readonly PlayerInfo[];
   mapName: string;
+  settings: GameSettings;
 }
 
-type View = 'menu' | 'connecting' | 'room';
+type View = 'menu' | 'connecting' | 'room' | 'result';
 
-/** CSS の色（#rrggbb） */
-export function playerColorCss(id: number): string {
-  const c = NET_CONFIG.playerColors[id % NET_CONFIG.playerColors.length] ?? 0xffffff;
-  return `#${c.toString(16).padStart(6, '0')}`;
+/** 選択肢の select（値は数、表示は label）。変えたら onChange */
+function numberSelect(
+  parent: HTMLElement,
+  label: string,
+  values: readonly number[],
+  text: (v: number) => string,
+  onChange: () => void,
+): HTMLSelectElement {
+  const wrap = el('label', 'campaign-fact lobby-rule', parent);
+  el('span', 'campaign-fact-label', wrap, label);
+  const select = el('select', 'ui-field lobby-rule-select', wrap);
+  for (const v of values) {
+    const o = el('option', '', select, text(v));
+    o.value = String(v);
+  }
+  select.addEventListener('change', onChange);
+  return select;
 }
+
+const minutes = (s: number): string => `${Math.round(s / 60)} 分`;
 
 export class LobbyScreen {
   readonly root: HTMLDivElement;
@@ -48,6 +71,13 @@ export class LobbyScreen {
   private readonly startButton: HTMLButtonElement;
   private readonly waitText: HTMLParagraphElement;
   private readonly createButton: HTMLButtonElement;
+  private readonly rules: HTMLDivElement;
+  private readonly scoreSelect: HTMLSelectElement;
+  private readonly timeSelect: HTMLSelectElement;
+  private readonly rulesText: HTMLSpanElement;
+  private readonly result: HTMLDivElement;
+  private readonly resultBody: HTMLDivElement;
+  private readonly againButton: HTMLButtonElement;
 
   constructor(parent: HTMLElement, handlers: LobbyHandlers) {
     const root = createScreen(parent, 'campaign-screen lobby-screen');
@@ -100,6 +130,22 @@ export class LobbyScreen {
     const map = el('div', 'campaign-fact', facts);
     el('span', 'campaign-fact-label', map, 'マップ');
     this.mapText = el('span', 'campaign-fact-value', map);
+    // ルール（5-3）: ホストは選べる、クライアントは文字だけ
+    const rule = el('div', 'campaign-fact', facts);
+    el('span', 'campaign-fact-label', rule, 'ルール');
+    this.rulesText = el('span', 'campaign-fact-value', rule);
+    this.rules = el('div', 'campaign-facts lobby-rules', this.room);
+    const changed = () => {
+      handlers.onSettings(Number(this.scoreSelect.value), Number(this.timeSelect.value));
+    };
+    this.scoreSelect = numberSelect(
+      this.rules,
+      '撃墜数',
+      PVP_SCORE_LIMITS,
+      (v) => `${v} 機`,
+      changed,
+    );
+    this.timeSelect = numberSelect(this.rules, '制限時間', PVP_TIME_LIMITS, minutes, changed);
     el('div', 'campaign-label', this.room, 'PILOTS');
     this.list = el('ul', 'lobby-players', this.room);
     this.waitText = el('p', 'briefing-text', this.room);
@@ -111,8 +157,27 @@ export class LobbyScreen {
       '開始',
       handlers.onStart,
     );
+
+    // リザルト（5-3）
+    this.result = el('div', 'lobby-view', panel);
+    this.resultBody = el('div', 'lobby-result', this.result);
+    const again = el('div', 'campaign-buttons', this.result);
+    createButton(again, 'ui-button is-ghost campaign-back', '退出', handlers.onLeave);
+    this.againButton = createButton(
+      again,
+      'ui-button is-primary campaign-go',
+      'もう一度',
+      handlers.onAgain,
+    );
     this.root = root;
     this.show('menu');
+  }
+
+  /** 対戦のリザルト（順位・撃墜・被撃墜・命中率）。「もう一度」でロビーへ */
+  showResult(r: Readonly<ResultView>): void {
+    renderResult(this.resultBody, r);
+    this.show('result');
+    this.againButton.focus({ preventScroll: true });
   }
 
   /** 部屋コードの入力欄に入れる（?room=XXXXXX） */
@@ -134,6 +199,11 @@ export class LobbyScreen {
   showRoom(r: Readonly<LobbyRoomView>): void {
     this.codeText.textContent = r.code;
     this.mapText.textContent = r.mapName;
+    const st = r.settings;
+    this.rulesText.textContent = `撃墜 ${st.scoreLimit} 機・${minutes(st.timeLimitSeconds)}`;
+    this.rules.hidden = !r.isHost;
+    this.scoreSelect.value = String(st.scoreLimit);
+    this.timeSelect.value = String(st.timeLimitSeconds);
     this.list.replaceChildren();
     for (const p of r.players) {
       const li = el('li', 'lobby-player', this.list);
@@ -170,5 +240,6 @@ export class LobbyScreen {
     this.menu.hidden = view !== 'menu';
     this.connecting.hidden = view !== 'connecting';
     this.room.hidden = view !== 'room';
+    this.result.hidden = view !== 'result';
   }
 }

@@ -17,6 +17,7 @@ export interface Snapshot {
   afterburner: boolean;
   throttle: number;
   hp: number;
+  invulnerable: boolean;
 }
 
 function createSnapshot(): Snapshot {
@@ -29,6 +30,7 @@ function createSnapshot(): Snapshot {
     afterburner: false,
     throttle: 0,
     hp: 0,
+    invulnerable: false,
   };
 }
 
@@ -48,6 +50,7 @@ function copyInto(out: Snapshot, time: number, m: Readonly<AircraftStateMsg>): v
   out.afterburner = m.afterburner;
   out.throttle = m.throttle;
   out.hp = m.hp;
+  out.invulnerable = m.invulnerable;
 }
 
 /** 補間した結果。mode: interpolated（2 点の間）/ extrapolated（最新より先を速度で）/ held（外挿の上限を超えた）/ empty */
@@ -71,6 +74,8 @@ export function createSampledPose(): SampledPose {
 export class SnapshotBuffer {
   private readonly items: Snapshot[] = [];
   private readonly spare: Snapshot[] = [];
+  /** これ以前の状態は入れない（復帰で位置が飛んだ。5-3） */
+  private floor = -Infinity;
 
   get size(): number {
     return this.items.length;
@@ -82,6 +87,13 @@ export class SnapshotBuffer {
 
   push(time: number, msg: Readonly<AircraftStateMsg>): void {
     const items = this.items;
+    if (time <= this.floor) return;
+    const newest = this.newest;
+    // 撃墜 → 復帰（5-3）: 残骸と出現位置の間を補間しないよう、そこから並べ直す（遅れて届いた前の状態も捨てる）
+    if (msg.alive && newest && !newest.alive && time > newest.time) {
+      this.clear();
+      this.floor = newest.time;
+    }
     let i = items.length;
     while (i > 0 && (items[i - 1]?.time ?? 0) > time) i--;
     if (items[i - 1]?.time === time) return;
@@ -271,6 +283,8 @@ export class HostClock {
 export class InputSender {
   private readonly ring: NetControls[] = [];
   private newestSeq = 0;
+  /** 最新のステップで他機を表示していたホストの tick（遅延補償。5-3。0 はまだ） */
+  viewTick = 0;
   private readonly every = Math.round(NET_CONFIG.rates.tickHz / NET_CONFIG.rates.inputHz);
 
   /** seq（1 から）のステップの操作（量子化済み）を記録する */
@@ -295,6 +309,6 @@ export class InputSender {
       const c = this.ring[(this.newestSeq - i) % NET_CONFIG.input.redundancyTicks];
       if (c) controls.push({ ...c });
     }
-    return { type: 'input', seq: this.newestSeq, controls };
+    return { type: 'input', seq: this.newestSeq, viewTick: this.viewTick, controls };
   }
 }

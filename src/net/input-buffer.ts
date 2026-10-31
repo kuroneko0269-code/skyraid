@@ -7,6 +7,7 @@
 // ばかりになったら、溜め直してそのクライアントの入力に合わせ直す（ホストの機体はその間止まり、クライアントは補正で合う）。
 // Three.js 非依存
 import { NET_CONFIG } from '../data/net';
+import { clearPresses } from './net-controls';
 import { createNetControls, type InputMsg, type NetControls } from './protocol';
 
 const I = NET_CONFIG.input;
@@ -24,6 +25,8 @@ export class InputBuffer {
   readonly last: NetControls = createNetControls();
   /** 最後に使った seq（state の lastInputSeq） */
   lastApplied = 0;
+  /** 最新の入力の「クライアントが表示していたホストの tick − seq」（遅延補償。5-3。null は未着） */
+  viewOffset: number | null = null;
   /** 埋めた（推測した）ステップの数 */
   guessed = 0;
   /** 入力が切れて直前の操作で進めたステップの数（guessed に含む） */
@@ -58,7 +61,10 @@ export class InputBuffer {
       Object.assign(stored, c);
       this.ring[slot] = stored;
     }
-    if (msg.seq > this.newest) this.newest = msg.seq;
+    if (msg.seq > this.newest) {
+      this.newest = msg.seq;
+      if (msg.viewTick > 0) this.viewOffset = msg.viewTick - msg.seq;
+    }
   }
 
   /** 溜まっているステップ数 */
@@ -84,7 +90,10 @@ export class InputBuffer {
       const c = this.seqs[slot] === seq ? this.ring[slot] : null;
       if (c) Object.assign(this.last, c);
       else this.guessed++;
-      out.push(Object.assign(this.slots[k] ?? createNetControls(), this.last));
+      const used = Object.assign(this.slots[k] ?? createNetControls(), this.last);
+      // 押した瞬間だけの操作（ミサイル・フレア・切替）は、使ったステップの 1 回だけ（推測で繰り返さない）
+      clearPresses(this.last);
+      out.push(used);
       this.lastApplied = seq;
       this.next++;
     }

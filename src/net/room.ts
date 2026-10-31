@@ -4,9 +4,11 @@
 // 時刻は tick(nowMs) で外から進める（ブラウザは setInterval、テストはインメモリのネットワークの時刻）。Three.js・DOM 非依存
 import { NET_CONFIG } from '../data/net';
 import { truncateChars } from '../progression/save';
+import { netLoadout } from './loadout';
 import { RoomBase, type PeerState } from './room-base';
 import {
   encodeMessage,
+  eventMsg,
   type GameSettings,
   type JoinMsg,
   type NetMessage,
@@ -68,6 +70,10 @@ export interface RoomOptions {
   settings?: GameSettings;
 }
 
+function maxHpOf(p: Readonly<PlayerProfile>): number {
+  return netLoadout(p.aircraftId, p.upgrades).flight.hull.maxHp;
+}
+
 /** ホストの部屋。create() で部屋コードを決めて待ち受ける */
 export class HostRoom extends RoomBase {
   readonly isHost = true;
@@ -75,6 +81,8 @@ export class HostRoom extends RoomBase {
   readonly joinProfiles = new Map<number, JoinMsg>();
   private readonly peerOfPlayer = new Map<number, string>();
   private readonly leaveFns: ((playerId: number) => void)[] = [];
+  /** ホスト自身の機体と強化（5-3。ホストの機体もこの数値で計算する） */
+  readonly hostProfile: PlayerProfile;
 
   private constructor(
     transport: Transport,
@@ -84,7 +92,10 @@ export class HostRoom extends RoomBase {
     settings: GameSettings,
   ) {
     super(transport, now, settings);
-    this.players = [{ id: 0, name: profile.name, aircraftId: profile.aircraftId }];
+    this.players = [
+      { id: 0, name: profile.name, aircraftId: profile.aircraftId, maxHp: maxHpOf(profile) },
+    ];
+    this.hostProfile = profile;
     transport.onPeerJoin((peerId) => {
       this.peers.set(peerId, { lastHeard: this.now(), rttMs: null, playerId: null });
     });
@@ -118,14 +129,28 @@ export class HostRoom extends RoomBase {
   /** 開始する（ロビーの「開始」）。全員に知らせる */
   start(tick = 0): void {
     if (this.started || this.ended) return;
-    this.broadcast({ type: 'event', kind: 'start', a: 0, b: 0, tick }, 'reliable');
+    this.broadcast(eventMsg('start', 0, 0, tick), 'reliable');
     this.emitStart();
+  }
+
+  /** ゲーム設定を変える（ロビーでホストが撃墜数・時間を選ぶ。5-3）。全員に名簿と一緒に送り直す */
+  setSettings(settings: GameSettings): void {
+    if (this.started || this.ended) return;
+    this.settings = settings;
+    this.sendRoster();
+  }
+
+  /** 対戦の終わり（5-3）: 全員に知らせ、ロビーに戻す（もう一度「開始」できる・参加を受け付ける） */
+  endMatch(tick: number): void {
+    if (!this.started || this.ended) return;
+    this.broadcast(eventMsg('over', 0, 0, tick), 'reliable');
+    this.started = false;
   }
 
   /** 抜ける（部屋を閉じる）。全員に終了を知らせてから閉じる */
   leave(): void {
     if (this.ended) return;
-    this.broadcast({ type: 'event', kind: 'end', a: 0, b: 0, tick: 0 }, 'reliable');
+    this.broadcast(eventMsg('end', 0, 0, 0), 'reliable');
     this.finish('left');
   }
 
@@ -171,7 +196,7 @@ export class HostRoom extends RoomBase {
     peer.playerId = id;
     this.peerOfPlayer.set(id, peerId);
     const name = truncateChars(msg.name, NET_CONFIG.nameMaxLength);
-    this.players.push({ id, name, aircraftId: msg.aircraftId });
+    this.players.push({ id, name, aircraftId: msg.aircraftId, maxHp: maxHpOf(msg) });
     this.players.sort((a, b) => a.id - b.id);
     this.joinProfiles.set(id, msg);
     this.sendRoster();

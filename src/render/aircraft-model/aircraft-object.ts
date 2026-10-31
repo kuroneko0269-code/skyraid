@@ -1,6 +1,6 @@
 // 1 機ぶんの機体モデル（自機・ハンガー）: 機体（不透明・操舵面とミサイルはシェーダー）+ キャノピー（半透明）+
 // アフターバーナーの炎 + 陽炎（4-4）。draw call は機体 1・キャノピー 1・炎 1（点火中だけ）・陽炎 1（巡航中・画質「高」以外）
-import { Group, Mesh } from 'three';
+import { Group, Mesh, MeshStandardMaterial } from 'three';
 import type { AircraftShape } from '../../data/aircraft-shapes';
 import { AIRCRAFT_MODEL_CONFIG, type AircraftDetail } from '../../data/aircraft-model';
 import { buildAircraft, type BuiltAircraft } from './build';
@@ -35,6 +35,8 @@ export class AircraftObject {
   private shape: Readonly<AircraftShape> | null = null;
   private detail: AircraftDetail = 'high';
   private missiles = -1;
+  private opacity = 1;
+  private canopyOpacity: number | null = null;
 
   constructor() {
     const paint = createPaintMaterial();
@@ -78,6 +80,25 @@ export class AircraftObject {
   /** 細かさだけ変える（画質の切り替え） */
   setDetail(detail: AircraftDetail): void {
     if (this.shape) this.build(this.shape, detail, this.missiles);
+  }
+
+  /** 不透明度（PvP の復帰後の無敵。5-3）。1 で元の不透明に戻す。変わったときだけマテリアルを作り直す */
+  setOpacity(opacity: number): void {
+    if (opacity === this.opacity) return;
+    this.opacity = opacity;
+    const body = this.body.material;
+    const canopy = this.canopy.material;
+    if (!(body instanceof MeshStandardMaterial) || !(canopy instanceof MeshStandardMaterial))
+      return;
+    this.canopyOpacity ??= canopy.opacity;
+    const fade = opacity < 1;
+    if (body.transparent !== fade) {
+      body.transparent = fade;
+      body.needsUpdate = true;
+    }
+    body.opacity = opacity;
+    canopy.opacity = this.canopyOpacity * opacity;
+    this.body.castShadow = !fade;
   }
 
   /** 見えるミサイルの数（撃った分だけ消える） */

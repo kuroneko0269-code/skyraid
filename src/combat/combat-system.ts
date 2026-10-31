@@ -140,6 +140,11 @@ export class CombatSystem {
     this.updateLead(shooter);
   }
 
+  /** ミサイルの起爆の演出を呼ぶ（PvP の表示。5-3。判定はホスト） */
+  reportExplosion(x: number, y: number, z: number, onTarget: boolean, radius: number): void {
+    for (const fn of this.explosionListeners) fn(x, y, z, onTarget, radius);
+  }
+
   reset(): void {
     this.kills = 0;
     this.hitMarkerTimer = 0;
@@ -179,7 +184,8 @@ export class CombatSystem {
     this.targeting.reset();
   }
 
-  private updateLead(shooter: Shooter): void {
+  /** 選択中の対象の予測照準点を更新する（step の中で呼ぶ。PvP の表示は索敵の後に呼ぶ。5-3） */
+  updateLead(shooter: Shooter): void {
     const t = this.targeting.selected;
     if (!t) {
       this.leadValid = false;

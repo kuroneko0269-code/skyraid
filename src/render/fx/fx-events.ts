@@ -207,7 +207,19 @@ export class FxEvents {
         return;
       }
     }
+    // PvP の他プレイヤー（5-3）
+    for (const e of s.rivals) {
+      if (near(e, x, y, z, margin)) {
+        this.emit((l) => l.enemyHit?.(x, y, z));
+        return;
+      }
+    }
   };
+
+  /** 他プレイヤーの機銃の発射（PvP。5-3）: 敵機の発射と同じ位置付きの音 */
+  otherGun(x: number, y: number, z: number): void {
+    this.emit((l) => l.enemyGun?.(x, y, z));
+  }
 }
 
 function near(t: CombatTarget, x: number, y: number, z: number, margin: number): boolean {

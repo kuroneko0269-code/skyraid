@@ -1,5 +1,5 @@
 // ゲームの状態から HUD に渡す 1 フレーム分の値を作る（毎フレーム同じオブジェクトに書き込む）
-import { TEAM_PLAYER } from '../combat/target';
+import { TEAM_PLAYER, type CombatTarget } from '../combat/target';
 import { HUD_ASSIST_CONFIG } from '../data/assist';
 import type { Aircraft, GroundHeightFn } from '../entities/aircraft';
 import { inverseRotateVec3, vec3 } from '../flight/math';
@@ -134,6 +134,11 @@ export function fillAssist(
  * レーダーの点: 出撃中の敵機と、自機を追っている敵のミサイル。assist（HUD 補助。4-12）なら敵機に
  * 高度差（±altitudeThreshold を超えたら上 / 下）と、後方（尾部から rearConeDeg・range 以内）の印を付ける
  */
+/** 敵機と PvP の他プレイヤー（5-3。シングルでは rivals は空） */
+function radarTargets(ff: FlightSession): readonly CombatTarget[] {
+  return ff.rivals.length === 0 ? ff.enemies : ff.rivals;
+}
+
 export function fillRadar(r: HudRadarFrame, ff: FlightSession, assist = false): void {
   let n = 0;
   const max = r.contacts.length;
@@ -142,7 +147,7 @@ export function fillRadar(r: HudRadarFrame, ff: FlightSession, assist = false): 
   const p = ff.aircraft.state.position;
   const q = ff.aircraft.state.orientation;
   const rearCos = Math.cos(hc.behind.rearConeDeg / DEG);
-  for (const e of ff.enemies) {
+  for (const e of radarTargets(ff)) {
     const c = r.contacts[n];
     if (!e.active || !c || n >= max) continue;
     c.x = e.position.x;

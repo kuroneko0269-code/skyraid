@@ -1,10 +1,11 @@
-// PvP の飛行中の DOM（5-1）: 他プレイヤーの名札（機体の画面上の位置）、Esc / ⏸ のメニュー（ゲームは止まらない）、
-// お知らせ、?netdebug の通信の値
+// PvP の飛行中の DOM（5-1）: 他プレイヤーの名札（機体の画面上の位置。5-3 から HP バー）、Esc / ⏸ のメニュー
+// （ゲームは止まらない）、お知らせ、?netdebug の通信の値。撃墜のフィード・スコアボード・残り時間は pvp-board.ts
 import { Vector3, type PerspectiveCamera } from 'three';
 import { NET_CONFIG } from '../data/net';
 import type { NetStats, RemoteSample } from '../net/net-game';
+import type { PlayerInfo } from '../net/protocol';
 import { el } from './hud-dom';
-import { playerColorCss } from './lobby';
+import { playerColorCss } from './lobby-colors';
 import { createButton } from './screen';
 
 const projected = new Vector3();
@@ -13,8 +14,11 @@ interface Tag {
   readonly root: HTMLDivElement;
   readonly name: HTMLSpanElement;
   readonly dist: HTMLSpanElement;
+  readonly hp: HTMLDivElement;
   lastName: string;
   lastDist: number;
+  lastHp: number;
+  lastInvulnerable: boolean;
 }
 
 export class PvpHud {
@@ -75,10 +79,10 @@ export class PvpHud {
     this.debug.textContent = '';
   }
 
-  /** 名札を機体の画面上の位置へ（後ろ・画面外は隠す） */
+  /** 名札を機体の画面上の位置へ（後ろ・画面外は隠す）。HP バーは最大 HP に対する割合（5-3） */
   updateTags(
     samples: readonly RemoteSample[],
-    names: ReadonlyMap<number, string>,
+    players: ReadonlyMap<number, PlayerInfo>,
     camera: PerspectiveCamera,
     width: number,
     height: number,
@@ -96,7 +100,18 @@ export class PvpHud {
       const x = (projected.x * 0.5 + 0.5) * width;
       const y = (-projected.y * 0.5 + 0.5) * height;
       tag.root.style.transform = `translate(${x.toFixed(1)}px, ${(y - 28).toFixed(1)}px) translateX(-50%)`;
-      const name = names.get(s.id) ?? '';
+      const info = players.get(s.id);
+      const name = info?.name ?? '';
+      const hp = info && info.maxHp > 0 ? Math.round((100 * s.hp) / info.maxHp) : 100;
+      if (hp !== tag.lastHp) {
+        tag.lastHp = hp;
+        tag.hp.style.transform = `scaleX(${Math.max(0, Math.min(1, hp / 100)).toFixed(2)})`;
+        tag.root.classList.toggle('is-low', hp <= 30);
+      }
+      if (s.invulnerable !== tag.lastInvulnerable) {
+        tag.lastInvulnerable = s.invulnerable;
+        tag.root.classList.toggle('is-invulnerable', s.invulnerable);
+      }
       if (name !== tag.lastName) {
         tag.lastName = name;
         tag.name.textContent = name;
@@ -128,6 +143,7 @@ export class PvpHud {
     } else {
       lines.push(
         `入力の溜め ${stats.inputBacklog}  推測 ${stats.inputGuessed}  溜め直し ${stats.inputResyncs}`,
+        `遅延補償の巻き戻し ${Math.round(stats.rewindMs)}ms`,
       );
     }
     this.debug.textContent = lines.join('\n');
@@ -138,9 +154,12 @@ export class PvpHud {
     if (!t) {
       const root = el('div', 'pvp-tag', this.tagLayer);
       root.style.color = playerColorCss(id);
-      const name = el('span', 'pvp-tag-name', root);
-      const dist = el('span', 'pvp-tag-dist', root);
-      t = { root, name, dist, lastName: '', lastDist: -1 };
+      const label = el('div', 'pvp-tag-label', root);
+      const name = el('span', 'pvp-tag-name', label);
+      const dist = el('span', 'pvp-tag-dist', label);
+      const bar = el('div', 'pvp-tag-hp', root);
+      const hp = el('div', 'pvp-tag-hp-fill', bar);
+      t = { root, name, dist, hp, lastName: '', lastDist: -1, lastHp: -1, lastInvulnerable: false };
       this.tags.set(id, t);
     }
     return t;

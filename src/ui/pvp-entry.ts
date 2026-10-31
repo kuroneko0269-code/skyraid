@@ -1,6 +1,7 @@
 // PvP（5-1）の入口。main.ts が静的に読むのはこのファイルだけで、通信（src/net/・peerjs）とロビーは
 // PvP を選んだとき・?room のときに import() で別のチャンクとして読む（シングルプレイの読み込みと性能に影響しない）
 import type { AircraftDetail } from '../data/aircraft-model';
+import type { CombatInput } from '../combat/combat-input';
 import type { AircraftControls } from '../entities/aircraft';
 import type { PvpDeps, PvpLink } from './pvp-link';
 import type { Screens } from './screens';
@@ -87,8 +88,8 @@ export class PvpEntry {
     this.link?.beginFlight();
   }
 
-  step(controls: Readonly<AircraftControls>, dt: number): void {
-    this.link?.step(controls, dt);
+  step(controls: Readonly<AircraftControls>, combat: Readonly<CombatInput>, dt: number): void {
+    this.link?.step(controls, combat, dt);
   }
 
   render(alpha: number): void {

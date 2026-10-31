@@ -17,6 +17,7 @@ function circle(t: number): AircraftStateMsg {
     id: 1,
     alive: true,
     afterburner: false,
+    invulnerable: false,
     lastInputSeq: 0,
     position: { x: R * Math.sin(a), y: 800, z: -R * (1 - Math.cos(a)) * -1 },
     orientation: { x: 0, y: Math.sin(-a / 2), z: 0, w: Math.cos(-a / 2) },
@@ -160,18 +161,23 @@ describe('sync: 入力の送信と受け取り', () => {
       for (let k = 0; k < n; k++) for (const u of buf.pull()) used.push(Math.round(u.roll * 100));
       return used;
     };
-    buf.receive({ type: 'input', seq: 4, controls: [at(4), at(3), at(2), at(1)] });
+    buf.receive({ type: 'input', seq: 4, viewTick: 0, controls: [at(4), at(3), at(2), at(1)] });
     // 溜まるまで（6 ステップ）は使わない
     expect(pullAll(3)).toEqual([]);
     // 5〜8 は届かず、9〜12 が届く
-    buf.receive({ type: 'input', seq: 12, controls: [at(12), at(11), at(10), at(9)] });
+    buf.receive({ type: 'input', seq: 12, viewTick: 0, controls: [at(12), at(11), at(10), at(9)] });
     expect(pullAll(12)).toEqual([1, 2, 3, 4, 4, 4, 4, 4, 9, 10, 11, 12]);
     expect(buf.guessed).toBe(4);
     expect(buf.lastApplied).toBe(12);
     // 切れたら直前の操作で進み、間に合わなかった入力は後から届いても使わない
     expect(pullAll(2)).toEqual([12, 12]);
     expect(buf.starved).toBe(2);
-    buf.receive({ type: 'input', seq: 16, controls: [at(16), at(15), at(14), at(13)] });
+    buf.receive({
+      type: 'input',
+      seq: 16,
+      viewTick: 0,
+      controls: [at(16), at(15), at(14), at(13)],
+    });
     expect(pullAll(2)).toEqual([15, 16]);
     expect(buf.lastApplied).toBe(16);
   });
@@ -179,9 +185,9 @@ describe('sync: 入力の送信と受け取り', () => {
   it('クライアントが大きく遅れたら溜め直す', () => {
     const buf = new InputBuffer();
     const at = (seq: number) => ({ ...createNetControls(), roll: seq / 100 });
-    buf.receive({ type: 'input', seq: 6, controls: [6, 5, 4, 3, 2, 1].map(at) });
+    buf.receive({ type: 'input', seq: 6, viewTick: 0, controls: [6, 5, 4, 3, 2, 1].map(at) });
     for (let k = 0; k < 12 + NET_CONFIG.input.resyncTicks; k++) buf.pull();
-    buf.receive({ type: 'input', seq: 12, controls: [12, 11, 10, 9, 8, 7].map(at) });
+    buf.receive({ type: 'input', seq: 12, viewTick: 0, controls: [12, 11, 10, 9, 8, 7].map(at) });
     expect(buf.pull().map((u) => Math.round(u.roll * 100))).toEqual([7]);
   });
 });

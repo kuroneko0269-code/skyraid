@@ -1,8 +1,21 @@
-// クライアントの PvP の飛行（5-1）。自機は手元で先行計算し（OwnPrediction）、操作を 30Hz で送る（InputSender）。
-// ホストの状態（15Hz）は他機の補間の並び（SnapshotBuffer）に入れ、自機はずれを補正する。Three.js 非依存
+// クライアントの PvP の飛行（5-1）と戦闘（5-3）。自機は手元で先行計算し（OwnPrediction）、操作と戦闘の操作を
+// 30Hz で送る（InputSender）。ホストの状態（15Hz）は他機の補間の並び（SnapshotBuffer）に入れ、自機はずれを補正する。
+// 命中・撃墜・復帰はホストの event で知る（自分では判定しない）。撃墜されたら止まり、復帰の event の seq の後の操作を
+// 出現位置からやり直して（記録した操作で計算し直す）ホストと同じ位置にそろえる。Three.js 非依存
 import { NET_CONFIG } from '../data/net';
+import { PVP_CONFIG } from '../data/pvp';
+import { PVP_SPAWN_POINTS } from '../data/pvp';
 import type { Aircraft, AircraftControls } from '../entities/aircraft';
-import { createNetControls, quantizeControls, type StateMsg } from './protocol';
+import { headingQuat } from '../entities/enemy-aircraft';
+import { copyQuat, copyVec3, quatIdentity } from '../flight/math';
+import {
+  createNetControls,
+  quantizeControls,
+  type EventMsg,
+  type MissileStateMsg,
+  type NetControls,
+  type StateMsg,
+} from './protocol';
 import { OwnPrediction, type PredictedBody } from './prediction';
 import type { ClientRoom } from './client-room';
 import {
@@ -13,11 +26,14 @@ import {
   type SampledPose,
 } from './sync';
 import {
+  NetGameEvents,
   RateCounter,
   SPAWN_ORIENTATION,
+  applyCombat,
   createRemoteSample,
   spawnPosition,
   toNetControls,
+  type LocalCombat,
   type NetGame,
   type NetStats,
   type RemoteSample,
@@ -34,13 +50,19 @@ export interface ClientGameDeps {
 }
 
 const TICK_HZ = NET_CONFIG.rates.tickHz;
+const HISTORY = NET_CONFIG.prediction.historyTicks;
 
-export class ClientGame implements NetGame {
+export class ClientGame extends NetGameEvents implements NetGame {
   readonly localId: number;
   /** 自機のステップ番号（1 から。入力の seq） */
   seq = 0;
   /** ホストが知らせた自機の HP */
   hp = 0;
+  private readonly maxHp: number;
+  /** 撃墜されて復帰を待っている */
+  down = false;
+  missiles: MissileStateMsg[] = [];
+  missileVersion = 0;
   readonly prediction = new OwnPrediction();
   private readonly sender = new InputSender();
   private readonly clock = new HostClock();
@@ -48,10 +70,18 @@ export class ClientGame implements NetGame {
   private readonly list: RemoteSample[] = [];
   private readonly received = new RateCounter();
   private readonly raw = createNetControls();
-  private readonly quantized = createNetControls();
+  /** seq ごとの量子化した操作（復帰のやり直し用） */
+  private readonly inputs: NetControls[] = [];
   private readonly pose: SampledPose = createSampledPose();
   private readonly body: PredictedBody;
+  private readonly wreck = { x: 0, y: 0, z: 0 };
+  private readonly wreckOrientation = quatIdentity();
+  private readonly spawnOrientation = quatIdentity();
+  /** 自分で墜落を計算した後、ホストの撃墜の知らせを待つ残り秒数 */
+  private crashHold = 0;
   private lastStateTick = -1;
+  /** 自機が最後に復帰した tick（それより前の状態の HP は使わない。復帰の event より遅れて届くことがある） */
+  private respawnTick = -1;
   private lastRenderTime: number | null = null;
   private lastHostNow: number | null = null;
   private extrapolating = 0;
@@ -62,9 +92,13 @@ export class ClientGame implements NetGame {
     private readonly deps: ClientGameDeps,
     private readonly now: () => number = () => performance.now(),
   ) {
+    super();
     this.localId = room.localPlayerId;
     const own = deps.own;
     own.respawn(spawnPosition(this.localId, { x: 0, y: 0, z: 0 }), SPAWN_ORIENTATION);
+    this.maxHp = room.players.find((p) => p.id === this.localId)?.maxHp ?? 0;
+    this.hp = this.maxHp;
+    for (let i = 0; i < HISTORY; i++) this.inputs.push(createNetControls());
     const state = own.state;
     this.body = {
       position: state.position,
@@ -84,7 +118,13 @@ export class ClientGame implements NetGame {
     });
     room.onMessage((_id, msg) => {
       if (msg.type === 'state') this.onState(msg);
+      else if (msg.type === 'event') this.handleEvent(msg);
+      else if (msg.type === 'score') this.emitScore(msg);
     });
+  }
+
+  get ownHp(): number {
+    return this.hp;
   }
 
   /** 名簿にいない機体を消し、新しい機体の入れ物を作る */
@@ -103,15 +143,81 @@ export class ClientGame implements NetGame {
     for (const id of [...this.remotes.keys()]) if (!ids.has(id)) this.remotes.delete(id);
   }
 
-  step(controls: Readonly<AircraftControls>, dt: number): void {
+  step(controls: Readonly<AircraftControls>, combat: Readonly<LocalCombat>, dt: number): void {
     const own = this.deps.own;
     this.seq++;
     toNetControls(this.raw, controls, own.flight.options);
-    quantizeControls(this.quantized, this.raw);
-    own.step(this.quantized, dt);
+    applyCombat(this.raw, combat);
+    const q = quantizeControls(this.inputs[this.seq % HISTORY] ?? createNetControls(), this.raw);
+    if (this.down || this.crashHold > 0) {
+      // 撃墜（墜落）されている間は止まる。撃てない
+      q.fire = q.missile = q.flare = false;
+      this.hold();
+      if (this.crashHold > 0) this.crashHold = Math.max(0, this.crashHold - dt);
+    } else this.fly(q, dt);
     this.prediction.record(this.seq, this.body);
-    this.sender.record(this.seq, this.quantized);
+    this.sender.viewTick =
+      this.lastRenderTime === null ? 0 : Math.round(this.lastRenderTime * TICK_HZ);
+    this.sender.record(this.seq, q);
     if (this.sender.ready()) this.room.send(this.sender.message(), 'unordered');
+  }
+
+  /** 1 ステップ飛ぶ。墜落したら残骸の位置で止まり、ホストの撃墜の知らせを待つ */
+  private fly(c: Readonly<NetControls>, dt: number): void {
+    const own = this.deps.own;
+    const opts = own.flight.options;
+    opts.autoLevel = c.autoLevel;
+    opts.invertPitch = c.invertPitch;
+    copyVec3(this.wreck, own.state.position);
+    copyQuat(this.wreckOrientation, own.state.orientation);
+    const crashes = own.crashCount;
+    own.step(c, dt);
+    if (own.crashCount === crashes) return;
+    own.respawn(this.wreck, this.wreckOrientation);
+    this.crashHold = PVP_CONFIG.crashHoldSeconds;
+  }
+
+  private hold(): void {
+    const own = this.deps.own;
+    copyVec3(own.prevPosition, own.state.position);
+    copyQuat(own.prevOrientation, own.state.orientation);
+  }
+
+  private handleEvent(e: EventMsg): void {
+    if (e.b === this.localId && e.kind === 'kill') {
+      // 撃墜された位置で止める（先行計算で先へ進んでいた分を戻す）
+      this.down = true;
+      this.crashHold = 0;
+      const own = this.deps.own;
+      own.state.position.x = e.x;
+      own.state.position.y = e.y;
+      own.state.position.z = e.z;
+      this.hold();
+    } else if (e.a === this.localId && e.kind === 'respawn') {
+      this.respawnTick = e.tick;
+      this.hp = this.maxHp;
+      this.respawn(e.b, e.n);
+    } else if (e.kind === 'respawn') this.remotes.get(e.a)?.buffer.clear();
+    this.emitEvent(e);
+  }
+
+  /** 復帰: 出現位置に置き、ホストがそこから使った seq（afterSeq の次から今まで）の操作で計算し直す */
+  private respawn(spawn: number, afterSeq: number): void {
+    const s = PVP_SPAWN_POINTS[spawn] ?? PVP_SPAWN_POINTS[0];
+    if (!s) return;
+    const own = this.deps.own;
+    own.respawn(s, headingQuat(this.spawnOrientation, s.headingDeg));
+    this.down = false;
+    this.crashHold = 0;
+    this.prediction.reset();
+    const from = Math.max(afterSeq + 1, this.seq - HISTORY + 1);
+    for (let k = from; k <= this.seq; k++) {
+      const c = this.inputs[k % HISTORY];
+      if (c) this.fly(c, 1 / TICK_HZ);
+      this.prediction.record(k, this.body);
+    }
+    copyVec3(own.prevPosition, own.state.position);
+    copyQuat(own.prevOrientation, own.state.orientation);
   }
 
   private onState(msg: StateMsg): void {
@@ -120,12 +226,16 @@ export class ClientGame implements NetGame {
     const hostTime = msg.tick / TICK_HZ;
     this.clock.observe(hostTime, t / 1000);
     const newer = msg.tick > this.lastStateTick;
-    if (newer) this.lastStateTick = msg.tick;
+    if (newer) {
+      this.lastStateTick = msg.tick;
+      this.missiles = msg.missiles;
+      this.missileVersion++;
+    }
     for (const a of msg.aircraft) {
       if (a.id === this.localId) {
         if (!newer) continue;
-        this.hp = a.hp;
-        this.prediction.reconcile(a, this.body, this.seq);
+        if (a.alive && msg.tick >= this.respawnTick) this.hp = a.hp;
+        if (a.alive && !this.down) this.prediction.reconcile(a, this.body, this.seq);
       } else this.remotes.get(a.id)?.buffer.push(hostTime, a);
     }
   }
@@ -149,16 +259,15 @@ export class ClientGame implements NetGame {
       if (mode !== 'interpolated') extrapolating++;
       margin = Math.min(margin, latest.time - t);
       const out = r.sample;
-      out.position.x = this.pose.position.x;
-      out.position.y = this.pose.position.y;
-      out.position.z = this.pose.position.z;
-      out.orientation.x = this.pose.orientation.x;
-      out.orientation.y = this.pose.orientation.y;
-      out.orientation.z = this.pose.orientation.z;
-      out.orientation.w = this.pose.orientation.w;
+      copyVec3(out.position, this.pose.position);
+      copyQuat(out.orientation, this.pose.orientation);
       out.alive = latest.alive;
       out.afterburner = latest.afterburner;
       out.throttle = latest.throttle;
+      copyVec3(out.velocity, latest.velocity);
+      out.speed = Math.hypot(latest.velocity.x, latest.velocity.y, latest.velocity.z);
+      out.hp = latest.hp;
+      out.invulnerable = latest.invulnerable;
       list.push(out);
     }
     this.extrapolating = extrapolating;
@@ -193,6 +302,7 @@ export class ClientGame implements NetGame {
       inputGuessed: 0,
       inputStarved: 0,
       inputResyncs: 0,
+      rewindMs: 0,
     };
   }
 }

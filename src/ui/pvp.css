@@ -1,0 +1,151 @@
+/* PvP の戦闘（5-3）: 名札の HP バー、撃墜のフィード、残り時間、スコアボード、リザルトの表 */
+.pvp-tag-hp {
+  width: 56px;
+  height: 4px;
+  margin: 2px auto 0;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid currentColor;
+  overflow: hidden;
+}
+
+.pvp-tag-hp-fill {
+  width: 100%;
+  height: 100%;
+  background: currentColor;
+  transform-origin: left center;
+}
+
+.pvp-tag.is-low .pvp-tag-hp-fill {
+  background: var(--ui-warn);
+}
+
+/* 復帰後の無敵中（機体も半透明） */
+.pvp-tag.is-invulnerable {
+  opacity: 0.5;
+}
+
+.pvp-feed {
+  position: fixed;
+  right: calc(var(--ui-space-3) + var(--ui-safe-right));
+  top: calc(88px + var(--ui-safe-top));
+  z-index: 16;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.pvp-feed[hidden],
+.pvp-timer[hidden],
+.pvp-board[hidden] {
+  display: none;
+}
+
+.pvp-feed-item {
+  padding: 2px var(--ui-space-2);
+  font: 600 13px/1.4 var(--ui-font-body);
+  color: var(--ui-text);
+  background: var(--ui-bg-sunken);
+  text-shadow: var(--ui-shadow-text);
+  white-space: nowrap;
+}
+
+.pvp-feed-verb {
+  color: var(--ui-text-dim);
+}
+
+.pvp-timer {
+  position: fixed;
+  left: 50%;
+  top: calc(var(--ui-space-2) + var(--ui-safe-top));
+  z-index: 16;
+  transform: translateX(-50%);
+  font: 600 16px/1.2 var(--ui-font-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-accent-hud);
+  text-shadow: var(--ui-shadow-text);
+  pointer-events: none;
+}
+
+.pvp-board {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 30;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100% - 2 * var(--ui-space-4)));
+  padding: var(--ui-space-3) var(--ui-space-4);
+  pointer-events: none;
+}
+
+.pvp-board-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--ui-space-2);
+}
+
+.pvp-board-time {
+  font: 600 14px/1.2 var(--ui-font-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-text-dim);
+}
+
+.pvp-result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 500 14px/1.4 var(--ui-font-body);
+  color: var(--ui-text);
+}
+
+.pvp-result-table th:nth-child(n + 3) {
+  text-align: right;
+}
+
+.pvp-result-table th {
+  padding: 2px var(--ui-space-1);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ui-text-dim);
+  text-align: left;
+}
+
+.pvp-result-table td {
+  padding: 4px var(--ui-space-1);
+  background: var(--ui-bg-sunken);
+  border-top: 1px solid var(--ui-line-faint);
+}
+
+.pvp-result-table tr.is-you td {
+  background: var(--ui-bg-raised);
+}
+
+.pvp-result-table .pvp-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pvp-result-table th:first-child,
+.pvp-result-table td:first-child {
+  width: 3em;
+}
+
+.pvp-name {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+}
+
+.lobby-rules {
+  margin-top: var(--ui-space-2);
+}
+
+.lobby-rules[hidden] {
+  display: none;
+}
+
+.lobby-rule-select {
+  min-width: 6em;
+  padding-block: 4px;
+}

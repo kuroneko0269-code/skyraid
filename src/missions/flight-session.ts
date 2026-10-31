@@ -6,7 +6,7 @@
 import { EnemySquadron, createEnemies } from '../ai/enemy-squadron';
 import { CombatSystem, createCombatInput, type CombatInput } from '../combat/combat-system';
 import type { Rng } from '../combat/gun';
-import { TEAM_ENEMY } from '../combat/target';
+import { TEAM_ENEMY, type CombatTarget } from '../combat/target';
 import { FREE_FLIGHT_ENEMIES, type Difficulty, type EnemyForceConfig } from '../data/ai';
 import { FLIGHT_CONFIG } from '../data/flight';
 import { ISLAND_MAP } from '../data/maps';
@@ -49,6 +49,8 @@ export class FlightSession implements MissionWorld {
   readonly props: MissionProps;
   /** 地表の高さ（地形なしのテストでは FLIGHT_CONFIG.groundAltitude） */
   private readonly ground: (x: number, z: number) => number;
+  /** PvP の他プレイヤー（5-3。レーダーの点・命中音に使う。シングルプレイでは空） */
+  readonly rivals: CombatTarget[] = [];
   /** フリーフライトの戦域の境界（警告だけ。ミッションの境界はランナーが持つ） */
   readonly freeBoundary = new BoundaryWatch(ISLAND_MAP, false);
   mode: SessionMode = 'free';
@@ -292,10 +294,24 @@ export class FlightSession implements MissionWorld {
    */
   respawnAt(position: Readonly<Vec3>, orientation: Readonly<Quat>): void {
     this.aircraft.respawn(position, orientation);
+    this.revived();
+  }
+
+  /** 機体はもう置いてある（PvP の通信側が復帰の位置から計算し直した。5-3）: HP 満タン・補給・リスナー */
+  revived(): void {
     this.player.revive();
     this.player.step(1 / 60);
     this.combat.resupply();
     for (const fn of this.respawnListeners) fn();
+  }
+
+  /** 撃墜された（PvP。5-3。判定はホスト）: HP 0、撃墜の演出とリスナー */
+  markDown(): void {
+    if (!this.player.active) return;
+    this.player.crash();
+    this.combat.notifyDestroyed(this.player);
+    this.notifiedDowns = this.player.downCount;
+    for (const fn of this.downListeners) fn();
   }
 
   /** フリーフライト: 墜落（撃墜）地点の地表から spawn.position.y 上空に、墜落前の機首方位のまま水平で戻す */

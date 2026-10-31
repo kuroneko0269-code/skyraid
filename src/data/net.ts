@@ -1,8 +1,8 @@
 // P2P 通信（5-1）の数値。仕組みは src/net/、決定は docs/decisions.md
 
 export const NET_CONFIG = {
-  /** プロトコルの版。join に入れ、ホストと違えば参加を断る */
-  protocolVersion: 1,
+  /** プロトコルの版。join に入れ、ホストと違えば参加を断る（5-3 で 2: 戦闘の入力・ミサイル・成績） */
+  protocolVersion: 2,
   /** 部屋の最大人数（ホストを含む） */
   maxPlayers: 4,
   room: {
@@ -80,7 +80,7 @@ export const NET_CONFIG = {
   playerColors: [0xe0402a, 0x2a8fe0, 0xe0b82a, 0x3cc46a],
   /** 機体の胴体の色をプレイヤーの色へ寄せる割合（0 = 元の色。遠くからも見分けられるように） */
   playerBodyTint: 0.3,
-  /** ホストのゲーム設定の初期値（welcome で配る。撃ち合いと勝敗は 5-3 / 5-4） */
+  /** ホストのゲーム設定の初期値（welcome で配る。撃墜数と制限時間は 5-3 からロビーでホストが選ぶ） */
   defaultSettings: {
     mapId: 'island',
     timeLimitSeconds: 300,

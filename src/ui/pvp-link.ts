@@ -1,16 +1,15 @@
 // PvP（5-1）の配線。main.ts が PvP を選んだとき・?room のときだけ import() で読む（シングルプレイでは読み込まない）。
 // ロビー（部屋を作る / コードで参加 → 名簿 → 開始）→ 飛行（自機は FlightSession の機体、他機は RemoteView）→
-// 終了（自分で退出・ホストの切断）。飛行中の Esc / ⏸ はゲームを止めずにメニューを出す
+// 終了（自分で退出・ホストの切断）。飛行中の Esc / ⏸ はゲームを止めずにメニューを出す。
+// 5-3: 撃ち合い（1 回の対戦は pvp-flight.ts）、ロビーのルール設定、対戦の終わり → ロビーのリザルト →「もう一度」
 import type { PerspectiveCamera, Scene } from 'three';
 import type { GameState } from '../core/game-state';
 import type { AircraftDetail } from '../data/aircraft-model';
 import { SAVE_CONFIG } from '../data/save';
+import type { CombatInput } from '../combat/combat-input';
 import type { AircraftControls, GroundHeightFn } from '../entities/aircraft';
 import type { FlightSession } from '../missions/flight-session';
-import { ClientGame } from '../net/client-game';
 import { ClientRoom } from '../net/client-room';
-import { HostGame } from '../net/host-game';
-import type { NetGame } from '../net/net-game';
 import { openLocalTransport } from '../net/local-transport';
 import { openPeerTransport } from '../net/peerjs-transport';
 import { HostRoom, JoinFailure, normalizeRoomCode, type JoinError } from '../net/room';
@@ -20,6 +19,8 @@ import type { Hangar } from '../progression/hangar';
 import type { PlayerView } from '../render/player-view';
 import { RemoteView, playerShape } from '../render/remote-view';
 import { LobbyScreen } from './lobby';
+import { PvpBoard, onRadarTap } from './pvp-board';
+import { PvpFlight } from './pvp-flight';
 import { PvpHud } from './pvp-hud';
 
 export interface PvpDeps {
@@ -37,6 +38,10 @@ export interface PvpDeps {
   readonly debug: boolean;
   /** 通信口: PeerJS（本番）か、同じブラウザのタブどうし（?net=local。確認用） */
   readonly transport: 'peerjs' | 'local';
+  /** スコアボードの Tab（ターゲット切替のキー）を押しているか（5-3） */
+  readonly scoreKeyDown: () => boolean;
+  /** 他プレイヤーの機銃の発射音（5-3。位置付き） */
+  readonly otherGun: (x: number, y: number, z: number) => void;
 }
 
 const JOIN_ERRORS: Record<JoinError, string> = {
@@ -57,13 +62,12 @@ export class PvpLink {
   private readonly hud: PvpHud;
   private readonly remotes: RemoteView;
   private readonly open: TransportOpener;
+  private readonly board: PvpBoard;
   private room: HostRoom | ClientRoom | null = null;
-  private net: NetGame | null = null;
+  private flight: PvpFlight | null = null;
   private timer = 0;
   /** 接続中に取り消したら、つながっても抜ける */
   private attempt = 0;
-  private lastFrameMs: number | null = null;
-  private readonly names = new Map<number, string>();
 
   constructor(private readonly deps: PvpDeps) {
     this.open = deps.transport === 'local' ? openLocalTransport : openPeerTransport;
@@ -80,6 +84,14 @@ export class PvpLink {
         this.leave();
         deps.game.transition('mode_select');
       },
+      onSettings: (scoreLimit, timeLimitSeconds) => {
+        const room = this.room;
+        if (room instanceof HostRoom)
+          room.setSettings({ ...room.settings, scoreLimit, timeLimitSeconds });
+      },
+      onAgain: () => {
+        this.refreshRoster(true);
+      },
     });
     this.hud = new PvpHud(
       deps.parent,
@@ -93,7 +105,13 @@ export class PvpLink {
       },
       deps.debug,
     );
+    this.board = new PvpBoard(deps.parent);
     this.remotes = new RemoteView(deps.scene, deps.aircraftDetail);
+    // タッチ: レーダーをタップするとスコアボードを開閉する
+    onRadarTap(() => {
+      if (this.flight && deps.game.state === 'flight')
+        this.flight.boardToggled = !this.flight.boardToggled;
+    });
     deps.game.onChange(({ to }) => {
       this.lobby.setShown(to === 'lobby');
       if (to !== 'flight') this.hud.setMenuOpen(false);
@@ -102,7 +120,7 @@ export class PvpLink {
 
   /** PvP の飛行中か（main の固定ステップがこちらを進める） */
   get flying(): boolean {
-    return this.net !== null;
+    return this.flight !== null;
   }
 
   /** ロビーを開く。code があればすぐ参加する（?room） */
@@ -190,18 +208,19 @@ export class PvpLink {
     this.refreshRoster();
   }
 
-  private refreshRoster(): void {
+  /** 名簿が変わった。ロビーなら出し直す（リザルトの表示中はそのまま。force は「もう一度」） */
+  private refreshRoster(force = false): void {
     const room = this.room;
     if (!room) return;
-    this.names.clear();
-    for (const p of room.players) this.names.set(p.id, p.name);
-    if (this.deps.game.state === 'lobby')
+    this.flight?.syncRoster();
+    if (this.deps.game.state === 'lobby' && (force || this.lobby.currentView !== 'result'))
       this.lobby.showRoom({
         code: room.code,
         isHost: room.isHost,
         localId: room.localPlayerId,
         players: room.players,
         mapName: room.settings.mapId === 'island' ? '海岸と島' : room.settings.mapId,
+        settings: room.settings,
       });
   }
 
@@ -213,49 +232,44 @@ export class PvpLink {
     const room = this.room;
     if (!room) return;
     const d = this.deps;
-    const own = d.session.aircraft;
-    this.net =
-      room instanceof HostRoom
-        ? new HostGame(room, {
-            own,
-            ownHp: () => d.session.player.hp,
-            groundHeight: d.groundHeight,
-          })
-        : new ClientGame(room, { own });
+    this.flight = new PvpFlight(room, {
+      session: d.session,
+      playerView: d.playerView,
+      camera: d.camera,
+      groundHeight: d.groundHeight,
+      remotes: this.remotes,
+      hud: this.hud,
+      board: this.board,
+      scoreKeyDown: d.scoreKeyDown,
+      otherGun: d.otherGun,
+    });
     const model = d.hangar.selectedModel;
     const missiles = d.hangar.loadout().missiles;
     d.playerView.setModel({ ...model, shape: playerShape(model, room.localPlayerId) }, missiles);
-    d.playerView.respawn(own);
-    this.lastFrameMs = null;
+    d.playerView.respawn(d.session.aircraft);
   }
 
-  /** 固定ステップ 1 回分 */
-  step(controls: Readonly<AircraftControls>, dt: number): void {
-    const own = this.deps.session.aircraft;
-    const crashes = own.crashCount;
-    this.net?.step(controls, dt);
-    // 墜落（Aircraft が上空へ戻した）: シングルと同じく機体とカメラを復帰位置へすぐ移す
-    if (own.crashCount !== crashes)
-      this.deps.session.respawnAt(own.state.position, own.state.orientation);
+  /** 固定ステップ 1 回分。対戦が終わったらロビーのリザルトへ */
+  step(controls: Readonly<AircraftControls>, combat: Readonly<CombatInput>, dt: number): void {
+    const f = this.flight;
+    if (!f) return;
+    f.step(controls, combat, dt);
+    if (!f.over) return;
+    this.endFlight();
+    const game = this.deps.game;
+    if (game.state === 'flight') game.transition('lobby');
+    this.lobby.showResult(f.result());
   }
 
-  /** 描画フレームごと（pipeline.render の前）。他機・名札・?netdebug */
+  /** 描画フレームごと（pipeline.render の前）。他機・名札・成績・?netdebug */
   render(alpha: number): void {
-    const net = this.net;
-    const now = performance.now();
-    const dt = this.lastFrameMs === null ? 0 : (now - this.lastFrameMs) / 1000;
-    this.lastFrameMs = now;
-    if (!net || this.deps.game.state !== 'flight') return;
-    const samples = net.samples(alpha, now);
-    this.remotes.update(samples, dt);
-    this.hud.updateTags(
-      samples,
-      this.names,
-      this.deps.camera,
-      window.innerWidth,
-      window.innerHeight,
-    );
-    this.hud.updateDebug(net.stats(now), net.localId, this.room?.players.length ?? 0, dt);
+    if (this.deps.game.state !== 'flight') return;
+    this.flight?.render(alpha, window.innerWidth, window.innerHeight);
+  }
+
+  private endFlight(): void {
+    this.flight?.dispose();
+    this.flight = null;
   }
 
   setAircraftDetail(detail: AircraftDetail): void {
@@ -272,9 +286,7 @@ export class PvpLink {
   private finish(reason: RoomEndReason): void {
     window.clearInterval(this.timer);
     this.room = null;
-    this.net = null;
-    this.remotes.clear();
-    this.hud.hide();
+    this.endFlight();
     const game = this.deps.game;
     if (reason === 'host-left') {
       this.hud.notify('ホストが切断しました');

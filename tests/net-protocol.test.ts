@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { ByteReader, ByteWriter, readQuat, writeQuat } from '../src/net/codec';
 import {
+  NO_TARGET,
   createNetControls,
   decodeMessage,
   encodeMessage,
+  eventMsg,
   quantizeControls,
   type AircraftStateMsg,
+  type MissileStateMsg,
   type NetMessage,
   type StateMsg,
 } from '../src/net/protocol';
@@ -53,8 +56,8 @@ describe('protocol: 直列化の往復', () => {
         yourId: 2,
         settings: { mapId: 'island', timeLimitSeconds: 300, scoreLimit: 10 },
         players: [
-          { id: 0, name: 'HOST', aircraftId: 'kestrel' },
-          { id: 2, name: 'ゲスト', aircraftId: 'bastion' },
+          { id: 0, name: 'HOST', aircraftId: 'kestrel', maxHp: 200 },
+          { id: 2, name: 'ゲスト', aircraftId: 'bastion', maxHp: 1234 },
         ],
       },
       {
@@ -64,8 +67,19 @@ describe('protocol: 直列化の往復', () => {
         settings: { mapId: 'island', timeLimitSeconds: 0, scoreLimit: 0 },
         players: [],
       },
-      { type: 'event', kind: 'kill', a: 1, b: 3, tick: 123456 },
-      { type: 'event', kind: 'end', a: 0, b: 0, tick: 0 },
+      eventMsg('kill', 1, 3, 123456, 0, 12.5, -300.25, 4500),
+      eventMsg('end', 0, 0, 0),
+      eventMsg('respawn', 2, 7, 999, 54321),
+      eventMsg('explode', 3, 255, 10, 200, 1, 2, 3),
+      {
+        type: 'score',
+        remainingSeconds: 123.4,
+        over: true,
+        players: [
+          { id: 0, kills: 10, deaths: 3, shots: 4000, hits: 321 },
+          { id: 3, kills: 0, deaths: 12, shots: 0, hits: 0 },
+        ],
+      },
       { type: 'ping', pong: true, nonce: 42, time: 12345.678 },
     ];
     for (const m of msgs) expect(roundTrip(m)).toEqual(m);
@@ -82,12 +96,24 @@ describe('protocol: 直列化の往復', () => {
       afterburner: true,
       autoLevel: true,
       invertPitch: false,
+      fire: true,
+      missile: false,
+      flare: true,
+      targetNext: false,
+      locked: true,
+      targetId: 3,
     });
     const q = quantizeControls(createNetControls(), c);
-    const back = roundTrip({ type: 'input', seq: 99, controls: [c, createNetControls()] });
+    const back = roundTrip({
+      type: 'input',
+      seq: 99,
+      viewTick: 12345,
+      controls: [c, createNetControls()],
+    });
     expect(back?.type).toBe('input');
     if (back?.type !== 'input') return;
     expect(back.seq).toBe(99);
+    expect(back.viewTick).toBe(12345);
     expect(back.controls[0]).toEqual(q);
     expect(back.controls[1]).toEqual(createNetControls());
     expect(quantizeControls(createNetControls(), q)).toEqual(q);
@@ -102,6 +128,7 @@ describe('protocol: 直列化の往復', () => {
         id: i,
         alive: i !== 2,
         afterburner: i === 1,
+        invulnerable: i === 3,
         lastInputSeq: 1000 + i,
         position: { x: r() * 20000 - 10000, y: r() * 9000, z: r() * 20000 - 10000 },
         orientation: randomQuat(r),
@@ -111,10 +138,10 @@ describe('protocol: 直列化の往復', () => {
         hp: Math.round(r() * 300),
       });
     }
-    const msg: StateMsg = { type: 'state', tick: 7777, aircraft };
+    const msg: StateMsg = { type: 'state', tick: 7777, aircraft, missiles: [] };
     const data = encodeMessage(msg);
-    // 1 機 37 バイト + 見出し 6 バイト（4 機で 154 バイト。15Hz で約 2.3KB/s）
-    expect(data.byteLength).toBe(6 + 37 * 4);
+    // 1 機 37 バイト + 見出し 7 バイト（4 機で 155 バイト。15Hz で約 2.3KB/s）
+    expect(data.byteLength).toBe(7 + 37 * 4);
     const back = decodeMessage(data);
     expect(back?.type).toBe('state');
     if (back?.type !== 'state') return;
@@ -125,6 +152,7 @@ describe('protocol: 直列化の往復', () => {
       expect(b.id).toBe(a.id);
       expect(b.alive).toBe(a.alive);
       expect(b.afterburner).toBe(a.afterburner);
+      expect(b.invulnerable).toBe(a.invulnerable);
       expect(b.lastInputSeq).toBe(a.lastInputSeq);
       expect(b.hp).toBe(a.hp);
       expect(b.position.x).toBeCloseTo(Math.fround(a.position.x), 6);
@@ -134,6 +162,52 @@ describe('protocol: 直列化の往復', () => {
       expect(Math.abs(b.speed - a.speed)).toBeLessThan(1e-4);
       expect(Math.abs(b.throttle - a.throttle)).toBeLessThanOrEqual(1 / 510);
       expect(angleDeg(b.orientation, a.orientation)).toBeLessThan(0.01);
+    });
+  });
+
+  it('state のミサイル: 1 発 14 バイト、位置は 0.5m・速度は 1/16 m/s。4 機 + 16 発で 6KB/s 以下', () => {
+    const r = rng(11);
+    const aircraft: AircraftStateMsg[] = [];
+    for (let i = 0; i < 4; i++) {
+      aircraft.push({
+        id: i,
+        alive: true,
+        afterburner: false,
+        invulnerable: false,
+        lastInputSeq: 100000,
+        position: { x: 1, y: 2, z: 3 },
+        orientation: randomQuat(r),
+        velocity: { x: 300, y: 0, z: 0 },
+        speed: 300,
+        throttle: 1,
+        hp: 200,
+      });
+    }
+    const missiles: MissileStateMsg[] = [];
+    for (let i = 0; i < 16; i++) {
+      missiles.push({
+        netId: 240 + i,
+        owner: i % 4,
+        targetId: i % 5 === 4 ? NO_TARGET : (i + 1) % 4,
+        position: { x: r() * 20000 - 10000, y: r() * 3000, z: r() * 20000 - 10000 },
+        velocity: { x: r() * 1400 - 700, y: r() * 1400 - 700, z: r() * 1400 - 700 },
+      });
+    }
+    const data = encodeMessage({ type: 'state', tick: 1, aircraft, missiles });
+    expect(data.byteLength).toBe(7 + 37 * 4 + 14 * 16);
+    // 15Hz で 6KB/s 以下
+    expect(data.byteLength * 15).toBeLessThanOrEqual(6000);
+    const back = decodeMessage(data);
+    if (back?.type !== 'state') throw new Error('state でない');
+    back.missiles.forEach((b, i) => {
+      const a = missiles[i];
+      if (!a) throw new Error('missing');
+      expect(b.netId).toBe(a.netId & 0xff);
+      expect(b.owner).toBe(a.owner);
+      expect(b.targetId).toBe(a.targetId);
+      expect(Math.abs(b.position.x - a.position.x)).toBeLessThanOrEqual(0.25);
+      expect(Math.abs(b.position.z - a.position.z)).toBeLessThanOrEqual(0.25);
+      expect(Math.abs(b.velocity.y - a.velocity.y)).toBeLessThanOrEqual(1 / 32);
     });
   });
 

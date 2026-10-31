@@ -118,7 +118,11 @@ export class ClientRoom extends RoomBase {
     }
     if (msg.type === 'event' && msg.kind === 'start') this.emitStart();
     else if (msg.type === 'event' && msg.kind === 'end') this.hostGone();
-    else this.emitMessage(0, msg);
+    else {
+      // 対戦の終わり（5-3）: ロビーに戻る（ホストの次の「開始」を受ける）
+      if (msg.type === 'event' && msg.kind === 'over') this.started = false;
+      this.emitMessage(0, msg);
+    }
   }
 
   protected silent(): void {

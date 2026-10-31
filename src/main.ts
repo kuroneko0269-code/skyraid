@@ -155,6 +155,11 @@ const pvp = new PvpEntry(screens, search, {
   playerView,
   pilotName: () => save.pilotName,
   groundHeight: getGroundHeight,
+  // 5-3: スコアボードは Tab（ターゲット切替のキー）の長押し、他プレイヤーの機銃は敵機と同じ位置付きの音
+  scoreKeyDown: () => input.isDown('targetNext'),
+  otherGun: (x, y, z) => {
+    fxEvents.otherGun(x, y, z);
+  },
 });
 // 機体モデルの細かさ（4-3。画質「低」は LOD）と陽炎の屈折（4-4。「高」だけ）
 quality.onPreset((preset) => {
@@ -268,7 +273,7 @@ loop.onUpdate((dt) => {
   readFlightControls(input, controls);
   assist.apply(controls);
   weaponInput.read(input, combatInput, dt);
-  if (pvp.flying) pvp.step(controls, dt);
+  if (pvp.flying) pvp.step(controls, combatInput, dt);
   else play.step(controls, combatInput, dt);
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
   keys.handle();
