@@ -154,6 +154,11 @@ export class Hud {
     return this.shown;
   }
 
+  /** 武器関連の表示（GUN の熱・残弾・KILL・対象のマーカー・着弾予測点）を隠す（7-2 の事前修正: レース中） */
+  setNoWeapons(on: boolean): void {
+    this.root.classList.toggle('is-no-weapons', on);
+  }
+
   setVisible(visible: boolean): void {
     this.shown = visible;
     this.root.hidden = !visible;

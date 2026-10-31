@@ -26,6 +26,8 @@ export interface RaceLinkParts {
   readonly audio: GameAudio;
   readonly weather: WeatherView;
   readonly ghost: GhostView;
+  /** レース中は武器関連の HUD を隠す（7-2 の事前修正） */
+  readonly hud: { setNoWeapons(on: boolean): void };
 }
 
 export interface RaceLink {
@@ -77,6 +79,7 @@ export function createRaceLink(p: RaceLinkParts): RaceLink {
 
   play.onRaceChange((race) => {
     hud.attach(race);
+    p.hud.setNoWeapons(race !== null);
     if (race) bindRace(race);
     else p.ghost.setGhost(null, null);
   });
