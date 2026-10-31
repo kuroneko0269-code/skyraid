@@ -6,7 +6,7 @@ import { EventBus } from './event-bus';
  * 初回起動（セーブにパイロット名がない）はタイトルの後にパイロット名の入力（3-1）。
  * ハンガー（3-3）はモード選択とブリーフィング（機体変更）から開き、開いた画面へ戻る。
  * PvP（5-1）はモード選択 → ロビー → 飛行。飛行からはモード選択へ（退出・ホストの切断）、対戦が終わるとロビーへ（5-3）。
- * PvP の飛行にポーズはない
+ * PvP の飛行にポーズはない。フォトモード（7-A）は飛行（P キー）・ポーズ（メニュー）から入り、出ると飛行へ戻る（時間は止まる）
  */
 export const SCREEN_STATES = [
   'boot',
@@ -17,6 +17,7 @@ export const SCREEN_STATES = [
   'briefing',
   'flight',
   'pause',
+  'photo',
   'result',
   'hangar',
   'lobby',
@@ -37,9 +38,11 @@ export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenStat
   hangar: ['mode_select', 'briefing'],
   // ミッションが終わるとリザルトへ。チュートリアル（4-11）は指示の「中断」でモード選択へ
   // PvP の対戦が終わるとロビー（のリザルト）へ（5-3）
-  flight: ['pause', 'result', 'mode_select', 'lobby'],
+  flight: ['pause', 'photo', 'result', 'mode_select', 'lobby'],
   // ミッション中はポーズから「ミッションを中断」でミッション一覧へ（チュートリアルはモード選択へ）
-  pause: ['flight', 'title', 'mission_select', 'mode_select'],
+  pause: ['flight', 'photo', 'title', 'mission_select', 'mode_select'],
+  // フォトモード（7-A）を出るとゲームに戻る
+  photo: ['flight'],
   // 「もう一度」は飛行へ直接、「ミッション一覧へ」（チュートリアルは「モード選択へ」）
   result: ['flight', 'mission_select', 'mode_select'],
 };
@@ -61,6 +64,16 @@ export function canTransition(from: ScreenState, to: ScreenState): boolean {
 /** 固定ステップ更新（ゲームの時間）を進める状態か。飛行中だけ進め、ポーズ・メニュー中は止める */
 export function isSimulating(state: ScreenState): boolean {
   return state === 'flight';
+}
+
+/** 止めていた飛行に戻る遷移か（ポーズ・フォトモードから。飛行をやり直さない） */
+export function isResume(from: ScreenState): boolean {
+  return from === 'pause' || from === 'photo';
+}
+
+/** 飛行が止まっている状態か（ポーズ・フォトモード。機体・HUD は残す） */
+export function isFrozenFlight(state: ScreenState): boolean {
+  return state === 'pause' || state === 'photo';
 }
 
 /**

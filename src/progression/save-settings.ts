@@ -26,6 +26,8 @@ export interface SaveSettings {
   hud: boolean;
   /** 夜は HUD の明るさを少し落とす（7-5。設定で無効にできる。版は上げず、ない項目は既定値） */
   nightHudDim: boolean;
+  /** フォトモード（7-A）の保存画像の透かし「SkyRaid」（版は上げず、ない項目は既定値の ON） */
+  photoWatermark: boolean;
   /** 音量（4-4。v3 から）: マスター / 効果音 / BGM。0〜1 */
   volume: VolumeSettings;
   /** 操作補助（4-12。v4 から）: エイムアシスト / ターゲットカメラ / HUD 補助 */
@@ -67,6 +69,7 @@ export function defaultSettings(): SaveSettings {
     difficultyEased: true,
     hud: true,
     nightHudDim: true,
+    photoWatermark: true,
     volume: defaultVolume(),
     assist: defaultAssist(),
     controls: defaultControls(),
@@ -89,6 +92,7 @@ export function normalizeSettings(s: Json): SaveSettings {
   set.difficultyEased = true;
   if (typeof s.hud === 'boolean') set.hud = s.hud;
   if (typeof s.nightHudDim === 'boolean') set.nightHudDim = s.nightHudDim;
+  if (typeof s.photoWatermark === 'boolean') set.photoWatermark = s.photoWatermark;
   if (isObject(s.volume)) {
     const v = s.volume;
     const d = set.volume;

@@ -26,7 +26,7 @@
 }
 
 /* 飛行中・ポーズ中だけ（リザルト・メニューでは隠す） */
-:root:not([data-screen='flight']):not([data-screen='pause']) .tutorial-hud {
+:root:not([data-screen='flight']):not([data-screen='pause']):not([data-photo-hud]) .tutorial-hud {
   display: none;
 }
 

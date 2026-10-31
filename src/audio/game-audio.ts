@@ -1,6 +1,6 @@
 // ゲームの音の窓口（4-4）: 飛行の状態（スロットル・速度・失速・ロック・警告）を描画フレームごとに読み、演出のきっかけ（FxEvents）で
 // 単発の効果音を鳴らす。画面に合わせて BGM を切り替え、ポーズ中は音量を 30% に。UI のボタンでタップ音・決定音、購入で和音
-import type { ScreenState } from '../core/game-state';
+import { isFrozenFlight, type ScreenState } from '../core/game-state';
 import { GUN_SOUND, UI_SOUND_EVENTS } from '../data/audio';
 import { HUD_CONFIG } from '../data/hud';
 import type { FlightSession } from '../missions/flight-session';
@@ -119,7 +119,8 @@ export class GameAudio {
       'click',
       (e) => {
         const el = e.target instanceof Element ? e.target.closest('button') : null;
-        if (!el || el.disabled) return;
+        // フォトモード（7-A）の UI は無音（シャッター音だけ）
+        if (!el || el.disabled || el.closest('[data-silent]')) return;
         this.playUi(el.classList.contains('is-primary') ? 'confirm' : 'tap');
       },
       { capture: true },
@@ -138,10 +139,17 @@ export class GameAudio {
     this.shots.ui(kind);
   }
 
+  /** フォトモード（7-A）のシャッター音 */
+  playShutter(): void {
+    this.shots.shutter();
+  }
+
   /** 描画フレームごとに呼ぶ */
   frame(state: ScreenState, pose: Readonly<ListenerPose>): void {
     const engine = this.engine;
-    engine.setPaused(state === 'pause');
+    // ポーズ・フォトモード（7-A）はマスター 30%（環境音は小さく続く）。フォトモードは効果音をシャッターだけに
+    engine.setPaused(isFrozenFlight(state));
+    this.shots.muted = state === 'photo';
     this.bgm.play(bgmTrackFor(state));
     if (!engine.ready) return;
     const l = this.listener;
@@ -163,7 +171,7 @@ export class GameAudio {
     this.kaijuWatch.update(state === 'flight' ? (this.kaijuSource ?? s.props.kaiju) : null, l);
     const loops = this.loops;
     if (!loops) return;
-    const flying = state === 'flight' || state === 'pause';
+    const flying = state === 'flight' || isFrozenFlight(state);
     const alive = flying && s.player.active;
     const a = s.aircraft;
     engineParams(a.throttle, a.state.afterburnerActive, this.engineState);

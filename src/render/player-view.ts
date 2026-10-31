@@ -1,6 +1,6 @@
 // 自機の見た目（4-3）: 出撃する機体の手続き生成モデルを、固定ステップの間を補間して置く。操舵面は操作に比例して動き、
 // 撃ったミサイルはパイロンから消え、アフターバーナーで炎、高 G 旋回で翼端から飛行機雲、巡航中はノズルの後ろに陽炎（4-4）
-import { Group, Vector3, type Camera, type Scene } from 'three';
+import { Group, Vector3, type Camera, type Object3D, type Scene } from 'three';
 import type { AircraftModel } from '../data/aircraft';
 import { CONTRAIL_CONFIG, type AircraftDetail } from '../data/aircraft-model';
 import type { Aircraft, AircraftControls } from '../entities/aircraft';
@@ -20,6 +20,10 @@ export class PlayerView {
   readonly mesh = new Group();
   readonly model = new AircraftObject();
   private readonly contrails = new SmokeTrail(CONTRAIL_CONFIG);
+  /** 飛行機雲（フォトモード（7-A）の「エフェクト」の表示の切替） */
+  get trailMesh(): Object3D {
+    return this.contrails.mesh;
+  }
   /** 今と前フレームの左右の翼端（ワールド）。hasPrev が false なら前フレームはない */
   private readonly tips = [new Vector3(), new Vector3()];
   private readonly prevTips = [new Vector3(), new Vector3()];

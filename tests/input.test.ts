@@ -90,7 +90,7 @@ describe('Input', () => {
     const tab = keyEvent('keydown', 'Tab');
     target.dispatchEvent(tab);
     expect(tab.defaultPrevented).toBe(true);
-    const other = keyEvent('keydown', 'KeyP');
+    const other = keyEvent('keydown', 'KeyJ');
     target.dispatchEvent(other);
     expect(other.defaultPrevented).toBe(false);
   });

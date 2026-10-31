@@ -20,6 +20,9 @@ export interface Layer {
 }
 
 export class SfxKit {
+  /** フォトモード（7-A）: シャッター以外の効果音を鳴らさない */
+  muted = false;
+
   constructor(
     readonly engine: AudioEngine,
     /** リスナーの位置（遠すぎる音は鳴らさない） */
@@ -32,7 +35,7 @@ export class SfxKit {
 
   voice(duration: number, pos: Readonly<Position> | null): Voice | null {
     const pool = this.engine.voices;
-    if (!pool) return null;
+    if (!pool || this.muted) return null;
     if (pos) {
       const l = this.listener;
       const d = Math.hypot(pos.x - l.x, pos.y - l.y, pos.z - l.z);

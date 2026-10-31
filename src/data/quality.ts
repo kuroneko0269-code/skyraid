@@ -61,6 +61,8 @@ export interface QualityPreset {
   readonly aircraftDetail: AircraftDetail;
   /** 陽炎を画面を歪める屈折で描く（4-4。ポストエフェクトの仕上げのパス）。false は薄い半透明の揺らぎ */
   readonly heatHazeRefraction: boolean;
+  /** フォトモード（7-A）の被写界深度（本物のボケ。シーンの奥行きをもう 1 回描く）。false はピントの操作なし */
+  readonly photoFocus: boolean;
   /** 森の地面に、木の影の代わりに太陽と反対側へずらした暗いまだらを描く（4-6。シャドウマップは使わない） */
   readonly treeShade: boolean;
   /** 夜空の星の数（7-5。Points 1 draw call） */
@@ -104,6 +106,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     treeShade: false,
     aircraftDetail: 'low',
     heatHazeRefraction: false,
+    photoFocus: false,
     starCount: 1000,
     rainMode: 'sheet',
     rainDrops: 0,
@@ -130,6 +133,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     treeShade: false,
     aircraftDetail: 'high',
     heatHazeRefraction: false,
+    photoFocus: false,
     starCount: 2500,
     rainMode: 'streaks',
     rainDrops: 3000,
@@ -156,6 +160,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     treeShade: true,
     aircraftDetail: 'high',
     heatHazeRefraction: true,
+    photoFocus: true,
     starCount: 4000,
     rainMode: 'streaks',
     rainDrops: 6000,

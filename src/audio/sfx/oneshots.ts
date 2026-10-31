@@ -3,6 +3,7 @@
 // どれも VoicePool のボイス（フィルタ → 音量 →（パンナー →）効果音のバス）に、ノイズ（共有バッファ）とオシレーターをつないで鳴らす。
 // pos を渡した音は 3D 配置（敵機・爆発・対空砲）、渡さない音は自機・UI（定位なし）
 import { AAA_SOUND, GUN_SOUND, UI_SOUND } from '../../data/audio';
+import { PHOTO_SHUTTER } from '../../data/photo';
 import type { ExplosionScale } from '../../data/fx';
 import type { AudioEngine } from '../engine';
 import { createHitCompressor, explosionSound, hitCompression } from '../params';
@@ -92,6 +93,31 @@ export class OneShots {
       this.notes(c.alert.freqs, c.alert.step, c.alert.duration, c.gain, 'square');
     } else {
       this.notes(c.purchase.freqs, c.purchase.step, c.purchase.duration, c.gain, 'triangle');
+    }
+  }
+
+  /** フォトモード（7-A）の効果音だけにする（シャッターは鳴る） */
+  set muted(m: boolean) {
+    this.kit.muted = m;
+  }
+
+  /** シャッター（7-A）: 高域のノイズの「カシャ」を 2 回（幕が開いて閉じる） */
+  shutter(): void {
+    const muted = this.kit.muted;
+    this.kit.muted = false;
+    const c = PHOTO_SHUTTER;
+    const duration = c.gap + c.click;
+    const v = this.voice(duration, null);
+    this.kit.muted = muted;
+    if (!v) return;
+    const t = this.engine.now;
+    this.kit.open(v, t, c.gain, duration);
+    for (const [at, gain] of [
+      [0, 1],
+      [c.gap, c.secondGain],
+    ] as const) {
+      const l = this.kit.layer(v, t + at, 'bandpass', c.freq, c.q, gain, 0.001, c.click);
+      this.kit.noise(v, t + at, c.click, l.filter);
     }
   }
 

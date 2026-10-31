@@ -3,7 +3,7 @@
 // 開発用: ?weather=<プリセット id> でフリーフライトの天候、?timeflow で「時間が流れる」を ON にしておく
 import type { WeatherSoundInput } from '../audio/params';
 import type { GameAudio } from '../audio/game-audio';
-import type { GameState } from '../core/game-state';
+import { isResume, type GameState } from '../core/game-state';
 import {
   DEFAULT_WEATHER_ID,
   isWeatherId,
@@ -47,7 +47,7 @@ export function linkWeather(weather: WeatherView, p: WeatherLinkParts): void {
   if (params.has('timeflow')) screens.modeSelect.freeTimeFlow = true;
 
   p.game.onChange(({ from, to }) => {
-    if (to === 'flight' && from !== 'pause') {
+    if (to === 'flight' && !isResume(from)) {
       const net = from === 'lobby';
       const def = screens.nextMission;
       const mode = screens.modeSelect;

@@ -49,7 +49,7 @@
   transition: opacity var(--screen-fade) ease;
 }
 
-:root:not([data-screen='flight']):not([data-screen='pause']) .hud {
+:root:not([data-screen='flight']):not([data-screen='pause']):not([data-photo-hud]) .hud {
   opacity: 0;
 }
 

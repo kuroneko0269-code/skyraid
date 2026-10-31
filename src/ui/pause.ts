@@ -13,7 +13,10 @@ export class PauseMenu {
   readonly settings: HTMLDivElement;
   private readonly settingsButton: HTMLButtonElement;
   private readonly abortButton: HTMLButtonElement;
+  private readonly photoButton: HTMLButtonElement;
   private settingsOpen = false;
+  /** 「フォトモード」（7-A。main がつなぐ） */
+  onPhoto: (() => void) | null = null;
 
   constructor(
     parent: HTMLElement,
@@ -29,6 +32,11 @@ export class PauseMenu {
     root.appendChild(panel);
 
     createButton(panel, 'ui-button', '再開', handlers.onResume);
+    // フリーフライト・キャンペーン・ソロのレイドだけ出す（7-A）
+    this.photoButton = createButton(panel, 'ui-button', 'フォトモード', () => {
+      this.onPhoto?.();
+    });
+    this.photoButton.hidden = true;
     this.settingsButton = createButton(panel, 'ui-button', '設定', () => {
       this.setSettingsOpen(!this.settingsOpen);
     });
@@ -56,6 +64,11 @@ export class PauseMenu {
   setInMission(inMission: boolean, label = 'ミッションを中断'): void {
     this.abortButton.hidden = !inMission;
     this.abortButton.textContent = label;
+  }
+
+  /** 「フォトモード」を出すか（PvP・協力・チュートリアルでは出さない） */
+  setPhotoAvailable(available: boolean): void {
+    this.photoButton.hidden = !available;
   }
 
   private setSettingsOpen(open: boolean): void {

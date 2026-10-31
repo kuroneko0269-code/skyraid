@@ -149,6 +149,7 @@ export function bgmTrackFor(state: ScreenState): BgmTrack | null {
       return null;
     case 'flight':
     case 'pause':
+    case 'photo':
       return 'flight';
     case 'result':
       return 'result';

@@ -1,8 +1,10 @@
 // ポストエフェクト（4-1）: three/examples/jsm の EffectComposer。
-// シーン（リニア HDR、MSAA）→ ブルーム（画質「高」のみ）→ 仕上げ（陽炎の屈折（4-4。「高」のみ）+ ビネット + 露出 + ACES + sRGB を 1 パスで）
+// シーン（リニア HDR、MSAA）→ ブルーム（画質「高」のみ）→（被写界深度: フォトモード（7-A）・「高」のみ）→
+// 仕上げ（陽炎の屈折（4-4。「高」のみ）+ ビネット + 露出 + ACES + sRGB +（フォトモードの画面の調整）を 1 パスで）
 import {
   HalfFloatType,
   Vector2,
+  Vector3,
   Vector4,
   WebGLRenderTarget,
   type Camera,
@@ -13,8 +15,16 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import type { GradeUniforms } from '../core/photo-grade';
 import { BLOOM_CONFIG, POST_CONFIG, VIGNETTE_CONFIG } from '../data/sky';
 import type { HazeSegment } from './fx/heat-haze';
+import { FocusPass, type FocusSettings } from './focus-pass';
+import {
+  GRADE_GLSL_APPLY,
+  GRADE_GLSL_UNIFORMS,
+  applyGradeUniforms,
+  createGradeShaderUniforms,
+} from './post-grade';
 
 // UnrealBloomPass の内部の描画回数（明るい部分の抽出 1 + ぼかし 5 段 × 2 + 合成 1 + 足し込み 1）
 const BLOOM_STEPS = 13;
@@ -34,6 +44,8 @@ const FinishShader = {
     uHazeStrength: { value: 0 },
     uHazeTime: { value: 0 },
     uAspect: { value: 1 },
+    // フォトモード（7-A）の画面の調整
+    ...createGradeShaderUniforms(),
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -51,6 +63,7 @@ const FinishShader = {
     uniform float uHazeTime;
     uniform float uAspect;
     varying vec2 vUv;
+    ${GRADE_GLSL_UNIFORMS}
 
     // 陽炎: ノズルから後ろへ伸びる帯の中だけ、流れる波で像をずらす（根元は細く強く、先は太く弱く）
     vec2 hazeOffset(vec2 uv) {
@@ -79,6 +92,7 @@ const FinishShader = {
       gl_FragColor = vec4(color, 1.0);
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
+      ${GRADE_GLSL_APPLY}
     }
   `,
 };
@@ -87,14 +101,17 @@ export class PostEffects {
   private readonly composer: EffectComposer;
   private readonly finish: ShaderPass;
   private bloom: UnrealBloomPass | null = null;
+  /** 被写界深度（7-A のフォトモード、画質「高」のみ。使うときだけ作る） */
+  private focus: FocusPass | null = null;
+  private focusEnabled = false;
   private bloomEnabled = false;
   private exposure = 1;
   private readonly size = new Vector2();
 
   constructor(
     private readonly renderer: WebGLRenderer,
-    scene: Scene,
-    camera: Camera,
+    private readonly scene: Scene,
+    private readonly camera: Camera,
   ) {
     renderer.getSize(this.size);
     const pixelRatio = renderer.getPixelRatio();
@@ -143,9 +160,34 @@ export class PostEffects {
     uniform(this.finish, 'uHazeTime').value = time;
   }
 
+  /** フォトモードの画面の調整（null で上書きなし） */
+  setGrade(g: Readonly<GradeUniforms> | null): void {
+    applyGradeUniforms(this.finish.uniforms, g);
+    uniform(this.finish, 'uVignette').value = g ? g.vignette : VIGNETTE_CONFIG.strength;
+  }
+
+  /** 被写界深度（null で無し）。初めて有効にしたときにパスを作る */
+  setFocus(f: Readonly<FocusSettings> | null): void {
+    const on = f !== null;
+    if (on !== this.focusEnabled) {
+      this.focusEnabled = on;
+      if (on) {
+        this.focus ??= new FocusPass(this.scene, this.camera);
+        // 仕上げのパスの直前（ブルームの後）
+        this.composer.insertPass(this.focus, this.composer.passes.indexOf(this.finish));
+        this.composer.setSize(this.size.x, this.size.y);
+      } else if (this.focus) {
+        this.composer.removePass(this.focus);
+      }
+    }
+    if (f && this.focus) this.focus.apply(f);
+  }
+
   setSize(width: number, height: number, pixelRatio: number): void {
     this.size.set(width, height);
     uniform(this.finish, 'uAspect').value = width / Math.max(1, height);
+    const res: unknown = uniform(this.finish, 'uResolution').value;
+    if (res instanceof Vector3) res.set(width * pixelRatio, height * pixelRatio, 0);
     this.composer.setPixelRatio(pixelRatio);
     this.composer.setSize(width, height);
   }
@@ -154,9 +196,22 @@ export class PostEffects {
     this.composer.render();
   }
 
-  /** 1 フレームの描画ステップ数（シーン 1 + ブルーム + 仕上げ 1） */
+  /**
+   * 保存用の大きな描画（7-A）の間はマルチサンプルを切る（4K の HalfFloat × 4 サンプル × 2 枚は数百 MB になる。
+   * 解像度を上げて描くので縁は十分なめらか）。描画先は次の描画で作り直される
+   */
+  setMultisample(on: boolean): void {
+    const samples = on ? POST_CONFIG.samples : 0;
+    for (const t of [this.composer.renderTarget1, this.composer.renderTarget2]) {
+      if (t.samples === samples) continue;
+      t.samples = samples;
+      t.dispose();
+    }
+  }
+
+  /** 1 フレームの描画ステップ数（シーン 1 + ブルーム + 被写界深度 2 + 仕上げ 1） */
   get steps(): number {
-    return 2 + (this.bloomEnabled ? BLOOM_STEPS : 0);
+    return 2 + (this.bloomEnabled ? BLOOM_STEPS : 0) + (this.focusEnabled ? 2 : 0);
   }
 
   private updateThreshold(): void {
@@ -166,6 +221,7 @@ export class PostEffects {
   /** レンダーターゲットを解放する */
   dispose(): void {
     this.bloom?.dispose();
+    this.focus?.dispose();
     this.composer.dispose();
     this.renderer.setRenderTarget(null);
   }

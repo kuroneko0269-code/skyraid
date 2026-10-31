@@ -44,6 +44,7 @@ import { linkFlightLoop } from './ui/flight-loop';
 import { createPvpWiring } from './ui/pvp-wiring';
 import { linkMissionEvents } from './ui/mission-wiring';
 import { createAppControls } from './ui/app-controls';
+import { createPhotoMode } from './ui/photo/photo-link';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app が見つかりません');
@@ -101,6 +102,10 @@ const { input, gamepad, hud, missionHud, settingsParts, touch, debug, keys } = c
   storage,
   pipeline,
   world,
+  photoTouch: () => photo.showsTouch,
+  photoToggle: () => {
+    photo.toggle();
+  },
 });
 
 // 飛行: フリーフライトは島の沖合から、ミッション（2-4）は定義の開始位置から。?autolevel=off / ?invert で操作設定を変える。
@@ -196,7 +201,7 @@ const startFlight = createFlightStarter({
 linkWeather(world.weather, { game, screens, pvp, hud, hudLink, audio, save });
 
 const loop = new GameLoop();
-linkFlightLoop(loop, {
+const { simulate } = linkFlightLoop(loop, {
   game,
   input,
   gamepad,
@@ -244,6 +249,27 @@ const frame = new FlightFrame({
   assistFlags,
   groundHeight: getGroundHeight,
 });
+// フォトモード（7-A）: ポーズメニュー・P キー。フリーフライト・キャンペーン・ソロのレイドだけ（時間は止める）
+const photo = createPhotoMode({
+  game,
+  canvas: renderer.domElement,
+  camera,
+  pipeline,
+  playerView,
+  views,
+  pause: screens.pause,
+  groundHeight: getGroundHeight,
+  weather: world.weather,
+  audio,
+  save,
+  allowed: () => !pvp.flying && !screens.inTutorial,
+  simulate,
+  stepSeconds: loop.stepSeconds,
+  refreshTouch: () => {
+    touch.refresh();
+  },
+});
+frame.photo = photo;
 
 loop.onRender((alpha) => {
   pvp.render(alpha);

@@ -24,6 +24,7 @@ export const ACTIONS = [
   'debugToggle',
   'hudToggle',
   'pause',
+  'photo',
 ] as const;
 
 export type Action = (typeof ACTIONS)[number];
@@ -61,4 +62,6 @@ export const DEFAULT_KEYBINDS: KeyBindings = {
   debugToggle: ['F3'],
   hudToggle: ['KeyH'],
   pause: ['Escape'],
+  // フォトモード（7-A）の出入り
+  photo: ['KeyP'],
 };

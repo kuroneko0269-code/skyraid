@@ -1,0 +1,238 @@
+/*
+ * フォトモード（7-A）。4-10 のデザインシステム（theme.css の変数と .ui-toggle / .ui-panel）を使う。
+ * 画面下に横スクロールのツールバー、その上にパネル、右下に撮影ボタン。スマホ横画面で右手の親指で届くよう右寄せ
+ */
+.photo-ui {
+  --photo-bar-h: 56px;
+  --photo-shutter: 68px;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  font: var(--ui-font-size) / 1.3 var(--ui-font-body);
+  color: var(--ui-text);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.photo-ui[hidden] {
+  display: none;
+}
+
+.photo-ui > * {
+  pointer-events: auto;
+}
+
+.photo-top {
+  position: absolute;
+  top: calc(var(--ui-space-3) + var(--ui-safe-top));
+  right: calc(var(--ui-space-3) + var(--ui-safe-right));
+  display: flex;
+  gap: var(--ui-space-2);
+}
+
+.photo-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ui-space-2);
+  padding: var(--ui-space-2) calc(var(--ui-space-3) + var(--ui-safe-right))
+    calc(var(--ui-space-2) + var(--ui-safe-bottom)) calc(var(--ui-space-3) + var(--ui-safe-left));
+  overflow-x: auto;
+  background: var(--ui-bg);
+  scrollbar-width: none;
+}
+
+.photo-bar > .photo-chip {
+  flex: 0 0 auto;
+  min-width: 84px;
+  font: 600 16px/1 var(--ui-font-display);
+  letter-spacing: 0.06em;
+}
+
+.photo-sheet {
+  position: absolute;
+  left: calc(var(--ui-space-3) + var(--ui-safe-left));
+  right: calc(var(--photo-shutter) + var(--ui-space-5) + var(--ui-safe-right));
+  bottom: calc(var(--photo-bar-h) + var(--ui-space-2) + var(--ui-safe-bottom));
+  max-height: 46vh;
+  overflow-y: auto;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.photo-panel {
+  pointer-events: auto;
+  display: grid;
+  gap: var(--ui-space-2);
+  padding: var(--ui-space-3);
+  --fill: var(--ui-bg);
+}
+
+.photo-panel[hidden] {
+  display: none;
+}
+
+.photo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ui-space-2);
+}
+
+.photo-row-title {
+  flex: 0 0 auto;
+  min-width: 5em;
+  color: var(--ui-text-dim);
+}
+
+.photo-chip {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 14px;
+  font: inherit;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.photo-chip:disabled,
+.photo-slider.is-disabled {
+  opacity: 0.4;
+}
+
+.photo-chip.is-primary {
+  --edge: var(--ui-line-strong);
+  --fill: var(--ui-accent-fill-hover);
+}
+
+.photo-chip.is-danger {
+  --edge: var(--ui-warn-line);
+}
+
+.photo-slider {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  min-height: 44px;
+  min-width: 240px;
+  flex: 1 1 240px;
+  padding: 0 var(--ui-space-3);
+}
+
+.photo-slider-name {
+  min-width: 5.5em;
+  color: var(--ui-text-dim);
+}
+
+.photo-slider input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--ui-accent);
+  touch-action: pan-y;
+}
+
+.photo-slider-value {
+  min-width: 5ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.photo-note {
+  margin: 0;
+  color: var(--ui-text-faint);
+  font-size: 12px;
+}
+
+.photo-note[hidden] {
+  display: none;
+}
+
+/* 撮影ボタン: 右下、ツールバーの上。親指で押しやすい大きさ */
+.photo-shutter {
+  position: absolute;
+  right: calc(var(--ui-space-4) + var(--ui-safe-right));
+  bottom: calc(var(--photo-bar-h) + var(--ui-space-3) + var(--ui-safe-bottom));
+  width: var(--photo-shutter);
+  height: var(--photo-shutter);
+  border-radius: 50%;
+  border: 3px solid var(--ui-text);
+  background: radial-gradient(circle, var(--ui-text) 0 55%, transparent 57%);
+  box-shadow: var(--ui-glow);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.photo-shutter:active {
+  transform: scale(0.94);
+}
+
+/* シャッターの白いフラッシュと、保存のお知らせ */
+.photo-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--photo-flash, 0.25s) ease-out;
+}
+
+.photo-flash.is-on {
+  opacity: 0.8;
+  transition: none;
+}
+
+.photo-toast {
+  position: fixed;
+  top: calc(var(--ui-space-6) + var(--ui-safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 42;
+  padding: var(--ui-space-2) var(--ui-space-4);
+  pointer-events: none;
+}
+
+/* フォトモード中のタッチ操作（表示 ON のとき）は見えるだけで触れない（カメラのドラッグを妨げない） */
+:root[data-screen='photo'] .touch-controls,
+:root[data-screen='photo'] .touch-controls * {
+  pointer-events: none;
+}
+
+/* スマホ横画面（高さが低い）: パネルは 1 行ずつ横に流す */
+@media (max-height: 520px) {
+  .photo-ui {
+    --photo-bar-h: 52px;
+    --photo-shutter: 60px;
+  }
+
+  .photo-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .photo-slider {
+    flex: 0 0 260px;
+  }
+
+  .photo-sheet {
+    max-height: 52vh;
+  }
+}
+
+/*
+ * HUD は「表示」で ON にしたときだけ（既定は隠す）。夜の減光（7-5）が HUD の不透明度を style に書くので、
+ * opacity ではなく visibility で隠す
+ */
+:root[data-screen='photo']:not([data-photo-hud]) .hud,
+:root[data-screen='photo']:not([data-photo-hud]) .mission-hud,
+:root[data-screen='photo']:not([data-photo-hud]) .kaiju-hud,
+:root[data-screen='photo']:not([data-photo-hud]) .tutorial-hud {
+  visibility: hidden;
+}

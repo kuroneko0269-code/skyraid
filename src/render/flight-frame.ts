@@ -2,7 +2,7 @@
 // 画面の状態に合わせたカメラ（デモ / ハンガー / 追従）・機体と演出・HUD・ミッションの印・影・画質の監視・描画
 import type { Object3D, PerspectiveCamera } from 'three';
 import type { AircraftControls } from '../entities/aircraft';
-import { isSimulating, usesDemoCamera, type ScreenState } from '../core/game-state';
+import { isFrozenFlight, isSimulating, usesDemoCamera, type ScreenState } from '../core/game-state';
 import type { WeaponInput } from '../core/weapon-input';
 import type { AssistFlags } from '../core/assist-settings';
 import { QUALITY_CONFIG } from '../data/quality';
@@ -51,7 +51,17 @@ export interface FlightFrameParts {
   readonly groundHeight: (x: number, z: number) => number;
 }
 
+/** フォトモード（7-A）のカメラとコマ送り（ui/photo/photo-link.ts） */
+export interface PhotoFrameHook {
+  /** コマ送りで固定ステップを進めた直後の 1 回だけ、その秒数（演出・機体の描画を同じだけ進める）。他は 0 */
+  takeStepSeconds(): number;
+  /** カメラを置く（描画の前） */
+  update(): void;
+}
+
 export class FlightFrame {
+  /** フォトモードのカメラ（main.ts が入れる） */
+  photo: PhotoFrameHook | null = null;
   /** 島の周りを回る時間。海の波もこれで動かし、ポーズ中は止める */
   private worldTime = 0;
   private lastFrameMs: number | null = null;
@@ -67,11 +77,18 @@ export class FlightFrame {
     const now = performance.now();
     const frameSeconds = this.lastFrameMs === null ? 0 : (now - this.lastFrameMs) / 1000;
     if (!isSimulating(state)) menuTick();
-    if (state !== 'pause') this.worldTime += frameSeconds;
+    if (!isFrozenFlight(state)) this.worldTime += frameSeconds;
+    // 演出（弾・爆発・煙）を進める時間: 飛行中は実時間、フォトモードはコマ送りの 1 ステップだけ
+    let fxSeconds = state === 'flight' ? frameSeconds : 0;
     if (usesDemoCamera(state)) p.demoCamera.update(frameSeconds);
     else if (state === 'hangar') p.hangarStage.update(frameSeconds);
     else if (state === 'flight') this.updateFlightView(alpha, frameSeconds);
-    p.views.update(alpha, state === 'flight' ? frameSeconds : 0, p.camera.position);
+    else if (state === 'photo' && this.photo) {
+      fxSeconds = this.photo.takeStepSeconds();
+      if (fxSeconds > 0) this.updateAircraft(alpha, fxSeconds);
+      this.photo.update();
+    }
+    p.views.update(alpha, fxSeconds, p.camera.position);
     p.ringView.update(p.play.runner?.running ? p.play.runner.activeRings : null);
     const v = p.session.player;
     p.damageOverlay.update(
@@ -109,20 +126,26 @@ export class FlightFrame {
     this.lastFrameMs = now;
   }
 
-  /** 追従カメラと機体の描画位置を更新する（飛行中だけ。ポーズ中はカメラも止める） */
-  private updateFlightView(alpha: number, frameSeconds: number): void {
+  /** 機体の描画位置（撃墜されている間は隠す。破片は combat の撃墜の演出） */
+  private updateAircraft(alpha: number, frameSeconds: number): void {
     const p = this.p;
-    const { session, camera } = p;
-    const aircraft = session.aircraft;
-    // 撃墜されている間は機体を隠す（破片は combat の撃墜の演出）
+    const session = p.session;
     this.aircraftMesh.visible = session.player.active;
     p.playerView.update(
-      aircraft,
+      session.aircraft,
       p.controls,
       session.combat.missileAmmo.count,
       alpha,
       frameSeconds,
     );
+  }
+
+  /** 追従カメラと機体の描画位置を更新する（飛行中だけ。ポーズ中はカメラも止める） */
+  private updateFlightView(alpha: number, frameSeconds: number): void {
+    const p = this.p;
+    const { session, camera } = p;
+    const aircraft = session.aircraft;
+    this.updateAircraft(alpha, frameSeconds);
     // カメラが地面にめり込まないよう、前フレームのカメラ位置の地表の高さを渡す
     const groundUnderCamera = p.groundHeight(camera.position.x, camera.position.z);
     const focus = p.assistFlags.camera

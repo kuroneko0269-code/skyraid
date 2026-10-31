@@ -25,6 +25,11 @@ export class FlightViews {
   private readonly groundTargets: GroundTargetView;
   private readonly ordnance: OrdnanceView;
   private readonly fx: FxLink;
+  /** フォトモード（7-A）の表示の切替: 敵・怪獣（敵機・ドローン・輸送機・怪獣・地上目標）とエフェクト（弾・ミサイル・爆発・煙） */
+  readonly photoGroups: { readonly enemies: Object3D[]; readonly effects: Object3D[] } = {
+    enemies: [],
+    effects: [],
+  };
 
   constructor(
     scene: Scene,
@@ -36,16 +41,31 @@ export class FlightViews {
     /** カメラを揺らす（被弾・近くの爆発。4-4） */
     shake: (strength: number) => void,
   ) {
-    this.combat = new CombatView(scene, aircraftMesh, ff.combat);
-    this.missiles = new MissileView(scene, ff.combat);
-    this.drones = new DroneView(scene, ff.combat.drones);
-    this.enemies = new EnemyView(scene, ff.enemies, ff.squadron.bulletPools, [
-      { pool: ff.props.aaa.shells, color: AAA_CONFIG.tracerColor },
-    ]);
-    this.props = new MissionPropsView(scene, ff.props);
-    this.groundTargets = new GroundTargetView(scene, ff.props.groundTargets);
-    this.ordnance = new OrdnanceView(scene, ff.combat);
-    this.fx = new FxLink(scene, events, ff.enemies, camera, shake);
+    // 作るたびにシーンに足された物を、フォトモードの表示の切替の組に入れる
+    const g = this.photoGroups;
+    const added = <T>(group: Object3D[], make: () => T): T => {
+      const before = scene.children.length;
+      const v = make();
+      group.push(...scene.children.slice(before));
+      return v;
+    };
+    this.combat = added(g.effects, () => new CombatView(scene, aircraftMesh, ff.combat));
+    this.missiles = added(g.effects, () => new MissileView(scene, ff.combat));
+    this.drones = added(g.enemies, () => new DroneView(scene, ff.combat.drones));
+    this.enemies = added(
+      g.enemies,
+      () =>
+        new EnemyView(scene, ff.enemies, ff.squadron.bulletPools, [
+          { pool: ff.props.aaa.shells, color: AAA_CONFIG.tracerColor },
+        ]),
+    );
+    this.props = added(g.enemies, () => new MissionPropsView(scene, ff.props));
+    this.groundTargets = added(
+      g.enemies,
+      () => new GroundTargetView(scene, ff.props.groundTargets),
+    );
+    this.ordnance = added(g.effects, () => new OrdnanceView(scene, ff.combat));
+    this.fx = added(g.effects, () => new FxLink(scene, events, ff.enemies, camera, shake));
   }
 
   /** 描画フレームごとに呼ぶ。frameSeconds は演出を進める時間（飛行中以外は 0） */

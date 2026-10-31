@@ -1,7 +1,7 @@
 // 描画フレームごとの陽炎の屈折と音（4-4）: 飛行中（ポーズを含む）は自機のノズルの陽炎の帯をポストエフェクトへ渡し、
 // それ以外では消す。音にはカメラの位置と向き（リスナー）と画面の状態を渡す
 import type { PerspectiveCamera } from 'three';
-import type { ScreenState } from '../core/game-state';
+import { isFrozenFlight, type ScreenState } from '../core/game-state';
 import type { GameAudio, ListenerPose } from '../audio/game-audio';
 import { listenerPose } from './audio-listener';
 import { NO_HAZE, type HazeSegment } from './fx/heat-haze';
@@ -33,7 +33,7 @@ export class FrameFx {
   update(state: ScreenState, time: number): void {
     const camera = this.camera;
     camera.updateMatrixWorld();
-    if (state === 'flight' || state === 'pause') {
+    if (state === 'flight' || isFrozenFlight(state)) {
       this.pipeline.setHaze(this.player.hazeSegment(camera, camera.aspect, this.haze), time);
     } else {
       this.pipeline.setHaze(NO_HAZE, 0);

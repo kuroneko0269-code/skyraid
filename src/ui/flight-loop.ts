@@ -5,7 +5,13 @@ import { applyKaijuToCity } from '../combat/city-damage';
 import type { CommonKeys } from '../core/common-keys';
 import type { GamepadInput } from '../core/gamepad';
 import { readFlightControls } from '../core/flight-input';
-import { syncLoopWithState, usesDemoCamera, type GameState } from '../core/game-state';
+import {
+  isFrozenFlight,
+  isResume,
+  syncLoopWithState,
+  usesDemoCamera,
+  type GameState,
+} from '../core/game-state';
 import type { GameLoop } from '../core/loop';
 import type { Input } from '../core/input';
 import type { AssistControl } from '../core/assist-control';
@@ -107,8 +113,8 @@ function linkScreenChanges(p: FlightLoopParts): void {
   game.onChange(({ from, to }) => {
     // 6-4: タイトルの背景（デモカメラ）は島
     if (to === 'title') p.activeMap.use('island');
-    if (to === 'flight' && from !== 'pause') p.startFlight(screens.nextMission, from === 'lobby');
-    if (to === 'pause') play.runner?.pause();
+    if (to === 'flight' && !isResume(from)) p.startFlight(screens.nextMission, from === 'lobby');
+    if (isFrozenFlight(to)) play.runner?.pause();
     else if (to === 'flight') play.runner?.resume();
     // 止めている間に押されたキー（再開に使った Esc など）を飛行に持ち込まない
     if (to === 'flight') {
@@ -119,7 +125,7 @@ function linkScreenChanges(p: FlightLoopParts): void {
     p.aircraftMesh.visible = !usesDemoCamera(to) && to !== 'hangar' && p.session.player.active;
     p.hangarStage.setShown(to === 'hangar');
     p.touch.refresh();
-    if (to === 'flight' && from !== 'pause')
+    if (to === 'flight' && !isResume(from))
       p.tutorial.onFlightStart(screens.inTutorial ? 'tutorial' : play.runner ? 'mission' : 'free');
   });
 }

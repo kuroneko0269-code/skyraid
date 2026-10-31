@@ -242,7 +242,7 @@ export class Screens {
   /** Esc / Start（メニュー中）: ポーズ → 再開、モード選択 → タイトルなど 1 つ前の画面へ */
   navigateBack(game: GameState): void {
     const state = game.state;
-    if (state === 'pause') game.transition('flight');
+    if (state === 'pause' || state === 'photo') game.transition('flight');
     else if (state === 'mode_select') {
       if (!this.modeSelect.closeDialog()) game.transition('title');
     } else if (state === 'pilot_name') game.transition('title');

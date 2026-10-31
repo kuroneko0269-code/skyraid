@@ -12,6 +12,7 @@ import {
   WIND_LEVEL_CONFIG,
   type TimeOfDay,
 } from '../data/weather';
+import type { WeatherSnapshot } from './photo-weather';
 
 /** 補間できる天候の数値（プリセットはこの値の組） */
 export interface WeatherParams {
@@ -220,6 +221,39 @@ export class WeatherDirector {
   /** 時間が流れるか（フリーフライトだけ ON にする。ミッション・PvP は固定） */
   setTimeFlow(on: boolean): void {
     this.flowing = on;
+  }
+
+  /** 今の状態（フォトモード（7-A）の一時的な上書きの前に覚えて、restore で戻す） */
+  snapshot(): WeatherSnapshot {
+    return {
+      preset: this.presetId,
+      flowing: this.flowing,
+      current: copyWeather(this.current, createWeatherParams()),
+      from: copyWeather(this.from, createWeatherParams()),
+      to: copyWeather(this.to, createWeatherParams()),
+      elapsed: this.elapsed,
+      duration: this.duration,
+    };
+  }
+
+  restore(s: Readonly<WeatherSnapshot>): void {
+    this.presetId = s.preset;
+    this.flowing = s.flowing;
+    copyWeather(s.current, this.current);
+    copyWeather(s.from, this.from);
+    copyWeather(s.to, this.to);
+    this.elapsed = s.elapsed;
+    this.duration = s.duration;
+    this.dirty = true;
+  }
+
+  /** 時刻だけをすぐ変える（フォトモードの時刻スライダー。補間は打ち切る） */
+  setHour(hour: number): void {
+    if (!Number.isFinite(hour)) return;
+    this.to.hour = this.current.hour = hour >= DAY ? DAY : Math.max(0, hour);
+    if (this.transitioning) copyWeather(this.to, this.current);
+    this.elapsed = this.duration = 0;
+    this.dirty = true;
   }
 
   /** dt 秒進める（ポーズ中は呼ばない）。値が変わったら true */

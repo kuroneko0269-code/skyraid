@@ -22,6 +22,9 @@ export interface AppControlParts {
   readonly storage: StorageLike;
   readonly pipeline: RenderPipeline;
   readonly world: World;
+  /** フォトモード（7-A）でタッチ操作を出すか / P キーで出入りする（フォトモードは後で作るので関数で渡す） */
+  readonly photoTouch: () => boolean;
+  readonly photoToggle: () => void;
 }
 
 export function createAppControls(p: AppControlParts) {
@@ -44,7 +47,7 @@ export function createAppControls(p: AppControlParts) {
     hud,
     missionHud,
     modeSelect: screens.modeSelect,
-    inFlight: () => game.state === 'flight',
+    inFlight: () => game.state === 'flight' || (game.state === 'photo' && p.photoTouch()),
   };
   const { touch, hudToggle } = createDisplaySettings(settingsParts);
 
@@ -52,6 +55,8 @@ export function createAppControls(p: AppControlParts) {
   const debugFlags = parseDebugFlags(window.location.search);
   const debug = new DebugLink(document.body, debugFlags.overlay, p.pipeline, p.world);
   const back = screens.navigateBack.bind(screens, game);
-  const keys = new CommonKeys(input, gamepad, { debug, hud: hudToggle }, back, debugFlags.logInput);
+  const photo = { toggle: p.photoToggle };
+  const toggles = { debug, hud: hudToggle, photo };
+  const keys = new CommonKeys(input, gamepad, toggles, back, debugFlags.logInput);
   return { input, gamepad, hud, missionHud, settingsParts, touch, debug, keys };
 }
