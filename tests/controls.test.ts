@@ -184,9 +184,10 @@ describe('セーブ v5（操作設定と案内の記録）', () => {
     };
     delete (v4.settings as Record<string, unknown>).controls;
     delete v4.flags;
+    delete v4.races;
+    // v5 → v6（7-1。レースの記録）も続けて通る
     const save = migrateSave(v4);
-    expect(save?.version).toBe(5);
-    expect(SAVE_CONFIG.version).toBe(5);
+    expect(save?.version).toBe(SAVE_CONFIG.version);
     expect(save?.settings.controls).toEqual(defaultControls());
     expect(save?.flags).toEqual({
       tutorialOffered: false,

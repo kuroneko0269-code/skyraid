@@ -22,10 +22,15 @@ import { MAPS } from '../data/maps';
 import { RAID_MISSION, raidMission } from '../data/missions-special';
 import { tutorialStrings, type TutorialStrings } from './tutorial-text';
 
+interface PvpHandlers {
+  onSelect: (raid: boolean) => void;
+  onBack: () => void;
+  onPause: () => boolean;
+}
+
 /**
- * 画面（読み込み中・タイトル・モード選択・ミッション一覧・ブリーフィング・ハンガー・ポーズ・リザルト）の DOM をまとめ、
- * GameState の遷移に合わせて切り替える。ボタンは GameState.transition を呼ぶだけで、
- * 遷移後の処理（飛行・ミッションの開始など）は main がイベントで行う
+ * 画面（読み込み中・タイトル・モード選択・ミッション一覧・ブリーフィング・ハンガー・ポーズ・リザルト）の DOM をまとめ、GameState の
+ * 遷移に合わせて切り替える。ボタンは transition を呼ぶだけで、遷移後の処理（飛行の開始など）は main がイベントで行う。レースは race-link.ts
  */
 export class Screens {
   readonly loading: LoadingScreen;
@@ -54,13 +59,10 @@ export class Screens {
   /** パイロット名を決めた後に呼ぶ（?room で初回起動したとき、ロビーへ。5-4） */
   private afterPilotName: (() => void) | null = null;
   private readonly viewListeners: ((model: AircraftModel) => void)[] = [];
-  /** PvP（5-1）: モード選択の「PvP」・ロビーの Esc・飛行中の ⏸（main が PvP を読み込んで差し込む） */
-  private pvp: {
-    /** raid: レイドの協力（6-2）として部屋を作る */
-    onSelect: (raid: boolean) => void;
-    onBack: () => void;
-    onPause: () => boolean;
-  } | null = null;
+  /** リングレース（7-1）を飛んでいる（終えたばかり）か。リザルト・ポーズの「中断」の戻り先をコース一覧にする（main が差し込む） */
+  inRace: () => boolean = () => false;
+  /** PvP（5-1）: モード選択の「PvP」（raid: 協力レイド（6-2）の部屋）・ロビーの Esc・飛行中の ⏸（main が差し込む） */
+  private pvp: PvpHandlers | null = null;
 
   constructor(
     parent: HTMLElement,
@@ -111,6 +113,7 @@ export class Screens {
           this.nextMission = mode === 'tutorial' ? TUTORIAL_MISSION : null;
           game.transition('flight');
         } else if (mode === 'campaign') game.transition('mission_select');
+        else if (mode === 'race') game.transition('race_select');
         else if (mode === 'hangar') this.openHangar(game, 'mode_select');
         else if (mode === 'pvp') this.pvp?.onSelect(false);
         else this.modeSelect.showRaidPrompt();
@@ -167,15 +170,14 @@ export class Screens {
     });
     this.result = new ResultScreen(parent, {
       onRetry: () => game.transition('flight'),
-      onList: () =>
-        game.transition(this.inTutorial || this.inRaid ? 'mode_select' : 'mission_select'),
+      onList: () => game.transition(this.listState()),
     });
     this.pause = new PauseMenu(parent, {
       onResume: () => game.transition('flight'),
       onTitle: () => game.transition('title'),
       onAbort: () => {
         onAbortMission();
-        game.transition(this.inTutorial || this.inRaid ? 'mode_select' : 'mission_select');
+        game.transition(this.listState());
       },
     });
     // PvP の飛行中はゲームを止めずに PvP のメニュー
@@ -184,7 +186,7 @@ export class Screens {
     });
     this.loading = new LoadingScreen(parent);
     this.curtain = new FadeCurtain(parent);
-    // 開発用: ?map=harbor でフリーフライト（?skipTitle も）のマップを選んでおく（6-4。main.ts から移した）
+    // 開発用: ?map=harbor でフリーフライト（?skipTitle も）のマップを選ぶ（6-4）
     const mapParam = new URLSearchParams(search).get('map');
     if (mapParam && MAPS[mapParam]) this.modeSelect.freeMapId = mapParam;
     this.show(game.state);
@@ -214,12 +216,14 @@ export class Screens {
     return this.nextMission?.id === RAID_MISSION.id;
   }
 
+  /** リザルト・ポーズの「中断」の戻り先: レースはコース一覧、チュートリアル・レイドはモード選択、ほかはミッション一覧 */
+  private listState(): ScreenState {
+    if (this.inRace()) return 'race_select';
+    return this.inTutorial || this.inRaid ? 'mode_select' : 'mission_select';
+  }
+
   /** PvP（5-1）の入口をつなぐ */
-  setPvpHandlers(handlers: {
-    onSelect: (raid: boolean) => void;
-    onBack: () => void;
-    onPause: () => boolean;
-  }): void {
+  setPvpHandlers(handlers: PvpHandlers): void {
     this.pvp = handlers;
   }
 
@@ -239,7 +243,6 @@ export class Screens {
     game.transition('hangar');
   }
 
-  /** ハンガーを閉じる（← 戻る・Esc）。確認ダイアログが開いていればそれだけ閉じる */
   /** Esc / Start（メニュー中）: ポーズ → 再開、モード選択 → タイトルなど 1 つ前の画面へ */
   navigateBack(game: GameState): void {
     const state = game.state;
@@ -247,12 +250,13 @@ export class Screens {
     else if (state === 'mode_select') {
       if (!this.modeSelect.closeDialog()) game.transition('title');
     } else if (state === 'pilot_name') game.transition('title');
-    else if (state === 'mission_select') game.transition('mode_select');
+    else if (state === 'mission_select' || state === 'race_select') game.transition('mode_select');
     else if (state === 'briefing') game.transition('mission_select');
     else if (state === 'hangar') this.closeHangar(game);
     else if (state === 'lobby') this.pvp?.onBack();
   }
 
+  /** ハンガーを閉じる（← 戻る・Esc）。確認ダイアログが開いていればそれだけ閉じる */
   closeHangar(game: GameState): void {
     if (this.hangarScreen.closeDialog()) return;
     this.briefing.setAircraftName(this.hangar.selectedModel.name);
@@ -289,7 +293,7 @@ export class Screens {
     this.missionSelect.setShown(state === 'mission_select');
     this.briefing.setShown(state === 'briefing');
     this.pause.setShown(state === 'pause');
-    this.result.setShown(state === 'result');
+    this.result.setShown(state === 'result' && !this.inRace());
     this.hangarScreen.setShown(state === 'hangar');
   }
 }

@@ -97,6 +97,8 @@ export class FlightModel {
   readonly options: FlightOptions;
 
   private rechargeTimer = 0;
+  /** ゲージを使わずにアフターバーナーが効く残り秒数（7-1 のブーストリング。数値は変えない: 速度・加速はアフターバーナーと同じ） */
+  freeAfterburnerSeconds = 0;
   // 毎ステップのアロケーションを避けるための作業領域
   private readonly forward = vec3();
   private readonly up = vec3();
@@ -136,6 +138,7 @@ export class FlightModel {
     s.stall = 0;
     copyVec3(s.angularRate, vec3());
     this.rechargeTimer = 0;
+    this.freeAfterburnerSeconds = 0;
   }
 
   /** バンク角（度）。右に傾くと正、範囲は -180〜180 */
@@ -172,6 +175,12 @@ export class FlightModel {
   private updateAfterburner(pressed: boolean, dt: number): void {
     const s = this.state;
     const ab = this.spec.afterburner;
+    // ブースト中（7-1）: 押さなくても効き、ゲージは変えない
+    if (this.freeAfterburnerSeconds > 0) {
+      this.freeAfterburnerSeconds = Math.max(0, this.freeAfterburnerSeconds - dt);
+      s.afterburnerActive = true;
+      return;
+    }
     if (s.afterburnerLocked && s.afterburnerGauge >= ab.restartThreshold) {
       s.afterburnerLocked = false;
     }

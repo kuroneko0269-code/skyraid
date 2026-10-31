@@ -89,7 +89,9 @@ export class FlightFrame {
       this.photo.update();
     }
     p.views.update(alpha, fxSeconds, p.camera.position);
-    p.ringView.update(p.play.runner?.running ? p.play.runner.activeRings : null);
+    // 7-1: レース中はレースのリング（ゴール後・中断後は描かない）
+    const race = p.play.race && p.play.race.phase !== 'finished' ? p.play.race.track : null;
+    p.ringView.update(p.play.runner?.running ? p.play.runner.activeRings : race);
     const v = p.session.player;
     p.damageOverlay.update(
       v.flashTimer,

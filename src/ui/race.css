@@ -1,0 +1,272 @@
+/* リングレース（7-1）: HUD・コース一覧・リザルト */
+
+/* ---- HUD（色は HUD と同じシアン） ---- */
+.race-hud {
+  --hud-color: rgba(110, 240, 255, 0.85);
+  --race-good: rgba(110, 255, 160, 0.95);
+  --race-bad: rgba(255, 90, 70, 0.95);
+  --race-boost: rgba(255, 150, 60, 0.95);
+  position: fixed;
+  inset: 0;
+  z-index: 16;
+  pointer-events: none;
+  color: var(--hud-color);
+  font:
+    600 14px/1.3 system-ui,
+    sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  opacity: var(--hud-night-opacity, 1);
+}
+
+:root:not([data-hud]) .race-hud,
+.race-hud[hidden],
+.race-hud [hidden] {
+  display: none;
+}
+
+.race-top {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 14px;
+  background: rgba(0, 20, 30, 0.35);
+  border-bottom: 2px solid var(--hud-color);
+}
+
+.race-time {
+  font:
+    700 28px/1.1 ui-monospace,
+    'SFMono-Regular',
+    Menlo,
+    Consolas,
+    monospace;
+  letter-spacing: 0.04em;
+}
+
+.race-sub {
+  display: flex;
+  gap: 14px;
+  font:
+    600 13px/1.2 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+.race-ghost.is-ahead {
+  color: var(--race-good);
+}
+
+.race-ghost.is-behind {
+  color: var(--race-bad);
+}
+
+.race-flash {
+  margin-top: 2px;
+  font:
+    700 16px/1.2 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: pre;
+}
+
+.race-flash.is-good {
+  color: var(--race-good);
+}
+
+.race-flash.is-bad {
+  color: var(--race-bad);
+}
+
+.race-flash.is-boost {
+  color: var(--race-boost);
+}
+
+.race-big {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  white-space: nowrap;
+  animation: race-big-in 0.2s ease-out;
+}
+
+.race-big-main {
+  font:
+    800 64px/1 system-ui,
+    sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.race-big-sub {
+  margin-top: 6px;
+  font:
+    700 26px/1.1 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+.race-big.is-go,
+.race-big.is-finish {
+  color: var(--race-good);
+}
+
+.race-big.is-over {
+  color: var(--race-bad);
+}
+
+@keyframes race-big-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+}
+
+@media (max-width: 600px), (max-height: 480px) {
+  .race-time {
+    font-size: 22px;
+  }
+
+  .race-big-main {
+    font-size: 44px;
+  }
+}
+
+/* ---- コース一覧（キャンペーンの画面と同じ骨組み: campaign.css） ---- */
+.race-layout {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ui-space-3);
+  width: min(880px, 100%);
+}
+
+.race-course-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
+  flex: 1 1 300px;
+  max-width: 420px;
+}
+
+.race-course.is-selected {
+  border-color: var(--ui-line-strong);
+  background: var(--ui-bg-active);
+}
+
+.race-course-best {
+  font:
+    600 13px/1.2 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  color: var(--ui-text-dim);
+}
+
+.race-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 340px;
+  max-width: 460px;
+  padding: var(--ui-space-3);
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
+}
+
+.race-detail-title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.race-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  font-size: 14px;
+}
+
+.race-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12px;
+  color: var(--ui-text-dim);
+}
+
+.race-kind::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border: 2px solid var(--race-kind-color, currentColor);
+  border-radius: 50%;
+  vertical-align: -1px;
+}
+
+.race-times {
+  width: 100%;
+  border-collapse: collapse;
+  font:
+    500 13px/1.5 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+.race-times td {
+  padding: 0 6px 0 0;
+  white-space: nowrap;
+}
+
+.race-times td:nth-child(2) {
+  color: var(--ui-text);
+}
+
+.race-times td:nth-child(n + 3) {
+  color: var(--ui-text-dim);
+}
+
+.race-aircraft {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.race-aircraft .ui-toggle[aria-pressed='true'] {
+  border-color: var(--ui-line-strong);
+  background: var(--ui-accent-fill-hover);
+}
+
+.race-rank-s {
+  color: var(--ui-gold);
+}
+
+/* ---- リザルト ---- */
+.race-result-time {
+  font:
+    800 40px/1.1 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  text-align: center;
+}
+
+.race-result-badges {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  min-height: 1.4em;
+  color: var(--ui-gold);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
