@@ -7,6 +7,7 @@ import {
   SCREEN_STATES,
   STATE_TRANSITIONS,
   canTransition,
+  hudVisibleOn,
   isSimulating,
   syncLoopWithState,
   usesDemoCamera,
@@ -14,6 +15,19 @@ import {
   type StateChange,
 } from '../src/core/game-state';
 import { GameLoop } from '../src/core/loop';
+import screenCss from '../src/ui/screen.css?raw';
+
+// HUD 類を隠す CSS と、HUD に書き込む TS（7-5b の回帰）
+const HUD_CSS = import.meta.glob<string>(['../src/ui/*hud*.css', '../src/ui/photo/*.css'], {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const UI_TS = import.meta.glob<string>(['../src/ui/**/*.ts', '../src/render/**/*.ts'], {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
 
 const STEP = 1 / 60;
 
@@ -247,5 +261,73 @@ describe('起動シーケンスと ?skipTitle', () => {
     expect(parseSkipTitle('?debug&skipTitle&invert')).toBe(true);
     expect(parseSkipTitle('?skiptitle=1')).toBe(true);
     expect(parseSkipTitle('?title=skip')).toBe(false);
+  });
+});
+
+describe('画面状態ごとの HUD の表示（7-5b）', () => {
+  const SHOWN: Record<ScreenState, boolean> = {
+    boot: false,
+    title: false,
+    pilot_name: false,
+    mode_select: false,
+    mission_select: false,
+    briefing: false,
+    flight: true,
+    pause: true,
+    photo: false,
+    result: false,
+    hangar: false,
+    lobby: false,
+  };
+
+  it('飛行・ポーズだけ出し、タイトル・名前入力・メニュー・ロビー・ハンガー・リザルトでは出さない', () => {
+    for (const s of SCREEN_STATES) expect(hudVisibleOn(s, false), s).toBe(SHOWN[s]);
+  });
+
+  it('フォトモードは「表示」で HUD を ON にしたときだけ。ほかの画面は photoHud に左右されない', () => {
+    expect(hudVisibleOn('photo', true)).toBe(true);
+    for (const s of SCREEN_STATES) {
+      if (s !== 'photo') expect(hudVisibleOn(s, true), s).toBe(SHOWN[s]);
+    }
+  });
+
+  it('遷移の流れ: 起動 → タイトル → 名前 → メニュー → ハンガー → 飛行 → フォト → 飛行 → リザルト', () => {
+    const game = new GameState();
+    const seen: [ScreenState, boolean][] = [];
+    game.onChange(({ to }) => seen.push([to, hudVisibleOn(to, false)]));
+    const path: ScreenState[] = [
+      'title',
+      'pilot_name',
+      'mode_select',
+      'hangar',
+      'mode_select',
+      'lobby',
+      'mode_select',
+      'flight',
+      'pause',
+      'photo',
+      'flight',
+      'photo',
+      'flight',
+      'result',
+    ];
+    for (const s of path) expect(game.transition(s)).toBe(true);
+    expect(seen).toEqual(path.map((s) => [s, SHOWN[s]]));
+    // フォトモードから戻ると飛行（表示）に戻る
+    expect(seen[10]).toEqual(['flight', true]);
+  });
+
+  it('CSS は data-hud で隠し、画面状態の列挙を持たない（夜の減光は変数で渡す）', () => {
+    expect(screenCss).toContain(':root:not([data-hud]) .hud');
+    expect(screenCss).toContain('var(--hud-night-opacity, 1)');
+    for (const [path, css] of Object.entries(HUD_CSS)) {
+      expect(css, path).not.toMatch(/:not\(\[data-screen='flight'\]\)/);
+    }
+  });
+
+  it('HUD の root にインラインの opacity を書かない（隠す CSS に勝ってしまう）', () => {
+    for (const [path, ts] of Object.entries(UI_TS)) {
+      expect(ts, path).not.toMatch(/hud\.root\.style\.opacity/);
+    }
   });
 });

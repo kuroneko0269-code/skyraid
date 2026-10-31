@@ -28,6 +28,7 @@ import type { PlayerView } from '../../render/player-view';
 import type { PauseMenu } from '../pause';
 import type { RenderPipeline } from '../../render/pipeline';
 import type { WeatherView } from '../../render/weather/weather-view';
+import { syncHudScreen } from '../hud-screen';
 import { attachPhotoGestures } from './photo-gestures';
 import { PhotoShutter } from './photo-shutter';
 import { PhotoToolbar, type PhotoShowKind } from './photo-toolbar';
@@ -157,6 +158,7 @@ export class PhotoLink implements PhotoFrameHook {
     for (const k of ['aircraft', 'enemies', 'effects'] as const) this.cam.setVisible(k, true);
     this.touchShown = false;
     delete document.documentElement.dataset.photoHud;
+    syncHudScreen(document.documentElement, p.game.state);
     this.resolution = resolveResolution(this.resolution, this.mobile);
     const t = this.toolbar;
     t.camera.syncCamera(this.orbit.fov, this.orbit.roll);
@@ -178,6 +180,7 @@ export class PhotoLink implements PhotoFrameHook {
     p.pipeline.setFocus(null);
     this.touchShown = false;
     delete document.documentElement.dataset.photoHud;
+    syncHudScreen(document.documentElement, p.game.state);
     this.toolbar.setShown(false);
     this.shutter.hideToast();
     p.refreshTouch();
@@ -192,6 +195,7 @@ export class PhotoLink implements PhotoFrameHook {
     if (kind === 'hud') {
       if (on) document.documentElement.dataset.photoHud = '';
       else delete document.documentElement.dataset.photoHud;
+      syncHudScreen(document.documentElement, this.p.game.state);
     } else if (kind === 'touch') {
       this.touchShown = on;
       this.p.refreshTouch();

@@ -77,6 +77,15 @@ export function isFrozenFlight(state: ScreenState): boolean {
 }
 
 /**
+ * HUD（ミッション・怪獣・チュートリアルの HUD も）を出す画面状態か（7-5b）。飛行とポーズは出し、
+ * フォトモードは「表示」で HUD を ON にしたときだけ。タイトル・名前入力・メニュー・ロビー・ハンガー・リザルトは出さない
+ */
+export function hudVisibleOn(state: ScreenState, photoHud: boolean): boolean {
+  if (state === 'photo') return photoHud;
+  return state === 'flight' || state === 'pause';
+}
+
+/**
  * 背景をデモカメラ（島の周回）で描く状態か。飛行・ポーズ・リザルトは追従カメラ（リザルトは止まった飛行の画面の上に出す）。
  * ハンガーは機体の展示のカメラ（render/hangar-stage.ts）
  */

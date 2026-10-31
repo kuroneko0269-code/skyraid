@@ -227,12 +227,12 @@
 }
 
 /*
- * HUD は「表示」で ON にしたときだけ（既定は隠す）。夜の減光（7-5）が HUD の不透明度を style に書くので、
- * opacity ではなく visibility で隠す
+ * HUD は「表示」で ON にしたときだけ（既定は隠す）。data-hud（7-5b）でフェードもするが、
+ * 入った瞬間から写らないよう visibility でもすぐ隠す
  */
-:root[data-screen='photo']:not([data-photo-hud]) .hud,
-:root[data-screen='photo']:not([data-photo-hud]) .mission-hud,
-:root[data-screen='photo']:not([data-photo-hud]) .kaiju-hud,
-:root[data-screen='photo']:not([data-photo-hud]) .tutorial-hud {
+:root[data-screen='photo']:not([data-hud]) .hud,
+:root[data-screen='photo']:not([data-hud]) .mission-hud,
+:root[data-screen='photo']:not([data-hud]) .kaiju-hud,
+:root[data-screen='photo']:not([data-hud]) .tutorial-hud {
   visibility: hidden;
 }

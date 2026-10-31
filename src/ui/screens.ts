@@ -15,6 +15,7 @@ import { PauseMenu, createPauseButton } from './pause';
 import { PilotNameScreen } from './pilot-name';
 import { ResultScreen } from './result';
 import { FadeCurtain, LoadingScreen, applyScreenFade } from './screen';
+import { syncHudScreen } from './hud-screen';
 import { TitleScreen } from './title';
 import { TUTORIAL_MISSION } from '../data/tutorial';
 import { MAPS } from '../data/maps';
@@ -280,6 +281,7 @@ export class Screens {
 
   private show(state: ScreenState): void {
     document.documentElement.dataset.screen = state;
+    syncHudScreen(document.documentElement, state);
     this.loading.setShown(state === 'boot');
     this.title.setShown(state === 'title');
     this.pilotName.setShown(state === 'pilot_name');

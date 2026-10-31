@@ -85,7 +85,8 @@ export function linkWeather(weather: WeatherView, p: WeatherLinkParts): void {
     const opacity = String(Math.round(nightHudOpacity(weather.night, dim) * 100) / 100);
     if (opacity !== lastOpacity) {
       lastOpacity = opacity;
-      p.hud.root.style.opacity = opacity;
+      // インラインの opacity は画面で隠す CSS を上書きしてしまうので、変数で渡す（7-5b）
+      p.hud.root.style.setProperty('--hud-night-opacity', opacity);
     }
   };
 }

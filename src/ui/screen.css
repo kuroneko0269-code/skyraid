@@ -44,12 +44,17 @@
   transition: none;
 }
 
-/* HUD は飛行中とポーズ中だけ。タイトル・モード選択ではフェードで隠す */
+/*
+ * HUD は飛行中とポーズ中（とフォトモードで表示 ON）だけ。それ以外はフェードで隠す。
+ * 可否は game-state.ts の hudVisibleOn() が <html data-hud> に書く（7-5b）。
+ * 夜の減光（7-5）は --hud-night-opacity。インラインの opacity を書くと下の隠す規則に勝ってしまう
+ */
 .hud {
+  opacity: var(--hud-night-opacity, 1);
   transition: opacity var(--screen-fade) ease;
 }
 
-:root:not([data-screen='flight']):not([data-screen='pause']):not([data-photo-hud]) .hud {
+:root:not([data-hud]) .hud {
   opacity: 0;
 }
 
