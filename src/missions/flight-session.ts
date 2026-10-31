@@ -286,6 +286,18 @@ export class FlightSession implements MissionWorld {
     for (const fn of this.respawnListeners) fn();
   }
 
+  /**
+   * 指定の位置・向きへ戻す（PvP。5-3 の事前修正: どこへ戻すかはホストが決める）。HP 満タン・補給して、
+   * シングルと同じリスナー（機体とカメラを新しい位置へすぐ移す）を呼ぶ
+   */
+  respawnAt(position: Readonly<Vec3>, orientation: Readonly<Quat>): void {
+    this.aircraft.respawn(position, orientation);
+    this.player.revive();
+    this.player.step(1 / 60);
+    this.combat.resupply();
+    for (const fn of this.respawnListeners) fn();
+  }
+
   /** フリーフライト: 墜落（撃墜）地点の地表から spawn.position.y 上空に、墜落前の機首方位のまま水平で戻す */
   private respawnAboveWreck(): void {
     const a = this.aircraft;

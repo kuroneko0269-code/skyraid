@@ -231,7 +231,12 @@ export class PvpLink {
 
   /** 固定ステップ 1 回分 */
   step(controls: Readonly<AircraftControls>, dt: number): void {
+    const own = this.deps.session.aircraft;
+    const crashes = own.crashCount;
     this.net?.step(controls, dt);
+    // 墜落（Aircraft が上空へ戻した）: シングルと同じく機体とカメラを復帰位置へすぐ移す
+    if (own.crashCount !== crashes)
+      this.deps.session.respawnAt(own.state.position, own.state.orientation);
   }
 
   /** 描画フレームごと（pipeline.render の前）。他機・名札・?netdebug */
