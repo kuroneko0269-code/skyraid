@@ -11,7 +11,8 @@ import {
   PVP_TEAM,
   PVP_TIME_LIMITS,
 } from '../data/pvp';
-import { isReady, startBlock, type StartBlock } from '../net/lobby-rules';
+import { isReady, normalizeSettings, startBlock, type StartBlock } from '../net/lobby-rules';
+import { findMap, SELECTABLE_MAPS } from '../data/maps';
 import type { GameSettings, PlayerInfo } from '../net/protocol';
 import { el } from './hud-dom';
 import { LobbyShare } from './lobby-share';
@@ -81,6 +82,7 @@ export class LobbyRoom {
   private readonly rulesText: HTMLSpanElement;
   private readonly optionsText: HTMLSpanElement;
   private readonly mapText: HTMLSpanElement;
+  private readonly mapSelect: HTMLSelectElement;
   private readonly rules: HTMLDivElement;
   private readonly scoreSelect: HTMLSelectElement;
   private readonly timeSelect: HTMLSelectElement;
@@ -122,13 +124,24 @@ export class LobbyRoom {
     const changed = (): void => {
       const v = this.view;
       if (!v) return;
-      h.onSettings({
-        ...v.settings,
-        scoreLimit: Number(this.scoreSelect.value),
-        timeLimitSeconds: Number(this.timeSelect.value),
-        mode: parseMode(this.modeSelect.value),
-      });
+      h.onSettings(
+        normalizeSettings({
+          ...v.settings,
+          mapId: this.mapSelect.value,
+          scoreLimit: Number(this.scoreSelect.value),
+          timeLimitSeconds: Number(this.timeSelect.value),
+          mode: parseMode(this.modeSelect.value),
+        }),
+      );
     };
+    // 6-4: マップ（レイドは港湾都市に固定なので出さない）
+    this.mapSelect = numberSelect(
+      this.rules,
+      'マップ',
+      SELECTABLE_MAPS.map((m) => m.id),
+      (id) => findMap(String(id)).name,
+      changed,
+    );
     this.scoreSelect = numberSelect(
       this.rules,
       '撃墜数',
@@ -197,7 +210,7 @@ export class LobbyRoom {
         ? 'レイド（協力）・ヴォルガス撃破'
         : `${st.mode === 'team' ? 'チーム戦' : '個人戦'}・撃墜 ${st.scoreLimit} 機・${minutes(st.timeLimitSeconds)}`;
     const raid = st.mode === 'raid';
-    for (const s of [this.scoreSelect, this.timeSelect]) {
+    for (const s of [this.scoreSelect, this.timeSelect, this.mapSelect]) {
       const row = s.parentElement;
       if (row) row.hidden = raid;
     }
@@ -208,6 +221,7 @@ export class LobbyRoom {
     const optionsFact = this.optionsText.parentElement;
     if (rulesFact) rulesFact.hidden = v.isHost;
     if (optionsFact) optionsFact.hidden = v.isHost;
+    this.mapSelect.value = st.mapId;
     this.scoreSelect.value = String(st.scoreLimit);
     this.timeSelect.value = String(st.timeLimitSeconds);
     this.modeSelect.value = st.mode;

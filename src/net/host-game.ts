@@ -5,6 +5,7 @@
 // 5-4: 開始前のカウントダウン（全機を止め操作を無視）、チーム戦、初心者保護、強化の無効、切断した人の機体を止めて
 // 待ち（away）、戻ったら入力が届き直してから出現位置へ戻す（クライアントはその seq から計算し直す）。
 // 6-2: レイド（全員が同じチーム）は怪獣をホストで動かし（RaidHost）、state に怪獣を入れ、倒すか街に到達されたら終わる。Three.js 非依存
+import type { Vec3 } from '../flight/math';
 import { NET_CONFIG } from '../data/net';
 import { PVP_CONFIG } from '../data/pvp';
 import { FLIGHT_CONFIG } from '../data/flight';
@@ -38,7 +39,7 @@ import type { HostRoom } from './room';
 import {
   NetGameEvents,
   RateCounter,
-  SPAWN_ORIENTATION,
+  spawnOrientation,
   applyCombat,
   createRemoteSample,
   spawnPosition,
@@ -62,6 +63,8 @@ export interface HostGameDeps {
   /** 自機（FlightSession の機体。HUD・カメラはこれを見る） */
   readonly own: Aircraft;
   readonly groundHeight?: GroundHeightFn;
+  /** 高層の建物（6-4） */
+  readonly obstacles?: (a: Readonly<Vec3>, b: Readonly<Vec3>) => boolean;
   readonly rng?: Rng;
   /** 開始前のカウントダウンの秒数（省略は PVP_CONFIG.countdownSeconds。テストで 0 にする） */
   readonly countdownSeconds?: number;
@@ -101,6 +104,7 @@ export class HostGame extends NetGameEvents implements NetGame {
     this.countdown = new Countdown(deps.countdownSeconds ?? PVP_CONFIG.countdownSeconds, TICK_HZ);
     const settings = room.settings;
     this.arena = new PvpArena(this.handleArena, deps.groundHeight ?? null, deps.rng);
+    this.arena.obstacles = deps.obstacles ?? null;
     // レイド（6-2）は全員を同じチームにする（味方の弾は当たらない）
     const teams =
       settings.mode === 'team'
@@ -112,7 +116,11 @@ export class HostGame extends NetGameEvents implements NetGame {
     this.arena.rookieGuard = settings.rookieGuard;
     this.match = new PvpMatch(settings, teams ? (id) => teams.get(id) : null);
     const p = room.hostProfile;
-    deps.own.respawn(spawnPosition(0, { x: 0, y: 0, z: 0 }), SPAWN_ORIENTATION);
+    const raidSpawn = settings.mode === 'raid';
+    deps.own.respawn(
+      spawnPosition(0, { x: 0, y: 0, z: 0 }, raidSpawn),
+      spawnOrientation(raidSpawn),
+    );
     this.own = this.arena.add(0, deps.own, fighterSpec(this.loadout(p.aircraftId, p.upgrades)));
     for (const pl of room.players) if (pl.id !== 0) this.addRemote(pl.id, pl.aircraftId);
     this.raid =
@@ -148,7 +156,8 @@ export class HostGame extends NetGameEvents implements NetGame {
     const join = this.room.joinProfiles.get(id);
     const loadout = this.loadout(join?.aircraftId ?? aircraftId, join?.upgrades);
     const aircraft = new Aircraft(loadout.flight, {}, FLIGHT_CONFIG, this.deps.groundHeight);
-    aircraft.respawn(spawnPosition(id, { x: 0, y: 0, z: 0 }), SPAWN_ORIENTATION);
+    const raid = this.room.settings.mode === 'raid';
+    aircraft.respawn(spawnPosition(id, { x: 0, y: 0, z: 0 }, raid), spawnOrientation(raid));
     this.remotes.set(id, {
       id,
       fighter: this.arena.add(id, aircraft, fighterSpec(loadout)),

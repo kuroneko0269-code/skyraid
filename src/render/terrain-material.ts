@@ -1,6 +1,13 @@
 // 地形のマテリアル（4-1 → 4-6）。画質「中」以上は PBR + シェーダーの中の層（傾斜と高さで砂浜 / 草地 / 森 /
 // 岩 / 崖 / 雪。砂浜は海岸線からの距離で。terrain-layers-glsl.ts）、「低」は従来どおり Lambert（頂点カラーだけ）
-import { MeshLambertMaterial, MeshStandardMaterial, type Material } from 'three';
+import {
+  MeshLambertMaterial,
+  MeshStandardMaterial,
+  Vector3,
+  Vector4,
+  type Material,
+  type Texture,
+} from 'three';
 import { TERRAIN_CONFIG, TERRAIN_DETAIL_CONFIG } from '../data/terrain';
 import { CLOUD_GLSL, type CloudUniforms } from './cloud-field';
 import { createCoastDistanceTexture } from './coast-textures';
@@ -23,20 +30,36 @@ const DEFINES: Record<(typeof FLAG_KEYS)[number], string> = {
   treeShade: 'TREE_SHADE',
 };
 
+/** マップごとに変わる地形のシェーダーの値（6-4）: 海岸線からの距離のテクスチャ・森の倍率 */
+export interface TerrainMapUniforms {
+  readonly uCoastDist: { value: Texture };
+  readonly uCoastSize: { value: number };
+  readonly uForestLow: { value: Vector3 };
+  readonly uForestClear: { value: Vector4 };
+}
+
+/** 島の値（森の倍率は変えない・木を置かない四角は空） */
+export function createTerrainMapUniforms(): TerrainMapUniforms {
+  return {
+    uCoastDist: { value: createCoastDistanceTexture() },
+    uCoastSize: { value: TERRAIN_CONFIG.size },
+    uForestLow: { value: new Vector3(0, 1, 1) },
+    uForestClear: { value: new Vector4(1, -1, 1, -1) },
+  };
+}
+
 /**
  * 画質「中」以上: PBR（粗い拡散面）+ 層の質感。影を受ける。
  * cloud を渡すと、define CLOUD_SHADOW で雲の影（直射光だけを暗くする）を付けられる（4-2）
  */
-export function createDetailedTerrainMaterial(cloud?: CloudUniforms): MeshStandardMaterial {
+export function createDetailedTerrainMaterial(
+  cloud?: CloudUniforms,
+  coast: TerrainMapUniforms = createTerrainMapUniforms(),
+): MeshStandardMaterial {
   const material = new MeshStandardMaterial({
     roughness: TERRAIN_DETAIL_CONFIG.roughness,
     metalness: 0,
   });
-  // 海岸線からの距離（砂浜の幅。4-8）
-  const coast = {
-    uCoastDist: { value: createCoastDistanceTexture() },
-    uCoastSize: { value: TERRAIN_CONFIG.size },
-  };
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, coast);
     if (cloud) Object.assign(shader.uniforms, cloud);

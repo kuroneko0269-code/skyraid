@@ -66,6 +66,17 @@ export class CombatSystem {
   private readonly impactListeners: ImpactListener[] = [];
   private readonly destroyedListeners: DestroyedListener[] = [];
   private readonly explosionListeners: ExplosionListener[] = [];
+  private readonly ordnanceListeners: ((
+    x: number,
+    y: number,
+    z: number,
+    radius: number,
+  ) => void)[] = [];
+  /**
+   * 爆弾・ロケットの着弾の高さ（6-4。街では立っている建物の屋根・壁でも起爆する）。null なら地表（groundHeight）。
+   * 着弾の予測点も同じ関数
+   */
+  ordnanceGround: GroundHeightFn | null = null;
 
   constructor(
     readonly targets: TargetField,
@@ -94,8 +105,12 @@ export class CombatSystem {
       MISSILE_POOL_SIZE,
     );
     this.flares = new FlareField(undefined, 1 + enemies.length);
-    this.rockets = new RocketPod(this.handleRocketImpact, groundHeight, rng);
-    this.bombs = new BombBay(this.handleBombImpact, groundHeight);
+    const ground = groundHeight;
+    const ordnance: GroundHeightFn | null = ground
+      ? (x, z) => (this.ordnanceGround ?? ground)(x, z)
+      : null;
+    this.rockets = new RocketPod(this.handleRocketImpact, ordnance, rng);
+    this.bombs = new BombBay(this.handleBombImpact, ordnance);
     this.drones = drones;
     this.allTargets = [...targets.balloons, ...drones, ...enemies, ...hostiles];
     this.allies = allies;
@@ -110,6 +125,11 @@ export class CombatSystem {
   /** 対象が撃墜されたときに呼ばれる。破片の演出用 */
   onDestroyed(fn: DestroyedListener): void {
     this.destroyedListeners.push(fn);
+  }
+
+  /** 爆弾・ロケットが着弾したとき（6-4。建物を壊す）。radius は爆風の半径 */
+  onOrdnance(fn: (x: number, y: number, z: number, radius: number) => void): void {
+    this.ordnanceListeners.push(fn);
   }
 
   /** ミサイルが起爆したときに呼ばれる。閃光の演出用 */
@@ -298,6 +318,7 @@ export class CombatSystem {
   };
 
   private readonly handleRocketImpact = (i: Readonly<Impact>): void => {
+    for (const fn of this.ordnanceListeners) fn(i.x, i.y, i.z, ROCKET_CONFIG.blast.radius);
     this.applyBlast(
       i.x,
       i.y,
@@ -310,6 +331,7 @@ export class CombatSystem {
   };
 
   private readonly handleBombImpact = (i: Readonly<Impact>): void => {
+    for (const fn of this.ordnanceListeners) fn(i.x, i.y, i.z, BOMB_CONFIG.blast.radius);
     this.applyBlast(i.x, i.y, i.z, BOMB_CONFIG.blast, TEAM_PLAYER, TEAM_PLAYER, i.target !== null);
   };
 

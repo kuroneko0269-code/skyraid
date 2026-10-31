@@ -1,5 +1,7 @@
 // ロビーの判定（5-4）: 開始できるか（全員 Ready・再接続待ちなし・チーム戦は両チームに 1 人以上）、
 // チームの自動割当、全員が「もう一度」を押したか。ホストもクライアントも同じ判定で表示する。Three.js・DOM 非依存
+import { RAID_CONFIG } from '../data/kaiju';
+import { findMap, SELECTABLE_MAPS } from '../data/maps';
 import type { PvpMode } from '../data/pvp';
 import { NET_CONFIG } from '../data/net';
 import type { GameSettings, PlayerInfo, UpgradeLevelsMsg } from './protocol';
@@ -110,5 +112,19 @@ export class ChatGate {
 
 /** 部屋を作るときの設定（6-2: モード選択の「レイド」の「協力」から作るならレイド。それ以外は既定） */
 export function initialSettings(raid: boolean): GameSettings | undefined {
-  return raid ? { ...NET_CONFIG.defaultSettings, mode: 'raid' } : undefined;
+  return raid
+    ? { ...NET_CONFIG.defaultSettings, mode: 'raid', mapId: RAID_CONFIG.mapId }
+    : undefined;
+}
+
+/** ホストが選んだ設定をそろえる（6-4: レイドは港湾都市に固定、マップは選べるものだけ） */
+export function normalizeSettings(s: GameSettings): GameSettings {
+  if (s.mode === 'raid') return { ...s, mapId: RAID_CONFIG.mapId };
+  const ok = SELECTABLE_MAPS.some((m) => m.id === s.mapId);
+  return ok ? s : { ...s, mapId: NET_CONFIG.defaultSettings.mapId };
+}
+
+/** ロビーに出すマップの名前（6-4） */
+export function mapName(id: string): string {
+  return findMap(id).name;
 }

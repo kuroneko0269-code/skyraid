@@ -49,6 +49,15 @@ export function terrainLayersGlsl(): string {
   varying vec3 vDetailNormal;
   uniform sampler2D uCoastDist;
   uniform float uCoastSize;
+  // 6-4: マップごとの森の倍率（forest.ts の forestMask と同じ）。x: 低地の下端 y: 上端 z: 低地の倍率（1 で変えない）
+  uniform vec3 uForestLow;
+  // 木を置かない四角（minX, maxX, minZ, maxZ。島は空の四角）
+  uniform vec4 uForestClear;
+  float forestMaskAt(vec2 xz, float h) {
+    if (xz.x >= uForestClear.x && xz.x <= uForestClear.y && xz.y >= uForestClear.z && xz.y <= uForestClear.w) return 0.0;
+    if (uForestLow.z >= 1.0) return 1.0;
+    return mix(uForestLow.z, 1.0, smoothstep(uForestLow.x, uForestLow.y, h));
+  }
   ${forestGlsl()}
   // 正弦を使わないハッシュ（大きな座標でも精度が落ちにくい。Dave Hoskins の hash12）
   float detailHash(vec2 p) {
@@ -170,6 +179,7 @@ export function terrainLayersGlsl(): string {
     tlForestZone = smoothstep(${f(v.minHeight)}, ${f(v.minHeight)} + fb, h)
       * (1.0 - smoothstep(${f(v.maxHeight)} - fb, ${f(v.maxHeight)}, h))
       * (1.0 - smoothstep(${f(v.maxSlopeDeg)} - fs, ${f(v.maxSlopeDeg)} + fs, slope));
+    tlForestZone *= forestMaskAt(p.xz, h);
     float wForest = forestDensity(p.xz) * tlForestZone;
     float patches = detailNoise(p.xz / 6.0) * 0.6 + detailNoise(p.xz / 1.7) * 0.4;
     albedo = mix(albedo, mix(${rgb(col.forest)}, ${rgb(col.forestLight)}, smoothstep(0.35, 0.75, patches)), wForest);

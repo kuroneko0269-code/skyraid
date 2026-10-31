@@ -12,7 +12,7 @@ import type { CombatInput } from '../combat/combat-input';
 import type { AircraftControls, GroundHeightFn } from '../entities/aircraft';
 import type { FlightSession } from '../missions/flight-session';
 import { ClientRoom } from '../net/client-room';
-import { allAgain, initialSettings } from '../net/lobby-rules';
+import { allAgain, initialSettings, mapName } from '../net/lobby-rules';
 import { netLoadout } from '../net/loadout';
 import { openLocalTransport } from '../net/local-transport';
 import { openPeerTransport } from '../net/peerjs-transport';
@@ -27,7 +27,7 @@ import { findAircraftModel } from '../data/aircraft';
 import { LobbyScreen } from './lobby';
 import { JOIN_ERRORS, lobbyActions, rosterNotices, type RosterSnapshot } from './pvp-lobby-actions';
 import { PvpBoard, onRadarTap } from './pvp-board';
-import { PvpFlight, type KaijuSource, type PvpSound } from './pvp-flight';
+import { PvpFlight, type KaijuSource, type PvpFlightDeps, type PvpSound } from './pvp-flight';
 import { PvpHud } from './pvp-hud';
 import { PvpOverlay } from './pvp-overlay';
 import { buildJoinUrl } from './pvp-entry';
@@ -43,6 +43,9 @@ export interface PvpDeps {
   readonly hangar: Hangar;
   readonly pilotName: () => string | null;
   readonly groundHeight: GroundHeightFn;
+  /** 守れた建物の割合（%）と高層の建物の衝突（6-4） */
+  readonly protectedBuildings: () => number | null;
+  readonly obstacles: PvpFlightDeps['obstacles'];
   readonly aircraftDetail: AircraftDetail;
   /** ?netdebug */
   readonly debug: boolean;
@@ -170,6 +173,11 @@ export class PvpLink {
   }
 
   /** PvP の飛行の装備（ホストが強化を無効にしていれば Lv 0。5-4） */
+  // 部屋のマップ（6-4。ロビーのホスト設定。レイドは港湾都市）
+  get mapId(): string {
+    return this.room?.settings.mapId ?? 'island';
+  }
+
   loadout(): Loadout {
     const id = this.ownAircraftId();
     const off = this.room?.settings.noUpgrades ?? true;
@@ -264,7 +272,7 @@ export class PvpLink {
       isHost: room.isHost,
       localId: room.localPlayerId,
       players: room.players,
-      mapName: room.settings.mapId === 'island' ? '海岸と島' : room.settings.mapId,
+      mapName: mapName(room.settings.mapId),
       settings: room.settings,
     });
   }

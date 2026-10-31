@@ -1,5 +1,8 @@
 // 怪獣「ヴォルガス（Vorgas）」（6-1 / 6-2）の数値。ロジックは src/entities/kaiju.ts（部位 HP・ダウン・ブレイク・フェーズ）と
 // src/ai/kaiju-ai.ts（上陸 → 歩行 → 攻撃選択 → 予兆 → 攻撃）、形は src/render/kaiju-model/。決定は docs/decisions.md の 6-1。
+import { CITY_CONFIG } from './city';
+import { HARBOR_MAP } from './maps';
+
 // 距離は m、時間は秒、角度は度。怪獣のローカル座標は足元が原点・前方 -Z・右 +X・上 +Y
 
 /** 部位（ロック・HUD の並び順。Tab で機首に近い順に切り替わる） */
@@ -33,12 +36,12 @@ export const KAIJU_CONFIG = {
    * 2〜4 人は base × (constant + perPlayer × 人数)。1 人は base × solo（6-1b。それまでは式のまま 1.0）。
    * 部位ダメージ倍率を ×5.3 → ×3.8 に下げた分、1 人の HP だけを下げてソロの所要時間を保つ（2〜4 人の HP は変えない）
    */
-  hpScale: { constant: 0.55, perPlayer: 0.45, solo: 0.78 },
+  hpScale: { constant: 0.55, perPlayer: 0.45, solo: 0.68 },
   /**
    * 人数ごとの部位ダメージ倍率（添字 = 人数 − 1）。1 人はブレイクが成立しない代わり（指示は ×1.3）。人数スケールの式では
    * 1 人の HP が 4 人の 1/2.35 しかなく、しかも怪獣の攻撃が全部 1 人に来るので、ボットで 5〜7 分に入るよう ×5.3 にした
-   * （ユーザー確認済み）。6-1b の指示で ×3.8 に下げ、1 人の HP を hpScale.solo（0.78 = 10,140）で下げて所要時間を保った
-   * （ボット 20 シードの中央値 約 6.4 分。docs/decisions.md の 6-1b）。2・3 人は式のままだと 4 人より遅く（2 人は 12 分超で最終フェーズに間に合わない）、
+   * （ユーザー確認済み）。6-1b の指示で ×3.8 に下げ、1 人の HP を hpScale.solo で下げて所要時間を保った（島のレイドで 0.78、6-4 でレイドが港湾都市（開始位置から上陸地点まで約 5km）
+   * になって遅くなったので 0.68 = 8,840。ボット 20 シードの中央値 約 6.3 分。docs/decisions.md の 6-1b）。2・3 人は式のままだと 4 人より遅く（2 人は 12 分超で最終フェーズに間に合わない）、
    * 1 人より大幅に遅くなるので、ボットで 4 人と同じくらいになるよう足した（docs/decisions.md の 6-1）
    */
   partyDamageScale: [3.8, 1.75, 1.25, 1],
@@ -155,12 +158,18 @@ export const KAIJU_ATTACK_CONFIG = {
 export const KAIJU_ATTACK_TIMINGS: Readonly<Record<KaijuAttack, KaijuAttackSpec>> =
   KAIJU_ATTACK_CONFIG;
 
-/** レイド（ソロ）の怪獣の出現と開始位置。島の南東の海（海岸線から 約 1.2km 沖）から島の中心へ */
+/**
+ * レイドの怪獣の出現と開始位置（6-4 から港湾都市に固定。6-2 の島の値は src/data/maps.ts の ISLAND_MAP）。
+ * 湾の沖 3km から上陸し、街の中心（タワー群）へ向かう。到達（reachRadius 内）か最終フェーズの時間切れの早い方で失敗
+ */
 export const RAID_CONFIG = {
-  kaijuFrom: { x: 2800, z: 2800 },
-  cityCenter: { x: 0, z: 0 },
-  /** 開始位置（島の南東の沖、高度 700m、上陸する怪獣の方を向く。約 2.6km 先）。協力は PvP の開始位置 */
-  start: { x: 3700, y: 700, z: 5200, headingDeg: -21 },
+  mapId: HARBOR_MAP.id,
+  kaijuFrom: HARBOR_MAP.kaiju.from,
+  cityCenter: HARBOR_MAP.kaiju.goal,
+  /** 到達で失敗する距離（タワー群の中心から。止まる距離と同じ） */
+  reachRadius: CITY_CONFIG.reachRadius,
+  /** 開始位置（街の北、高度 800m、機首を湾側へ）。協力も同じ位置に横一列（間隔 150m） */
+  start: HARBOR_MAP.raidStart,
   /** 報酬（全員同じ。貢献度で差をつけない） */
   reward: 5000,
   parTimeSeconds: 420,

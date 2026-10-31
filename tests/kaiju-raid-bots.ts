@@ -12,7 +12,11 @@ import { GUN_CONFIG, MISSILE_CONFIG, TARGETING_CONFIG } from '../src/data/weapon
 import { RAID_CONFIG, KAIJU_PARTS, type KaijuPartId } from '../src/data/kaiju';
 import { Kaiju } from '../src/entities/kaiju';
 import { resolveLoadout } from '../src/progression/loadout';
-import { getGroundHeight } from '../src/render/terrain-height';
+import { HARBOR_TERRAIN } from '../src/data/terrain-harbor';
+import { createHeightField } from '../src/render/terrain-height';
+
+// 6-4: レイドは港湾都市（地形は 1 回だけ作る）
+const getGroundHeight = createHeightField(HARBOR_TERRAIN).getGroundHeight;
 
 const DT = 1 / 60;
 const DEG = Math.PI / 180;
@@ -124,7 +128,11 @@ export function runRaidBots(o: RaidBotOptions): RaidBotResult {
   kaiju.emerge(f.x, f.z, RAID_CONFIG.cityCenter.x, RAID_CONFIG.cityCenter.z, {
     players: o.players,
   });
-  ai.configure({ goal: RAID_CONFIG.cityCenter });
+  ai.configure({
+    goal: RAID_CONFIG.cityCenter,
+    stopRadius: RAID_CONFIG.reachRadius,
+    arrivalFails: true,
+  });
   let downs = 0;
   let breaks = 0;
   let partsBroken = 0;

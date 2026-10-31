@@ -19,6 +19,7 @@ import type { FlightOptions } from '../flight/flight-model';
 import type { Loadout } from '../progression/loadout';
 import { copyQuat, copyVec3, quatIdentity, vec3, type Quat, type Vec3 } from '../flight/math';
 import { BoundaryWatch } from './boundary';
+import { protectedPercent, type BuildingField } from '../combat/buildings';
 import { DestroyTally } from './destroy-tally';
 import { configureDrones, spawnInSession } from './session-spawn';
 import { KaijuExposure } from './kaiju-exposure';
@@ -34,6 +35,8 @@ export interface FlightSessionOptions {
   start?: Readonly<Vec3>;
   /** 敵の出し方（テストのシミュレーションで島から離れた場所に出す） */
   enemies?: EnemyForceConfig;
+  /** 今のマップの街の建物（6-4。なければ null）。自機の衝突・開始時の建て直し・「守れた建物」 */
+  buildings?: () => BuildingField | null;
 }
 
 export type SessionMode = 'free' | 'mission';
@@ -54,12 +57,13 @@ export class FlightSession implements MissionWorld {
   readonly kaijuExposure: KaijuExposure;
   /** 地表の高さ（地形なしのテストでは FLIGHT_CONFIG.groundAltitude） */
   private readonly ground: (x: number, z: number) => number;
+  private readonly buildings: () => BuildingField | null;
   /** PvP の他プレイヤー（5-3。レーダーの点・命中音に使う。シングルプレイでは空） */
   readonly rivals: CombatTarget[] = [];
   /** フリーフライトの戦域の境界（警告だけ。ミッションの境界はランナーが持つ） */
   readonly freeBoundary = new BoundaryWatch(ISLAND_MAP, false);
   mode: SessionMode = 'free';
-  private readonly freeStart: Readonly<Vec3>;
+  private freeStart: Readonly<Vec3>;
   /** 今の開始位置・向き（リスポーンもここ） */
   private readonly startPosition: Vec3 = vec3();
   private readonly startOrientation: Quat = quatIdentity();
@@ -78,6 +82,7 @@ export class FlightSession implements MissionWorld {
   constructor(options: FlightSessionOptions = {}) {
     const ground = options.groundHeight;
     this.ground = ground ?? (() => FLIGHT_CONFIG.groundAltitude);
+    this.buildings = options.buildings ?? (() => null);
     const rng = options.rng ?? Math.random;
     this.freeStart = options.start ?? WORLD_CONFIG.start;
     copyVec3(this.startPosition, this.freeStart);
@@ -143,6 +148,11 @@ export class FlightSession implements MissionWorld {
     this.combat.applyLoadout(l);
   }
 
+  /** フリーフライトの開始位置（6-4: マップごと。機首は -Z） */
+  setFreeStart(start: Readonly<Vec3>): void {
+    this.freeStart = start;
+  }
+
   /** フリーフライトを初めから（startFree と同じ） */
   reset(): void {
     this.startFree();
@@ -193,6 +203,7 @@ export class FlightSession implements MissionWorld {
     this.freeBoundary.reset();
     this.destroyed.clear();
     this.kaijuExposure.reset();
+    this.buildings()?.reset();
   }
 
   /** 固定ステップ 1 回分。撃墜されている間は操作を受け付けない */
@@ -225,7 +236,9 @@ export class FlightSession implements MissionWorld {
     copyVec3(this.wreck, a.state.position);
     copyQuat(this.wreckOrientation, a.state.orientation);
     a.step(controls, dt);
-    if (a.crashCount === crashes) return;
+    // 6-4: 高層の建物に当たっても墜落（低層は飛び抜けられる）
+    const hitBuilding = this.buildings()?.collides(this.wreck, a.state.position) ?? false;
+    if (a.crashCount === crashes && !hitBuilding) return;
     // Aircraft は墜落すると上空へ戻すので、残骸の位置に置き直す（撃墜中は動かさない）
     a.respawn(this.wreck, this.wreckOrientation);
     // 練習（4-11）: 墜落にせず、その場の地表から 300m 上空へ戻す（HP・弾はそのまま）
@@ -287,6 +300,11 @@ export class FlightSession implements MissionWorld {
 
   get kaijuReachedCity(): boolean {
     return this.props.kaijuReachedCity;
+  }
+
+  get protectedBuildings(): number | null {
+    const b = this.buildings();
+    return b ? protectedPercent(b) : null;
   }
 
   spawn(def: SpawnDef): void {

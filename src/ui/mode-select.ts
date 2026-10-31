@@ -2,6 +2,7 @@ import './mode-select.css';
 import { el } from './hud-dom';
 import { createButton, createScreen, setScreenShown } from './screen';
 import type { TutorialStrings } from './tutorial-text';
+import { SELECTABLE_MAPS, ISLAND_MAP } from '../data/maps';
 
 export const GAME_MODES = ['tutorial', 'free', 'campaign', 'hangar', 'pvp', 'raid'] as const;
 export type GameMode = (typeof GAME_MODES)[number];
@@ -34,6 +35,10 @@ export class ModeSelectScreen {
   private readonly promptStart: HTMLButtonElement;
   private readonly raidPrompt: HTMLDivElement;
   private readonly raidSolo: HTMLButtonElement;
+  private readonly mapPrompt: HTMLDivElement;
+  private readonly mapButtons: HTMLButtonElement[] = [];
+  /** フリーフライトのマップ（6-4。選ぶたびに変わる。初めは島） */
+  freeMapId: string = ISLAND_MAP.id;
 
   constructor(
     parent: HTMLElement,
@@ -55,7 +60,9 @@ export class ModeSelectScreen {
 
     for (const entry of MODE_ENTRIES) {
       const button = createButton(list, 'ui-button ui-item mode-button', '', () => {
-        handlers.onSelect(entry.mode);
+        // 6-4: フリーフライトはマップを選んでから
+        if (entry.mode === 'free') this.showMapPrompt();
+        else handlers.onSelect(entry.mode);
       });
       const label = document.createElement('span');
       label.className = 'mode-label';
@@ -119,7 +126,33 @@ export class ModeSelectScreen {
         handlers.onRaid('solo');
       },
     );
+    // フリーフライトのマップの選択（6-4）
+    this.mapPrompt = el('div', 'mode-prompt', root);
+    this.mapPrompt.hidden = true;
+    const mapBox = el('div', 'ui-dialog mode-prompt-box', this.mapPrompt);
+    el('h3', 'ui-heading mode-prompt-title', mapBox, 'フリーフライト：マップ');
+    const mapList = el('div', 'campaign-buttons', mapBox);
+    createButton(mapList, 'ui-button is-ghost campaign-back', '戻る', () => {
+      this.closeDialog();
+      this.firstEnabled?.focus({ preventScroll: true });
+    });
+    for (const map of SELECTABLE_MAPS) {
+      const b = createButton(mapList, 'ui-button campaign-go', map.name, () => {
+        this.freeMapId = map.id;
+        this.closeDialog();
+        handlers.onSelect('free');
+      });
+      b.dataset.map = map.id;
+      this.mapButtons.push(b);
+    }
     this.root = root;
+  }
+
+  /** フリーフライトのマップの選択を出す（6-4。前に選んだマップにフォーカス） */
+  showMapPrompt(): void {
+    this.mapPrompt.hidden = false;
+    const b = this.mapButtons.find((x) => x.dataset.map === this.freeMapId) ?? this.mapButtons[0];
+    b?.focus({ preventScroll: true });
   }
 
   /** レイドの人数の選択を出す（6-2） */
@@ -136,9 +169,10 @@ export class ModeSelectScreen {
 
   /** 案内が開いていれば閉じて true（Esc） */
   closeDialog(): boolean {
-    if (this.prompt.hidden && this.raidPrompt.hidden) return false;
+    if (this.prompt.hidden && this.raidPrompt.hidden && this.mapPrompt.hidden) return false;
     this.prompt.hidden = true;
     this.raidPrompt.hidden = true;
+    this.mapPrompt.hidden = true;
     return true;
   }
 

@@ -12,6 +12,16 @@ import { Ocean } from './ocean';
 import { Terrain } from './terrain';
 import { defaultHeightField } from './terrain-height';
 import { Vegetation } from './vegetation';
+import { ISLAND_MAP } from '../data/maps';
+import type { LoadedMap } from '../missions/active-map';
+import { CityView } from './city/city-view';
+import {
+  bakeCoastTextures,
+  createCoastDistanceTexture,
+  createDepthTexture,
+} from './coast-textures';
+import { treeArea } from './terrain-gen/forest';
+import type { Texture } from 'three';
 
 /** 空（大気散乱）・海・島・雲・太陽光をまとめて、カメラ位置と画質設定に合わせて更新する */
 export class World {
@@ -24,8 +34,15 @@ export class World {
   readonly ocean: Ocean;
   readonly clouds: Clouds;
   readonly lights: SceneLights;
+  /** 街（6-4。港湾都市だけ） */
+  city: CityView | null = null;
+  private cityCount = 2000;
+  private readonly scene: Scene;
+  private mapId = ISLAND_MAP.id;
+  private time = 0;
 
   constructor(scene: Scene, drawDistance: number) {
+    this.scene = scene;
     this.ocean = new Ocean(this.atmosphere, drawDistance, this.cloudField);
     this.clouds = new Clouds(this.atmosphere, this.cloudField);
     scene.add(
@@ -53,9 +70,47 @@ export class World {
       treeShade: preset.treeShade,
     });
     this.vegetation.setCount(preset.treeCount, preset.treeClumps);
+    this.cityCount = preset.cityBuildings;
+    this.city?.setCount(preset.cityBuildings);
     this.lights.setShadows(preset.shadows, preset.shadowMapSize);
     // ブルームがあれば太陽のまぶしさはブルームに任せる
     this.atmosphere.setGlow(!(preset.postEffects && preset.bloom));
+  }
+
+  /**
+   * マップを切り替える（6-4）: 地形のチャンク・水深と海岸線のテクスチャ・木・街を捨てて作り直す。
+   * 同じマップなら何もしない（建物の建て直しは BuildingField の reset で描画が追う）
+   */
+  setMap(m: LoadedMap): void {
+    if (m.def.id === this.mapId && (this.city !== null) === (m.buildings !== null)) return;
+    this.mapId = m.def.id;
+    const island = m.def.id === ISLAND_MAP.id;
+    const size = m.def.terrain.size;
+    let depth: Texture;
+    let coast: Texture;
+    if (island) {
+      // 島の格子は起動時に焼いたものを使い回す（テクスチャだけ作る）
+      depth = createDepthTexture();
+      coast = createCoastDistanceTexture();
+    } else {
+      const baked = bakeCoastTextures(m.field.getHeight, size, m.def.terrain.seaLevel);
+      depth = baked.depth;
+      coast = baked.coast;
+    }
+    const oldCoast = this.terrain.coastTexture;
+    this.terrain.setField(m.field, m.def.terrain, coast, m.def.vegetation);
+    oldCoast.dispose();
+    this.ocean.setDepthTexture(depth, size).dispose();
+    this.vegetation.setTerrain(m.field.getHeight, treeArea(m.def.vegetation));
+    if (this.city) {
+      this.scene.remove(this.city.object);
+      this.city.dispose();
+      this.city = null;
+    }
+    if (m.buildings) {
+      this.city = new CityView(m.buildings, this.cityCount);
+      this.scene.add(this.city.object);
+    }
   }
 
   /** 露出（大気の明るさから計算）。RenderPipeline.setExposure に渡す */
@@ -73,6 +128,9 @@ export class World {
     this.clouds.update(camera, time);
     this.terrain.update(camera);
     this.vegetation.update(camera, time);
+    const dt = Math.min(0.1, Math.max(0, time - this.time));
+    this.time = time;
+    this.city?.update(camera, dt);
     this.lights.follow(shadowCenter);
   }
 }

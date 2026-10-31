@@ -93,6 +93,8 @@ export class ResultScreen {
     };
     fact('時間', formatClock(r.elapsedSeconds));
     fact('被弾', `${Math.round(r.damageTaken)} / ${r.maxHp}`);
+    // 6-4: 街のあるマップ（レイド）だけ。スコアの表示で報酬には影響しない
+    if (r.protectedBuildings !== undefined) fact('守れた建物', `${r.protectedBuildings}%`);
     fact('報酬', `獲得 +${formatCredits(r.credits)} / 残高 ${formatCredits(extras.balance)}`);
     this.gear.hidden = !extras.newGear;
   }

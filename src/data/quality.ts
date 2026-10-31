@@ -48,6 +48,8 @@ export interface QualityPreset {
    * 4-7 で森の密度を 3 倍に: 「高」は 30000 → 90000、「中」は上限の 20000（12000 から）。「低」は据え置き
    */
   readonly treeCount: number;
+  /** 街（6-4。港湾都市）に描く建物の数。判定・「守れた建物」は画質によらず全部 */
+  readonly cityBuildings: number;
   /** 木を 3〜5 本の束で置く（4-7。src/data/vegetation.ts の clump。遠景のビルボードは束ごとに 1 枚） */
   readonly treeClumps: boolean;
   /** 岩・崖の法線の細部（4-6。手続きノイズで法線を揺らし、光の当たり方で凹凸を見せる。terrainDetail が true のときだけ） */
@@ -84,6 +86,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     cloudSteps: 0,
     cloudShadows: false,
     treeCount: 3000,
+    cityBuildings: 800,
     treeClumps: false,
     terrainNormalDetail: false,
     treeShade: false,
@@ -106,6 +109,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     cloudSteps: 8,
     cloudShadows: false,
     treeCount: 20000,
+    cityBuildings: 2000,
     treeClumps: true,
     terrainNormalDetail: true,
     treeShade: false,
@@ -128,6 +132,7 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     cloudSteps: 12,
     cloudShadows: true,
     treeCount: 90000,
+    cityBuildings: 4000,
     treeClumps: true,
     terrainNormalDetail: true,
     treeShade: true,

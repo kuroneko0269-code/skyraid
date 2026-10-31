@@ -27,6 +27,8 @@ export interface MissionResult {
   readonly rank: Rank | null;
   /** 獲得クレジット（失敗・中断は 0） */
   readonly credits: number;
+  /** 守れた建物の割合（%。街のあるマップだけ。スコアの表示だけで報酬には影響しない。6-4） */
+  readonly protectedBuildings?: number;
 }
 
 export interface MissionEvents extends Record<string, unknown> {

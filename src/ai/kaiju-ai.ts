@@ -46,6 +46,8 @@ export interface KaijuAiOptions {
   /** 歩いて向かう先と、止まる距離 */
   readonly goal: { readonly x: number; readonly z: number };
   readonly stopRadius?: number;
+  /** 向かう先（止まる距離の内側）に着いたら街に到達（失敗。6-4 の港湾都市） */
+  readonly arrivalFails?: boolean;
 }
 
 /** 熱線（描画・判定） */
@@ -72,6 +74,7 @@ export class KaijuAi {
   private attacks: readonly KaijuAttack[] = KAIJU_ATTACKS;
   private readonly goal = { x: 0, z: 0 };
   private stopRadius: number = KAIJU_CONFIG.walk.stopRadius;
+  private arrivalFails = false;
   private beamRepeats = 0;
   private readonly hitThisAttack = new Set<number>();
   private readonly listeners: ((e: KaijuAiEvent) => void)[] = [];
@@ -96,6 +99,7 @@ export class KaijuAi {
     this.goal.x = o.goal.x;
     this.goal.z = o.goal.z;
     this.stopRadius = o.stopRadius ?? KAIJU_CONFIG.walk.stopRadius;
+    this.arrivalFails = o.arrivalFails ?? false;
     this.reset();
   }
 
@@ -143,6 +147,7 @@ export class KaijuAi {
     const dx = this.goal.x - k.feet.x;
     const dz = this.goal.z - k.feet.z;
     if (Math.hypot(dx, dz) > this.stopRadius) k.walkToward(this.goal.x, this.goal.z, speed, dt);
+    else if (this.arrivalFails) k.reachCity();
     this.cooldown -= dt;
     if (this.cooldown > 0) return;
     const t = this.nearest(targets);

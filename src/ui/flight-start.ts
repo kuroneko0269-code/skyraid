@@ -1,6 +1,8 @@
 // 飛行の始め方（main.ts から分けた。5-1）: ハンガーの装備を自機に入れ、フリーフライト・ミッション・PvP の世界にして、
 // 演出・カメラ・画質の監視をやり直す
+import { findMap, ISLAND_MAP } from '../data/maps';
 import { WORLD_CONFIG } from '../data/terrain';
+import type { ActiveMap } from '../missions/active-map';
 import type { FlightSession } from '../missions/flight-session';
 import type { GamePlay } from '../missions/game-play';
 import type { MissionDef } from '../missions/types';
@@ -12,6 +14,7 @@ import type { PvpEntry } from './pvp-entry';
 import type { Screens } from './screens';
 
 export interface FlightStartParts {
+  readonly activeMap: ActiveMap;
   readonly screens: Screens;
   readonly session: FlightSession;
   readonly play: GamePlay;
@@ -36,6 +39,12 @@ export function createFlightStarter(
     const loadout = (net ? p.pvp.loadout() : null) ?? p.screens.hangar.loadout();
     p.session.applyLoadout(loadout);
     p.playerView.setModel(p.screens.hangar.selectedModel, loadout.missiles);
+    // 6-4: マップ（PvP はロビーのホスト設定、ミッションは定義、フリーフライトはモード選択で選んだもの）。
+    // 違うマップなら地形・街を捨てて作り直す。同じなら建物を建て直すだけ
+    const mapId = net ? p.pvp.mapId : def ? def.mapId : p.screens.modeSelect.freeMapId;
+    p.activeMap.use(mapId);
+    const map = findMap(mapId);
+    p.session.setFreeStart(map.id === ISLAND_MAP.id ? WORLD_CONFIG.start : map.start);
     if (net) {
       p.play.startEmpty({ ...WORLD_CONFIG.start, headingDeg: 0 });
       p.pvp.beginFlight();

@@ -106,6 +106,8 @@ export interface KaijuSpawn {
   readonly retreatDamageRatio: number;
   /** 歩くのをやめる walkTo からの距離（省略は src/data/kaiju.ts の walk.stopRadius） */
   readonly stopRadius?: number;
+  /** walkTo に着いたら街に到達（失敗。6-4） */
+  readonly arrivalFails?: boolean;
   /** 使える攻撃（省略は 4 種すべて。M5 は咆哮と投擲だけ） */
   readonly attacks?: readonly KaijuAttack[];
   /** 最終フェーズの制限時間を使う（省略は true。時間切れは失敗条件 kaijuReachedCity） */

@@ -288,10 +288,7 @@ export class Kaiju implements KaijuPartOwner, KaijuPoseInput {
       case 'active':
         if (this.finalRemaining !== null && !this.cityReached) {
           this.finalRemaining = Math.max(0, this.finalRemaining - dt);
-          if (this.finalRemaining <= 0) {
-            this.cityReached = true;
-            this.emit({ kind: 'cityReached' });
-          }
+          if (this.finalRemaining <= 0) this.reachCity();
         }
         break;
       case 'retreating': {
@@ -310,6 +307,12 @@ export class Kaiju implements KaijuPartOwner, KaijuPoseInput {
   finishStep(): void {
     if (!this.visible) return;
     this.updateParts();
+  }
+
+  /** 街に到達した（6-4: 向かう先に着いた。最終フェーズの時間切れと同じ失敗） */
+  reachCity(): void {
+    if (!this.cityReached) this.emit({ kind: 'cityReached' });
+    this.cityReached = true;
   }
 
   /** (x, z) へ向きを変えながら speed で歩く（向きが大きくずれている間は足踏みで回る） */

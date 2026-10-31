@@ -5,7 +5,7 @@ import { OCEAN_CONFIG } from '../data/ocean';
 import { TERRAIN_CONFIG } from '../data/terrain';
 import { bakeCoastDistance } from './coast-distance';
 import { bakeDepthField, type DepthField } from './ocean-depth';
-import { getHeight } from './terrain-height';
+import { getHeight, type HeightFn } from './terrain-height';
 
 let depthField: DepthField | null = null;
 
@@ -28,6 +28,30 @@ function halfFloatTexture(data: Float32Array, resolution: number): DataTexture {
   texture.magFilter = LinearFilter;
   texture.needsUpdate = true;
   return texture;
+}
+
+/** 水深と海岸線からの距離のテクスチャ（6-4: マップを切り替えるたびに焼き直す。捨てるときは dispose） */
+export interface CoastTextures {
+  readonly depth: DataTexture;
+  readonly coast: DataTexture;
+  readonly size: number;
+  dispose(): void;
+}
+
+/** 高さ関数から焼く（一辺 size、uv = xz / size + 0.5） */
+export function bakeCoastTextures(height: HeightFn, size: number, seaLevel: number): CoastTextures {
+  const field = bakeDepthField(height, size, OCEAN_CONFIG.depthMap.resolution, seaLevel);
+  const depth = halfFloatTexture(field.data, field.resolution);
+  const coast = halfFloatTexture(bakeCoastDistance(field), field.resolution);
+  return {
+    depth,
+    coast,
+    size,
+    dispose: () => {
+      depth.dispose();
+      coast.dispose();
+    },
+  };
 }
 
 /** 水深（m。陸は負）のテクスチャ。uv = xz / TERRAIN_CONFIG.size + 0.5 */

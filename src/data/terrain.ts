@@ -1,6 +1,119 @@
 // 島の地形のパラメータ（1-3）。空は src/data/sky.ts（4-1）、海は src/data/ocean.ts、雲は src/data/clouds.ts（4-2）。
 // 高さの計算は src/render/terrain-height.ts、メッシュと LOD は src/render/terrain.ts。距離・高さは m
 
+/** 港湾都市の形（6-4。src/render/terrain-gen/harbor-shape.ts）。島は持たない */
+export interface HarborShapeParams {
+  /** 陸の外周（原点中心の正方形の半分）。外周は edgeFall m で海へ下がる。ノイズで ±edgeNoise m 出入り */
+  readonly landHalf: number;
+  readonly edgeFall: number;
+  readonly edgeNoise: number;
+  /** 南の湾の海岸線: |x| < bayHalfWidth では z = bayZ の直線（岸壁）、その外は bayCurve × (|x| − bayHalfWidth)² だけ南へ */
+  readonly bayZ: number;
+  readonly bayHalfWidth: number;
+  readonly bayCurve: number;
+  /** 岸壁（直線の海岸）の水深と、自然の海岸の浜の幅 */
+  readonly quayDepth: number;
+  readonly beachWidth: number;
+  /** 平野: 海岸で plainLow m、北へ plainSlope m/m で上がる。丘のノイズの振幅 */
+  readonly plainLow: number;
+  readonly plainSlope: number;
+  readonly hillAmplitude: number;
+  readonly hillFrequency: number;
+  /** 北の山: 尾根の z・裾の幅・高さ・尾根のノイズ */
+  readonly ridgeZ: number;
+  readonly ridgeWidth: number;
+  readonly ridgeHeight: number;
+  readonly ridgeDetail: number;
+  readonly ridgeFrequency: number;
+  /** 街を平らにする範囲（x・z の最小最大）・高さ・まわりのなじませ幅 */
+  readonly flat: {
+    readonly minX: number;
+    readonly maxX: number;
+    readonly minZ: number;
+    readonly maxZ: number;
+    readonly height: number;
+    readonly blend: number;
+  };
+}
+
+/** 地形の生成のパラメータ（6-4 でマップごとに持てるよう型を分けた。島は TERRAIN_CONFIG） */
+export interface TerrainParams {
+  readonly seed: number;
+  readonly size: number;
+  readonly chunks: number;
+  readonly seaLevel: number;
+  readonly shape: {
+    readonly coastRadius: number;
+    readonly coastWarp: number;
+    readonly coastFrequency: number;
+    readonly peakHeight: number;
+    readonly peakSharpness: number;
+    readonly lowlandHeight: number;
+    readonly hillAmplitude: number;
+    readonly hillFrequency: number;
+    readonly hillOctaves: number;
+    readonly ridgeAmplitude: number;
+    readonly ridgeFrequency: number;
+    readonly shelfWidth: number;
+    readonly seaDepth: number;
+    readonly coast: {
+      readonly sideFrom: number;
+      readonly sideTo: number;
+      readonly sideNoise: number;
+      readonly cliffHeight: number;
+      readonly cliffWidth: number;
+      readonly cliffShelf: number;
+      readonly beachFrom: number;
+      readonly beachFlatten: number;
+    };
+    /** あれば島ではなく港湾都市の形にする（6-4） */
+    readonly harbor?: HarborShapeParams;
+  };
+  readonly erosion: {
+    readonly enabled: boolean;
+    readonly extent: number;
+    readonly resolution: number;
+    readonly minHeight: number;
+    readonly fadeHeight: number;
+    readonly seedOffset: number;
+    readonly droplets: number;
+    readonly maxSteps: number;
+    readonly inertia: number;
+    readonly capacity: number;
+    readonly minCapacity: number;
+    readonly erodeRate: number;
+    readonly depositRate: number;
+    readonly evaporate: number;
+    readonly gravity: number;
+    readonly radius: number;
+    readonly heightScale: number;
+    readonly smoothPasses: number;
+    readonly leeDeposit: number;
+    readonly windwardLoss: number;
+  };
+  readonly colors: {
+    readonly seabed: number;
+    readonly sand: number;
+    readonly grass: number;
+    readonly forest: number;
+    readonly rock: number;
+    readonly snow: number;
+    readonly sandTop: number;
+    readonly rockStart: number;
+    readonly snowStart: number;
+    readonly blend: number;
+    readonly steepNormalY: number;
+    readonly jitter: number;
+  };
+  readonly lod: {
+    readonly blockSize: number;
+    readonly segments: readonly number[];
+    readonly fineDistance: number;
+    readonly distanceRatios: readonly number[];
+    readonly hysteresis: number;
+  };
+}
+
 export const TERRAIN_CONFIG = {
   /** ノイズのシード。同じシードなら同じ島になる */
   seed: 20261029,
@@ -127,7 +240,7 @@ export const TERRAIN_CONFIG = {
     /** 段が変わる境目で行ったり来たりしないよう、粗くするときだけこの距離だけ余分に待つ */
     hysteresis: 100,
   },
-} as const;
+} as const satisfies TerrainParams;
 
 export const WORLD_CONFIG = {
   /**

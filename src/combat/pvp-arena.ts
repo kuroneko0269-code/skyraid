@@ -11,7 +11,7 @@ import { FLARE_CONFIG, MISSILE_CONFIG } from '../data/weapons';
 import type { Aircraft, AircraftControls } from '../entities/aircraft';
 import { headingQuat } from '../entities/enemy-aircraft';
 import { LOCAL_FORWARD } from '../flight/flight-model';
-import { copyQuat, copyVec3, quatIdentity, rotateVec3, vec3 } from '../flight/math';
+import { copyQuat, copyVec3, quatIdentity, rotateVec3, vec3, type Vec3 } from '../flight/math';
 import { FlareField } from './flare';
 import type { GroundHeightFn, GunHit, Rng } from './gun';
 import { MissileSystem, splashDamage, type Detonation } from './missile';
@@ -74,6 +74,9 @@ export class PvpArena {
   private readonly wreckOrientation = quatIdentity();
   private readonly spawnOrientation = quatIdentity();
   private readonly event: ArenaEvent = { kind: 'fire', a: 0, b: 0, n: 0, x: 0, y: 0, z: 0 };
+
+  /** 高層の建物（6-4。移動の線分が当たれば墜落）。null は建物なし */
+  obstacles: ((a: Readonly<Vec3>, b: Readonly<Vec3>) => boolean) | null = null;
 
   constructor(
     private readonly emit: (e: Readonly<ArenaEvent>) => void,
@@ -187,7 +190,7 @@ export class PvpArena {
     copyQuat(this.wreckOrientation, a.state.orientation);
     const crashes = a.crashCount;
     a.step(stunned ? NEUTRAL : c, dt);
-    if (a.crashCount !== crashes) {
+    if (a.crashCount !== crashes || (this.obstacles?.(this.wreck, a.state.position) ?? false)) {
       // Aircraft は墜落すると上空へ戻すので、残骸の位置に置き直す
       a.respawn(this.wreck, this.wreckOrientation);
       f.crash();

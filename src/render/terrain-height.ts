@@ -1,10 +1,11 @@
 // 島の高さ関数（Three.js 非依存）。地形メッシュの生成と、機体・カメラの地面判定の両方で使う
-import { TERRAIN_CONFIG } from '../data/terrain';
+import { TERRAIN_CONFIG, type TerrainParams } from '../data/terrain';
 import { WIND_CONFIG } from '../data/wind';
 import { SimplexNoise2D } from './noise';
 import { erode } from './terrain-gen/erosion';
+import { harborShape } from './terrain-gen/harbor-shape';
 
-export type TerrainConfig = typeof TERRAIN_CONFIG;
+export type TerrainConfig = TerrainParams;
 
 /** (x, z) → 高さ（m）。y が上 */
 export type HeightFn = (x: number, z: number) => number;
@@ -68,23 +69,29 @@ export function smoothGrid(grid: Float32Array, res: number, passes: number): voi
 }
 
 /**
- * 中央に山がある島の高さ関数を作る。
- * 中心からの距離を「海岸線の半径」（ノイズで出入り）で割った t（中心 0・海岸 1）で形を決め、
- * 山の中腹に丘と尾根のノイズを足す。海岸は風上を崖・風下を砂浜にし（4-6）、
- * 最後に海抜 5m 以上へ水力浸食の差分を足す（4-6）
+ * 地形の形（浸食の前。6-4 で島と港湾都市を差し替えられるよう分けた）。cliff() は直前の shapeHeight が求めた
+ * 「浸食の後で足す崖の高さ」（格子より細い崖を浸食で崩さない）
  */
-export function createHeightField(
-  config: TerrainConfig = TERRAIN_CONFIG,
-  options: HeightFieldOptions = {},
-): HeightField {
+export interface ShapeModel {
+  readonly shapeHeight: (x: number, z: number) => number;
+  readonly cliff: () => number;
+  readonly coastSide: (x: number, z: number) => { windward: number; leeward: number };
+  /** 浸食の格子で、確実に沖の海の点（ノイズの計算を省いて海底の深さにする） */
+  readonly isOpenSea: (x: number, z: number) => boolean;
+}
+
+/**
+ * 中央に山がある島の形。
+ * 中心からの距離を「海岸線の半径」（ノイズで出入り）で割った t（中心 0・海岸 1）で形を決め、
+ * 山の中腹に丘と尾根のノイズを足す。海岸は風上を崖・風下を砂浜にする（4-6）
+ */
+export function islandShape(config: TerrainConfig, noise: SimplexNoise2D): ShapeModel {
   const s = config.shape;
   const c = s.coast;
-  const noise = new SimplexNoise2D(config.seed);
   const coastOffset = Math.exp(-s.peakSharpness);
   const windAngle = (WIND_CONFIG.direction * Math.PI) / 180;
   const windX = Math.cos(windAngle);
   const windZ = Math.sin(windAngle);
-
   const coastSide = (x: number, z: number): { windward: number; leeward: number } => {
     const d = Math.sqrt(x * x + z * z);
     // 中心から見た向きと風向き（吹いていく向き）の内積。正 = 風下、負 = 風上
@@ -141,7 +148,29 @@ export function createHeightField(
     return Math.max(h, config.seaLevel - s.seaDepth);
   };
 
-  const getBaseHeight = (x: number, z: number): number => shapeHeight(x, z) + cliff;
+  const maxCoast = s.coastRadius * (1 + s.coastWarp) + 100;
+  return {
+    shapeHeight,
+    cliff: () => cliff,
+    coastSide,
+    // 海岸線の最大半径より外は必ず海
+    isOpenSea: (x, z) => x * x + z * z > maxCoast * maxCoast,
+  };
+}
+
+/**
+ * 高さ関数を作る。形（島 / 港湾都市。config.shape.harbor の有無）に、海抜 erosion.minHeight m 以上へ
+ * 水力浸食の差分を足す（4-6）
+ */
+export function createHeightField(
+  config: TerrainConfig = TERRAIN_CONFIG,
+  options: HeightFieldOptions = {},
+): HeightField {
+  const s = config.shape;
+  const noise = new SimplexNoise2D(config.seed);
+  const model = s.harbor ? harborShape(config, s.harbor, noise) : islandShape(config, noise);
+  const { shapeHeight, coastSide } = model;
+  const getBaseHeight = (x: number, z: number): number => shapeHeight(x, z) + model.cliff();
 
   // ---- 浸食（起動時に 1 回。格子の差分をならして 3 次 B スプラインで補間して足す。4-8） ----
   const e = config.erosion;
@@ -156,14 +185,13 @@ export function createHeightField(
     const heights = new Float32Array(res * res);
     const mask = new Float32Array(res * res);
     const depositScale = new Float32Array(res * res);
-    const maxCoast = s.coastRadius * (1 + s.coastWarp) + 100;
     for (let j = 0; j < res; j++) {
       for (let i = 0; i < res; i++) {
         const x = -half + i * cell;
         const z = -half + j * cell;
         const k = i + j * res;
         // 海岸線の最大半径より外は必ず海（浸食しない）。ノイズの計算を省く
-        if (x * x + z * z > maxCoast * maxCoast) {
+        if (model.isOpenSea(x, z)) {
           heights[k] = config.seaLevel - s.seaDepth;
           continue;
         }
@@ -202,7 +230,7 @@ export function createHeightField(
 
   const getHeight = (x: number, z: number): number => {
     const shape = shapeHeight(x, z);
-    const coastCliff = cliff;
+    const coastCliff = model.cliff();
     if (!delta || shape <= e.minHeight) return shape + coastCliff;
     // 補間の行き過ぎで海抜 5m 未満に効かないよう、元の高さでもう一度効きを掛ける。
     // 削っても minHeight より下にはしない（海岸線と浅瀬の形を変えない）

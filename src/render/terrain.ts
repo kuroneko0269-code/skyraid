@@ -29,9 +29,13 @@ import {
 import {
   createDetailedTerrainMaterial,
   createSimpleTerrainMaterial,
+  createTerrainMapUniforms,
   setTerrainShaderFlags,
+  type TerrainMapUniforms,
   type TerrainShaderFlags,
 } from './terrain-material';
+import type { ForestMaskSpec } from './terrain-gen/forest';
+import type { Texture } from 'three';
 import type { CloudUniforms } from './cloud-field';
 
 // 高さ関数は Three.js に依存しない terrain-height.ts にある。ここからも使えるようにする
@@ -65,7 +69,9 @@ export class Terrain {
   readonly object = new Group();
   private readonly chunks: Chunk[] = [];
   private readonly blocks: Block[] = [];
-  private readonly palette: TerrainPalette;
+  private palette: TerrainPalette;
+  /** マップごとのシェーダーの値（海岸線からの距離・森の倍率。6-4） */
+  private readonly mapUniforms: TerrainMapUniforms = createTerrainMapUniforms();
   // 画質「中」以上は PBR + 近距離のディテール、「低」は Lambert（setDetail で切り替える）
   private readonly detailedMaterial: MeshStandardMaterial;
   private readonly simpleMaterial = createSimpleTerrainMaterial();
@@ -75,16 +81,70 @@ export class Terrain {
   private triangles = 0;
 
   constructor(
-    readonly field: HeightField = defaultHeightField,
-    private readonly config: TerrainConfig = TERRAIN_CONFIG,
+    private fieldRef: HeightField = defaultHeightField,
+    private config: TerrainConfig = TERRAIN_CONFIG,
     cloud?: CloudUniforms,
   ) {
     // cloud を渡すと、画質「高」で雲の影を付けられる（setShaderFlags）
-    this.detailedMaterial = createDetailedTerrainMaterial(cloud);
+    this.detailedMaterial = createDetailedTerrainMaterial(cloud, this.mapUniforms);
     this.material = this.detailedMaterial;
     this.object.name = 'terrain';
     this.palette = new TerrainPalette(config.colors);
     this.thresholds = lodThresholds(5000, config.lod.distanceRatios, config.lod.fineDistance);
+    this.build();
+  }
+
+  get field(): HeightField {
+    return this.fieldRef;
+  }
+
+  /**
+   * マップを切り替える（6-4）: チャンク・ブロックのジオメトリを捨てて、新しい高さ関数で作り直す
+   * （マテリアルは使い回す。海岸線からの距離のテクスチャと森の倍率を差し替える。古いテクスチャの破棄は呼ぶ側）
+   */
+  setField(
+    field: HeightField,
+    config: TerrainConfig,
+    coast: Texture,
+    forest: ForestMaskSpec,
+  ): void {
+    this.disposeChunks();
+    this.fieldRef = field;
+    this.config = config;
+    this.palette = new TerrainPalette(config.colors);
+    const u = this.mapUniforms;
+    u.uCoastDist.value = coast;
+    u.uCoastSize.value = config.size;
+    u.uForestLow.value.set(forest.lowlandFrom, forest.lowlandFull, forest.lowlandScale);
+    const c = forest.clear;
+    if (c) u.uForestClear.value.set(c.minX, c.maxX, c.minZ, c.maxZ);
+    else u.uForestClear.value.set(1, -1, 1, -1);
+    this.build();
+  }
+
+  /** 今の海岸線からの距離のテクスチャ（切り替えで捨てるため） */
+  get coastTexture(): Texture {
+    return this.mapUniforms.uCoastDist.value;
+  }
+
+  /** ジオメトリをすべて捨てる */
+  private disposeChunks(): void {
+    for (const chunk of this.chunks) {
+      chunk.mesh.geometry.dispose();
+      this.object.remove(chunk.mesh);
+    }
+    this.chunks.length = 0;
+    this.blocks.length = 0;
+  }
+
+  dispose(): void {
+    this.disposeChunks();
+    this.detailedMaterial.dispose();
+    this.simpleMaterial.dispose();
+  }
+
+  private build(): void {
+    const config = this.config;
     const lod = config.lod;
     const half = config.size / 2;
     // ブロックの格子（全体で n × n）。チャンクは perChunk × perChunk 個のブロックを持つ
@@ -92,7 +152,7 @@ export class Terrain {
     const n = config.chunks * perChunk;
     const size = config.size / n;
     for (let c = 0; c < config.chunks * config.chunks; c++) {
-      const mesh = new Mesh(undefined, this.material);
+      const mesh = new Mesh(new BufferGeometry(), this.material);
       mesh.visible = false;
       // 機体の影を受ける（地形自身は影を落とさない。影の範囲が狭く、山の影が途中で切れるため）
       mesh.receiveShadow = true;
@@ -194,7 +254,7 @@ export class Terrain {
     block.geometries[level] = buildChunkGeometry(
       block.rect,
       this.config.lod.segments[level] ?? 4,
-      this.field.getHeight,
+      this.fieldRef.getHeight,
       this.palette,
     );
   }
@@ -239,7 +299,7 @@ export class Terrain {
     let maxY = -Infinity;
     for (let j = 0; j <= samples; j++) {
       for (let i = 0; i <= samples; i++) {
-        const h = this.field.getHeight(
+        const h = this.fieldRef.getHeight(
           rect.minX + (rect.size * i) / samples,
           rect.minZ + (rect.size * j) / samples,
         );

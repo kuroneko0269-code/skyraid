@@ -282,6 +282,7 @@ export class MissionRunner {
       objectives,
       rank,
       credits,
+      ...(w.protectedBuildings != null ? { protectedBuildings: w.protectedBuildings } : {}),
     };
   }
 }

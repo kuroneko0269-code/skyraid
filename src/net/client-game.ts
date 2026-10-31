@@ -11,7 +11,7 @@ import { RESPAWN_BOOST } from '../combat/pvp-arena';
 import { Countdown } from '../combat/pvp-rules';
 import type { Aircraft, AircraftControls } from '../entities/aircraft';
 import { headingQuat } from '../entities/enemy-aircraft';
-import { copyQuat, copyVec3, quatIdentity } from '../flight/math';
+import { copyQuat, copyVec3, quatIdentity, type Vec3 } from '../flight/math';
 import {
   createNetControls,
   quantizeControls,
@@ -28,7 +28,7 @@ import { RemoteInterpolation } from './client-remotes';
 import {
   NetGameEvents,
   RateCounter,
-  SPAWN_ORIENTATION,
+  spawnOrientation,
   applyCombat,
   spawnPosition,
   toNetControls,
@@ -43,6 +43,8 @@ export interface ClientGameDeps {
   readonly own: Aircraft;
   /** 開始前のカウントダウンの秒数（省略は PVP_CONFIG.countdownSeconds。テストで 0 にする） */
   readonly countdownSeconds?: number;
+  /** 高層の建物（6-4。ホストと同じ判定で先行計算の墜落を出す） */
+  readonly obstacles?: (a: Readonly<Vec3>, b: Readonly<Vec3>) => boolean;
 }
 
 const TICK_HZ = NET_CONFIG.rates.tickHz;
@@ -92,7 +94,8 @@ export class ClientGame extends NetGameEvents implements NetGame {
     this.countdown = new Countdown(deps.countdownSeconds ?? PVP_CONFIG.countdownSeconds, TICK_HZ);
     this.localId = room.localPlayerId;
     const own = deps.own;
-    own.respawn(spawnPosition(this.localId, { x: 0, y: 0, z: 0 }), SPAWN_ORIENTATION);
+    const raid = room.settings.mode === 'raid';
+    own.respawn(spawnPosition(this.localId, { x: 0, y: 0, z: 0 }, raid), spawnOrientation(raid));
     this.maxHp = room.players.find((p) => p.id === this.localId)?.maxHp ?? 0;
     this.hp = this.maxHp;
     for (let i = 0; i < HISTORY; i++) this.inputs.push(createNetControls());
@@ -179,7 +182,8 @@ export class ClientGame extends NetGameEvents implements NetGame {
     copyQuat(this.wreckOrientation, own.state.orientation);
     const crashes = own.crashCount;
     own.step(c, dt);
-    if (own.crashCount === crashes) return;
+    const hit = this.deps.obstacles?.(this.wreck, own.state.position) ?? false;
+    if (own.crashCount === crashes && !hit) return;
     own.respawn(this.wreck, this.wreckOrientation);
     this.crashHold = PVP_CONFIG.crashHoldSeconds;
   }

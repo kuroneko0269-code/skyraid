@@ -1,5 +1,6 @@
 // PvP の飛行の共通部分（5-1）: 開始位置、他機の表示用の値、通信の計測値。
 // ホストは host-game.ts、クライアントは client-game.ts。Three.js 非依存
+import { RAID_CONFIG } from '../data/kaiju';
 import { NET_CONFIG } from '../data/net';
 import { WORLD_CONFIG } from '../data/terrain';
 import type { AircraftControls } from '../entities/aircraft';
@@ -14,11 +15,14 @@ import {
   type ScoreMsg,
 } from './protocol';
 
-/** 開始位置（ID 0〜3 を島の沖合に横一列。高度 800m。5-4 の事前修正） */
-export function spawnPosition(id: number, out: Vec3): Vec3 {
-  const s = WORLD_CONFIG.start;
+/**
+ * 開始位置（ID 0〜3 を島の沖合に横一列。高度 800m。5-4 の事前修正）。レイド（6-4）は港湾都市の街の北
+ * （RAID_CONFIG.start）に東西の横一列。港湾都市の PvP も島と同じ沖合（湾の沖。海側を向く）
+ */
+export function spawnPosition(id: number, out: Vec3, raid = false): Vec3 {
+  const s = raid ? RAID_CONFIG.start : WORLD_CONFIG.start;
   out.x = s.x + (id - (NET_CONFIG.maxPlayers - 1) / 2) * NET_CONFIG.spawn.spacing;
-  out.y = NET_CONFIG.spawn.altitude;
+  out.y = raid ? RAID_CONFIG.start.y : NET_CONFIG.spawn.altitude;
   out.z = s.z;
   return out;
 }
@@ -28,6 +32,16 @@ export const SPAWN_ORIENTATION: Readonly<Quat> = headingQuat(
   { x: 0, y: 0, z: 0, w: 1 },
   NET_CONFIG.spawn.headingDeg,
 );
+
+/** レイドの開始の姿勢（6-4: 湾側 = 怪獣の方） */
+export const RAID_SPAWN_ORIENTATION: Readonly<Quat> = headingQuat(
+  { x: 0, y: 0, z: 0, w: 1 },
+  RAID_CONFIG.start.headingDeg,
+);
+
+export function spawnOrientation(raid: boolean): Readonly<Quat> {
+  return raid ? RAID_SPAWN_ORIENTATION : SPAWN_ORIENTATION;
+}
 
 /** 他機 1 機の描画用の値（描画フレームごとに書き換える入れ物） */
 export interface RemoteSample {

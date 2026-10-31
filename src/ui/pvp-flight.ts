@@ -2,6 +2,7 @@
 // 固定ステップ・描画フレームで進め、他機・名札・フィード・スコアボード・残り時間・?netdebug を出す。
 // 5-4: カウントダウン・残り時間の警告（音つき）・撃墜の画面・無敵・再接続中（pvp-overlay.ts）、チーム戦の敵味方の色と
 // チームの合計、リザルトのベストプレイヤー・最長連続撃墜。対戦の終わり（over）で over が立つ
+import type { Vec3 } from '../flight/math';
 import type { PerspectiveCamera } from 'three';
 import { createCombatInput, type CombatInput } from '../combat/combat-input';
 import { accuracy, bestPlayer, standings, teamTotals } from '../combat/pvp-rules';
@@ -34,6 +35,10 @@ export interface PvpFlightDeps {
   readonly playerView: PlayerView;
   readonly camera: PerspectiveCamera;
   readonly groundHeight: GroundHeightFn;
+  /** 守れた建物の割合（%。街がなければ null。6-4） */
+  readonly protectedBuildings: () => number | null;
+  /** 高層の建物（6-4） */
+  readonly obstacles: (a: Readonly<Vec3>, b: Readonly<Vec3>) => boolean;
   readonly remotes: RemoteView;
   readonly hud: PvpHud;
   readonly board: PvpBoard;
@@ -94,8 +99,8 @@ export class PvpFlight {
     this.team = room.settings.mode === 'team';
     this.net =
       room instanceof HostRoom
-        ? new HostGame(room, { own, groundHeight: deps.groundHeight })
-        : new ClientGame(room, { own });
+        ? new HostGame(room, { own, groundHeight: deps.groundHeight, obstacles: deps.obstacles })
+        : new ClientGame(room, { own, obstacles: deps.obstacles });
     this.mirror = new PvpMirror(deps.session, room.localPlayerId, deps.otherGun);
     this.raid = room.settings.mode === 'raid';
     if (this.raid) this.attachKaiju();
@@ -305,6 +310,7 @@ export class PvpFlight {
       rows,
       best: best ? { id: best.id, name: this.nameOf(best.id), kills: best.kills } : null,
       teamTotals: totals ? [totals.get(0) ?? 0, totals.get(1) ?? 0] : null,
+      protectedBuildings: this.raid ? this.deps.protectedBuildings() : null,
     };
   }
 

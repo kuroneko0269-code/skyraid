@@ -94,7 +94,12 @@ export class MissionProps {
       retreatRatio: def.retreatDamageRatio,
       finalTimer: def.finalTimer ?? def.retreatDamageRatio >= 1,
     });
-    this.kaijuAi.configure({ goal: w, stopRadius: def.stopRadius, attacks: def.attacks });
+    this.kaijuAi.configure({
+      goal: w,
+      stopRadius: def.stopRadius,
+      attacks: def.attacks,
+      arrivalFails: def.arrivalFails,
+    });
   }
 
   spawnGroundTargets(def: GroundTargetSpawn): void {

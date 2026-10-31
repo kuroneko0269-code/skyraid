@@ -94,6 +94,44 @@ export function slopeDeg(
   return (Math.atan(Math.sqrt(gx * gx + gz * gz)) * 180) / Math.PI;
 }
 
+/**
+ * マップごとの木の撒き方（6-4）: 候補を撒く半径と、密度に掛ける倍率（0〜1）。島は既定（undefined）で 4-9 のまま
+ */
+export interface TreeArea {
+  readonly radius: number;
+  readonly mask: (x: number, z: number, h: number) => number;
+}
+
+/** 木を置かない四角と、低地で森を減らす設定（MapVegetation と同じ形） */
+export interface ForestMaskSpec {
+  readonly radius: number;
+  readonly lowlandScale: number;
+  readonly lowlandFrom: number;
+  readonly lowlandFull: number;
+  readonly clear: {
+    readonly minX: number;
+    readonly maxX: number;
+    readonly minZ: number;
+    readonly maxZ: number;
+  } | null;
+}
+
+/** 森の密度の倍率（街の四角は 0、低地は lowlandScale から高さで 1 へ）。GLSL の forestMaskAt と同じ式 */
+export function forestMask(spec: ForestMaskSpec, x: number, z: number, h: number): number {
+  const c = spec.clear;
+  if (c && x >= c.minX && x <= c.maxX && z >= c.minZ && z <= c.maxZ) return 0;
+  if (spec.lowlandScale >= 1) return 1;
+  const t = smoothstep(spec.lowlandFrom, spec.lowlandFull, h);
+  return spec.lowlandScale + (1 - spec.lowlandScale) * t;
+}
+
+/** マップの設定から木の撒き方を作る（既定のままなら undefined = 島と同じ） */
+export function treeArea(spec: ForestMaskSpec): TreeArea | undefined {
+  if (!spec.clear && spec.lowlandScale >= 1 && spec.radius === VEGETATION_CONFIG.radius)
+    return undefined;
+  return { radius: spec.radius, mask: (x, z, h) => forestMask(spec, x, z, h) };
+}
+
 export interface TreePlacement {
   /** 木の本数 */
   readonly count: number;
@@ -143,6 +181,7 @@ export function placeTrees(
   config: VegetationConfig = VEGETATION_CONFIG,
   seed = TERRAIN_CONFIG.seed + config.seedOffset,
   clumped = false,
+  area?: TreeArea,
 ): TreePlacement {
   const random = createRandom(seed);
   const positions = new Float32Array(count * 3);
@@ -153,7 +192,7 @@ export function placeTrees(
   const sizes = new Uint8Array(count);
   const clumpSeeds = new Float32Array(count);
   const clumpScales = new Float32Array(count);
-  const r = config.radius;
+  const r = area?.radius ?? config.radius;
   const cl = config.clump;
   const maxAttempts = count * config.maxAttemptsPerTree;
   let placed = 0;
@@ -166,10 +205,16 @@ export function placeTrees(
     const variation = random();
     if (x * x + z * z > r * r) continue;
     // 4-9: 置く確率は 密度 ^ acceptPower（縁ほど疎に）
-    const density = forestDensity(x, z, config);
+    let density = forestDensity(x, z, config);
     if (accept >= density ** config.edge.acceptPower) continue;
     const h = height(x, z);
     if (h < config.minHeight || h > config.maxHeight) continue;
+    // 6-4: マップの倍率（島は area なしで素通り。並びを変えないよう乱数を引いた後で棄却する）
+    if (area) {
+      const m = area.mask(x, z, h);
+      if (m <= 0 || accept >= (density * m) ** config.edge.acceptPower) continue;
+      density *= m;
+    }
     if (slopeDeg(height, x, z, config.slopeStep, h) > config.maxSlopeDeg) continue;
     const members = clumped
       ? cl.min + Math.floor(clumpHash(variation, 0, 0) * (cl.max - cl.min + 1))

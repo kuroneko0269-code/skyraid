@@ -126,6 +126,11 @@ export class PvpEntry {
   }
 
   /** PvP の飛行の装備（強化の無効を反映。5-4）。PvP を読んでいなければ null */
+  /** 部屋のマップ（6-4） */
+  get mapId(): string {
+    return this.link?.mapId ?? 'island';
+  }
+
   loadout(): Loadout | null {
     return this.link?.loadout() ?? null;
   }

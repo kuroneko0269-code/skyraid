@@ -18,7 +18,7 @@ import {
 } from 'three';
 import { VEGETATION_CONFIG } from '../data/vegetation';
 import type { Vec3 } from '../flight/math';
-import { placeTrees, type TreePlacement } from './terrain-gen/forest';
+import { placeTrees, type TreeArea, type TreePlacement } from './terrain-gen/forest';
 import {
   createBillboardGeometry,
   createBillboardMaterial,
@@ -83,8 +83,19 @@ export class Vegetation {
   private readonly matrix = new Matrix4();
   private readonly scale = new Vector3();
 
-  constructor(private readonly height: HeightFn) {
+  private area: TreeArea | undefined = undefined;
+
+  constructor(private height: HeightFn) {
     this.object.name = 'vegetation';
+  }
+
+  /** マップを切り替える（6-4）: 高さ関数と撒き方を変え、撒いてあれば撒き直す */
+  setTerrain(height: HeightFn, area: TreeArea | undefined): void {
+    this.height = height;
+    this.area = area;
+    if (!this.trees) return;
+    this.trees = placeTrees(this.height, this.requested, undefined, undefined, this.clumped, area);
+    this.rebuild(this.trees);
   }
 
   /** 本数と束にするか（画質）。変わったときだけ撒き直す */
@@ -92,7 +103,7 @@ export class Vegetation {
     if (this.trees && this.requested === count && this.clumped === clumped) return;
     this.requested = count;
     this.clumped = clumped;
-    this.trees = placeTrees(this.height, count, undefined, undefined, clumped);
+    this.trees = placeTrees(this.height, count, undefined, undefined, clumped, this.area);
     this.rebuild(this.trees);
   }
 

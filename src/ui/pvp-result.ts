@@ -28,6 +28,8 @@ export interface ResultView {
   best: { readonly id: number; readonly name: string; readonly kills: number } | null;
   /** チーム戦の合計（[A, B]）。個人戦は null */
   teamTotals: readonly [number, number] | null;
+  /** 守れた建物の割合（%。街のあるマップのレイドだけ。6-4） */
+  protectedBuildings?: number | null;
 }
 
 const REASON_TEXT: Readonly<Record<ResultView['reason'], string>> = {
@@ -58,6 +60,9 @@ export function renderResult(parent: HTMLElement, r: Readonly<ResultView>): void
   el('div', 'ui-kicker campaign-kicker', parent, 'RESULT');
   el('h2', 'ui-title campaign-title', parent, title(r));
   el('p', 'briefing-text', parent, REASON_TEXT[r.reason]);
+  if (r.protectedBuildings != null) {
+    el('p', 'briefing-text', parent, `守れた建物 ${r.protectedBuildings}%`);
+  }
   const t = r.teamTotals;
   if (t) {
     const line = el('div', 'pvp-result-teams', parent);

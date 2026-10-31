@@ -12,6 +12,7 @@ import {
   Vector4,
   type BufferGeometry,
   type IUniform,
+  type Texture,
 } from 'three';
 import { OCEAN_CONFIG } from '../data/ocean';
 import type { QualityPreset } from '../data/quality';
@@ -192,6 +193,15 @@ export class Ocean {
   }
 
   /** 描画距離に合わせてメッシュを作り直す */
+  /** マップの水深のテクスチャ（6-4。切り替えで差し替える。古いテクスチャの破棄は呼ぶ側）。今のものを返す */
+  setDepthTexture(texture: Texture, size: number): Texture {
+    const u = this.detailedMesh.material.uniforms;
+    const old = u.uDepthTex?.value as Texture;
+    if (u.uDepthTex) u.uDepthTex.value = texture;
+    if (u.uDepthSize) u.uDepthSize.value = size;
+    return old;
+  }
+
   setDrawDistance(drawDistance: number): void {
     if (drawDistance === this.drawDistance) return;
     this.drawDistance = drawDistance;

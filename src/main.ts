@@ -9,6 +9,7 @@ import { parseFlightOptions, parseFlightOverrides } from './core/flight-options'
 import { CommonKeys } from './core/common-keys';
 import { WORLD_CONFIG } from './data/terrain';
 import { MISSIONS } from './data/missions';
+import { MAPS } from './data/maps';
 import { createControls } from './entities/aircraft';
 import { createCombatInput } from './combat/combat-system';
 import { WeaponInput } from './core/weapon-input';
@@ -28,7 +29,9 @@ import { DemoCamera } from './render/demo-camera';
 import { RenderPipeline } from './render/pipeline';
 import { QualityLink } from './render/quality-link';
 import { createWorldScene } from './render/scene';
-import { getGroundHeight } from './render/terrain-height';
+import { ActiveMap } from './missions/active-map';
+import { applyKaijuToCity } from './combat/city-damage';
+import type { KaijuBodyView, KaijuEffectsView } from './entities/kaiju-display';
 import { DamageOverlay } from './ui/damage-overlay';
 import { AssistControl } from './core/assist-control';
 import { Hud } from './ui/hud';
@@ -57,6 +60,12 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 container.appendChild(renderer.domElement);
 
 const { scene, camera, world } = createWorldScene(renderer, window.innerWidth / window.innerHeight);
+// 今のマップ（6-4）: 地面の高さ・街。切り替えると地形・水深・木・街を作り直す
+const activeMap = new ActiveMap();
+const getGroundHeight = activeMap.ground;
+activeMap.onChange((m) => {
+  world.setMap(m);
+});
 const pipeline = new RenderPipeline(renderer, scene, camera);
 const playerView = new PlayerView(scene);
 const aircraftMesh = playerView.mesh;
@@ -76,6 +85,9 @@ const game = new GameState();
 const screens = new Screens(document.body, game, MISSIONS, save, () => {
   play.abortMission();
 });
+// 開発用: ?map=harbor でフリーフライト（?skipTitle も）のマップを選んでおく（6-4）
+const mapParam = new URLSearchParams(window.location.search).get('map');
+if (mapParam && MAPS[mapParam]) screens.modeSelect.freeMapId = mapParam;
 screens.onAircraftView((model) => {
   hangarStage.setModel(model, screens.hangar.loadout(model.id).missiles);
 });
@@ -124,10 +136,18 @@ const keys = new CommonKeys(input, gamepad, { debug, hud: hudToggle }, back, deb
 // 射撃（2-1）・ロックオンとミサイル（2-2）・敵機（2-3）。判定は固定ステップ、演出は描画フレーム
 const session = new FlightSession({
   groundHeight: getGroundHeight,
+  buildings: () => activeMap.buildings,
   flightOptions: parseFlightOptions(window.location.search),
   start: WORLD_CONFIG.start,
 });
 const play = new GamePlay(session);
+// 6-4: 爆弾・ロケットは建物の屋根・壁でも起爆し、当たった建物を壊す（HP 1 回分）
+session.combat.ordnanceGround = activeMap.ordnanceGround;
+session.combat.onOrdnance((x, y, z, radius) => {
+  activeMap.buildings?.hitSphere(x, y, z, radius, 'player');
+});
+// 協力のレイドの怪獣（写し）。シングルは session の怪獣
+let coopKaiju: { body: KaijuBodyView; fx: KaijuEffectsView | null } | null = null;
 // 怪獣の HUD（6-2）: 体力バー・フェーズ・ロック中の部位・予兆・スタンのノイズ
 const kaijuHud = new KaijuHudLink(new KaijuHud(document.body), hud, session);
 const { aircraft } = session;
@@ -164,6 +184,8 @@ const pvp = new PvpEntry(screens, search, {
     audio.playUi(kind);
   },
   groundHeight: getGroundHeight,
+  obstacles: (a, b) => activeMap.buildings?.collides(a, b) ?? false,
+  protectedBuildings: () => session.protectedBuildings,
   // 5-3: スコアボードは Tab（ターゲット切替のキー）の長押し、他プレイヤーの機銃は敵機と同じ位置付きの音
   scoreKeyDown: () => input.isDown('targetNext'),
   otherGun: (x, y, z) => {
@@ -171,6 +193,7 @@ const pvp = new PvpEntry(screens, search, {
   },
   // 6-2: レイドの協力の怪獣（ホストは本体、クライアントは state の写し）を描画・HUD・音に出す
   kaijuSource: (src) => {
+    coopKaiju = src ? { body: src.body, fx: src.fx } : null;
     views.setKaijuSource(src?.body ?? null, src?.fx ?? null);
     kaijuHud.setSource(src ? src.hud : null);
     audio.setKaijuSource(src?.body ?? null);
@@ -221,6 +244,7 @@ const hudLink = new HudLink(
 hudLink.bindTap(renderer.domElement, () => game.state === 'flight');
 
 const startFlight = createFlightStarter({
+  activeMap,
   screens,
   session,
   play,
@@ -235,6 +259,8 @@ const loop = new GameLoop();
 // 固定ステップ更新は飛行中だけ（ポーズ・メニュー中は GameLoop ごと止める）
 syncLoopWithState(game, loop);
 game.onChange(({ from, to }) => {
+  // 6-4: タイトルの背景（デモカメラ）は島
+  if (to === 'title') activeMap.use('island');
   if (to === 'flight' && from !== 'pause') startFlight(screens.nextMission, from === 'lobby');
   if (to === 'pause') play.runner?.pause();
   else if (to === 'flight') play.runner?.resume();
@@ -290,6 +316,13 @@ loop.onUpdate((dt) => {
   weaponInput.read(input, combatInput, dt);
   if (pvp.flying) pvp.step(controls, combatInput, dt);
   else play.step(controls, combatInput, dt);
+  // 6-4: 街の建物が崩れる時間と、怪獣（歩行・薙ぎ払い・熱線）が壊す建物
+  const buildings = activeMap.buildings;
+  if (buildings) {
+    buildings.step(dt);
+    const k = coopKaiju ?? { body: session.props.kaiju, fx: session.props.kaijuAi };
+    applyKaijuToCity(buildings, k.body, k.fx);
+  }
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
   keys.handle();
   // ミッションが終わり、大きな文字を出し終えたらリザルトへ（固定更新もここで止まる）

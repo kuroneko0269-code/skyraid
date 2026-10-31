@@ -209,12 +209,12 @@ export const ENCOUNTER_MISSION: MissionDef = {
 };
 
 /**
- * レイド（6-2。ソロ）: 怪獣ヴォルガスが島の南東の海から上陸し、島の中心（街の予定地）へ歩く。倒せば成功、最終フェーズの
- * 3 分が切れて街に到達されたら失敗。撃墜されても開始位置へ戻って続けられる（失敗にしない）。ミッション一覧には出さない
+ * レイド（6-2。ソロ）: 怪獣ヴォルガスが港湾都市（6-4）の湾の沖から上陸し、街の中心（タワー群）へ歩く。倒せば成功、
+ * タワー群に着くか最終フェーズの 4.5 分が切れたら失敗。撃墜されても開始位置へ戻って続けられる（失敗にしない）。ミッション一覧には出さない
  */
 export const RAID_MISSION: MissionDef = {
   id: 'raid',
-  mapId: 'island',
+  mapId: RAID_CONFIG.mapId,
   start: RAID_CONFIG.start,
   parTimeSeconds: RAID_CONFIG.parTimeSeconds,
   spawns: [
@@ -223,6 +223,8 @@ export const RAID_MISSION: MissionDef = {
       trigger: { type: 'start' },
       position: RAID_CONFIG.kaijuFrom,
       walkTo: RAID_CONFIG.cityCenter,
+      stopRadius: RAID_CONFIG.reachRadius,
+      arrivalFails: true,
       retreatDamageRatio: 1,
     },
   ],
