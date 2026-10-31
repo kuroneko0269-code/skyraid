@@ -104,10 +104,10 @@ export const DEFENSE_CONFIG = {
    * 戦闘機は出てから retreatSeconds たつと撤退する（どの味方からも retreatClearance より離れているときに消える。
    * 撃墜にならない）。最後の 1 機との空戦で波が長引かないように
    */
-  fighterRetreatSeconds: 90,
+  fighterRetreatSeconds: 60,
   fighterRetreatClearance: 1500,
   /** これを過ぎたら味方の近くでも撤退する */
-  fighterRetreatHardSeconds: 150,
+  fighterRetreatHardSeconds: 100,
   hostFighterPool: 12,
   /** 補給: 波の間に、基地の中心から水平 radius 以内を、地表から maxAgl 以下・速度 maxSpeed 以下で通る */
   supply: { radius: 600, maxAgl: 300, maxSpeed: 150 },

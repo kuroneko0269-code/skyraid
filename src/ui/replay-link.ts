@@ -3,6 +3,7 @@
 // .skyreplay の書き出し・読み込み。再生中の操作は ui/replay-playback.ts
 import type { GameState } from '../core/game-state';
 import { REPLAY_CONFIG } from '../data/replay';
+import type { DefenseRunner } from '../missions/defense/runner';
 import type { GamePlay } from '../missions/game-play';
 import type { SaveStore } from '../progression/save-store';
 import { decodeHeader, decodeReplay, encodeReplay } from '../replay/codec';
@@ -140,9 +141,15 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
   };
 
   /** 本番の記録を終えて自動保存する（短すぎる・記録していなければ何もしない） */
+  // 中断で防衛戦が捨てられても波数を結果に出せるように、直前の防衛戦を覚えておく（7-C）
+  let lastDefense: DefenseRunner | null = null;
+  play.onDefenseChange((d) => {
+    if (d) lastDefense = d;
+  });
   const finishLive = (): void => {
     if (!hub.recorder.active || liveMode === null) return;
-    const data = hub.recorder.finish(replayOutcome(play, liveMode));
+    const data = hub.recorder.finish(replayOutcome(play, liveMode, lastDefense));
+    lastDefense = null;
     liveMode = null;
     if (!data || data.header.steps < REPLAY_CONFIG.minSeconds * 60) {
       lastAuto = Promise.resolve(null);
