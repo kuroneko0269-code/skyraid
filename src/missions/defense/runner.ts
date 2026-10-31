@@ -50,6 +50,8 @@ export interface DefenseOptions {
   readonly rng?: Rng;
   /** 戦闘機が最も近い味方（協力の各プレイヤー）を狙う。ソロは false（自機を狙う） */
   readonly preferAllies?: boolean;
+  /** 戦闘機を同時に出す上限（省略は編隊の数。ソロは DEFENSE_CONFIG.soloFighterPool） */
+  readonly maxFighters?: number;
 }
 
 export interface DefenseEvents extends Record<string, unknown> {
@@ -120,6 +122,7 @@ export class DefenseRunner {
       this.base,
       this.rng,
       options.preferAllies ?? false,
+      options.maxFighters ?? world.enemies.length,
     );
     props.onEnemyBomb = (x, y, z) => {
       this.bombImpact(x, y, z);

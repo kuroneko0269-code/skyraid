@@ -2,7 +2,9 @@
 // ホストなら部屋を直接、クライアントならホストへのメッセージで変える。名簿の変化のお知らせ（切断・再接続・離脱）の文も作る
 import { AIRCRAFT_MODELS } from '../data/aircraft';
 import { ClientRoom } from '../net/client-room';
-import { startBlock } from '../net/lobby-rules';
+import { mapName, startBlock } from '../net/lobby-rules';
+import type { LobbyRoomView } from './lobby-room';
+import { buildJoinUrl } from './pvp-entry';
 import type { PlayerInfo } from '../net/protocol';
 import { HostRoom, type JoinError, type PlayerProfile } from '../net/room';
 import type { Hangar } from '../progression/hangar';
@@ -113,4 +115,17 @@ export function rosterNotices(
     if (id !== localId && !next.some((p) => p.id === id)) out.push(`${before.name} が離脱しました`);
   }
   return out;
+}
+
+/** ロビーの部屋の画面に出す値（pvp-link.ts から分けた） */
+export function roomView(room: HostRoom | ClientRoom): LobbyRoomView {
+  return {
+    code: room.code,
+    joinUrl: buildJoinUrl(window.location.href, room.code),
+    isHost: room.isHost,
+    localId: room.localPlayerId,
+    players: room.players,
+    mapName: mapName(room.settings.mapId),
+    settings: room.settings,
+  };
 }

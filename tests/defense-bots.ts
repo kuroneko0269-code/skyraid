@@ -41,7 +41,7 @@ export function startDefenseSim(o: DefenseSimOptions = {}): DefenseSim {
     groundHeight: map.ground,
     buildings: () => map.buildings,
     flightOptions: { autoLevel: false },
-    enemies: { ...FREE_FLIGHT_ENEMIES, maxCount: DEFENSE_CONFIG.soloFighterPool },
+    enemies: { ...FREE_FLIGHT_ENEMIES, maxCount: DEFENSE_CONFIG.hostFighterPool },
   });
   const model = findAircraftModel(STARTER_AIRCRAFT.id);
   const lv = o.level ?? 0;

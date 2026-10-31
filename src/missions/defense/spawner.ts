@@ -40,6 +40,7 @@ export class DefenseSpawner {
     private readonly base: DefenseBase,
     private readonly rng: Rng,
     private readonly preferAllies: boolean,
+    private readonly maxFighters: number,
   ) {}
 
   /** 波の始まり */
@@ -57,6 +58,7 @@ export class DefenseSpawner {
     const z = center.z + oz * c.spawnDistance + rz * lat;
     const props = this.world.props;
     if (s.kind === 'fighter') {
+      if (this.world.enemies.filter((e) => e.active).length >= this.maxFighters) return -1;
       const y = s.escort ? BOMBER_CONFIG.altitude + 150 : c.fighterAltitude;
       const heading = Math.atan2(center.x - x, -(center.z - z)) / DEG;
       const index = this.world.squadron.deploy(

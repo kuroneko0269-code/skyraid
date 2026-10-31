@@ -11,7 +11,7 @@ import { RaceRunner, type RaceReference, type RaceWorld } from './race/runner';
 import type { CourseDef } from './race/types';
 import { MissionRunner } from './runner';
 import { DefenseRunner } from './defense/runner';
-import type { DefenseDifficulty, DefenseMapDef } from '../data/defense';
+import { DEFENSE_CONFIG, type DefenseDifficulty, type DefenseMapDef } from '../data/defense';
 import type { MissionDef, Pose } from './types';
 
 /** レース中（7-1）は武器を使わない */
@@ -139,7 +139,7 @@ export class GamePlay {
         enemies: s.enemies,
         groundHeight: s.groundAt,
       },
-      { map, difficulty, players: 1, rng: seed },
+      { map, difficulty, players: 1, rng: seed, maxFighters: DEFENSE_CONFIG.soloFighterPool },
     );
     d.bus.on('defense:supply', ({ fraction }) => {
       s.combat.resupplyPart(fraction);

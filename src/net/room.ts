@@ -11,6 +11,7 @@ import { ChatGate, autoTeams, newPlayer, sameUpgrades, teamForNewcomer } from '.
 import { netLoadout } from './loadout';
 import { RoomBase, type PeerState } from './room-base';
 import {
+  type EventMsg,
   NO_RESUME,
   encodeMessage,
   eventMsg,
@@ -140,9 +141,10 @@ export class HostRoom extends RoomBase {
   /** 対戦の終わり（5-3）: 全員に知らせ、ロビーに戻す。準備と「もう一度」は全員やり直し（5-4） */
   /** outcome はレイドの結果（6-2。raid-host.ts の RAID_OUTCOME。PvP は 0） */
   /** n はレイドのクリア時間（6-6。カウントダウンの後からの tick） */
-  endMatch(tick: number, outcome = 0, n = 0): void {
+  /** 対戦の終わり（over）。extra は防衛戦（7-2）の結果（a = 施設のビット、xyz = クリアした波・司令部の HP・最大 HP） */
+  endMatch(tick: number, outcome = 0, n = 0, extra: EventMsg | null = null): void {
     if (!this.started || this.ended) return;
-    this.broadcast(eventMsg('over', 0, outcome, tick, n), 'reliable');
+    this.broadcast(extra ?? eventMsg('over', 0, outcome, tick, n), 'reliable');
     this.started = false;
     for (const p of this.players) {
       p.ready = p.id === 0;

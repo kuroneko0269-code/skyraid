@@ -32,7 +32,14 @@ describe('怪獣の state の大きさと岩', () => {
     const k = raid.state();
     k.beam = { x: 0.6, y: -0.3, z: Math.sqrt(1 - 0.36 - 0.09) };
     k.finalRemaining = 123.4;
-    const msg: StateMsg = { type: 'state', tick: 1, aircraft: [], missiles: [], kaiju: k };
+    const msg: StateMsg = {
+      type: 'state',
+      tick: 1,
+      aircraft: [],
+      missiles: [],
+      kaiju: k,
+      defense: null,
+    };
     const none = encodeMessage({ ...msg, kaiju: null }).byteLength;
     const size = encodeMessage(msg).byteLength - none + 1;
     expect(size).toBeLessThanOrEqual(40);

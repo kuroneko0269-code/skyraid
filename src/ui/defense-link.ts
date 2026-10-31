@@ -40,10 +40,8 @@ export interface DefenseLink {
   begin(): void;
   /** 描画フレームごと */
   render(width: number, height: number): void;
-  /** 協力の飛行が HUD を使う（net 側が値を入れる） */
+  /** 協力の飛行も同じ HUD を使う（net 側が値を入れる） */
   readonly hud: DefenseHud;
-  /** 協力の部屋を作る（モード選択の「協力」。pvp-wiring が差し込む） */
-  openCoop: (mapId: string, difficulty: DefenseDifficulty) => void;
 }
 
 /** 施設が壊れたときの文 */
@@ -62,9 +60,11 @@ export function createDefenseLink(p: DefenseLinkParts): DefenseLink {
   const { game, screens, play, save, audio } = p;
   let selection: DefenseSelection | null = null;
   let pending: { score: DefenseScore; at: number } | null = null;
-  const hud = new DefenseHud(document.body, () => {
+  const hud = new DefenseHud(document.body);
+  const soloSkip = (): void => {
     play.defense?.skip();
-  });
+  };
+  hud.onSkip = soloSkip;
   const hudLink = new DefenseHudLink(hud, p.camera, p.aircraft, play.session.props.cruiseMissiles);
   const result = new DefenseResultScreen(document.body, {
     onRetry: () => game.transition('flight'),
@@ -87,18 +87,18 @@ export function createDefenseLink(p: DefenseLinkParts): DefenseLink {
       return selection;
     },
     hud,
-    openCoop: () => undefined,
     begin() {
+      hud.onSkip = soloSkip;
       const s = selection;
       if (!s) return;
       play.startDefense(findDefenseMap(s.mapId), s.difficulty);
       screens.pause.setInMission(true, '防衛戦を中断');
     },
     render(width, height) {
+      // 協力の防衛戦の HUD は ui/defense-flight.ts が出す（ここはソロだけ。メニューの間は CSS で隠れる）
       const d = play.defense;
-      const flying = game.state === 'flight';
-      hud.setShown(flying && d !== null);
-      if (!d || !flying) return;
+      if (!d || game.state !== 'flight') return;
+      hud.setShown(true);
       state.phase = d.phase;
       state.wave = d.wave;
       state.remaining = d.remaining;
@@ -116,7 +116,7 @@ export function createDefenseLink(p: DefenseLinkParts): DefenseLink {
   screens.inDefense = () => selection !== null;
   screens.onDefense = (kind, mapId, difficulty) => {
     if (kind === 'coop') {
-      link.openCoop(mapId, difficulty);
+      screens.openDefenseCoop(mapId, difficulty === 'hard');
       return;
     }
     selection = { mapId, difficulty };
@@ -134,6 +134,7 @@ export function createDefenseLink(p: DefenseLinkParts): DefenseLink {
 
   play.onDefenseChange((d) => {
     pending = null;
+    if (!d) hud.setShown(false);
     if (d) bind(d);
   });
 
@@ -174,7 +175,7 @@ export function createDefenseLink(p: DefenseLinkParts): DefenseLink {
 
 /** 波・補給・被弾・施設の喪失の大きな文字と音（ソロ・協力の共通。isSelf は補給した人が自分か） */
 export function bindDefenseFeedback(
-  d: Pick<DefenseRunner, 'bus' | 'wave'>,
+  d: Pick<DefenseRunner, 'bus'>,
   hud: DefenseHud,
   audio: Pick<GameAudio, 'playDefense'>,
   isSelf: (id: number) => boolean,

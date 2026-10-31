@@ -90,6 +90,11 @@ export class PvpEntry {
           l.openLobby(undefined, raid);
         });
       },
+      onDefense: (mapId, hard) => {
+        void this.load().then((l) => {
+          l.openLobby(undefined, false, { mapId, hard });
+        });
+      },
       onBack: () => this.link?.back(),
       onPause: () => this.togglePause(),
     });

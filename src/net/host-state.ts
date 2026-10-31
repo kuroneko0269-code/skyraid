@@ -13,6 +13,7 @@ import {
   NO_PART,
   NO_TARGET,
   type AircraftStateMsg,
+  type DefenseStateMsg,
   type KaijuStateMsg,
   type MissileStateMsg,
   type StateMsg,
@@ -36,6 +37,8 @@ export function collectMissiles(
   pool: Pool<Missile>,
   out: MissileStateMsg[],
   spare: MissileStateMsg[],
+  /** netId に使うビット（7-2: 防衛戦は 0x7f。上のビットは敵のミサイル） */
+  netIdMask = 0xff,
 ): void {
   out.length = 0;
   for (let i = 0; i < pool.count; i++) {
@@ -48,7 +51,7 @@ export function collectMissiles(
       velocity: { x: 0, y: 0, z: 0 },
     };
     spare[i] = msg;
-    msg.netId = m.serial & 0xff;
+    msg.netId = m.serial & netIdMask;
     msg.owner = m.owner;
     msg.targetId = m.target instanceof PvpFighter ? m.target.id : NO_TARGET;
     msg.position.x = m.position.x;
@@ -91,10 +94,11 @@ export function stateMsg(
   missiles: MissileStateMsg[],
   kaiju: KaijuStateMsg | null,
   msgs: AircraftStateMsg[],
+  defense: DefenseStateMsg | null = null,
 ): StateMsg {
   msgs.length = 0;
   for (const f of fighters) msgs.push(stateOf(f, f.id === 0 ? 0 : seqOf(f.id)));
-  return { type: 'state', tick, aircraft: msgs, missiles, kaiju };
+  return { type: 'state', tick, aircraft: msgs, missiles, kaiju, defense };
 }
 
 /** ホストの機体を固定ステップの間で補間して描画用の値に入れる */

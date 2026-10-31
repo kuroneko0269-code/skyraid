@@ -60,7 +60,10 @@ export class DefenseHud {
   private bigTimer: ReturnType<typeof setTimeout> | null = null;
   private last = '';
 
-  constructor(parent: HTMLElement, onSkip: () => void) {
+  /** スキップ（ボタン・N キー）。ソロはランナー、協力は全員の投票（ui/defense-flight.ts が差し替える） */
+  onSkip: () => void = () => undefined;
+
+  constructor(parent: HTMLElement) {
     const root = el('div', 'defense-hud', parent);
     root.hidden = true;
     const top = el('div', 'defense-top', root);
@@ -76,7 +79,9 @@ export class DefenseHud {
     this.prepText = el('span', 'defense-prep-text', this.prep);
     this.skip = el('button', 'ui-button defense-skip', this.prep, 'スキップ (N)');
     this.skip.type = 'button';
-    this.skip.addEventListener('click', onSkip);
+    this.skip.addEventListener('click', () => {
+      this.onSkip();
+    });
     this.forecast = el('div', 'defense-forecast', top);
     const s = DEFENSE_CONFIG.supply;
     this.supply = el(
@@ -98,7 +103,7 @@ export class DefenseHud {
       this.markers.push(m);
     }
     document.addEventListener('keydown', (e) => {
-      if (e.code === 'KeyN' && !root.hidden && !this.prep.hidden && !e.repeat) onSkip();
+      if (e.code === 'KeyN' && !root.hidden && !this.prep.hidden && !e.repeat) this.onSkip();
     });
     this.root = root;
   }

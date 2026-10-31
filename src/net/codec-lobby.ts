@@ -8,6 +8,8 @@ const SET_NO_UPGRADES = 2;
 const SET_ROOKIE = 4;
 const SET_RAID = 8;
 const SET_HARD = 16;
+/** 防衛戦（7-2） */
+const SET_DEFENSE = 32;
 export const PL_READY = 1;
 export const PL_AGAIN = 2;
 const PL_AWAY = 4;
@@ -23,7 +25,13 @@ export function readUpgrades(r: ByteReader): UpgradeLevelsMsg {
 export function writeSettings(w: ByteWriter, s: Readonly<GameSettings>): void {
   w.str(s.mapId).u16(s.timeLimitSeconds).u8(s.scoreLimit);
   w.u8(
-    (s.mode === 'team' ? SET_TEAM : s.mode === 'raid' ? SET_RAID : 0) |
+    (s.mode === 'team'
+      ? SET_TEAM
+      : s.mode === 'raid'
+        ? SET_RAID
+        : s.mode === 'defense'
+          ? SET_DEFENSE
+          : 0) |
       (s.noUpgrades ? SET_NO_UPGRADES : 0) |
       (s.rookieGuard ? SET_ROOKIE : 0) |
       (s.hard ? SET_HARD : 0),
@@ -42,7 +50,7 @@ export function readSettings(r: ByteReader): GameSettings {
     mapId,
     timeLimitSeconds,
     scoreLimit,
-    mode: f & SET_TEAM ? 'team' : f & SET_RAID ? 'raid' : 'ffa',
+    mode: f & SET_TEAM ? 'team' : f & SET_RAID ? 'raid' : f & SET_DEFENSE ? 'defense' : 'ffa',
     noUpgrades: (f & SET_NO_UPGRADES) !== 0,
     rookieGuard: (f & SET_ROOKIE) !== 0,
     hard: (f & SET_HARD) !== 0,

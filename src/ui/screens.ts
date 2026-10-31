@@ -25,6 +25,8 @@ import { tutorialStrings, type TutorialStrings } from './tutorial-text';
 
 interface PvpHandlers {
   onSelect: (raid: boolean) => void;
+  /** 防衛戦（7-2）の協力の部屋を作る */
+  onDefense: (mapId: string, hard: boolean) => void;
   onBack: () => void;
   onPause: () => boolean;
 }
@@ -230,6 +232,11 @@ export class Screens {
     if (this.inRace()) return 'race_select';
     if (this.inDefense()) return 'mode_select';
     return this.inTutorial || this.inRaid ? 'mode_select' : 'mission_select';
+  }
+
+  /** 防衛戦の協力（7-2）: マップと難易度を初期設定にして部屋を作る */
+  openDefenseCoop(mapId: string, hard: boolean): void {
+    this.pvp?.onDefense(mapId, hard);
   }
 
   /** PvP（5-1）の入口をつなぐ */

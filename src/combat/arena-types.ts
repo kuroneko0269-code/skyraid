@@ -28,6 +28,8 @@ export interface ArenaEvent {
 export const NOBODY = 255;
 /** 怪獣の部位を表す ID（hit の b・入力の targetId。6-2）: KAIJU_ID_BASE + 部位の番号 */
 export const KAIJU_ID_BASE = 16;
+/** 防衛戦（7-2）の敵を表す ID（hit の b・入力の targetId）: DEFENSE_ID_BASE + 敵の通し番号（戦闘機・爆撃機・巡航ミサイルの順） */
+export const DEFENSE_ID_BASE = 32;
 
 /** respawn の b（出現位置の番号）に足す印: 初心者保護つき（protocol.ts の RESPAWN_ROOKIE と同じ） */
 export const RESPAWN_BOOST = 0x80;

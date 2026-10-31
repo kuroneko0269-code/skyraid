@@ -7,7 +7,6 @@
 import { NET_CONFIG } from '../data/net';
 import { PVP_CONFIG } from '../data/pvp';
 import { PVP_SPAWN_POINTS } from '../data/pvp';
-import { RAID_CONFIG } from '../data/kaiju';
 import { RAID_RULES } from '../data/raid';
 import { RESPAWN_BOOST } from '../combat/pvp-arena';
 import type { BuildingField } from '../combat/buildings';
@@ -23,6 +22,7 @@ import {
   quantizeControls,
   type EventMsg,
   type KaijuStateMsg,
+  type DefenseStateMsg,
   type MissileStateMsg,
   type NetControls,
   type StateMsg,
@@ -34,9 +34,8 @@ import { RemoteInterpolation } from './client-remotes';
 import {
   NetGameEvents,
   RateCounter,
-  spawnOrientation,
   applyCombat,
-  spawnPosition,
+  startPose,
   toNetControls,
   type LocalCombat,
   type NetGame,
@@ -78,6 +77,10 @@ export class ClientGame extends NetGameEvents implements NetGame {
   /** レイドの怪獣（6-2） */
   kaiju: KaijuStateMsg | null = null;
   kaijuVersion = 0;
+  /** 防衛戦（7-2。最新の state） */
+  defenseState: DefenseStateMsg | null = null;
+  defenseVersion = 0;
+  defenseTick = 0;
   readonly prediction = new OwnPrediction();
   private readonly sender = new InputSender();
   private readonly view = new RemoteInterpolation();
@@ -94,7 +97,6 @@ export class ClientGame extends NetGameEvents implements NetGame {
   private lastStateTick = -1;
   /** 自機が最後に復帰した tick（それより前の状態の HP は使わない。復帰の event より遅れて届くことがある） */
   private respawnTick = -1;
-  private readonly raid: boolean;
   /** プレイヤー ID → ロックしている怪獣の部位（6-6。最新の state） */
   private readonly locks = new Map<number, number>();
 
@@ -107,13 +109,13 @@ export class ClientGame extends NetGameEvents implements NetGame {
     this.localId = room.localPlayerId;
     const own = deps.own;
     const raid = room.settings.mode === 'raid';
-    this.raid = raid;
     this.countdown = new PreStart(
       raid ? (deps.briefingSeconds ?? RAID_RULES.briefingSeconds) : 0,
       deps.countdownSeconds ?? PVP_CONFIG.countdownSeconds,
       TICK_HZ,
     );
-    own.respawn(spawnPosition(this.localId, { x: 0, y: 0, z: 0 }, raid), spawnOrientation(raid));
+    const start = startPose(this.localId, room.settings);
+    own.respawn(start, headingQuat(this.spawnOrientation, start.headingDeg));
     this.maxHp = room.players.find((p) => p.id === this.localId)?.maxHp ?? 0;
     this.hp = this.maxHp;
     for (let i = 0; i < HISTORY; i++) this.inputs.push(createNetControls());
@@ -163,8 +165,15 @@ export class ClientGame extends NetGameEvents implements NetGame {
 
   /** ブリーフィングのスキップをホストへ（6-6。全員がそろうとホストが終わらせる） */
   skipBriefing(): void {
-    if (this.countdown.briefingRemaining <= 0) return;
+    // 7-2: 防衛戦は準備（波の間）のスキップにも使う
+    if (this.countdown.briefingRemaining <= 0 && this.room.settings.mode !== 'defense') return;
     this.room.send(eventMsg('skip', this.localId, 0, 0), 'reliable');
+  }
+
+  /** 他機の表示の時刻（ホストの tick。防衛戦の爆撃機・巡航ミサイルを同じ時刻で再現する。7-2） */
+  get viewTick(): number {
+    const t = this.view.renderTime;
+    return t === null ? this.lastStateTick : t * TICK_HZ;
   }
 
   /** 攻撃の対象のプレイヤー（6-6。最新の state。攻撃中だけ） */
@@ -262,12 +271,12 @@ export class ClientGame extends NetGameEvents implements NetGame {
   /** 復帰: 出現位置に置き、ホストがそこから使った seq（afterSeq の次から今まで）の操作で計算し直す */
   private respawn(spawn: number, afterSeq: number): void {
     // レイド（6-6）は自分の開始位置（ホストと同じ式）
-    const s = this.raid
-      ? {
-          ...spawnPosition(this.localId, { x: 0, y: 0, z: 0 }, true),
-          headingDeg: RAID_CONFIG.start.headingDeg,
-        }
-      : (PVP_SPAWN_POINTS[spawn] ?? PVP_SPAWN_POINTS[0]);
+    // レイド（6-6）・防衛戦（7-2）は自分の開始位置
+    const mode = this.room.settings.mode;
+    const s =
+      mode === 'raid' || mode === 'defense'
+        ? startPose(this.localId, this.room.settings)
+        : (PVP_SPAWN_POINTS[spawn] ?? PVP_SPAWN_POINTS[0]);
     if (!s) return;
     const own = this.deps.own;
     own.respawn(s, headingQuat(this.spawnOrientation, s.headingDeg));
@@ -296,6 +305,11 @@ export class ClientGame extends NetGameEvents implements NetGame {
       this.missileVersion++;
       this.kaiju = msg.kaiju;
       this.kaijuVersion++;
+      if (msg.defense) {
+        this.defenseState = msg.defense;
+        this.defenseTick = msg.tick;
+        this.defenseVersion++;
+      }
     }
     for (const a of msg.aircraft) {
       if (newer) this.locks.set(a.id, a.lockPart === NO_PART ? -1 : a.lockPart);

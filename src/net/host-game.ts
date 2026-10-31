@@ -5,21 +5,15 @@
 // 5-4: 開始前のカウントダウン（全機を止め操作を無視）、チーム戦、初心者保護、強化の無効、切断した人の機体を止めて
 // 待ち（away）、戻ったら入力が届き直してから出現位置へ戻す（クライアントはその seq から計算し直す）。
 // 6-2: レイド（全員が同じチーム）は怪獣をホストで動かし（RaidHost）、state に怪獣を入れ、倒すか街に到達されたら終わる。Three.js 非依存
-import type { Vec3 } from '../flight/math';
+import { quatIdentity, type Vec3 } from '../flight/math';
+import { headingQuat } from '../entities/enemy-aircraft';
 import { NET_CONFIG } from '../data/net';
 import { PVP_CONFIG } from '../data/pvp';
 import { FLIGHT_CONFIG } from '../data/flight';
 import { Aircraft, type AircraftControls, type GroundHeightFn } from '../entities/aircraft';
 import { PvpArena, type ArenaEvent } from '../combat/pvp-arena';
 import type { PvpFighter } from '../combat/pvp-fighter';
-import {
-  collectMissiles,
-  fighterSpec,
-  holdAircraft,
-  hostStats,
-  interpolateSample,
-  stateMsg,
-} from './host-state';
+import { fighterSpec, holdAircraft, hostStats, interpolateSample, stateMsg } from './host-state';
 import { PvpMatch } from '../combat/pvp-rules';
 import type { BuildingField } from '../combat/buildings';
 import type { PreStart } from './briefing';
@@ -34,11 +28,14 @@ import {
 import type { Rng } from '../combat/gun';
 import { InputBuffer } from './input-buffer';
 import { RAID_OUTCOME, type RaidHost } from './raid-host';
+import { DEFENSE_OUTCOME, type DefenseHost } from './defense-host';
+import { collectAllMissiles, createDefenseHost, modeTeams, overEvent } from './host-defense';
 import { netLoadout } from './loadout';
 import {
   createNetControls,
   eventMsg,
   type AircraftStateMsg,
+  type DefenseStateMsg,
   type EventMsg,
   type KaijuStateMsg,
   type MissileStateMsg,
@@ -49,10 +46,9 @@ import type { HostRoom } from './room';
 import {
   NetGameEvents,
   RateCounter,
-  spawnOrientation,
   applyCombat,
   createRemoteSample,
-  spawnPosition,
+  startPose,
   toNetControls,
   type LocalCombat,
   type NetGame,
@@ -99,7 +95,14 @@ export class HostGame extends NetGameEvents implements NetGame {
   missiles: MissileStateMsg[] = [];
   /** レイドの怪獣（6-2。PvP は null） */
   readonly raid: RaidHost | null;
+  /** 防衛戦（7-2。ほかは null） */
+  readonly defense: DefenseHost | null;
   missileVersion = 0;
+  /** 防衛戦の状態の版・tick と、表示の時刻（ホストは今の tick。7-2） */
+  defenseVersion = 0;
+  defenseTick = 0;
+  viewTick = 0;
+  kaijuVersion = 0;
   private readonly remotes = new Map<number, HostRemote>();
   private readonly list: RemoteSample[] = [];
   private readonly sent = new RateCounter();
@@ -122,25 +125,17 @@ export class HostGame extends NetGameEvents implements NetGame {
     this.countdown = preStart(raid, deps.briefingSeconds, deps.countdownSeconds);
     this.arena = new PvpArena(this.handleArena, deps.groundHeight ?? null, deps.rng);
     this.arena.obstacles = deps.obstacles ?? null;
-    // レイド（6-2）は全員を同じチームにする（味方の弾は当たらない）
-    const teams =
-      settings.mode === 'team'
-        ? new Map(room.players.map((p) => [p.id, p.team]))
-        : settings.mode === 'raid'
-          ? new Map(room.players.map((p) => [p.id, 0]))
-          : null;
+    const teams = modeTeams(room);
     this.arena.setTeams(teams);
     this.arena.rookieGuard = settings.rookieGuard;
     this.match = new PvpMatch(settings, teams ? (id) => teams.get(id) : null);
     const p = room.hostProfile;
-    const raidSpawn = settings.mode === 'raid';
-    deps.own.respawn(
-      spawnPosition(0, { x: 0, y: 0, z: 0 }, raidSpawn),
-      spawnOrientation(raidSpawn),
-    );
+    const start = startPose(0, settings);
+    deps.own.respawn(start, headingQuat(quatIdentity(), start.headingDeg));
     this.own = this.arena.add(0, deps.own, fighterSpec(this.loadout(p.aircraftId, p.upgrades)));
     for (const pl of room.players) if (pl.id !== 0) this.addRemote(pl.id, pl.aircraftId);
     this.raid = raid ? createRaidHost(this.arena, room, deps, this.sendEvent) : null;
+    this.defense = createDefenseHost(this.arena, room, deps, this.sendEvent);
     room.onPlayerLeave((id) => {
       this.remotes.delete(id);
       this.arena.remove(id);
@@ -173,8 +168,8 @@ export class HostGame extends NetGameEvents implements NetGame {
     const join = this.room.joinProfiles.get(id);
     const loadout = this.loadout(join?.aircraftId ?? aircraftId, join?.upgrades);
     const aircraft = new Aircraft(loadout.flight, {}, FLIGHT_CONFIG, this.deps.groundHeight);
-    const raid = this.room.settings.mode === 'raid';
-    aircraft.respawn(spawnPosition(id, { x: 0, y: 0, z: 0 }, raid), spawnOrientation(raid));
+    const start = startPose(id, this.room.settings);
+    aircraft.respawn(start, headingQuat(quatIdentity(), start.headingDeg));
     this.remotes.set(id, {
       id,
       fighter: this.arena.add(id, aircraft, fighterSpec(loadout)),
@@ -203,14 +198,17 @@ export class HostGame extends NetGameEvents implements NetGame {
 
   /** 全員（名簿の今の人）がスキップを押したらブリーフィングを終わらせ、全員に brief を送る */
   private skip(id: number): void {
+    // 7-2: 防衛戦の準備のスキップ（全員がそろったら次の波）
     const c = this.countdown;
-    if (allSkipped(c, this.room.players, id))
+    if (this.defense && !c.active) this.defense.skip(id, this.room.players);
+    else if (allSkipped(c, this.room.players, id))
       this.sendEvent(eventMsg('brief', 0, 0, 0, c.remainingTicks));
   }
 
   /** できごとを全員へ送り、自分にも渡す（tick は今） */
   private readonly sendEvent = (e: EventMsg): void => {
     e.tick = this.tick;
+    if (e.kind === 'dkill') this.scoreDirty = true;
     this.room.broadcast(e, 'reliable');
     this.emitEvent(e);
   };
@@ -232,6 +230,7 @@ export class HostGame extends NetGameEvents implements NetGame {
   step(controls: Readonly<AircraftControls>, combat: Readonly<LocalCombat>, dt: number): void {
     if (this.over) return;
     this.tick++;
+    this.kaijuVersion = this.defenseVersion = this.defenseTick = this.viewTick = this.tick;
     const arena = this.arena;
     arena.tick = this.tick;
     if (this.countdown.step()) {
@@ -266,20 +265,25 @@ export class HostGame extends NetGameEvents implements NetGame {
     this.playTicks++;
     arena.endTick(dt);
     this.raid?.step(dt);
-    this.collectMissiles();
+    this.defense?.step(dt);
+    collectAllMissiles(this.arena, this.defense, this.missiles, this.missilePool);
+    this.missileVersion++;
     if (this.tick % this.stateEvery === 0) this.broadcastState();
     // レイドは怪獣を倒すか街に到達されたら終わり（撃墜数・制限時間は使わない）
-    const outcome = this.raid?.outcome ?? RAID_OUTCOME.none;
-    const ended = this.raid
-      ? outcome !== RAID_OUTCOME.none
-      : this.match.step(dt, arena.all) !== null;
+    const outcome = this.raid?.outcome ?? this.defense?.outcome ?? RAID_OUTCOME.none;
+    const ended =
+      this.raid || this.defense
+        ? outcome !== RAID_OUTCOME.none && outcome !== DEFENSE_OUTCOME.none
+        : this.match.step(dt, arena.all) !== null;
     if (ended || this.scoreDirty || this.tick % this.scoreEvery === 0) this.sendScore(ended);
     if (ended) {
       this.over = true;
       // 壊れた建物を配り切ってから終わりを知らせる（確実な経路は順番どおり。守れた建物 % が全員で一致する）
       this.sendRuins();
-      this.room.endMatch(this.tick, outcome, this.playTicks);
-      this.emitEvent(eventMsg('over', 0, outcome, this.tick, this.playTicks));
+      // 7-2: 防衛戦は over に結果（施設のビット・クリアした波・司令部の HP）を入れる（state より後に届いても全員で一致する）
+      const over = overEvent(this.defense, outcome, this.tick, this.playTicks);
+      this.room.endMatch(this.tick, outcome, this.playTicks, over);
+      this.emitEvent(over);
     }
   }
 
@@ -288,8 +292,9 @@ export class HostGame extends NetGameEvents implements NetGame {
     return this.raid?.state() ?? null;
   }
 
-  get kaijuVersion(): number {
-    return this.tick;
+  /** 防衛戦の状態（7-2。ホスト自身の表示は戦闘機を全部） */
+  get defenseState(): DefenseStateMsg | null {
+    return this.defense?.state(true) ?? null;
   }
 
   /** 対戦が終わったか */
@@ -313,13 +318,9 @@ export class HostGame extends NetGameEvents implements NetGame {
     // 復帰: その機体に最後に使った入力の seq（クライアントがそこから自機を計算し直す）
     const n = e.kind === 'respawn' ? (this.remotes.get(e.a)?.input.lastApplied ?? 0) : e.n;
     if (e.kind === 'kill') this.scoreDirty = true;
+    if (e.kind === 'flare') this.defense?.flare(e.a);
     this.sendEvent(eventMsg(e.kind, e.a, e.b, this.tick, n, e.x, e.y, e.z));
   };
-
-  private collectMissiles(): void {
-    collectMissiles(this.arena.missiles.missiles, this.missiles, this.missilePool);
-    this.missileVersion++;
-  }
 
   private sendRuins(): void {
     const ruins = takeRuins(this.raid);
@@ -330,7 +331,16 @@ export class HostGame extends NetGameEvents implements NetGame {
     this.sendRuins();
     const seqOf = (id: number): number => this.remotes.get(id)?.input.lastApplied ?? 0;
     const kaiju = this.raid?.state() ?? null;
-    const msg = stateMsg(this.tick, this.arena.all, seqOf, this.missiles, kaiju, this.msgs);
+    const defense = this.defense?.state(false) ?? null;
+    const msg = stateMsg(
+      this.tick,
+      this.arena.all,
+      seqOf,
+      this.missiles,
+      kaiju,
+      this.msgs,
+      defense,
+    );
     this.room.broadcast(msg, 'unordered');
     this.sent.hit(this.now());
   }
@@ -343,15 +353,9 @@ export class HostGame extends NetGameEvents implements NetGame {
     return list;
   }
 
-  /** テスト用: 参加者の機体（ホストの正） */
-  aircraftOf(id: number): Aircraft | null {
-    return this.arena.fighters.get(id)?.aircraft ?? null;
-  }
-
-  /** テスト用: 参加者の機体に最後に使った入力の seq */
-  lastInputSeq(id: number): number {
-    return this.remotes.get(id)?.input.lastApplied ?? 0;
-  }
+  /** テスト用: 参加者の機体（ホストの正）と最後に使った入力の seq */
+  aircraftOf = (id: number): Aircraft | null => this.arena.fighters.get(id)?.aircraft ?? null;
+  lastInputSeq = (id: number): number => this.remotes.get(id)?.input.lastApplied ?? 0;
 
   stats(nowMs: number): NetStats {
     return hostStats(

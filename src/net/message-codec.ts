@@ -3,6 +3,7 @@
 import { PVP_CONFIG } from '../data/pvp';
 import { ByteReader, ByteWriter, readQuat, writeQuat } from './codec';
 import { readKaiju, writeKaiju } from './codec-kaiju';
+import { readDefense, writeDefense } from './codec-defense';
 import { readScore, writeScore } from './codec-score';
 import {
   PL_AGAIN,
@@ -21,6 +22,7 @@ import {
   type NetControls,
 } from './net-controls';
 import {
+  ENEMY_OWNER,
   EVENT_KINDS,
   WELCOME_STATUS,
   type AircraftStateMsg,
@@ -50,6 +52,8 @@ const FLAG_INVULNERABLE = 4;
 const LOCK_SHIFT = 3;
 /** 1 回の ruin に入れる建物の最大数 */
 const RUIN_MAX = 1024;
+/** ミサイルの撃った人のバイトの、防衛戦の敵のミサイルの印（7-2） */
+const ENEMY_BIT = 0x20;
 const MISSILE_STEP = PVP_CONFIG.missilePositionStep;
 function packVelocity(v: number): number {
   return Math.round(Math.min(32767, Math.max(-32767, v * VELOCITY_SCALE)));
@@ -113,7 +117,9 @@ export function encodeMessage(msg: NetMessage): ArrayBuffer {
       w.u8(msg.missiles.length);
       for (const m of msg.missiles) {
         const target = m.targetId === NO_TARGET_ID ? 7 : m.targetId & 3;
-        w.u8(m.netId & 0xff).u8((m.owner & 3) | (target << 2));
+        // 7-2: 防衛戦の敵のミサイルは ENEMY_BIT
+        const owner = m.owner === ENEMY_OWNER ? ENEMY_BIT : m.owner & 3;
+        w.u8(m.netId & 0xff).u8(owner | (target << 2));
         w.i16(packMissilePosition(m.position.x));
         w.i16(packMissilePosition(m.position.y));
         w.i16(packMissilePosition(m.position.z));
@@ -122,6 +128,7 @@ export function encodeMessage(msg: NetMessage): ArrayBuffer {
         w.i16(packVelocity(m.velocity.z));
       }
       writeKaiju(w, msg.kaiju);
+      writeDefense(w, msg.defense);
       break;
     case 'event':
       w.u8(EVENT_KINDS.indexOf(msg.kind)).u8(msg.a).u8(msg.b).u32(msg.tick).u32(msg.n);
@@ -210,7 +217,8 @@ function decodeBody(r: ByteReader): NetMessage | null {
       const m = r.u8();
       const missiles: MissileStateMsg[] = [];
       for (let i = 0; i < m; i++) missiles.push(readMissile(r));
-      return { type: 'state', tick, aircraft, missiles, kaiju: readKaiju(r) };
+      const kaiju = readKaiju(r);
+      return { type: 'state', tick, aircraft, missiles, kaiju, defense: readDefense(r) };
     }
     case TYPE_IDS.event: {
       const kind = EVENT_KINDS[r.u8()];
@@ -252,7 +260,7 @@ function readMissile(r: ByteReader): MissileStateMsg {
   };
   return {
     netId,
-    owner: packed & 3,
+    owner: (packed & ENEMY_BIT) !== 0 ? ENEMY_OWNER : packed & 3,
     targetId: target === 7 ? NO_TARGET_ID : target,
     position,
     velocity,
