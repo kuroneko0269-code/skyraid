@@ -33,7 +33,10 @@ export const COAST_COURSE: CourseDef = {
   goldTimeSeconds: 48,
 };
 
-/** 渓谷スラローム: 島の北の山腹を地表 60〜90m で左右に縫い、山腹を東へ横切って北の海へ下りる中級コース */
+/**
+ * 渓谷スラローム: 島の北の山腹を地表 60〜90m で左右に縫い、山腹を東へ横切って北の海へ下り、
+ * 西の海岸沿いを南へ下りる中級コース（7-2 の事前修正で 18 → 24 個）
+ */
 export const CANYON_COURSE: CourseDef = {
   id: 'canyon',
   name: '渓谷スラローム',
@@ -60,10 +63,17 @@ export const CANYON_COURSE: CourseDef = {
     { x: 880, y: 60, z: -3320, headingDeg: -49, pitchDeg: -1, kind: 'normal' },
     { x: 400, y: 60, z: -3420, headingDeg: -95, pitchDeg: 0, kind: 'boost' },
     { x: -100, y: 60, z: -3220, headingDeg: -126, pitchDeg: 2, kind: 'normal' },
-    { x: -400, y: 98, z: -2870, headingDeg: -139, pitchDeg: 5, kind: 'checkpoint' },
+    { x: -400, y: 98, z: -2870, headingDeg: -136, pitchDeg: 3, kind: 'checkpoint' },
+    // 7-2 の事前修正: 西の海岸沿いを南へ縫う 6 個を足して 24 個に（ボット 34.65 秒）
+    { x: -950, y: 120, z: -2350, headingDeg: -132, pitchDeg: 1, kind: 'normal' },
+    { x: -1550, y: 115, z: -1850, headingDeg: -135, pitchDeg: -1, kind: 'thin' },
+    { x: -2150, y: 100, z: -1150, headingDeg: -152, pitchDeg: 0, kind: 'checkpoint' },
+    { x: -2350, y: 105, z: -350, headingDeg: -164, pitchDeg: 0, kind: 'boost' },
+    { x: -2650, y: 105, z: 550, headingDeg: 171, pitchDeg: 0, kind: 'normal' },
+    { x: -1950, y: 90, z: 2050, headingDeg: 155, pitchDeg: 0, kind: 'checkpoint' },
   ],
-  timeLimitSeconds: 50,
-  goldTimeSeconds: 16.5,
+  timeLimitSeconds: 90,
+  goldTimeSeconds: 29,
 };
 
 /**

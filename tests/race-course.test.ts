@@ -36,7 +36,7 @@ describe('コースの定義', () => {
     const summary = COURSES.map((c) => [c.id, c.mapId, c.weatherId, c.rings.length]);
     expect(summary).toEqual([
       ['coast', 'island', 'day-clear', 12],
-      ['canyon', 'island', 'day-clear', 18],
+      ['canyon', 'island', 'day-clear', 24],
       ['harbor-speed', 'harbor', 'day-clear', 20],
       ['acro', 'island', 'evening-clear', 16],
     ]);
