@@ -2,6 +2,7 @@
 import { findCourse } from '../data/courses';
 import { findDefenseMap } from '../data/defense';
 import { findMap } from '../data/maps';
+import type { DefenseRunner } from '../missions/defense/runner';
 import type { GamePlay } from '../missions/game-play';
 import { missionStrings } from '../ui/mission-text';
 import type { ReplayOutcome, ReplayStart } from './types';
@@ -35,8 +36,15 @@ export function formatClock(seconds: number): string {
   return `${String(Math.floor(t / 60))}:${String(t % 60).padStart(2, '0')}`;
 }
 
-/** 今の飛行の結果（終わっていなければ「中断」。フリーフライトは撃墜数） */
-export function replayOutcome(play: GamePlay, mode: ReplayStart['mode']): ReplayOutcome {
+/**
+ * 今の飛行の結果（終わっていなければ「中断」。フリーフライトは撃墜数）。
+ * lastDefense: ポーズメニューの中断は記録を終える前に防衛戦を捨てるので、直前の防衛戦（波数の表示に使う。7-C）
+ */
+export function replayOutcome(
+  play: GamePlay,
+  mode: ReplayStart['mode'],
+  lastDefense: DefenseRunner | null = null,
+): ReplayOutcome {
   const kills = play.session.combat.kills;
   switch (mode) {
     case 'mission':
@@ -53,7 +61,7 @@ export function replayOutcome(play: GamePlay, mode: ReplayStart['mode']): Replay
       return { label: `${formatRaceTime(r.time)} ${r.rank ?? ''}`.trim(), success: true };
     }
     case 'defense': {
-      const d = play.defense;
+      const d = play.defense ?? lastDefense;
       if (!d) return { label: '中断', success: false };
       if (d.phase === 'cleared') return { label: '防衛成功', success: true };
       if (d.phase === 'failed')
