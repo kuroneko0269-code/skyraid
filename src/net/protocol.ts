@@ -181,6 +181,44 @@ export interface KaijuStateMsg {
 /** KaijuStateMsg.attack: 攻撃していない */
 export const NO_ATTACK = 255;
 
+/** 防衛戦（7-2）の敵の戦闘機 1 機（表示用。位置は 0.5m、姿勢は smallest-three） */
+export interface DefenseFighterMsg {
+  /** 敵機の入れ物の番号（ホストの世界の squadron.enemies の添字） */
+  index: number;
+  /** 機銃を撃っている */
+  firing: boolean;
+  position: Vec3;
+  orientation: Quat;
+}
+
+/**
+ * 防衛戦（7-2）の状態（防衛戦のときだけ state に入る。判定はホストだけ）。
+ * 爆撃機・巡航ミサイルは出現の event（dspawn）から各自が直進を再現し、撃墜・着弾・離脱は event（dkill）。
+ * 戦闘機は 1 回の state に半分ずつ（7.5Hz）入れる（codec-defense.ts）
+ */
+export interface DefenseStateMsg {
+  /** DEFENSE_PHASES の番号 */
+  phase: number;
+  wave: number;
+  remaining: number;
+  /** 準備の残り秒数 */
+  intermission: number;
+  hqHp: number;
+  hqMaxHp: number;
+  /** 施設の状態のビット（FACILITY_KINDS の順） */
+  aliveBits: number;
+  /** 次の波の来る方向（マップの approaches の番号）と数 */
+  approach: number;
+  fighters: number;
+  bombers: number;
+  cruise: number;
+  /** スキップを押した人・この準備で補給した人のビット（1 << ID） */
+  skipMask: number;
+  supplyMask: number;
+  /** この state に入れた戦闘機（全部の半分ずつ） */
+  enemies: DefenseFighterMsg[];
+}
+
 export interface StateMsg {
   type: 'state';
   tick: number;
@@ -188,6 +226,8 @@ export interface StateMsg {
   missiles: MissileStateMsg[];
   /** レイドの怪獣（6-2。レイドでなければ null） */
   kaiju: KaijuStateMsg | null;
+  /** 防衛戦（7-2。防衛戦でなければ null） */
+  defense: DefenseStateMsg | null;
 }
 
 export const EVENT_KINDS = [
@@ -206,6 +246,9 @@ export const EVENT_KINDS = [
   'break',
   'skip',
   'brief',
+  'dspawn',
+  'dkill',
+  'dsupply',
 ] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
@@ -224,7 +267,11 @@ export const KILLER_NONE = 255;
  * 6-6: rock: 怪獣の岩（a = 岩の番号、b = 0 投げた（xyz = 位置、n = 速度を packRockVelocity で詰めたもの）/ 1 落ちた（xyz = 位置））/
  * break: ブレイク（a = 部位の番号、b = 貢献者のビット（1 << ID））/ skip: ブリーフィングのスキップ（クライアント → ホスト）/
  * brief: ブリーフィングの終わり（ホスト → 全員。この後カウントダウン。n = カウントダウンの残り tick）/
- * over の n: クリア時間（カウントダウンの後からの tick）
+ * over の n: クリア時間（カウントダウンの後からの tick）。
+ * 7-2（防衛戦）: dspawn: 爆撃機・巡航ミサイルが出た（a = 種類 DEFENSE_KIND、b = 入れ物の番号、xyz = 出た位置、
+ * n = 爆撃機の目標の施設の番号）/ dkill: 敵が消えた（a = 撃墜した人・DKILL_IMPACT（巡航ミサイルの着弾）・DKILL_ESCAPE（離脱）・
+ * KILLER_NONE（対空砲・墜落）、b = 種類、n = 入れ物の番号、xyz = 位置）/ dsupply: 補給（a = 人、n = 満タンに対する % ）。
+ * skip は防衛戦の準備のスキップにも使う
  */
 export interface EventMsg {
   type: 'event';
@@ -289,6 +336,14 @@ export type NetMessage =
   | LobbyMsg
   | ChatMsg
   | RuinMsg;
+
+/** 防衛戦（7-2）の敵の種類（dspawn・dkill の a / b） */
+export const DEFENSE_KIND = { fighter: 0, bomber: 1, cruise: 2 } as const;
+/** dkill の a: 巡航ミサイルが司令部に着いた / 爆撃機・戦闘機が離脱した */
+export const DKILL_IMPACT = 254;
+export const DKILL_ESCAPE = 253;
+/** MissileStateMsg.owner: 防衛戦の敵のミサイル（7-2） */
+export const ENEMY_OWNER = 4;
 
 /** AircraftStateMsg.lockPart: ロックしていない */
 export const NO_PART = 7;

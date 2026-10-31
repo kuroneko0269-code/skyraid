@@ -134,9 +134,15 @@ export function fillAssist(
  * レーダーの点: 出撃中の敵機と、自機を追っている敵のミサイル。assist（HUD 補助。4-12）なら敵機に
  * 高度差（±altitudeThreshold を超えたら上 / 下）と、後方（尾部から rearConeDeg・range 以内）の印を付ける
  */
-/** 敵機と PvP の他プレイヤー（5-3。シングルでは rivals は空） */
-function radarTargets(ff: FlightSession): readonly CombatTarget[] {
-  return ff.rivals.length === 0 ? ff.enemies : ff.rivals;
+/** PvP の他プレイヤー（5-3。シングルでは空）・敵機・防衛戦（7-2）の爆撃機と巡航ミサイル（出ていなければ active が false） */
+const radarLists = new WeakMap<FlightSession, readonly (readonly CombatTarget[])[]>();
+function radarTargets(ff: FlightSession): readonly (readonly CombatTarget[])[] {
+  let lists = radarLists.get(ff);
+  if (!lists) {
+    lists = [ff.rivals, ff.enemies, ff.props.bombers, ff.props.cruiseMissiles];
+    radarLists.set(ff, lists);
+  }
+  return lists;
 }
 
 export function fillRadar(r: HudRadarFrame, ff: FlightSession, assist = false): void {
@@ -147,27 +153,28 @@ export function fillRadar(r: HudRadarFrame, ff: FlightSession, assist = false): 
   const p = ff.aircraft.state.position;
   const q = ff.aircraft.state.orientation;
   const rearCos = Math.cos(hc.behind.rearConeDeg / DEG);
-  for (const e of radarTargets(ff)) {
-    const c = r.contacts[n];
-    if (!e.active || !c || n >= max) continue;
-    c.x = e.position.x;
-    c.z = e.position.z;
-    // PvP のチーム戦の味方は味方の色（5-4。シングルの敵機は TEAM_ENEMY）
-    c.kind = e.team === TEAM_PLAYER ? 'ally' : 'enemy';
-    const dy = e.position.y - p.y;
-    c.altitude = dy > hc.altitudeThreshold ? 'above' : dy < -hc.altitudeThreshold ? 'below' : '';
-    c.behind = false;
-    if (assist && ff.player.active) {
-      local.x = e.position.x - p.x;
-      local.y = dy;
-      local.z = e.position.z - p.z;
-      const d = Math.hypot(local.x, local.y, local.z);
-      inverseRotateVec3(local, q, local);
-      // 機体ローカルの後ろは +Z
-      c.behind = d <= hc.behind.range && d > 0 && local.z / d >= rearCos;
+  for (const list of radarTargets(ff))
+    for (const e of list) {
+      const c = r.contacts[n];
+      if (!e.active || !c || n >= max) continue;
+      c.x = e.position.x;
+      c.z = e.position.z;
+      // PvP のチーム戦の味方は味方の色（5-4。シングルの敵機は TEAM_ENEMY）
+      c.kind = e.team === TEAM_PLAYER ? 'ally' : 'enemy';
+      const dy = e.position.y - p.y;
+      c.altitude = dy > hc.altitudeThreshold ? 'above' : dy < -hc.altitudeThreshold ? 'below' : '';
+      c.behind = false;
+      if (assist && ff.player.active) {
+        local.x = e.position.x - p.x;
+        local.y = dy;
+        local.z = e.position.z - p.z;
+        const d = Math.hypot(local.x, local.y, local.z);
+        inverseRotateVec3(local, q, local);
+        // 機体ローカルの後ろは +Z
+        c.behind = d <= hc.behind.range && d > 0 && local.z / d >= rearCos;
+      }
+      n++;
     }
-    n++;
-  }
   const pool = ff.combat.missiles.missiles;
   for (let i = 0; i < pool.count && n < max; i++) {
     const m = pool.get(i);

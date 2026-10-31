@@ -10,6 +10,10 @@ import { KaijuAi, type KaijuHitHandler, type KaijuTarget } from '../ai/kaiju-ai'
 import { Kaiju } from '../entities/kaiju';
 import { Transport } from '../entities/transport';
 import type { GroundTargetSpawn, KaijuSpawn, TransportSpawn } from './types';
+import { EnemyBombs } from '../combat/enemy-bombs';
+import { BOMBER_CONFIG, CRUISE_CONFIG, FACILITY_KINDS } from '../data/defense';
+import { Bomber } from '../entities/bomber';
+import { CruiseMissile } from '../entities/cruise-missile';
 
 /** 護衛対象の今の様子（MissionWorld.escort） */
 export interface EscortState {
@@ -33,8 +37,21 @@ export class MissionProps {
   readonly aaa: AntiAirFire;
   /** 対空砲の弾が自機に当たったとき（FlightSession がダメージを与える） */
   onAaaHit: (hit: Readonly<AaaHit>) => void = () => undefined;
-  /** プレイヤーの敵側で、撃てる・ロックできるもの（怪獣の部位・地上目標）。CombatSystem.allTargets に入れる */
+  /** プレイヤーの敵側で、撃てる・ロックできるもの（怪獣の部位・地上目標・爆撃機・巡航ミサイル）。CombatSystem.allTargets に入れる */
   readonly hostileTargets: readonly CombatTarget[];
+  /** 防衛戦（7-2）の基地の施設（FACILITY_KINDS の順。陣営は味方なので hostileTargets に入れない） */
+  readonly baseTargets: GroundTarget[];
+  /** 防衛戦の爆撃機・巡航ミサイル・爆撃機の爆弾 */
+  readonly bombers: Bomber[];
+  readonly cruiseMissiles: CruiseMissile[];
+  readonly enemyBombs: EnemyBombs;
+  /** 爆撃機の爆弾が着いたとき（防衛戦のランナーがダメージを入れる。協力のクライアントは見た目だけ） */
+  onEnemyBomb: (x: number, y: number, z: number) => void = () => undefined;
+  /** 味方の対空砲（7-2。基地の対空砲が敵を撃つ）。当たったら onFriendlyAaaHit */
+  readonly friendlyAaa: AntiAirFire;
+  onFriendlyAaaHit: (hit: Readonly<AaaHit>, target: AaaTarget) => void = () => undefined;
+  /** 壊れた地上目標と基地（描画は 1 つにまとめる） */
+  readonly allGroundTargets: readonly GroundTarget[];
 
   constructor(groundHeight: GroundHeightFn = () => 0, rng: Rng = Math.random) {
     this.transports = Array.from({ length: TRANSPORT_CONFIG.maxCount }, () => new Transport());
@@ -58,7 +75,26 @@ export class MissionProps {
       groundHeight,
       rng,
     );
-    this.hostileTargets = [...this.kaiju.parts, ...this.groundTargets];
+    this.baseTargets = FACILITY_KINDS.map(() => new GroundTarget(groundHeight));
+    this.bombers = Array.from({ length: BOMBER_CONFIG.maxCount }, () => new Bomber());
+    this.cruiseMissiles = Array.from({ length: CRUISE_CONFIG.maxCount }, () => new CruiseMissile());
+    this.enemyBombs = new EnemyBombs(groundHeight, (x, y, z) => {
+      this.onEnemyBomb(x, y, z);
+    });
+    this.friendlyAaa = new AntiAirFire(
+      (hit, target) => {
+        this.onFriendlyAaaHit(hit, target);
+      },
+      groundHeight,
+      rng,
+    );
+    this.hostileTargets = [
+      ...this.kaiju.parts,
+      ...this.groundTargets,
+      ...this.bombers,
+      ...this.cruiseMissiles,
+    ];
+    this.allGroundTargets = [...this.groundTargets, ...this.baseTargets];
   }
 
   /** 全部引っ込める（フリーフライト・ミッションの開始） */
@@ -68,6 +104,11 @@ export class MissionProps {
     this.kaijuAi.reset();
     for (const g of this.groundTargets) g.withdraw();
     this.aaa.reset();
+    for (const g of this.baseTargets) g.withdraw();
+    for (const b of this.bombers) b.withdraw();
+    for (const c of this.cruiseMissiles) c.withdraw();
+    this.enemyBombs.reset();
+    this.friendlyAaa.reset();
   }
 
   /** player は対空砲が狙う自機（撃墜されている間は active が false）、kaijuTargets は怪獣が狙う機体 */
@@ -79,6 +120,7 @@ export class MissionProps {
     for (const t of this.transports) t.step(dt);
     this.kaijuAi.step(kaijuTargets, dt);
     for (const g of this.groundTargets) g.step(dt);
+    for (const g of this.baseTargets) g.step(dt);
     this.aaa.step(this.groundTargets, player, dt);
   }
 

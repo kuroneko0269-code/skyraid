@@ -20,10 +20,13 @@ import { TitleScreen } from './title';
 import { TUTORIAL_MISSION } from '../data/tutorial';
 import { MAPS } from '../data/maps';
 import { RAID_MISSION, raidMission } from '../data/missions-special';
+import type { DefenseDifficulty } from '../data/defense';
 import { tutorialStrings, type TutorialStrings } from './tutorial-text';
 
 interface PvpHandlers {
   onSelect: (raid: boolean) => void;
+  /** 防衛戦（7-2）の協力の部屋を作る */
+  onDefense: (mapId: string, hard: boolean) => void;
   onBack: () => void;
   onPause: () => boolean;
 }
@@ -61,6 +64,10 @@ export class Screens {
   private readonly viewListeners: ((model: AircraftModel) => void)[] = [];
   /** リングレース（7-1）を飛んでいる（終えたばかり）か。リザルト・ポーズの「中断」の戻り先をコース一覧にする（main が差し込む） */
   inRace: () => boolean = () => false;
+  /** 防衛戦（7-2。ui/defense-link.ts が差し込む）: 飛んでいるか・モード選択の「防衛戦」の選択 */
+  inDefense: () => boolean = () => false;
+  onDefense: (kind: 'solo' | 'coop', mapId: string, difficulty: DefenseDifficulty) => void = () =>
+    undefined;
   /** PvP（5-1）: モード選択の「PvP」（raid: 協力レイド（6-2）の部屋）・ロビーの Esc・飛行中の ⏸（main が差し込む） */
   private pvp: PvpHandlers | null = null;
 
@@ -116,7 +123,11 @@ export class Screens {
         else if (mode === 'race') game.transition('race_select');
         else if (mode === 'hangar') this.openHangar(game, 'mode_select');
         else if (mode === 'pvp') this.pvp?.onSelect(false);
+        else if (mode === 'defense') this.modeSelect.showDefensePrompt();
         else this.modeSelect.showRaidPrompt();
+      },
+      onDefense: (kind, mapId, difficulty) => {
+        this.onDefense(kind, mapId, difficulty);
       },
       onRaid: (kind, difficulty) => {
         if (kind === 'coop') {
@@ -219,7 +230,13 @@ export class Screens {
   /** リザルト・ポーズの「中断」の戻り先: レースはコース一覧、チュートリアル・レイドはモード選択、ほかはミッション一覧 */
   private listState(): ScreenState {
     if (this.inRace()) return 'race_select';
+    if (this.inDefense()) return 'mode_select';
     return this.inTutorial || this.inRaid ? 'mode_select' : 'mission_select';
+  }
+
+  /** 防衛戦の協力（7-2）: マップと難易度を初期設定にして部屋を作る */
+  openDefenseCoop(mapId: string, hard: boolean): void {
+    this.pvp?.onDefense(mapId, hard);
   }
 
   /** PvP（5-1）の入口をつなぐ */
@@ -293,7 +310,7 @@ export class Screens {
     this.missionSelect.setShown(state === 'mission_select');
     this.briefing.setShown(state === 'briefing');
     this.pause.setShown(state === 'pause');
-    this.result.setShown(state === 'result' && !this.inRace());
+    this.result.setShown(state === 'result' && !this.inRace() && !this.inDefense());
     this.hangarScreen.setShown(state === 'hangar');
   }
 }

@@ -1,6 +1,7 @@
 // PvP の飛行の共通部分（5-1）: 開始位置、他機の表示用の値、通信の計測値。
 // ホストは host-game.ts、クライアントは client-game.ts。Three.js 非依存
 import { RAID_CONFIG } from '../data/kaiju';
+import { findDefenseMap } from '../data/defense';
 import { NET_CONFIG } from '../data/net';
 import { WORLD_CONFIG } from '../data/terrain';
 import type { AircraftControls } from '../entities/aircraft';
@@ -9,6 +10,7 @@ import type { Quat, Vec3 } from '../flight/math';
 import {
   NO_TARGET,
   type EventMsg,
+  type DefenseStateMsg,
   type KaijuStateMsg,
   type MissileStateMsg,
   type NetControls,
@@ -25,6 +27,33 @@ export function spawnPosition(id: number, out: Vec3, raid = false): Vec3 {
   out.y = raid ? RAID_CONFIG.start.y : NET_CONFIG.spawn.altitude;
   out.z = s.z;
   return out;
+}
+
+/** 開始位置と機首の方位（度） */
+export interface StartPose {
+  x: number;
+  y: number;
+  z: number;
+  headingDeg: number;
+}
+
+/**
+ * ID ごとの開始位置（復帰もここ）。PvP は島の沖合、レイドは街の北（spawnPosition と同じ）、
+ * 防衛戦（7-2）はマップの開始位置から機首の横へ ID 順に一列（間隔は PvP と同じ）
+ */
+export function startPose(id: number, settings: { mode: string; mapId: string }): StartPose {
+  if (settings.mode === 'defense') {
+    const s = findDefenseMap(settings.mapId).start;
+    const h = (s.headingDeg * Math.PI) / 180;
+    const k = (id - (NET_CONFIG.maxPlayers - 1) / 2) * NET_CONFIG.spawn.spacing;
+    return { x: s.x + Math.cos(h) * k, y: s.y, z: s.z + Math.sin(h) * k, headingDeg: s.headingDeg };
+  }
+  const raid = settings.mode === 'raid';
+  const p = spawnPosition(id, { x: 0, y: 0, z: 0 }, raid);
+  return {
+    ...p,
+    headingDeg: raid ? RAID_CONFIG.start.headingDeg : NET_CONFIG.spawn.headingDeg,
+  };
 }
 
 /** 開始の姿勢: 機首は海側（+Z。島の外向き） */
@@ -174,6 +203,13 @@ export interface NetGame extends NetGameEvents {
   /** レイドの怪獣の状態（6-2。ホストの最新。kaijuVersion が変わったら新しい。PvP は null） */
   readonly kaiju: KaijuStateMsg | null;
   readonly kaijuVersion: number;
+  /** 防衛戦の状態（7-2。最新。defenseVersion が変わったら新しい。防衛戦でなければ null） */
+  readonly defenseState: DefenseStateMsg | null;
+  readonly defenseVersion: number;
+  /** defenseState の state の tick */
+  readonly defenseTick: number;
+  /** 他機を表示している時刻（ホストの tick。ホストは今） */
+  readonly viewTick: number;
 }
 
 /** 自機の操作と飛行の設定 → 通信の操作 */

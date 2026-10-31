@@ -204,6 +204,19 @@ export class CombatSystem {
     this.targeting.reset();
   }
 
+  /** 防衛戦の補給（7-2）: fraction が 1 なら resupply と同じ。1 未満なら各武装を満タンの fraction（切り上げ）だけ足す */
+  resupplyPart(fraction: number): void {
+    if (fraction >= 1) {
+      this.resupply();
+      return;
+    }
+    this.missileAmmo.refillPart(fraction);
+    this.flares.magazine.refillPart(fraction);
+    this.rockets.refillPart(fraction);
+    this.bombs.magazine.refillPart(fraction);
+    this.gun.heat.reset();
+  }
+
   /** 選択中の対象の予測照準点を更新する（step の中で呼ぶ。PvP の表示は索敵の後に呼ぶ。5-3） */
   updateLead(shooter: Shooter): void {
     const t = this.targeting.selected;

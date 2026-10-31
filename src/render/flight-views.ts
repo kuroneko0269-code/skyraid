@@ -15,6 +15,8 @@ import { GroundTargetView } from './ground-target-view';
 import { MissileView } from './missile-view';
 import { MissionPropsView } from './mission-props-view';
 import { OrdnanceView } from './ordnance-view';
+import { DefenseView } from './defense-view';
+import { DEFENSE_VIEW } from '../data/defense';
 
 export class FlightViews {
   private readonly combat: CombatView;
@@ -24,6 +26,7 @@ export class FlightViews {
   private readonly props: MissionPropsView;
   private readonly groundTargets: GroundTargetView;
   private readonly ordnance: OrdnanceView;
+  private readonly defense: DefenseView;
   private readonly fx: FxLink;
   /** フォトモード（7-A）の表示の切替: 敵・怪獣（敵機・ドローン・輸送機・怪獣・地上目標）とエフェクト（弾・ミサイル・爆発・煙） */
   readonly photoGroups: { readonly enemies: Object3D[]; readonly effects: Object3D[] } = {
@@ -57,14 +60,16 @@ export class FlightViews {
       () =>
         new EnemyView(scene, ff.enemies, ff.squadron.bulletPools, [
           { pool: ff.props.aaa.shells, color: AAA_CONFIG.tracerColor },
+          { pool: ff.props.friendlyAaa.shells, color: DEFENSE_VIEW.friendlyTracer },
         ]),
     );
     this.props = added(g.enemies, () => new MissionPropsView(scene, ff.props));
     this.groundTargets = added(
       g.enemies,
-      () => new GroundTargetView(scene, ff.props.groundTargets),
+      () => new GroundTargetView(scene, ff.props.allGroundTargets),
     );
     this.ordnance = added(g.effects, () => new OrdnanceView(scene, ff.combat));
+    this.defense = added(g.enemies, () => new DefenseView(scene, ff.props));
     this.fx = added(g.effects, () => new FxLink(scene, events, ff.enemies, camera, shake));
   }
 
@@ -77,6 +82,7 @@ export class FlightViews {
     this.props.update(alpha);
     this.groundTargets.update(frameSeconds);
     this.ordnance.update(alpha);
+    this.defense.update(alpha);
     if (frameSeconds > 0) this.events.frame();
     this.fx.update(frameSeconds);
   }
@@ -85,6 +91,7 @@ export class FlightViews {
   setAircraftDetail(detail: AircraftDetail): void {
     this.enemies.setDetail(detail);
     this.props.setDetail(detail);
+    this.defense.setDetail(detail);
   }
 
   /** 怪獣の表示元を差し替える（協力のクライアント。6-2。null でミッションの怪獣） */

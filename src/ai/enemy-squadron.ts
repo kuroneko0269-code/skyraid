@@ -69,6 +69,21 @@ export class EnemySquadron {
     this.bulletPools = this.units.map((u) => u.gun.bullets);
   }
 
+  /** enemies[index] が機銃の引き金を引いているか（7-2: 協力の防衛戦の表示に送る） */
+  isFiring(index: number): boolean {
+    const u = this.units[index];
+    return u !== undefined && u.enemy.active && u.command.trigger;
+  }
+
+  /**
+   * 表示だけの機銃（7-2: 協力の防衛戦の表示側。ホストの判定を写した敵機から、当たらない見た目の弾を出す）。
+   * 敵機の位置・姿勢は呼び出し側が入れてある
+   */
+  stepMirrorGun(index: number, firing: boolean, dt: number): void {
+    const u = this.units[index];
+    if (u) u.gun.step(firing && u.enemy.active, u.enemy.aircraft.state, [], dt);
+  }
+
   /** enemies[index] の機銃が撃った弾の数（音の演出。4-4） */
   gunShotCount(index: number): number {
     return this.units[index]?.gun.shotCount ?? 0;

@@ -12,7 +12,7 @@ import type { CombatInput } from '../combat/combat-input';
 import type { AircraftControls, GroundHeightFn } from '../entities/aircraft';
 import type { FlightSession } from '../missions/flight-session';
 import { ClientRoom } from '../net/client-room';
-import { allAgain, initialSettings, mapName } from '../net/lobby-rules';
+import { allAgain, initialSettings, type DefensePreset } from '../net/lobby-rules';
 import { openLocalTransport } from '../net/local-transport';
 import { openPeerTransport } from '../net/peerjs-transport';
 import { HostRoom, JoinFailure, normalizeRoomCode } from '../net/room';
@@ -24,14 +24,19 @@ import type { PlayerView } from '../render/player-view';
 import { RemoteView, playerShape } from '../render/remote-view';
 import { findAircraftModel } from '../data/aircraft';
 import { LobbyScreen } from './lobby';
-import { JOIN_ERRORS, lobbyActions, rosterNotices, type RosterSnapshot } from './pvp-lobby-actions';
+import {
+  JOIN_ERRORS,
+  lobbyActions,
+  roomView,
+  rosterNotices,
+  type RosterSnapshot,
+} from './pvp-lobby-actions';
 import { PvpBoard, onRadarTap } from './pvp-board';
 import { PvpFlight, type KaijuSource, type PvpFlightDeps, type PvpSound } from './pvp-flight';
 import { PvpHud } from './pvp-hud';
 import { PvpOverlay } from './pvp-overlay';
 import { RaidBriefing } from './raid-briefing';
 import { pilotProfile, roomLoadout, rosterAircraftId } from './pvp-profile';
-import { buildJoinUrl } from './pvp-entry';
 import { QUICK_PHRASES } from '../data/pvp';
 
 export interface PvpDeps {
@@ -67,6 +72,9 @@ export interface PvpDeps {
   /** 協力レイドのブリーフィングを前に見たか・見た印を付ける（6-6） */
   readonly briefingSeen: () => boolean;
   readonly markBriefingSeen: () => void;
+  /** 防衛戦（7-2）の HUD と音 */
+  readonly defenseHud: PvpFlightDeps['defenseHud'];
+  readonly playDefense: PvpFlightDeps['playDefense'];
 }
 
 /** 部屋の tick（ping・無通信の検知・再接続）の間隔（ms） */
@@ -87,8 +95,8 @@ export class PvpLink {
   private attempt = 0;
   /** 直前の名簿（切断・再接続・離脱のお知らせ） */
   private roster: RosterSnapshot = new Map();
-  /** モード選択の「レイド」の「協力」から開いた（部屋を作るときレイドの設定にする。6-2） */
-  private raidLobby = false;
+  /** 部屋を作るときの設定（モード選択の「レイド」（6-2）・「防衛戦」（7-2）の「協力」から開いたとき。ほかは既定） */
+  private preset: GameSettings | undefined;
 
   constructor(private readonly deps: PvpDeps) {
     this.open = deps.transport === 'local' ? openLocalTransport : openPeerTransport;
@@ -143,8 +151,8 @@ export class PvpLink {
   }
 
   /** ロビーを開く。code があればすぐ参加する（?room）。raid はレイドの協力（6-2）として部屋を作る */
-  openLobby(code?: string, raid = false): void {
-    this.raidLobby = raid;
+  openLobby(code?: string, raid = false, defense: DefensePreset = null): void {
+    this.preset = initialSettings(raid, defense);
     const game = this.deps.game;
     if (game.state !== 'mode_select') game.transition('mode_select');
     game.transition('lobby');
@@ -171,8 +179,6 @@ export class PvpLink {
     return pilotProfile(this.deps.hangar, this.deps.pilotName, aircraftId);
   }
 
-  /** PvP の飛行の装備（ホストが強化を無効にしていれば Lv 0。5-4） */
-  // 部屋のマップ（6-4。ロビーのホスト設定。レイドは港湾都市）
   /** ロビーのホスト設定（マップ・天候。7-5 で mapId から置き換え）。部屋がなければ null */
   get settings(): Readonly<GameSettings> | null {
     return this.room?.settings ?? null;
@@ -186,7 +192,7 @@ export class PvpLink {
     const attempt = ++this.attempt;
     this.lobby.showConnecting('部屋を作っています…');
     try {
-      const settings = initialSettings(this.raidLobby);
+      const settings = this.preset;
       const room = await HostRoom.create({ open: this.open, profile: this.profile(), settings });
       if (attempt !== this.attempt) {
         room.leave();
@@ -265,15 +271,7 @@ export class PvpLink {
       this.lobby.updateAgain(room.players, room.localPlayerId);
       if (!allAgain(room.players)) return;
     }
-    this.lobby.showRoom({
-      code: room.code,
-      joinUrl: buildJoinUrl(window.location.href, room.code),
-      isHost: room.isHost,
-      localId: room.localPlayerId,
-      players: room.players,
-      mapName: mapName(room.settings.mapId),
-      settings: room.settings,
-    });
+    this.lobby.showRoom(roomView(room));
   }
 
   /**
@@ -310,7 +308,9 @@ export class PvpLink {
     const room = this.room;
     const result = f.result();
     // 6-6: レイドの報酬（全員同じ額）をセーブに足す
-    if (result.raid) this.deps.addCredits(result.raid.credits);
+    // 7-2: 防衛戦の報酬も（全員同じ額）
+    const credits = (result.raid?.credits ?? 0) + (result.defense?.credits ?? 0);
+    if (result.raid || result.defense) this.deps.addCredits(credits);
     if (room) this.lobby.showResult(result, room.players);
   }
 

@@ -8,7 +8,7 @@ import { segmentSphere } from './collision';
 import type { Bullet, GroundHeightFn, Rng } from './gun';
 import { leadPoint } from './lead';
 import { Pool } from './pool';
-import type { CombatTarget } from './target';
+import { TEAM_ENEMY, TEAM_PLAYER, teamOf, type CombatTarget } from './target';
 
 export type AaaConfig = typeof AAA_CONFIG;
 
@@ -20,6 +20,14 @@ export interface AaaHit {
   x: number;
   y: number;
   z: number;
+}
+
+/** 1 門ごとの、狙っている相手の加速度の見積もり（7-2: 味方の対空砲は門ごとに相手が違う） */
+interface SiteTrack {
+  target: AaaTarget | null;
+  readonly accel: Vec3;
+  readonly prev: Vec3;
+  hasPrev: boolean;
 }
 
 /** 砲口の高さ（足元から。砲身の根元） */
@@ -39,8 +47,11 @@ export class AntiAirFire {
   private readonly prevVelocity = vec3();
   private hasPrevVelocity = false;
 
+  /** 味方の対空砲（7-2）: 門ごとの相手と加速度 */
+  private readonly tracks = new Map<GroundTarget, SiteTrack>();
+
   constructor(
-    private readonly onHit: (hit: Readonly<AaaHit>) => void = () => undefined,
+    private readonly onHit: (hit: Readonly<AaaHit>, target: AaaTarget) => void = () => undefined,
     private readonly groundHeight: GroundHeightFn | null = null,
     private readonly rng: Rng = Math.random,
     readonly config: AaaConfig = AAA_CONFIG,
@@ -53,34 +64,87 @@ export class AntiAirFire {
     this.warning = false;
     this.hasPrevVelocity = false;
     this.targetAccel.x = this.targetAccel.y = this.targetAccel.z = 0;
+    this.tracks.clear();
   }
 
   /** 固定ステップ 1 回分。飛んでいる弾を進めてから、各対空砲の照準・射撃を進める */
   step(sites: readonly GroundTarget[], target: AaaTarget | null, dt: number): void {
     const pool = this.shells;
+    const targets = target ? [target] : [];
     for (let i = pool.count - 1; i >= 0; i--) {
-      if (this.advance(pool.get(i), target, dt)) pool.release(i);
+      if (this.advance(pool.get(i), targets, dt)) pool.release(i);
     }
-    this.estimateAccel(target, dt);
+    this.hasPrevVelocity = this.estimateAccel(
+      target,
+      this.targetAccel,
+      this.prevVelocity,
+      this.hasPrevVelocity,
+      dt,
+    );
     let warning = false;
     for (const s of sites) {
-      if (s.type !== 'aaa') continue;
-      if (this.stepSite(s, target, dt)) warning = true;
+      // 味方の対空砲（7-2）は stepFriendly で動かす
+      if (s.type !== 'aaa' || teamOf(s) !== TEAM_ENEMY) continue;
+      if (this.stepSite(s, target, this.targetAccel, dt)) warning = true;
     }
     this.warning = warning;
   }
 
-  /** 自機の加速度 = 速度の変化 ÷ dt を時定数 accelSmoothing でなめらかにし、accelLimit で頭打ちにする */
-  private estimateAccel(target: AaaTarget | null, dt: number): void {
-    const a = this.targetAccel;
+  /**
+   * 味方の対空砲（7-2。陣営が TEAM_PLAYER の対空砲）: 門ごとに、射程内で最も近い敵を同じ方法（予測射撃・命中率）で撃つ。
+   * 弾は targets のどれかに当たれば onHit（当たった相手付き）
+   */
+  stepFriendly(sites: readonly GroundTarget[], targets: readonly AaaTarget[], dt: number): void {
+    const pool = this.shells;
+    for (let i = pool.count - 1; i >= 0; i--) {
+      if (this.advance(pool.get(i), targets, dt)) pool.release(i);
+    }
+    for (const s of sites) {
+      if (s.type !== 'aaa' || teamOf(s) !== TEAM_PLAYER) continue;
+      let track = this.tracks.get(s);
+      if (!track) {
+        track = { target: null, accel: vec3(), prev: vec3(), hasPrev: false };
+        this.tracks.set(s, track);
+      }
+      const m = this.muzzleOf(s);
+      let best: AaaTarget | null = null;
+      let bestD = Infinity;
+      for (const t of targets) {
+        if (!t.active || !this.inRange(m, t)) continue;
+        const p = t.position;
+        const d = Math.hypot(p.x - m.x, p.y - m.y, p.z - m.z);
+        if (d < bestD) {
+          bestD = d;
+          best = t;
+        }
+      }
+      if (best !== track.target) {
+        track.target = best;
+        track.hasPrev = false;
+        track.accel.x = track.accel.y = track.accel.z = 0;
+      }
+      track.hasPrev = this.estimateAccel(best, track.accel, track.prev, track.hasPrev, dt);
+      this.stepSite(s, best, track.accel, dt);
+    }
+  }
+
+  /**
+   * 相手の加速度 = 速度の変化 ÷ dt を時定数 accelSmoothing でなめらかにし、accelLimit で頭打ちにする。
+   * 次のステップの hasPrev を返す
+   */
+  private estimateAccel(
+    target: AaaTarget | null,
+    a: Vec3,
+    p: Vec3,
+    hasPrev: boolean,
+    dt: number,
+  ): boolean {
     if (!target?.active) {
-      this.hasPrevVelocity = false;
       a.x = a.y = a.z = 0;
-      return;
+      return false;
     }
     const v = target.velocity;
-    const p = this.prevVelocity;
-    if (this.hasPrevVelocity && dt > 0) {
+    if (hasPrev && dt > 0) {
       const k = Math.min(1, dt / this.config.accelSmoothing);
       a.x += ((v.x - p.x) / dt - a.x) * k;
       a.y += ((v.y - p.y) / dt - a.y) * k;
@@ -96,11 +160,16 @@ export class AntiAirFire {
     p.x = v.x;
     p.y = v.y;
     p.z = v.z;
-    this.hasPrevVelocity = true;
+    return true;
   }
 
   /** 1 門分。警告を出す状態なら true */
-  private stepSite(site: GroundTarget, target: AaaTarget | null, dt: number): boolean {
+  private stepSite(
+    site: GroundTarget,
+    target: AaaTarget | null,
+    accel: Readonly<Vec3>,
+    dt: number,
+  ): boolean {
     const g = site.gun;
     const c = this.config;
     const m = this.muzzleOf(site);
@@ -122,7 +191,7 @@ export class AntiAirFire {
       c.shellSpeed,
       target.position,
       target.velocity,
-      this.targetAccel,
+      accel,
       c.gravity,
     );
     const a = t >= 0 ? this.aim : target.position;
@@ -214,8 +283,8 @@ export class AntiAirFire {
     this.shotCount++;
   }
 
-  /** 弾を dt 秒進める。自機・地面に当たる・射程を超えたら true */
-  private advance(b: Bullet, target: AaaTarget | null, dt: number): boolean {
+  /** 弾を dt 秒進める。相手（自機・味方の対空砲は敵）・地面に当たる・射程を超えたら true */
+  private advance(b: Bullet, targets: readonly AaaTarget[], dt: number): boolean {
     const c = this.config;
     b.px = b.x;
     b.py = b.y;
@@ -225,7 +294,8 @@ export class AntiAirFire {
     b.y += b.vy * dt;
     b.z += b.vz * dt;
     b.traveled += Math.hypot(b.vx, b.vy, b.vz) * dt;
-    if (target?.active) {
+    for (const target of targets) {
+      if (!target.active) continue;
       const p = target.position;
       const s = segmentSphere(b.px, b.py, b.pz, b.x, b.y, b.z, p.x, p.y, p.z, target.hitRadius);
       if (s >= 0) {
@@ -233,7 +303,7 @@ export class AntiAirFire {
         h.x = b.px + (b.x - b.px) * s;
         h.y = b.py + (b.y - b.py) * s;
         h.z = b.pz + (b.z - b.pz) * s;
-        this.onHit(h);
+        this.onHit(h, target);
         return true;
       }
     }

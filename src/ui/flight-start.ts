@@ -26,6 +26,8 @@ export interface FlightStartParts {
   readonly pvp: PvpEntry;
   /** リングレース（7-1。ui/race-link.ts）: 飛ぶコース（null はレースでない）と、レースを始める処理 */
   readonly race: { readonly course: CourseDef | null; begin(): void };
+  /** 防衛戦（7-2。ui/defense-link.ts）: 選んだマップ（null は防衛戦でない）と、防衛戦を始める処理 */
+  readonly defense: { readonly selection: { readonly mapId: string } | null; begin(): void };
 }
 
 /**
@@ -45,13 +47,16 @@ export function createFlightStarter(
     // 6-4: マップ（PvP はロビーのホスト設定、ミッションは定義、フリーフライトはモード選択で選んだもの）。
     // 違うマップなら地形・街を捨てて作り直す。同じなら建物を建て直すだけ
     const course = net ? null : p.race.course;
+    const defense = net ? null : p.defense.selection;
     const mapId = net
       ? p.pvp.mapId
       : course
         ? course.mapId
-        : def
-          ? def.mapId
-          : p.screens.modeSelect.freeMapId;
+        : defense
+          ? defense.mapId
+          : def
+            ? def.mapId
+            : p.screens.modeSelect.freeMapId;
     p.activeMap.use(mapId);
     const map = findMap(mapId);
     p.session.setFreeStart(map.id === ISLAND_MAP.id ? WORLD_CONFIG.start : map.start);
@@ -59,6 +64,7 @@ export function createFlightStarter(
       p.play.startEmpty({ ...WORLD_CONFIG.start, headingDeg: 0 });
       p.pvp.beginFlight();
     } else if (course) p.race.begin();
+    else if (defense) p.defense.begin();
     else if (def) p.play.startMission(def);
     else p.play.startFree();
     p.views.reset();

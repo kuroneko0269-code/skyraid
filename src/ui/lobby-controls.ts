@@ -33,8 +33,9 @@ export const MODE_LABELS: Readonly<Record<PvpMode, string>> = {
   ffa: '個人戦',
   team: 'チーム戦（2 対 2）',
   raid: 'レイド（協力・怪獣）',
+  defense: '防衛戦（協力・基地）',
 };
 
 export function parseMode(v: string): PvpMode {
-  return v === 'team' || v === 'raid' ? v : 'ffa';
+  return v === 'team' || v === 'raid' || v === 'defense' ? v : 'ffa';
 }

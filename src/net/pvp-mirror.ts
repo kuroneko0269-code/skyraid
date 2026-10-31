@@ -14,7 +14,7 @@ import { PVP_CONFIG } from '../data/pvp';
 import type { Bullet } from '../combat/gun';
 import type { Pool } from '../combat/pool';
 import { TEAM_ENEMY, TEAM_PLAYER, type CombatTarget } from '../combat/target';
-import { KAIJU_ID_BASE, NOBODY, RESPAWN_BOOST } from '../combat/pvp-arena';
+import { DEFENSE_ID_BASE, KAIJU_ID_BASE, NOBODY, RESPAWN_BOOST } from '../combat/pvp-arena';
 import type { Vec3 } from '../flight/math';
 import type { FlightSession } from '../missions/flight-session';
 import { RivalProxy } from './rival-proxy';
@@ -60,6 +60,9 @@ export class PvpMirror {
   /** 索敵の対象（チーム戦の味方を除く。レイドは怪獣の部位も） */
   private readonly targetList: CombatTarget[] = [];
   private kaijuTargets: readonly KaijuLockable[] = [];
+  /** 防衛戦（7-2）の敵（索敵の対象。入力の targetId は DEFENSE_ID_BASE + 添字） */
+  private defenseTargets: readonly CombatTarget[] = [];
+  private readonly defenseIndex = new Map<CombatTarget, number>();
   /** 自機のスタンの残り秒数（6-2。操作を使わない・HUD のノイズ） */
   ownStun = 0;
   private readonly baseMaxHp: number;
@@ -81,7 +84,7 @@ export class PvpMirror {
   }
 
   /** 名簿に合わせて他プレイヤーを作る・消す。team はチーム戦のときの自分のチーム（個人戦は undefined） */
-  syncRoster(players: readonly PlayerInfo[], team?: number): void {
+  syncRoster(players: readonly PlayerInfo[], team?: number, allAllies = false): void {
     const ids = new Set<number>();
     for (const p of players) {
       if (p.id === this.localId) continue;
@@ -91,7 +94,8 @@ export class PvpMirror {
         r = new RivalProxy(p.id, p.aircraftId, p.maxHp);
         this.rivals.set(p.id, r);
       }
-      r.team = team !== undefined && p.team === team ? TEAM_PLAYER : TEAM_ENEMY;
+      // 7-2: 防衛戦は全員が味方（索敵しない・名札とレーダーは味方の色）
+      r.team = allAllies || (team !== undefined && p.team === team) ? TEAM_PLAYER : TEAM_ENEMY;
     }
     for (const id of [...this.rivals.keys()]) if (!ids.has(id)) this.rivals.delete(id);
     this.rivalList.length = 0;
@@ -100,7 +104,7 @@ export class PvpMirror {
       this.rivalList.push(r);
       if (!r.ally) this.targetList.push(r);
     }
-    this.targetList.push(...this.kaijuTargets);
+    this.targetList.push(...this.kaijuTargets, ...this.defenseTargets);
     const list = this.session.rivals;
     list.length = 0;
     list.push(...this.rivalList);
@@ -111,7 +115,17 @@ export class PvpMirror {
     this.kaijuTargets = parts;
     this.targetList.length = 0;
     for (const r of this.rivalList) if (!r.ally) this.targetList.push(r);
-    this.targetList.push(...parts);
+    this.targetList.push(...parts, ...this.defenseTargets);
+  }
+
+  /** 防衛戦の敵を索敵の対象にする（7-2。ホストと同じ通し番号の順） */
+  setDefenseTargets(list: readonly CombatTarget[]): void {
+    this.defenseTargets = list;
+    this.defenseIndex.clear();
+    list.forEach((t, i) => this.defenseIndex.set(t, i));
+    this.targetList.length = 0;
+    for (const r of this.rivalList) if (!r.ally) this.targetList.push(r);
+    this.targetList.push(...this.kaijuTargets, ...list);
   }
 
   /** 他プレイヤーの見た目の機銃の弾（描画） */
@@ -157,7 +171,9 @@ export class PvpMirror {
         ? sel.id
         : sel && isKaijuLockable(sel)
           ? KAIJU_ID_BASE + sel.kaijuIndex
-          : NO_TARGET;
+          : sel && this.defenseIndex.has(sel)
+            ? DEFENSE_ID_BASE + (this.defenseIndex.get(sel) ?? 0)
+            : NO_TARGET;
     c.gun.step(l.fire, own, NO_TARGETS, dt);
     return l;
   }

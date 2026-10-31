@@ -12,6 +12,7 @@ import { LagHistory } from './lag-history';
 import { Magazine } from './magazine';
 import type { FuseTarget } from './missile';
 import type { PlayerScore } from './pvp-rules';
+import type { CombatTarget } from './target';
 
 /** 機体と強化で決まる数値（resolveLoadout の一部） */
 export interface FighterSpec {
@@ -24,8 +25,8 @@ export interface FighterSpec {
   readonly targeting: TargetingSpec;
 }
 
-/** 機銃の当たり判定の対象: 他機（巻き戻した位置）か、レイドの怪獣の部位（6-2。巻き戻さない） */
-export type ArenaGunTarget = RewoundTarget | KaijuPart;
+/** 機銃の当たり判定の対象: 他機（巻き戻した位置）か、レイドの怪獣の部位（6-2。巻き戻さない）か、防衛戦の敵（7-2。巻き戻さない） */
+export type ArenaGunTarget = RewoundTarget | KaijuPart | CombatTarget;
 
 /** 撃つ人から見た対象（遅延補償で巻き戻した位置）。機銃の当たり判定に使う */
 export class RewoundTarget implements GunTarget {

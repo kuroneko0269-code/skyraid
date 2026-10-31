@@ -99,7 +99,7 @@ export const QUICK_PHRASES: readonly string[] = [...PVP_QUICK_PHRASES, ...RAID_Q
 export const RAID_PHRASE_BASE = PVP_QUICK_PHRASES.length;
 
 /** 対戦のモード（5-4）: 個人戦 / チーム戦（2 対 2）/ レイド（6-2。全員が同じチームで怪獣と戦う） */
-export const PVP_MODES = ['ffa', 'team', 'raid'] as const;
+export const PVP_MODES = ['ffa', 'team', 'raid', 'defense'] as const;
 export type PvpMode = (typeof PVP_MODES)[number];
 
 /** チーム戦のチーム（0 = A、1 = B）の色と、飛行中の敵味方の色（名札・レーダー） */

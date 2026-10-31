@@ -14,6 +14,7 @@ import type { KaijuHudLink } from '../render/kaiju-hud-link';
 import type { PlayerView } from '../render/player-view';
 import type { QualityLink } from '../render/quality-link';
 import { PvpEntry } from './pvp-entry';
+import type { DefenseHud } from './defense-hud';
 import { raidLinkDeps } from './raid-briefing';
 import type { Screens } from './screens';
 
@@ -34,6 +35,8 @@ export interface PvpWiringParts {
   readonly views: FlightViews;
   readonly kaijuHud: KaijuHudLink;
   readonly quality: QualityLink;
+  /** 防衛戦（7-2）の HUD（ソロと同じもの） */
+  readonly defenseHud: DefenseHud;
 }
 
 export interface PvpWiring {
@@ -60,6 +63,10 @@ export function createPvpWiring(p: PvpWiringParts): PvpWiring {
     groundHeight: p.groundHeight,
     obstacles: (a, b) => activeMap.buildings?.collides(a, b) ?? false,
     protectedBuildings: () => session.protectedBuildings,
+    defenseHud: p.defenseHud,
+    playDefense: (kind) => {
+      audio.playDefense(kind);
+    },
     // 6-6: 協力レイドの建物（ホストだけが壊して配る）・報酬・ブリーフィングを見たか
     ...raidLinkDeps(save, () => activeMap.buildings),
     // 5-3: スコアボードは Tab（ターゲット切替のキー）の長押し、他プレイヤーの機銃は敵機と同じ位置付きの音

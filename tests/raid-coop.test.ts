@@ -99,7 +99,14 @@ describe('state の怪獣', () => {
     for (let i = 0; i < 12 * 60; i++) raid.step(DT);
     raid.kaiju.part('tail').damageBy(5000, 0);
     const k = raid.state();
-    const msg: StateMsg = { type: 'state', tick: 5, aircraft: [], missiles: [], kaiju: k };
+    const msg: StateMsg = {
+      type: 'state',
+      tick: 5,
+      aircraft: [],
+      missiles: [],
+      kaiju: k,
+      defense: null,
+    };
     const back = decodeMessage(encodeMessage(msg));
     if (back?.type !== 'state' || !back.kaiju) throw new Error('decode');
     const b = back.kaiju;

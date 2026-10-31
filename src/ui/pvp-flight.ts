@@ -28,6 +28,9 @@ import type { BuildingField } from '../combat/buildings';
 import { RAID_RULES } from '../data/raid';
 import type { RaidBriefing } from './raid-briefing';
 import { RaidFlight, type KaijuSource } from './raid-flight';
+import { DefenseFlight } from './defense-flight';
+import type { DefenseHud } from './defense-hud';
+import type { DefenseSoundKind } from '../data/defense';
 
 export type { KaijuSource } from './raid-flight';
 
@@ -60,6 +63,9 @@ export interface PvpFlightDeps {
   readonly briefing: RaidBriefing;
   readonly briefingSeen: () => boolean;
   readonly markBriefingSeen: () => void;
+  /** 防衛戦（7-2）の HUD（ソロと同じもの）と音 */
+  readonly defenseHud: DefenseHud;
+  readonly playDefense: (kind: DefenseSoundKind) => void;
 }
 
 /** 「GO!」を出しておく秒数 */
@@ -87,6 +93,8 @@ export class PvpFlight {
   private warningUntil = 0;
   /** レイド（6-2。6-6 で raid-flight.ts に分けた。PvP は null） */
   private readonly raid: RaidFlight | null;
+  /** 防衛戦（7-2。ほかは null） */
+  readonly defense: DefenseFlight | null;
   private readonly stunned = createControls();
 
   constructor(
@@ -110,11 +118,22 @@ export class PvpFlight {
       room.settings.mode === 'raid'
         ? new RaidFlight(this.net, this.mirror, () => this.players.keys(), this.nameOf, deps)
         : null;
+    this.defense =
+      room.settings.mode === 'defense'
+        ? new DefenseFlight(this.net, this.mirror, room.settings, {
+            session: deps.session,
+            defenseHud: deps.defenseHud,
+            playDefense: deps.playDefense,
+            camera: deps.camera,
+            aircraftObject: deps.playerView.mesh,
+          })
+        : null;
     deps.hud.setRaid(this.raid !== null);
     this.syncRoster();
     this.net.onEvent((e) => {
       this.mirror.handleEvent(e);
       this.raid?.handleEvent(e);
+      this.defense?.handleEvent(e);
       if (e.kind === 'over') this.over = true;
     });
     this.net.onScore((s) => {
@@ -127,7 +146,11 @@ export class PvpFlight {
     // 抜けた人の名前はリザルトのために残す（名簿にいる人は新しい値で上書き）
     for (const p of this.room.players) this.players.set(p.id, p);
     this.localTeam = this.team ? this.players.get(this.net.localId)?.team : undefined;
-    this.mirror.syncRoster(this.room.players, this.localTeam);
+    this.mirror.syncRoster(
+      this.room.players,
+      this.localTeam,
+      this.room.settings.mode === 'defense',
+    );
   }
 
   /** 固定ステップ 1 回分。カウントダウン・再接続中・スタン中（6-2）は戦闘の操作を使わない */
@@ -139,6 +162,7 @@ export class PvpFlight {
     this.net.step(stun ? this.stunned : controls, local, dt);
     this.mirror.stepWorld(this.net, dt);
     this.raid?.step(dt);
+    this.defense?.step(dt);
     this.holdSeconds = this.deps.scoreKeyDown() ? this.holdSeconds + dt : 0;
   }
 
@@ -156,12 +180,17 @@ export class PvpFlight {
     d.playerView.model.setOpacity(
       this.mirror.ownInvulnerable > 0 ? PVP_CONFIG.invulnerableOpacity : 1,
     );
-    const allyOf = this.team ? (id: number) => this.players.get(id)?.team === this.localTeam : null;
+    const allyOf = this.team
+      ? (id: number) => this.players.get(id)?.team === this.localTeam
+      : this.defense
+        ? () => true
+        : null;
     d.hud.updateTags(samples, this.players, d.camera, width, height, allyOf, net.kaijuTarget);
     this.raid?.render();
+    this.defense?.render(width, height, true);
     const open = this.boardToggled || this.holdSeconds >= PVP_CONFIG.scoreboardHoldSeconds;
     // レイド（6-2）の残り時間は怪獣の HUD（最終フェーズ）に出す
-    const remaining = this.raid ? null : this.remainingSeconds(now);
+    const remaining = this.raid || this.defense ? null : this.remainingSeconds(now);
     d.board.update(
       this.mirror.activeFeed(),
       this.score,
@@ -210,7 +239,7 @@ export class PvpFlight {
             color: m.downedBy === null ? '' : playerColorCss(m.downedBy),
             remaining:
               m.downedAt +
-              (this.raid ? RAID_RULES.respawnSeconds : PVP_CONFIG.respawnSeconds) -
+              (this.raid || this.defense ? RAID_RULES.respawnSeconds : PVP_CONFIG.respawnSeconds) -
               m.time,
           }
         : null;
@@ -262,9 +291,13 @@ export class PvpFlight {
       ? this.raid.cleared
         ? 'raidClear'
         : 'raidFail'
-      : (this.score?.remainingSeconds ?? 0) > 0.05
-        ? 'score'
-        : 'time';
+      : this.defense
+        ? this.defense.cleared
+          ? 'defenseClear'
+          : 'defenseFail'
+        : (this.score?.remainingSeconds ?? 0) > 0.05
+          ? 'score'
+          : 'time';
     const best = bestPlayer(players);
     const totals = this.team ? teamTotals(players, teamOf) : null;
     return {
@@ -275,12 +308,14 @@ export class PvpFlight {
       teamTotals: totals ? [totals.get(0) ?? 0, totals.get(1) ?? 0] : null,
       protectedBuildings: this.raid ? this.deps.protectedBuildings() : null,
       raid: this.raid?.summary(players, this.room.settings.hard) ?? null,
+      defense: this.defense?.summary(players) ?? null,
     };
   }
 
   /** 終わり: シングルプレイの判定・表示に PvP のものを残さない */
   dispose(): void {
     this.raid?.dispose();
+    this.defense?.dispose();
     this.mirror.detach();
     this.deps.remotes.clear();
     this.deps.playerView.model.setOpacity(1);

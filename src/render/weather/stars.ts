@@ -1,12 +1,6 @@
 // 夜空の星（7-5）: 手続き生成の点（Points 1 draw call）。カメラに付いて動く天球の上に置き、
 // 曇天・霧・雨・昼は薄くして、見えないときは描かない（昼は draw call を増やさない）
-import {
-  AdditiveBlending,
-  BufferAttribute,
-  BufferGeometry,
-  Points,
-  ShaderMaterial,
-} from 'three';
+import { AdditiveBlending, BufferAttribute, BufferGeometry, Points, ShaderMaterial } from 'three';
 import { createRandom } from '../../core/random';
 import { NIGHT_CONFIG } from '../../data/weather';
 

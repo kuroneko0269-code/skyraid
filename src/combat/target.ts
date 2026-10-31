@@ -7,6 +7,8 @@ import type { GunTarget } from './gun';
 /** 陣営。ミサイル・フレアの owner、対象の team に使う */
 export const TEAM_PLAYER = 0;
 export const TEAM_ENEMY = 1;
+/** 防衛戦（7-2）の基地の攻撃（味方の対空砲・燃料タンクの誘爆）。プレイヤーの撃墜数に数えない */
+export const TEAM_BASE = 2;
 
 export interface CombatTarget extends GunTarget, Damageable {
   /** 前ステップの位置（描画の補間用） */

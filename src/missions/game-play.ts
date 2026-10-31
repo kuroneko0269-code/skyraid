@@ -10,6 +10,8 @@ import type { FlightSession } from './flight-session';
 import { RaceRunner, type RaceReference, type RaceWorld } from './race/runner';
 import type { CourseDef } from './race/types';
 import { MissionRunner } from './runner';
+import { DefenseRunner } from './defense/runner';
+import { DEFENSE_CONFIG, type DefenseDifficulty, type DefenseMapDef } from '../data/defense';
 import type { MissionDef, Pose } from './types';
 
 /** レース中（7-1）は武器を使わない */
@@ -20,6 +22,10 @@ export class GamePlay {
   runner: MissionRunner | null = null;
   /** 進行中（または終わったばかり）のリングレース（7-1）。レースでなければ null */
   race: RaceRunner | null = null;
+  /** 進行中（または終わったばかり）の防衛戦（7-2）。防衛戦でなければ null */
+  defense: DefenseRunner | null = null;
+  private readonly defenseListeners: ((d: DefenseRunner | null) => void)[] = [];
+  private readonly defender = { id: 0, position: vec3(), speed: 0, active: false };
   private readonly runnerListeners: ((runner: MissionRunner | null) => void)[] = [];
   private readonly raceListeners: ((race: RaceRunner | null) => void)[] = [];
   private readonly raceWorld: RaceWorld;
@@ -54,6 +60,11 @@ export class GamePlay {
     this.raceListeners.push(fn);
   }
 
+  /** 防衛戦が変わったとき（7-2） */
+  onDefenseChange(fn: (d: DefenseRunner | null) => void): void {
+    this.defenseListeners.push(fn);
+  }
+
   /** ランナーが変わったとき（ミッションの開始・フリーフライトの開始）。HUD がイベントを購読し直す */
   onRunnerChange(fn: (runner: MissionRunner | null) => void): void {
     this.runnerListeners.push(fn);
@@ -66,6 +77,7 @@ export class GamePlay {
 
   startFree(): void {
     this.setRace(null);
+    this.setDefense(null);
     this.session.startFree();
     this.setRunner(null);
   }
@@ -73,12 +85,14 @@ export class GamePlay {
   /** PvP（5-1）: 敵・的・ミッションなしで世界を空にする（機体は net/ が動かし、session.step は呼ばない） */
   startEmpty(start: Readonly<Pose>): void {
     this.setRace(null);
+    this.setDefense(null);
     this.session.startMission(start);
     this.setRunner(null);
   }
 
   startMission(def: MissionDef): MissionRunner {
     this.setRace(null);
+    this.setDefense(null);
     this.session.startMission(def.start, def.practice === true);
     const runner = new MissionRunner(def, this.session);
     this.setRunner(runner);
@@ -93,6 +107,7 @@ export class GamePlay {
   startRace(course: CourseDef, reference: RaceReference | null = null): RaceRunner {
     this.session.startMission(course.start, true);
     this.setRunner(null);
+    this.setDefense(null);
     const race = new RaceRunner(course, reference);
     race.bus.on('race:ring', ({ ring }) => {
       if (ring.kind === 'boost')
@@ -101,6 +116,37 @@ export class GamePlay {
     this.setRace(race);
     this.place(course.start, true);
     return race;
+  }
+
+  /**
+   * 防衛戦（7-2。ソロ）を始める: 基地の近くの開始位置から、敵・的なしの世界で（敵は波ごとにランナーが出す）。
+   * 補給の判定は自機。撃墜されたら開始位置へ戻る（ミッションと同じ）
+   */
+  startDefense(
+    map: DefenseMapDef,
+    difficulty: DefenseDifficulty,
+    seed?: () => number,
+  ): DefenseRunner {
+    this.setRace(null);
+    this.session.startMission(map.start, false);
+    this.setRunner(null);
+    const s = this.session;
+    const d = new DefenseRunner(
+      {
+        props: s.props,
+        squadron: s.squadron,
+        combat: s.combat,
+        enemies: s.enemies,
+        groundHeight: s.groundAt,
+      },
+      { map, difficulty, players: 1, rng: seed, maxFighters: DEFENSE_CONFIG.soloFighterPool },
+    );
+    d.bus.on('defense:supply', ({ fraction }) => {
+      s.combat.resupplyPart(fraction);
+    });
+    this.setDefense(d);
+    d.start();
+    return d;
   }
 
   /** 固定ステップ 1 回分（世界 → ミッションの順。ランナーはこのステップの結果を読む） */
@@ -115,6 +161,17 @@ export class GamePlay {
     }
     this.session.step(controls, input, dt);
     this.runner?.step(dt);
+    const d = this.defense;
+    if (d) {
+      const a = this.session.aircraft.state;
+      const me = this.defender;
+      me.position.x = a.position.x;
+      me.position.y = a.position.y;
+      me.position.z = a.position.z;
+      me.speed = a.speed;
+      me.active = this.session.player.active;
+      d.step(dt, [me]);
+    }
   }
 
   /** 自機を pose に水平で置く（巡航速度）。fullThrottle ならスロットル全開 */
@@ -130,8 +187,15 @@ export class GamePlay {
   /** ミッションを中断する（ポーズメニュー） */
   abortMission(): void {
     this.runner?.abort();
-    // レース（7-1）は捨てる（記録・報酬なし）
+    // レース（7-1）・防衛戦（7-2）は捨てる（記録・報酬なし）
     this.setRace(null);
+    this.setDefense(null);
+  }
+
+  private setDefense(d: DefenseRunner | null): void {
+    if (this.defense === d) return;
+    this.defense = d;
+    for (const fn of this.defenseListeners) fn(d);
   }
 
   private setRace(race: RaceRunner | null): void {

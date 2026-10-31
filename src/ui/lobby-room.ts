@@ -217,14 +217,18 @@ export class LobbyRoom {
     this.rulesText.textContent =
       st.mode === 'raid'
         ? `レイド（協力）・ヴォルガス撃破・${RAID_DIFFICULTY_LABELS[st.hard ? 'hard' : 'normal']}`
-        : `${st.mode === 'team' ? 'チーム戦' : '個人戦'}・撃墜 ${st.scoreLimit} 機・${minutes(st.timeLimitSeconds)}`;
+        : st.mode === 'defense'
+          ? `防衛戦（協力）・全 10 波・${st.hard ? '高難度' : '通常'}`
+          : `${st.mode === 'team' ? 'チーム戦' : '個人戦'}・撃墜 ${st.scoreLimit} 機・${minutes(st.timeLimitSeconds)}`;
     const raid = st.mode === 'raid';
+    // 7-2: 防衛戦はマップ（島・港湾都市）と難易度を選ぶ（撃墜数・制限時間は使わない）
+    const defense = st.mode === 'defense';
     for (const s of [this.scoreSelect, this.timeSelect, this.mapSelect]) {
       const row = s.parentElement;
-      if (row) row.hidden = raid;
+      if (row) row.hidden = raid || (defense && s !== this.mapSelect);
     }
     const diffRow = this.difficultySelect.parentElement;
-    if (diffRow) diffRow.hidden = !raid;
+    if (diffRow) diffRow.hidden = !raid && !defense;
     this.difficultySelect.value = st.hard ? 'hard' : 'normal';
     for (const b of this.raidChat) b.hidden = !raid;
     this.optionsText.textContent = `強化 ${st.noUpgrades ? '無効' : '有効'}・初心者保護 ${st.rookieGuard ? 'ON' : 'OFF'}`;

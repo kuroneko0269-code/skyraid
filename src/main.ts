@@ -47,6 +47,9 @@ import { createAppControls } from './ui/app-controls';
 import { createPhotoMode } from './ui/photo/photo-link';
 import { createRaceLink } from './ui/race-link';
 import { GhostView } from './render/ghost-view';
+import { createDefenseLink } from './ui/defense-link';
+import { FREE_FLIGHT_ENEMIES } from './data/ai';
+import { DEFENSE_CONFIG } from './data/defense';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app が見つかりません');
@@ -117,6 +120,9 @@ const session = new FlightSession({
   buildings: () => activeMap.buildings,
   flightOptions: parseFlightOptions(window.location.search),
   start: WORLD_CONFIG.start,
+  // 7-2: 防衛戦の戦闘機の入れ物（協力のホストの世界と同じ数。ソロで同時に出すのは soloFighterPool まで。
+  // フリーフライトの敵の数の設定は今のまま）
+  enemies: { ...FREE_FLIGHT_ENEMIES, maxCount: DEFENSE_CONFIG.hostFighterPool },
 });
 const play = new GamePlay(session);
 // 怪獣の HUD（6-2）: 体力バー・フェーズ・ロック中の部位・予兆・スタンのノイズ
@@ -139,6 +145,16 @@ const tutorial = new TutorialLink(document.body, save, input, touch, hud, () => 
   screens.abortTutorial(game);
 });
 const frameFx = new FrameFx(pipeline, playerView, camera, audio);
+// 防衛戦（7-2）: モード選択の選択・HUD・リザルト・音・報酬
+const defense = createDefenseLink({
+  game,
+  screens,
+  play,
+  save,
+  audio,
+  camera,
+  aircraft: aircraftMesh,
+});
 // PvP（5-1）: 選んだとき・?room のときだけ通信の部分を読み込む
 const search = window.location.search;
 const { pvp, coopKaiju } = createPvpWiring({
@@ -158,6 +174,7 @@ const { pvp, coopKaiju } = createPvpWiring({
   views,
   kaijuHud,
   quality,
+  defenseHud: defense.hud,
 });
 const ringView = new RingView(scene);
 const missionLink = new MissionLink(missionHud, camera, aircraftMesh, play);
@@ -213,6 +230,7 @@ const startFlight = createFlightStarter({
   quality,
   pvp,
   race,
+  defense,
 });
 
 const loop = new GameLoop();
@@ -289,6 +307,7 @@ frame.photo = photo;
 loop.onRender((alpha) => {
   pvp.render(alpha);
   race.render(alpha);
+  defense.render(window.innerWidth, window.innerHeight);
   frame.render(game.state, alpha, keys.menuTick);
   if (game.state === 'flight') kaijuHud.update();
   tutorial.update(game.state === 'flight');

@@ -3,7 +3,7 @@
 // 距離は m、時間は秒、速度は m/s。見た目はプリミティブ（箱・円柱）の組み合わせのプレースホルダー
 import type { Difficulty } from './ai';
 
-export const GROUND_TARGET_TYPES = ['radar', 'fuelTank', 'hangar', 'aaa'] as const;
+export const GROUND_TARGET_TYPES = ['radar', 'fuelTank', 'hangar', 'aaa', 'command'] as const;
 export type GroundTargetType = (typeof GROUND_TARGET_TYPES)[number];
 
 /**
@@ -164,6 +164,43 @@ export const GROUND_TARGET_SPECS: Readonly<Record<GroundTargetType, GroundTarget
         offset: { x: 0.9, y: 4.6, z: 0 },
         color: 0x2f322b,
         role: 'barrel',
+      },
+    ],
+  },
+  /**
+   * 司令部（7-2 の防衛戦の防衛対象）: 低い箱の建物 + 管制塔 + 屋上のアンテナ。HP 2000（高難度は防衛戦の側で 1500 に）。
+   * 防衛戦では陣営を味方にして置く（プレイヤーの弾は当たらない）
+   */
+  command: {
+    maxHp: 2000,
+    hitRadius: 22,
+    centerHeight: 10,
+    visualRadius: 20,
+    footprint: 18,
+    parts: [
+      {
+        shape: 'box',
+        size: { x: 36, y: 12 + SINK, z: 24 },
+        offset: { x: 0, y: (12 - SINK) / 2, z: 0 },
+        color: 0x8c9187,
+      },
+      {
+        shape: 'box',
+        size: { x: 10, y: 14, z: 10 },
+        offset: { x: 10, y: 19, z: 0 },
+        color: 0x9fa59a,
+      },
+      {
+        shape: 'box',
+        size: { x: 12, y: 3, z: 12 },
+        offset: { x: 10, y: 27.5, z: 0 },
+        color: 0x4b6a7a,
+      },
+      {
+        shape: 'cylinder',
+        size: { x: 0.8, y: 10, z: 0.8 },
+        offset: { x: -10, y: 17, z: 4 },
+        color: 0x5a5e57,
       },
     ],
   },

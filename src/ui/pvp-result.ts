@@ -4,6 +4,9 @@ import { PVP_TEAM } from '../data/pvp';
 import type { PlayerInfo } from '../net/protocol';
 import type { RaidSummary } from '../net/raid-result';
 import { renderRaidResult } from './raid-result';
+import type { DefenseSummary } from '../net/defense-result';
+import { DEFENSE_CONFIG } from '../data/defense';
+import { formatCredits } from './mission-text';
 import { el } from './hud-dom';
 import { playerColorCss, teamColorCss } from './lobby-colors';
 
@@ -23,7 +26,7 @@ export interface ResultRow {
 
 export interface ResultView {
   /** 終わり方（撃墜数に達した / 時間切れ / レイドの成功・失敗。6-2） */
-  reason: 'score' | 'time' | 'raidClear' | 'raidFail';
+  reason: 'score' | 'time' | 'raidClear' | 'raidFail' | 'defenseClear' | 'defenseFail';
   localId: number;
   rows: readonly ResultRow[];
   /** ベストプレイヤー（誰も撃墜していなければ null） */
@@ -34,6 +37,8 @@ export interface ResultView {
   protectedBuildings?: number | null;
   /** 協力レイドの結果（6-6。PvP は省略） */
   raid?: RaidSummary | null;
+  /** 協力の防衛戦の結果（7-2） */
+  defense?: DefenseSummary | null;
 }
 
 const REASON_TEXT: Readonly<Record<ResultView['reason'], string>> = {
@@ -41,11 +46,15 @@ const REASON_TEXT: Readonly<Record<ResultView['reason'], string>> = {
   time: '時間切れ',
   raidClear: '全員で怪獣を倒した（報酬は全員同じ）',
   raidFail: '怪獣が街に到達した（全員に 300 CR）',
+  defenseClear: '全 10 波から基地を守り切った（報酬は全員同じ）',
+  defenseFail: '司令部が破壊された（クリアした波 × 300 CR）',
 };
 
 function title(r: Readonly<ResultView>): string {
   if (r.reason === 'raidClear') return 'ヴォルガス撃破';
   if (r.reason === 'raidFail') return '作戦失敗';
+  if (r.reason === 'defenseClear') return '防衛成功';
+  if (r.reason === 'defenseFail') return '基地陥落';
   const t = r.teamTotals;
   if (t) {
     if (t[0] === t[1]) return '引き分け';
@@ -69,6 +78,7 @@ export function renderResult(parent: HTMLElement, r: Readonly<ResultView>): void
     renderRaidResult(parent, r.raid, (id) => names.get(id) ?? `P${id + 1}`, r.localId);
     return;
   }
+  if (r.defense) renderDefenseResult(parent, r.defense, r.rows);
   if (r.protectedBuildings != null) {
     el('p', 'briefing-text', parent, `守れた建物 ${r.protectedBuildings}%`);
   }
@@ -109,6 +119,29 @@ export function renderResult(parent: HTMLElement, r: Readonly<ResultView>): void
     el('td', 'pvp-num', tr, `${Math.round(row.accuracy * 100)}%`);
     el('td', 'pvp-num', tr, String(row.bestStreak));
   }
+}
+
+/** 協力の防衛戦（7-2）: 難易度・クリアした波・司令部・施設・報酬・MVP（表は PvP と同じ） */
+function renderDefenseResult(
+  parent: HTMLElement,
+  d: Readonly<DefenseSummary>,
+  rows: readonly ResultRow[],
+): void {
+  const s = d.score;
+  const facts = el('div', 'campaign-facts', parent);
+  const fact = (label: string, value: string): void => {
+    const row = el('div', 'campaign-fact', facts);
+    el('span', 'campaign-fact-label', row, label);
+    el('span', 'campaign-fact-value', row, value);
+  };
+  fact('マップ', `${d.mapName}・${d.hard ? '高難度' : '通常'}`);
+  fact('クリアした波', `${s.wavesCleared} / ${DEFENSE_CONFIG.waves}`);
+  fact('撃墜（全員）', String(s.kills));
+  fact('司令部', `${Math.ceil(Math.max(0, s.hqHp))} / ${s.hqMaxHp}`);
+  fact('残った施設', `${s.facilitiesAlive} / ${s.facilitiesTotal}`);
+  fact('報酬（全員）', `+${formatCredits(d.credits)}`);
+  const mvp = rows.find((x) => x.id === d.mvp);
+  fact('MVP', mvp ? `${mvp.name}（${mvp.kills} 撃墜）` : 'なし');
 }
 
 /** 「もう一度」の待ち: 押した人に ✓、全員そろうとロビーへ */

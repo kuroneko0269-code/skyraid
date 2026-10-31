@@ -59,7 +59,7 @@ export function sameSide(
   mode: PvpMode,
   teamOf: (id: number) => number | undefined,
 ): boolean {
-  if (a === b || mode === 'raid') return true;
+  if (a === b || mode === 'raid' || mode === 'defense') return true;
   if (mode !== 'team') return false;
   const ta = teamOf(a);
   return ta !== undefined && ta === teamOf(b);
@@ -111,8 +111,24 @@ export class ChatGate {
   }
 }
 
-/** 部屋を作るときの設定（6-2: モード選択の「レイド」の「協力」から作るならレイド。それ以外は既定） */
-export function initialSettings(raid: boolean): GameSettings | undefined {
+/**
+ * 部屋を作るときの設定（6-2: モード選択の「レイド」の「協力」から作るならレイド。
+ * 7-2: 「防衛戦」の「協力」ならマップと難易度もモード選択のもの。それ以外は既定）
+ */
+/** 防衛戦（7-2）の協力の部屋の初期設定（モード選択で選んだマップと難易度） */
+export type DefensePreset = { readonly mapId: string; readonly hard: boolean } | null;
+
+export function initialSettings(
+  raid: boolean,
+  defense: DefensePreset = null,
+): GameSettings | undefined {
+  if (defense)
+    return {
+      ...NET_CONFIG.defaultSettings,
+      mode: 'defense',
+      mapId: defense.mapId,
+      hard: defense.hard,
+    };
   return raid
     ? {
         ...NET_CONFIG.defaultSettings,
@@ -130,6 +146,7 @@ export function initialSettings(raid: boolean): GameSettings | undefined {
 export function normalizeSettings(s: GameSettings): GameSettings {
   const weather = isWeatherId(s.weather) ? s.weather : DEFAULT_WEATHER_ID;
   if (s.mode === 'raid') return { ...s, mapId: RAID_CONFIG.mapId, weather };
+  // 7-2: 防衛戦は島か港湾都市（選べるマップと同じ）
   const ok = SELECTABLE_MAPS.some((m) => m.id === s.mapId);
   return ok ? { ...s, weather } : { ...s, mapId: NET_CONFIG.defaultSettings.mapId, weather };
 }

@@ -54,6 +54,11 @@ export class RocketPod {
     this.refill();
   }
 
+  /** 満タンの fraction（切り上げ）だけ足す（7-2） */
+  refillPart(fraction: number): void {
+    this.remaining = Math.min(this.capacity, this.remaining + Math.ceil(this.capacity * fraction));
+  }
+
   refill(): void {
     this.remaining = this.capacity;
     this.cooldown = 0;

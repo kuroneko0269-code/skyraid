@@ -1,5 +1,6 @@
 // ゲームの音の窓口（4-4）: 飛行の状態（スロットル・速度・失速・ロック・警告）を描画フレームごとに読み、演出のきっかけ（FxEvents）で
 // 単発の効果音を鳴らす。画面に合わせて BGM を切り替え、ポーズ中は音量を 30% に。UI のボタンでタップ音・決定音、購入で和音
+import type { DefenseSoundKind } from '../data/defense';
 import { isFrozenFlight, type ScreenState } from '../core/game-state';
 import { GUN_SOUND, UI_SOUND_EVENTS } from '../data/audio';
 import type { RaceSoundKind } from '../data/race';
@@ -143,6 +144,11 @@ export class GameAudio {
   /** リングレース（7-1）の音 */
   playRace(kind: RaceSoundKind): void {
     this.shots.race(kind);
+  }
+
+  /** 防衛戦（7-2）の音 */
+  playDefense(kind: DefenseSoundKind): void {
+    this.shots.defense(kind);
   }
 
   /** フォトモード（7-A）のシャッター音 */
