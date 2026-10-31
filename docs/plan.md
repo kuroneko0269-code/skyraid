@@ -65,7 +65,7 @@
 - [x] 6-1 怪獣モデル（プレースホルダー）と部位HP（指示により手続き生成の本モデル「ヴォルガス」・6-2 と同時） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/52b5d84
 - [x] 6-2 怪獣AI：移動、4種の攻撃、予兆表示（指示により HUD・音・ボットでの HP の決定も） — 6-1 と同じコミット: https://github.com/kuroneko0269-code/skyraid/commit/52b5d84
 - [ ] 6-3 フェーズ制（70% / 40%）とブレイク（6-1 / 6-2 で前倒し実装済み: https://github.com/kuroneko0269-code/skyraid/commit/52b5d84。最終フェーズは 4.5 分）
-- [ ] 6-4 市街地マップと破壊される建物
+- [x] 6-4 市街地マップと破壊される建物（港湾都市・マップの選択・建物の衝突と破壊・守れた建物・レイドを港湾都市に固定） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/39ddb13（事前修正 6-1b: 怪獣の結晶の塊・鱗と筋肉・目・前腕、ソロの倍率 ×3.8 https://github.com/kuroneko0269-code/skyraid/commit/3cff5dd）
 - [ ] 6-5 ミッション5（怪獣導入）とレイドモード入口（M5 のデータと怪獣の仮実装は 2-5 で入れた。6-1 の怪獣に差し替える）（6-1 / 6-2 で M5 の差し替え・ソロのレイド・協力の最小限の入口を前倒し実装済み: https://github.com/kuroneko0269-code/skyraid/commit/52b5d84）
 - [ ] 6-6 協力時の同期（怪獣状態はホストが配信）（6-2 で最小限: ホストが怪獣を動かし state に部位 HP・状態・位置を追加）
 
