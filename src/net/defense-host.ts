@@ -297,8 +297,8 @@ export class DefenseHost {
     m.fighters = r.counts.fighter;
     m.bombers = r.counts.bomber;
     m.cruise = r.counts.cruise;
-    m.skipMask = [...this.skips].reduce((b, id) => b | (1 << (id & 7)), 0);
-    m.supplyMask = [...this.supplies].reduce((b, id) => b | (1 << (id & 7)), 0);
+    m.skipMask = mask(this.skips);
+    m.supplyMask = mask(this.supplies);
     m.enemies.length = 0;
     if (!all) this.half ^= 1;
     this.enemies.forEach((e, i) => {
@@ -318,4 +318,11 @@ export class DefenseHost {
     });
     return m;
   }
+}
+
+/** ID の集合 → ビット（1 << ID） */
+function mask(ids: ReadonlySet<number>): number {
+  let b = 0;
+  for (const id of ids) b |= 1 << (id & 7);
+  return b;
 }

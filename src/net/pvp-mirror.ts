@@ -84,7 +84,7 @@ export class PvpMirror {
   }
 
   /** 名簿に合わせて他プレイヤーを作る・消す。team はチーム戦のときの自分のチーム（個人戦は undefined） */
-  syncRoster(players: readonly PlayerInfo[], team?: number): void {
+  syncRoster(players: readonly PlayerInfo[], team?: number, allAllies = false): void {
     const ids = new Set<number>();
     for (const p of players) {
       if (p.id === this.localId) continue;
@@ -94,7 +94,8 @@ export class PvpMirror {
         r = new RivalProxy(p.id, p.aircraftId, p.maxHp);
         this.rivals.set(p.id, r);
       }
-      r.team = team !== undefined && p.team === team ? TEAM_PLAYER : TEAM_ENEMY;
+      // 7-2: 防衛戦は全員が味方（索敵しない・名札とレーダーは味方の色）
+      r.team = allAllies || (team !== undefined && p.team === team) ? TEAM_PLAYER : TEAM_ENEMY;
     }
     for (const id of [...this.rivals.keys()]) if (!ids.has(id)) this.rivals.delete(id);
     this.rivalList.length = 0;

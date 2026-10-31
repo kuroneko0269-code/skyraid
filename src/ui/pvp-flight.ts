@@ -146,7 +146,11 @@ export class PvpFlight {
     // 抜けた人の名前はリザルトのために残す（名簿にいる人は新しい値で上書き）
     for (const p of this.room.players) this.players.set(p.id, p);
     this.localTeam = this.team ? this.players.get(this.net.localId)?.team : undefined;
-    this.mirror.syncRoster(this.room.players, this.localTeam);
+    this.mirror.syncRoster(
+      this.room.players,
+      this.localTeam,
+      this.room.settings.mode === 'defense',
+    );
   }
 
   /** 固定ステップ 1 回分。カウントダウン・再接続中・スタン中（6-2）は戦闘の操作を使わない */
@@ -176,7 +180,11 @@ export class PvpFlight {
     d.playerView.model.setOpacity(
       this.mirror.ownInvulnerable > 0 ? PVP_CONFIG.invulnerableOpacity : 1,
     );
-    const allyOf = this.team ? (id: number) => this.players.get(id)?.team === this.localTeam : null;
+    const allyOf = this.team
+      ? (id: number) => this.players.get(id)?.team === this.localTeam
+      : this.defense
+        ? () => true
+        : null;
     d.hud.updateTags(samples, this.players, d.camera, width, height, allyOf, net.kaijuTarget);
     this.raid?.render();
     this.defense?.render(width, height, true);
