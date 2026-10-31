@@ -6,7 +6,11 @@ import type { PerspectiveCamera } from 'three';
 import { createCombatInput, type CombatInput } from '../combat/combat-input';
 import { accuracy, bestPlayer, standings, teamTotals } from '../combat/pvp-rules';
 import { PVP_CONFIG, PVP_TEAM } from '../data/pvp';
-import type { AircraftControls, GroundHeightFn } from '../entities/aircraft';
+import { createControls, type AircraftControls, type GroundHeightFn } from '../entities/aircraft';
+import type { KaijuBodyView, KaijuEffectsView, KaijuPartView } from '../entities/kaiju-display';
+import { KaijuMirror } from '../net/kaiju-mirror';
+import { RAID_OUTCOME } from '../net/raid-host';
+import type { KaijuHudFrame } from './kaiju-hud';
 import type { FlightSession } from '../missions/flight-session';
 import { ClientGame } from '../net/client-game';
 import { ClientRoom } from '../net/client-room';
@@ -40,6 +44,15 @@ export interface PvpFlightDeps {
   readonly otherGun: (x: number, y: number, z: number) => void;
   /** カウントダウン・GO・残り時間の警告の音（5-4） */
   readonly sound: (kind: PvpSound) => void;
+  /** レイドの怪獣の表示元を差し替える（6-2。描画・HUD・音。null で戻す） */
+  readonly kaijuSource: (src: KaijuSource | null) => void;
+}
+
+/** レイドの怪獣の表示元（6-2） */
+export interface KaijuSource {
+  readonly body: KaijuBodyView;
+  readonly fx: KaijuEffectsView;
+  readonly hud: () => KaijuHudFrame;
 }
 
 /** 「GO!」を出しておく秒数 */
@@ -65,6 +78,13 @@ export class PvpFlight {
   private lastRemaining: number | null = null;
   private warning = '';
   private warningUntil = 0;
+  /** レイド（6-2）: クライアントの怪獣の写しと、終わり方 */
+  private readonly raid: boolean;
+  private kaijuMirror: KaijuMirror | null = null;
+  private kaijuVersion = -1;
+  private kaijuAt = 0;
+  private raidOutcome = 0;
+  private readonly stunned = createControls();
 
   constructor(
     private readonly room: HostRoom | ClientRoom,
@@ -77,10 +97,15 @@ export class PvpFlight {
         ? new HostGame(room, { own, groundHeight: deps.groundHeight })
         : new ClientGame(room, { own });
     this.mirror = new PvpMirror(deps.session, room.localPlayerId, deps.otherGun);
+    this.raid = room.settings.mode === 'raid';
+    if (this.raid) this.attachKaiju();
     this.syncRoster();
     this.net.onEvent((e) => {
       this.mirror.handleEvent(e);
-      if (e.kind === 'over') this.over = true;
+      if (e.kind === 'over') {
+        this.over = true;
+        this.raidOutcome = e.b;
+      }
     });
     this.net.onScore((s) => {
       this.score = s;
@@ -95,13 +120,61 @@ export class PvpFlight {
     this.mirror.syncRoster(this.room.players, this.localTeam);
   }
 
-  /** 固定ステップ 1 回分。カウントダウン・再接続中は戦闘の操作を使わない */
+  /**
+   * レイド（6-2）: 怪獣の表示元を、ホストは本体、クライアントは写しにし、部位をロックの対象にする
+   */
+  private attachKaiju(): void {
+    const host = this.net instanceof HostGame ? this.net.raid : null;
+    const mirror = host ? null : new KaijuMirror();
+    this.kaijuMirror = mirror;
+    const body = host ? host.kaiju : mirror;
+    const fx = host ? host.ai : mirror;
+    if (!body || !fx) return;
+    this.mirror.setKaijuTargets(body.parts);
+    const s = this.deps.session;
+    const frame = {
+      body: body as KaijuBodyView | null,
+      locked: null as KaijuPartView | null,
+      stun: 0,
+    };
+    this.deps.kaijuSource({
+      body,
+      fx,
+      hud: () => {
+        const sel = s.combat.targeting.selected;
+        frame.body = body.visible ? body : null;
+        frame.locked =
+          sel && 'kaijuIndex' in sel ? (body.parts[Number(sel.kaijuIndex)] ?? null) : null;
+        frame.stun = this.mirror.ownStun;
+        return frame;
+      },
+    });
+  }
+
+  /** 固定ステップ 1 回分。カウントダウン・再接続中・スタン中（6-2）は戦闘の操作を使わない */
   step(controls: Readonly<AircraftControls>, combat: Readonly<CombatInput>, dt: number): void {
     if (this.over) return;
-    const local = this.mirror.stepLocal(this.net.inputBlocked ? this.noInput : combat, dt);
-    this.net.step(controls, local, dt);
+    const stun = this.mirror.ownStun > 0;
+    const blocked = this.net.inputBlocked || stun;
+    const local = this.mirror.stepLocal(blocked ? this.noInput : combat, dt);
+    this.net.step(stun ? this.stunned : controls, local, dt);
     this.mirror.stepWorld(this.net, dt);
+    this.stepKaiju(dt);
     this.holdSeconds = this.deps.scoreKeyDown() ? this.holdSeconds + dt : 0;
+  }
+
+  /** クライアントの怪獣の写しを進める（新しい state が来たら写す） */
+  private stepKaiju(dt: number): void {
+    const m = this.kaijuMirror;
+    if (!m) return;
+    this.kaijuAt += dt;
+    const k = this.net.kaiju;
+    if (k && this.net.kaijuVersion !== this.kaijuVersion) {
+      this.kaijuVersion = this.net.kaijuVersion;
+      m.receive(k, this.kaijuAt);
+      this.kaijuAt = 0;
+    }
+    m.step(dt);
   }
 
   /** 描画フレームごと（pipeline.render の前） */
@@ -121,7 +194,8 @@ export class PvpFlight {
     const allyOf = this.team ? (id: number) => this.players.get(id)?.team === this.localTeam : null;
     d.hud.updateTags(samples, this.players, d.camera, width, height, allyOf);
     const open = this.boardToggled || this.holdSeconds >= PVP_CONFIG.scoreboardHoldSeconds;
-    const remaining = this.remainingSeconds(now);
+    // レイド（6-2）の残り時間は怪獣の HUD（最終フェーズ）に出す
+    const remaining = this.raid ? null : this.remainingSeconds(now);
     d.board.update(
       this.mirror.activeFeed(),
       this.score,
@@ -216,7 +290,13 @@ export class PvpFlight {
       bestStreak: s.score.bestStreak,
       team: this.team ? (teamOf(s.score.id) ?? 0) : null,
     }));
-    const reason = (this.score?.remainingSeconds ?? 0) > 0.05 ? 'score' : 'time';
+    const reason = this.raid
+      ? this.raidOutcome === RAID_OUTCOME.clear
+        ? 'raidClear'
+        : 'raidFail'
+      : (this.score?.remainingSeconds ?? 0) > 0.05
+        ? 'score'
+        : 'time';
     const best = bestPlayer(players);
     const totals = this.team ? teamTotals(players, teamOf) : null;
     return {
@@ -230,6 +310,7 @@ export class PvpFlight {
 
   /** 終わり: シングルプレイの判定・表示に PvP のものを残さない */
   dispose(): void {
+    if (this.raid) this.deps.kaijuSource(null);
     this.mirror.detach();
     this.deps.remotes.clear();
     this.deps.playerView.model.setOpacity(1);

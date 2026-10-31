@@ -2,6 +2,7 @@
 // 位置は float32、姿勢は smallest-three（6 バイト）、速度ベクトルは 1/16 m/s 単位の int16。Three.js 非依存
 import { PVP_CONFIG } from '../data/pvp';
 import { ByteReader, ByteWriter, readQuat, writeQuat } from './codec';
+import { readKaiju, writeKaiju } from './codec-kaiju';
 import {
   PL_AGAIN,
   PL_READY,
@@ -114,6 +115,7 @@ export function encodeMessage(msg: NetMessage): ArrayBuffer {
         w.i16(packVelocity(m.velocity.y));
         w.i16(packVelocity(m.velocity.z));
       }
+      writeKaiju(w, msg.kaiju);
       break;
     case 'event':
       w.u8(EVENT_KINDS.indexOf(msg.kind)).u8(msg.a).u8(msg.b).u32(msg.tick).u32(msg.n);
@@ -202,7 +204,7 @@ function decodeBody(r: ByteReader): NetMessage | null {
       const m = r.u8();
       const missiles: MissileStateMsg[] = [];
       for (let i = 0; i < m; i++) missiles.push(readMissile(r));
-      return { type: 'state', tick, aircraft, missiles };
+      return { type: 'state', tick, aircraft, missiles, kaiju: readKaiju(r) };
     }
     case TYPE_IDS.event: {
       const kind = EVENT_KINDS[r.u8()];

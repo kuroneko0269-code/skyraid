@@ -19,6 +19,36 @@ export interface CombatTarget extends GunTarget, Damageable {
   readonly team?: number;
   /** 壊れたときに周囲へ出す範囲ダメージ（燃料タンク。2-6）。省略・null はなし */
   readonly deathBlast?: BlastSpec | null;
+  /**
+   * 同じ体の部品（怪獣の部位。6-1）。範囲ダメージは同じ blastGroup のうち爆心に最も近い 1 つにだけ入れる
+   * （部位の球が重なっているので、ミサイル 1 発が 3 部位に入らないように）。省略は単独
+   */
+  readonly blastGroup?: object;
+}
+
+/**
+ * 範囲ダメージを入れる対象の選別（6-1）: list のうち blastGroup が同じものは、表面までの距離 dist が最も小さい 1 つだけ残す。
+ * 戻り値は out（使い回す）
+ */
+export function nearestPerGroup<T extends { readonly blastGroup?: object }>(
+  list: readonly T[],
+  dist: readonly number[],
+  out: T[],
+): T[] {
+  out.length = 0;
+  list.forEach((t, i) => {
+    const g = t.blastGroup;
+    if (g !== undefined) {
+      const d = dist[i] ?? Infinity;
+      for (let j = 0; j < list.length; j++) {
+        if (j === i || list[j]?.blastGroup !== g) continue;
+        const dj = dist[j] ?? Infinity;
+        if (dj < d || (dj === d && j < i)) return;
+      }
+    }
+    out.push(t);
+  });
+  return out;
 }
 
 /** 対象の陣営（省略は敵側） */

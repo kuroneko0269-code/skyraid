@@ -18,6 +18,8 @@ import {
   type WarningFlags,
   type WindParams,
 } from './params';
+import { KaijuSoundWatch } from './kaiju-watch';
+import type { KaijuBodyView } from '../entities/kaiju-display';
 import { FlightLoops } from './sfx/loops';
 import { OneShots, type UiSoundKind } from './sfx/oneshots';
 
@@ -48,6 +50,9 @@ export class GameAudio {
     stall: false,
   };
   private lastEnemyGun = -1;
+  /** 怪獣の音（6-2）と、その表示元（null はミッションの怪獣。協力のクライアントは写しに差し替える） */
+  private readonly kaijuWatch: KaijuSoundWatch;
+  private kaijuSource: KaijuBodyView | null = null;
 
   constructor(
     readonly engine: AudioEngine,
@@ -58,6 +63,7 @@ export class GameAudio {
   ) {
     this.shots = new OneShots(engine, this.listener);
     this.bgm = new BgmPlayer(engine, baseUrl);
+    this.kaijuWatch = new KaijuSoundWatch(this.shots.kaiju);
     engine.onReady(() => {
       this.loops = new FlightLoops(engine);
     });
@@ -117,6 +123,11 @@ export class GameAudio {
     });
   }
 
+  /** 怪獣の音の表示元を差し替える（協力のクライアント。null でミッションの怪獣） */
+  setKaijuSource(body: KaijuBodyView | null): void {
+    this.kaijuSource = body;
+  }
+
   playUi(kind: UiSoundKind): void {
     this.shots.ui(kind);
   }
@@ -142,9 +153,10 @@ export class GameAudio {
       pose.uy,
       pose.uz,
     );
+    const s = this.session;
+    this.kaijuWatch.update(state === 'flight' ? (this.kaijuSource ?? s.props.kaiju) : null, l);
     const loops = this.loops;
     if (!loops) return;
-    const s = this.session;
     const flying = state === 'flight' || state === 'pause';
     const alive = flying && s.player.active;
     const a = s.aircraft;

@@ -14,6 +14,7 @@ export class FakeWorld implements MissionWorld {
   playerMaxHp = 200;
   escortLost = false;
   kaijuDamageRatio = 0;
+  kaijuReachedCity = false;
   playerSpeed = 250;
   /** 護衛対象（グループ名 → 様子） */
   readonly escorts = new Map<string, EscortState>();

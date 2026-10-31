@@ -17,6 +17,7 @@ import { ResultScreen } from './result';
 import { FadeCurtain, LoadingScreen, applyScreenFade } from './screen';
 import { TitleScreen } from './title';
 import { TUTORIAL_MISSION } from '../data/tutorial';
+import { RAID_MISSION } from '../data/missions-special';
 import { tutorialStrings, type TutorialStrings } from './tutorial-text';
 
 /**
@@ -53,7 +54,8 @@ export class Screens {
   private readonly viewListeners: ((model: AircraftModel) => void)[] = [];
   /** PvP（5-1）: モード選択の「PvP」・ロビーの Esc・飛行中の ⏸（main が PvP を読み込んで差し込む） */
   private pvp: {
-    onSelect: () => void;
+    /** raid: レイドの協力（6-2）として部屋を作る */
+    onSelect: (raid: boolean) => void;
     onBack: () => void;
     onPause: () => boolean;
   } | null = null;
@@ -102,14 +104,22 @@ export class Screens {
       },
     });
     this.modeSelect = new ModeSelectScreen(parent, this.tutorialText, {
-      // レイドは disabled
       onSelect: (mode) => {
         if (mode === 'free' || mode === 'tutorial') {
           this.nextMission = mode === 'tutorial' ? TUTORIAL_MISSION : null;
           game.transition('flight');
         } else if (mode === 'campaign') game.transition('mission_select');
         else if (mode === 'hangar') this.openHangar(game, 'mode_select');
-        else if (mode === 'pvp') this.pvp?.onSelect();
+        else if (mode === 'pvp') this.pvp?.onSelect(false);
+        else this.modeSelect.showRaidPrompt();
+      },
+      onRaid: (kind) => {
+        if (kind === 'coop') {
+          this.pvp?.onSelect(true);
+          return;
+        }
+        this.nextMission = RAID_MISSION;
+        game.transition('flight');
       },
       onBack: () => game.transition('title'),
     });
@@ -155,14 +165,15 @@ export class Screens {
     });
     this.result = new ResultScreen(parent, {
       onRetry: () => game.transition('flight'),
-      onList: () => game.transition(this.inTutorial ? 'mode_select' : 'mission_select'),
+      onList: () =>
+        game.transition(this.inTutorial || this.inRaid ? 'mode_select' : 'mission_select'),
     });
     this.pause = new PauseMenu(parent, {
       onResume: () => game.transition('flight'),
       onTitle: () => game.transition('title'),
       onAbort: () => {
         onAbortMission();
-        game.transition(this.inTutorial ? 'mode_select' : 'mission_select');
+        game.transition(this.inTutorial || this.inRaid ? 'mode_select' : 'mission_select');
       },
     });
     // PvP の飛行中はゲームを止めずに PvP のメニュー
@@ -193,9 +204,14 @@ export class Screens {
     return this.nextMission?.id === TUTORIAL_MISSION.id;
   }
 
+  /** ソロのレイド（6-2）を飛んでいる（または終えたばかり） */
+  get inRaid(): boolean {
+    return this.nextMission?.id === RAID_MISSION.id;
+  }
+
   /** PvP（5-1）の入口をつなぐ */
   setPvpHandlers(handlers: {
-    onSelect: () => void;
+    onSelect: (raid: boolean) => void;
     onBack: () => void;
     onPause: () => boolean;
   }): void {

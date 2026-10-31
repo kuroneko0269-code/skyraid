@@ -5,7 +5,9 @@ import { findAircraftModel } from '../data/aircraft';
 import {
   PVP_CONFIG,
   PVP_QUICK_PHRASES,
+  PVP_MODES,
   PVP_SCORE_LIMITS,
+  type PvpMode,
   PVP_TEAM,
   PVP_TIME_LIMITS,
 } from '../data/pvp';
@@ -124,7 +126,7 @@ export class LobbyRoom {
         ...v.settings,
         scoreLimit: Number(this.scoreSelect.value),
         timeLimitSeconds: Number(this.timeSelect.value),
-        mode: this.modeSelect.value === 'team' ? 'team' : 'ffa',
+        mode: parseMode(this.modeSelect.value),
       });
     };
     this.scoreSelect = numberSelect(
@@ -144,8 +146,8 @@ export class LobbyRoom {
     this.modeSelect = numberSelect(
       this.rules,
       'モード',
-      ['ffa', 'team'],
-      (v) => (v === 'team' ? 'チーム戦（2 対 2）' : '個人戦'),
+      PVP_MODES,
+      (v) => MODE_LABELS[parseMode(String(v))],
       changed,
     );
     const toggles = el('div', 'lobby-toggles', this.rules);
@@ -189,8 +191,16 @@ export class LobbyRoom {
     this.codeText.textContent = v.code;
     this.share.set(v.code, v.joinUrl);
     this.mapText.textContent = v.mapName;
-    const mode = st.mode === 'team' ? 'チーム戦' : '個人戦';
-    this.rulesText.textContent = `${mode}・撃墜 ${st.scoreLimit} 機・${minutes(st.timeLimitSeconds)}`;
+    // レイド（6-2）は撃墜数・制限時間を使わない（怪獣を倒すか、最終フェーズの時間切れで終わる）
+    this.rulesText.textContent =
+      st.mode === 'raid'
+        ? 'レイド（協力）・ヴォルガス撃破'
+        : `${st.mode === 'team' ? 'チーム戦' : '個人戦'}・撃墜 ${st.scoreLimit} 機・${minutes(st.timeLimitSeconds)}`;
+    const raid = st.mode === 'raid';
+    for (const s of [this.scoreSelect, this.timeSelect]) {
+      const row = s.parentElement;
+      if (row) row.hidden = raid;
+    }
     this.optionsText.textContent = `強化 ${st.noUpgrades ? '無効' : '有効'}・初心者保護 ${st.rookieGuard ? 'ON' : 'OFF'}`;
     this.rules.hidden = !v.isHost;
     // ホストは選ぶ欄に同じことが出ているので、文字のルールは出さない（横画面のスマホで縦に詰める）
@@ -281,4 +291,15 @@ export class LobbyRoom {
       : el('span', 'lobby-team', li, label);
     chip.style.color = teamColorCss(p.team);
   }
+}
+
+/** ロビーのモードの表示名（6-2 でレイドを足した） */
+const MODE_LABELS: Readonly<Record<PvpMode, string>> = {
+  ffa: '個人戦',
+  team: 'チーム戦（2 対 2）',
+  raid: 'レイド（協力・怪獣）',
+};
+
+function parseMode(v: string): PvpMode {
+  return v === 'team' || v === 'raid' ? v : 'ffa';
 }

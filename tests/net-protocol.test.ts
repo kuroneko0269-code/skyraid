@@ -194,10 +194,10 @@ describe('protocol: 直列化の往復', () => {
         hp: Math.round(r() * 300),
       });
     }
-    const msg: StateMsg = { type: 'state', tick: 7777, aircraft, missiles: [] };
+    const msg: StateMsg = { type: 'state', tick: 7777, aircraft, missiles: [], kaiju: null };
     const data = encodeMessage(msg);
-    // 1 機 37 バイト + 見出し 7 バイト（4 機で 155 バイト。15Hz で約 2.3KB/s）
-    expect(data.byteLength).toBe(7 + 37 * 4);
+    // 1 機 37 バイト + 見出し 7 バイト + 怪獣の有無 1 バイト（6-2）（4 機で 156 バイト。15Hz で約 2.3KB/s）
+    expect(data.byteLength).toBe(8 + 37 * 4);
     const back = decodeMessage(data);
     expect(back?.type).toBe('state');
     if (back?.type !== 'state') return;
@@ -249,8 +249,8 @@ describe('protocol: 直列化の往復', () => {
         velocity: { x: r() * 1400 - 700, y: r() * 1400 - 700, z: r() * 1400 - 700 },
       });
     }
-    const data = encodeMessage({ type: 'state', tick: 1, aircraft, missiles });
-    expect(data.byteLength).toBe(7 + 37 * 4 + 14 * 16);
+    const data = encodeMessage({ type: 'state', tick: 1, aircraft, missiles, kaiju: null });
+    expect(data.byteLength).toBe(8 + 37 * 4 + 14 * 16);
     // 15Hz で 6KB/s 以下
     expect(data.byteLength * 15).toBeLessThanOrEqual(6000);
     const back = decodeMessage(data);

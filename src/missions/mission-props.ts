@@ -1,4 +1,4 @@
-// ミッションの出現物のうち、敵機・的・ドローン以外（2-5）: 輸送機（護衛対象）・怪獣の仮実装・地上目標（2-6）と対空砲の射撃。
+// ミッションの出現物のうち、敵機・的・ドローン以外（2-5）: 輸送機（護衛対象）・怪獣（6-1 / 6-2。本体と AI）・地上目標（2-6）と対空砲の射撃。
 // FlightSession が持ち、出現（spawn）・固定ステップ・ミッションの開始時の片付けをここにまとめる（Three.js 非依存）
 import { AntiAirFire, type AaaHit, type AaaTarget } from '../combat/aaa';
 import type { GroundHeightFn, Rng } from '../combat/gun';
@@ -6,7 +6,8 @@ import type { CombatTarget } from '../combat/target';
 import { GROUND_TARGET_CONFIG } from '../data/ground-targets';
 import { TRANSPORT_CONFIG } from '../data/mission-props';
 import { GroundTarget } from '../entities/ground-target';
-import { KaijuPlaceholder } from '../entities/kaiju-placeholder';
+import { KaijuAi, type KaijuHitHandler, type KaijuTarget } from '../ai/kaiju-ai';
+import { Kaiju } from '../entities/kaiju';
 import { Transport } from '../entities/transport';
 import type { GroundTargetSpawn, KaijuSpawn, TransportSpawn } from './types';
 
@@ -20,18 +21,32 @@ export interface EscortState {
 
 export class MissionProps {
   readonly transports: Transport[];
-  readonly kaiju: KaijuPlaceholder;
+  readonly kaiju: Kaiju;
+  /** 怪獣の行動（6-2）。当たりは onKaijuHit */
+  readonly kaijuAi: KaijuAi;
+  /** 怪獣の攻撃が当たったとき（FlightSession がダメージ・スタンを与える） */
+  onKaijuHit: KaijuHitHandler = { damage: () => undefined, stun: () => undefined };
+  /** 遊ぶ人数（怪獣の HP の人数スケール。シングルプレイは 1） */
+  players = 1;
   readonly groundTargets: GroundTarget[];
   /** 対空砲の射撃（弾・警告）。当たったら onAaaHit */
   readonly aaa: AntiAirFire;
   /** 対空砲の弾が自機に当たったとき（FlightSession がダメージを与える） */
   onAaaHit: (hit: Readonly<AaaHit>) => void = () => undefined;
-  /** プレイヤーの敵側で、撃てる・ロックできるもの（怪獣・地上目標）。CombatSystem.allTargets に入れる */
+  /** プレイヤーの敵側で、撃てる・ロックできるもの（怪獣の部位・地上目標）。CombatSystem.allTargets に入れる */
   readonly hostileTargets: readonly CombatTarget[];
 
   constructor(groundHeight: GroundHeightFn = () => 0, rng: Rng = Math.random) {
     this.transports = Array.from({ length: TRANSPORT_CONFIG.maxCount }, () => new Transport());
-    this.kaiju = new KaijuPlaceholder(groundHeight);
+    this.kaiju = new Kaiju(groundHeight);
+    this.kaijuAi = new KaijuAi(this.kaiju, {
+      damage: (id, amount, attack) => {
+        this.onKaijuHit.damage(id, amount, attack);
+      },
+      stun: (id, seconds) => {
+        this.onKaijuHit.stun(id, seconds);
+      },
+    });
     this.groundTargets = Array.from(
       { length: GROUND_TARGET_CONFIG.maxCount },
       () => new GroundTarget(groundHeight),
@@ -43,21 +58,26 @@ export class MissionProps {
       groundHeight,
       rng,
     );
-    this.hostileTargets = [this.kaiju, ...this.groundTargets];
+    this.hostileTargets = [...this.kaiju.parts, ...this.groundTargets];
   }
 
   /** 全部引っ込める（フリーフライト・ミッションの開始） */
   reset(): void {
     for (const t of this.transports) t.withdraw();
     this.kaiju.withdraw();
+    this.kaijuAi.reset();
     for (const g of this.groundTargets) g.withdraw();
     this.aaa.reset();
   }
 
-  /** player は対空砲が狙う自機（撃墜されている間は active が false） */
-  step(dt: number, player: AaaTarget | null = null): void {
+  /** player は対空砲が狙う自機（撃墜されている間は active が false）、kaijuTargets は怪獣が狙う機体 */
+  step(
+    dt: number,
+    player: AaaTarget | null = null,
+    kaijuTargets: readonly KaijuTarget[] = [],
+  ): void {
     for (const t of this.transports) t.step(dt);
-    this.kaiju.step(dt);
+    this.kaijuAi.step(kaijuTargets, dt);
     for (const g of this.groundTargets) g.step(dt);
     this.aaa.step(this.groundTargets, player, dt);
   }
@@ -69,7 +89,12 @@ export class MissionProps {
 
   spawnKaiju(def: KaijuSpawn): void {
     const { position: p, walkTo: w } = def;
-    this.kaiju.emerge(p.x, p.z, w.x, w.z, def.retreatDamageRatio);
+    this.kaiju.emerge(p.x, p.z, w.x, w.z, {
+      players: this.players,
+      retreatRatio: def.retreatDamageRatio,
+      finalTimer: def.finalTimer ?? def.retreatDamageRatio >= 1,
+    });
+    this.kaijuAi.configure({ goal: w, stopRadius: def.stopRadius, attacks: def.attacks });
   }
 
   spawnGroundTargets(def: GroundTargetSpawn): void {
@@ -92,7 +117,12 @@ export class MissionProps {
 
   /** 怪獣に与えたダメージの割合（出ていなければ 0） */
   get kaijuDamageRatio(): number {
-    return this.kaiju.phase === 'hidden' ? 0 : this.kaiju.damageRatio;
+    return this.kaiju.stage === 'hidden' ? 0 : this.kaiju.damageRatio;
+  }
+
+  /** 怪獣が最終フェーズの時間切れで街に着いたか */
+  get kaijuReachedCity(): boolean {
+    return this.kaiju.visible && this.kaiju.cityReached;
   }
 
   /** 地上目標なら、そのグループ（撃墜数の数え上げ用）。地上目標でなければ undefined */

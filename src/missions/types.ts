@@ -3,6 +3,7 @@
 // 表示する文（タイトル・ブリーフィング）は言語ごとに src/data/i18n/*.json に置き、ミッションの id で引く（2-5）
 import type { Difficulty, PatrolPoint } from '../data/ai';
 import type { GroundTargetType } from '../data/ground-targets';
+import type { KaijuAttack } from '../data/kaiju';
 import type { Rank } from '../data/ranking';
 
 /** 位置と向き（機首の向きは -Z から右回り、度。真上から見て時計回り） */
@@ -94,8 +95,8 @@ export interface TransportSpawn {
 }
 
 /**
- * 怪獣（仮実装、2-5。6-1 で本実装）。position の海から浮かび上がり、walkTo へ歩く。
- * HP の retreatDamageRatio を削られると海へ引き返す
+ * 怪獣（2-5。6-1 でヴォルガスに差し替え）。position の海から上陸し、walkTo へ歩く（stopRadius で止まる）。
+ * HP の retreatDamageRatio を削られると海へ引き返す（1 なら撤退せず、倒せる）
  */
 export interface KaijuSpawn {
   readonly kind: 'kaiju';
@@ -103,6 +104,12 @@ export interface KaijuSpawn {
   readonly position: Point2;
   readonly walkTo: Point2;
   readonly retreatDamageRatio: number;
+  /** 歩くのをやめる walkTo からの距離（省略は src/data/kaiju.ts の walk.stopRadius） */
+  readonly stopRadius?: number;
+  /** 使える攻撃（省略は 4 種すべて。M5 は咆哮と投擲だけ） */
+  readonly attacks?: readonly KaijuAttack[];
+  /** 最終フェーズの制限時間を使う（省略は true。時間切れは失敗条件 kaijuReachedCity） */
+  readonly finalTimer?: boolean;
 }
 
 export type SpawnDef =
@@ -173,7 +180,7 @@ export interface DestroyObjective extends ObjectiveBase {
   readonly count: number;
 }
 
-/** 怪獣（2-5。部位 HP はフェーズ6）: 怪獣の全体の HP の damageRatio だけダメージを与える（撤退させる） */
+/** 怪獣（2-5）: 怪獣の全体の HP の damageRatio だけダメージを与える（1 未満は撤退させる、1 は倒す。6-1） */
 export interface KaijuObjective extends ObjectiveBase {
   readonly type: 'kaiju';
   readonly damageRatio: number;
@@ -205,9 +212,11 @@ export type SuccessCondition = 'allRequiredObjectives';
 
 /**
  * 失敗条件。playerDown: 自機撃墜（地面・海面への墜落も） / escortLost: 護衛対象の喪失 /
- * timeUp: 制限時間超過（timeLimitSeconds があるとき） / outOfBounds: 戦域離脱（境界の外で猶予を過ぎる）
+ * timeUp: 制限時間超過（timeLimitSeconds があるとき） / outOfBounds: 戦域離脱（境界の外で猶予を過ぎる） /
+ * kaijuReachedCity: 怪獣の最終フェーズの制限時間が切れ、島の中心（街）に到達した（6-2）
  */
-export type FailCondition = 'playerDown' | 'escortLost' | 'timeUp' | 'outOfBounds';
+export type FailCondition =
+  'playerDown' | 'escortLost' | 'timeUp' | 'outOfBounds' | 'kaijuReachedCity';
 
 export interface RewardDef {
   /** クレジットの基本額 */

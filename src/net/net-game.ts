@@ -8,6 +8,7 @@ import type { Quat, Vec3 } from '../flight/math';
 import {
   NO_TARGET,
   type EventMsg,
+  type KaijuStateMsg,
   type MissileStateMsg,
   type NetControls,
   type ScoreMsg,
@@ -148,6 +149,9 @@ export interface NetGame extends NetGameEvents {
   readonly countdownRemaining: number;
   /** 自機の戦闘の操作を使わない（カウントダウン中・再接続中。5-4） */
   readonly inputBlocked: boolean;
+  /** レイドの怪獣の状態（6-2。ホストの最新。kaijuVersion が変わったら新しい。PvP は null） */
+  readonly kaiju: KaijuStateMsg | null;
+  readonly kaijuVersion: number;
 }
 
 /** 自機の操作と飛行の設定 → 通信の操作 */

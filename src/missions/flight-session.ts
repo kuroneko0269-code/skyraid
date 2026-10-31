@@ -21,6 +21,7 @@ import { copyQuat, copyVec3, quatIdentity, vec3, type Quat, type Vec3 } from '..
 import { BoundaryWatch } from './boundary';
 import { DestroyTally } from './destroy-tally';
 import { configureDrones, spawnInSession } from './session-spawn';
+import { KaijuExposure } from './kaiju-exposure';
 import { MissionProps, type EscortState } from './mission-props';
 import type { DestroyableKind, Pose, SpawnDef } from './types';
 import type { MissionWorld } from './world';
@@ -38,6 +39,8 @@ export interface FlightSessionOptions {
 export type SessionMode = 'free' | 'mission';
 
 const NO_INPUT = createCombatInput();
+/** スタン中の操作（6-2。すべて離した状態） */
+const STUNNED: AircraftControls = { pitch: 0, roll: 0, yaw: 0, throttle: 0, afterburner: false };
 
 export class FlightSession implements MissionWorld {
   readonly aircraft: Aircraft;
@@ -47,6 +50,8 @@ export class FlightSession implements MissionWorld {
   readonly enemies: readonly EnemyAircraft[];
   /** 輸送機・怪獣・地上目標（ミッションの出現物。2-5） */
   readonly props: MissionProps;
+  /** 怪獣の咆哮のスタンとフレアの時間（6-2） */
+  readonly kaijuExposure: KaijuExposure;
   /** 地表の高さ（地形なしのテストでは FLIGHT_CONFIG.groundAltitude） */
   private readonly ground: (x: number, z: number) => number;
   /** PvP の他プレイヤー（5-3。レーダーの点・命中音に使う。シングルプレイでは空） */
@@ -97,6 +102,15 @@ export class FlightSession implements MissionWorld {
     );
     this.squadron = new EnemySquadron(this.combat, enemies, ground, rng, force);
     this.combat.onDestroyed(this.destroyed.count);
+    this.kaijuExposure = new KaijuExposure(this.player, this.combat.flares);
+    this.props.onKaijuHit = {
+      damage: (_id, amount) => {
+        this.combat.dealDamage(this.player, amount, TEAM_ENEMY);
+      },
+      stun: (_id, seconds) => {
+        this.kaijuExposure.applyStun(seconds);
+      },
+    };
     this.props.onAaaHit = (h) => {
       this.combat.reportImpact(h.x, h.y, h.z, true);
       this.combat.dealDamage(this.player, this.props.aaa.config.damage, TEAM_ENEMY);
@@ -178,16 +192,21 @@ export class FlightSession implements MissionWorld {
     this.props.reset();
     this.freeBoundary.reset();
     this.destroyed.clear();
+    this.kaijuExposure.reset();
   }
 
   /** 固定ステップ 1 回分。撃墜されている間は操作を受け付けない */
   step(controls: Readonly<AircraftControls>, input: Readonly<CombatInput>, dt: number): void {
     const alive = this.player.active;
-    if (alive) this.stepAircraft(controls, dt);
+    // 咆哮のスタン中（6-2）は操作できない
+    const stunned = this.kaijuExposure.stunned;
+    if (alive) this.stepAircraft(stunned ? STUNNED : controls, dt);
     if (this.player.step(dt)) this.respawn();
     this.squadron.step(dt);
-    this.props.step(dt, this.player);
-    this.combat.step(this.player.active ? input : NO_INPUT, this.aircraft.state, dt);
+    this.kaijuExposure.step(dt);
+    this.props.step(dt, this.player, this.kaijuExposure.targets);
+    const armed = this.player.active && !stunned;
+    this.combat.step(armed ? input : NO_INPUT, this.aircraft.state, dt);
     if (this.mode === 'free' && this.player.active) {
       const p = this.aircraft.state.position;
       this.freeBoundary.step(p.x, p.z, dt);
@@ -264,6 +283,10 @@ export class FlightSession implements MissionWorld {
 
   get kaijuDamageRatio(): number {
     return this.props.kaijuDamageRatio;
+  }
+
+  get kaijuReachedCity(): boolean {
+    return this.props.kaijuReachedCity;
   }
 
   spawn(def: SpawnDef): void {

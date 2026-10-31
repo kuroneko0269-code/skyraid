@@ -39,8 +39,17 @@
       "briefing": [
         "We have detected two enemy fighters and a huge contact under the sea southeast of the island.",
         "The contact is likely to surface while you are engaging the fighters. Its identity is unknown.",
-        "If a giant creature appears, concentrate your fire and drive it back into the sea.",
+        "If a giant creature appears, concentrate your fire and drive it back into the sea. Beware of its roar and thrown rocks.",
         "Downing the fighters is optional, but watch your six."
+      ]
+    },
+    "raid": {
+      "title": "Raid: Vorgas",
+      "briefing": [
+        "The giant monster Vorgas is coming ashore from the sea southeast of the island.",
+        "Glowing back crystals mean a heat beam; a raised tail means a sweep. Read the tells and dodge.",
+        "Break a leg to knock it down and double all damage.",
+        "Below 40% health it enters the final phase. Defeat it within 3 minutes or it reaches the city."
       ]
     }
   },

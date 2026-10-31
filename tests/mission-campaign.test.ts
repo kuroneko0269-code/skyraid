@@ -14,7 +14,8 @@ import {
   STRIKE_MISSION,
   TRAINING_MISSION,
 } from '../src/data/missions';
-import { KAIJU_PLACEHOLDER_CONFIG, TRANSPORT_CONFIG } from '../src/data/mission-props';
+import { TRANSPORT_CONFIG } from '../src/data/mission-props';
+import { KAIJU_CONFIG } from '../src/data/kaiju';
 import type { GamePlay } from '../src/missions/game-play';
 import type { MissionRunner } from '../src/missions/runner';
 import type { MissionDef } from '../src/missions/types';
@@ -126,7 +127,7 @@ describe('初期ミッション 5 本のデータ', () => {
     const objective = ENCOUNTER_MISSION.objectives.find((o) => o.type === 'kaiju');
     expect(spawn?.kind === 'kaiju' && spawn.retreatDamageRatio).toBe(0.2);
     expect(objective?.type === 'kaiju' && objective.damageRatio).toBe(0.2);
-    expect(KAIJU_PLACEHOLDER_CONFIG.height).toBe(150);
+    expect(KAIJU_CONFIG.height).toBe(150);
   });
 });
 
@@ -265,12 +266,12 @@ describe('初期ミッションの通し（シード固定のボット）', () =
     const s = play.session;
     const runner = play.startMission(ENCOUNTER_MISSION);
     const kaiju = s.props.kaiju;
-    const strike = new StrikeBot(s, () => [kaiju]);
+    const strike = new StrikeBot(s, () => kaiju.parts);
     const pilot = new PilotBot(s, VETERAN, createRandom(502), undefined, getGroundHeight);
     let emergedAt = -1;
     runUntilEnd(play, runner, 450, () => {
       if (emergedAt < 0 && kaiju.visible) emergedAt = runner.elapsed;
-      if (kaiju.active) {
+      if (kaiju.targetable) {
         strike.think(DT);
         return strike;
       }
@@ -280,11 +281,11 @@ describe('初期ミッションの通し（シード固定のボット）', () =
     expect(emergedAt).toBeCloseTo(30, 1);
     expect(runner.status).toBe('success');
     expect(kaiju.damageRatio).toBeGreaterThan(0.2 - 1e-9);
-    expect(kaiju.phase).toBe('retreating');
+    expect(kaiju.stage).toBe('retreating');
     // 引き返して沈みきると消える
-    for (let i = 0; i < KAIJU_PLACEHOLDER_CONFIG.sinkSeconds * 60 + 2; i++)
+    for (let i = 0; i < KAIJU_CONFIG.retreat.sinkSeconds * 60 + 2; i++)
       play.step(pilot.controls, pilot.input, DT);
-    expect(kaiju.phase).toBe('gone');
+    expect(kaiju.stage).toBe('gone');
   });
 
   it('放置すると失敗: M1 時間切れ / M2 撃墜 / M3 輸送機の喪失 / M4 時間切れ / M5 撃墜', () => {

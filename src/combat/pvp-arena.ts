@@ -4,7 +4,8 @@
 // ミサイルの発射ではロックを信頼せず、巻き戻した対象の位置で円錐の条件を見直す（外れていれば無誘導）。
 // 撃墜（墜落も）されると 3 秒後、出現位置のうち他機から最も遠い所へ戻し、3 秒無敵にする。
 // 5-4: チーム戦（味方の機銃・ミサイル・爆風は当たらない）、初心者保護（復帰時）、連続撃墜、再接続待ち（away）と
-// 再接続した人の位置合わせ（resync: 撃墜に数えずに出現位置へ戻す）。Three.js 非依存
+// 再接続した人の位置合わせ（resync: 撃墜に数えずに出現位置へ戻す）。
+// 6-2: レイドの怪獣の部位を機銃・ミサイルの対象に入れ（攻撃した人の ID 付きでダメージ）、怪獣の攻撃の当たり・スタンを受ける。Three.js 非依存
 import { PVP_CONFIG, PVP_SPAWN_POINTS } from '../data/pvp';
 import { FLARE_CONFIG, MISSILE_CONFIG } from '../data/weapons';
 import type { Aircraft, AircraftControls } from '../entities/aircraft';
@@ -14,7 +15,9 @@ import { copyQuat, copyVec3, quatIdentity, rotateVec3, vec3 } from '../flight/ma
 import { FlareField } from './flare';
 import type { GroundHeightFn, GunHit, Rng } from './gun';
 import { MissileSystem, splashDamage, type Detonation } from './missile';
-import { PvpFighter, RewoundTarget, type FighterSpec } from './pvp-fighter';
+import { KaijuPart } from '../entities/kaiju-part';
+import { PvpFighter, RewoundTarget, type ArenaGunTarget, type FighterSpec } from './pvp-fighter';
+import { NEUTRAL, lockablePart, splashKaijuParts, type ArenaFuseTarget } from './arena-raid';
 import { isRookie } from './pvp-rules';
 import { farthestSpawn } from './pvp-spawn';
 import { inCone } from './targeting';
@@ -33,7 +36,7 @@ export interface PvpControls extends AircraftControls {
 
 /** 判定の結果（ホストが event で全員に送る）。a・b・n の意味は protocol.ts の EventMsg と同じ */
 export interface ArenaEvent {
-  kind: 'fire' | 'hit' | 'explode' | 'kill' | 'flare' | 'respawn';
+  kind: 'fire' | 'hit' | 'explode' | 'kill' | 'flare' | 'respawn' | 'stun';
   a: number;
   b: number;
   n: number;
@@ -44,6 +47,9 @@ export interface ArenaEvent {
 
 /** 撃墜した人・当たった人が「いない」（墜落・地面での起爆） */
 export const NOBODY = 255;
+/** 怪獣の部位を表す ID（hit の b・入力の targetId。6-2）: KAIJU_ID_BASE + 部位の番号 */
+export const KAIJU_ID_BASE = 16;
+
 /** respawn の b（出現位置の番号）に足す印: 初心者保護つき（protocol.ts の RESPAWN_ROOKIE と同じ） */
 export const RESPAWN_BOOST = 0x80;
 
@@ -57,7 +63,9 @@ export class PvpArena {
   /** チーム戦のチーム（プレイヤー ID → チーム。null は個人戦） */
   private teams: ReadonlyMap<number, number> | null = null;
   readonly fighters = new Map<number, PvpFighter>();
-  readonly missiles: MissileSystem<PvpFighter>;
+  readonly missiles: MissileSystem<ArenaFuseTarget>;
+  private kaijuParts: readonly KaijuPart[] = [];
+  private readonly fuseList: ArenaFuseTarget[] = [];
   readonly flares: FlareField;
   private readonly list: PvpFighter[] = [];
   private readonly forward = vec3();
@@ -72,7 +80,7 @@ export class PvpArena {
     private readonly groundHeight: GroundHeightFn | null = null,
     private readonly rng: Rng = Math.random,
   ) {
-    this.missiles = new MissileSystem<PvpFighter>(
+    this.missiles = new MissileSystem<ArenaFuseTarget>(
       MISSILE_CONFIG,
       this.handleDetonation,
       groundHeight,
@@ -81,7 +89,28 @@ export class PvpArena {
       PVP_CONFIG.maxMissiles,
     );
     this.flares = new FlareField(FLARE_CONFIG, 4);
-    this.missiles.isFriendly = (target, owner) => this.sameSide(target.id, owner);
+    this.missiles.isFriendly = (target, owner) =>
+      target instanceof PvpFighter && this.sameSide(target.id, owner);
+  }
+
+  /** レイドの怪獣の部位を対象に入れる（6-2） */
+  setKaijuParts(parts: readonly KaijuPart[]): void {
+    this.kaijuParts = parts;
+    this.rebuild();
+  }
+
+  /** 怪獣の攻撃が当たった（6-2。撃墜は「墜落」と同じく撃墜した人なし） */
+  kaijuDamage(id: number, amount: number): void {
+    const f = this.fighters.get(id);
+    if (f?.active) this.damage(f, amount, null);
+  }
+
+  /** 怪獣の咆哮のスタン（6-2）。全員に stun の event（n = 秒 × 100） */
+  stun(id: number, seconds: number): void {
+    const f = this.fighters.get(id);
+    if (!f?.active) return;
+    f.stunTimer = Math.max(f.stunTimer, seconds);
+    this.send('stun', id, 0, Math.round(seconds * 100), f.position);
   }
 
   /** チーム戦にする（null は個人戦）。味方は機銃の判定（others）から外す */
@@ -146,17 +175,18 @@ export class PvpArena {
       // 撃墜されている間・再接続待ちの間は動かない（残骸の位置）。飛んでいる弾だけ進める
       copyVec3(a.prevPosition, a.state.position);
       copyQuat(a.prevOrientation, a.state.orientation);
-      f.gun.step(false, a.state, f.others, dt);
+      f.gun.step(false, a.state, f.gunTargets, dt);
       this.setFiring(f, false);
       return;
     }
     const opts = a.flight.options;
     opts.autoLevel = c.autoLevel;
     opts.invertPitch = c.invertPitch;
+    const stunned = f.stunTimer > 0;
     copyVec3(this.wreck, a.state.position);
     copyQuat(this.wreckOrientation, a.state.orientation);
     const crashes = a.crashCount;
-    a.step(c, dt);
+    a.step(stunned ? NEUTRAL : c, dt);
     if (a.crashCount !== crashes) {
       // Aircraft は墜落すると上空へ戻すので、残骸の位置に置き直す
       a.respawn(this.wreck, this.wreckOrientation);
@@ -166,16 +196,19 @@ export class PvpArena {
     }
     a.velocity(f.velocity);
     this.rewind(f, viewTick);
-    this.setFiring(f, c.fire);
-    f.gun.step(c.fire, a.state, f.others, dt);
+    const fire = c.fire && !stunned;
+    this.setFiring(f, fire);
+    f.gun.step(fire, a.state, f.gunTargets, dt);
     f.missileAmmo.step(dt);
     f.flareAmmo.step(dt);
+    if (stunned) return;
     if (c.missile && f.missileAmmo.tryUse()) {
       const target = this.lockTarget(f, c);
       this.missiles.launch(a.state, target, f.team);
     }
     if (c.flare && f.flareAmmo.tryUse()) {
       this.flares.release(a.state, f.team);
+      f.flareAge = 0;
       this.send('flare', f.id, 0, 0, a.state.position);
     }
   }
@@ -184,8 +217,10 @@ export class PvpArena {
   endTick(dt: number): void {
     for (const f of this.list) f.history.record(this.tick, f.position);
     this.flares.step(dt);
-    this.missiles.step(this.list, this.flares.flares, dt);
+    this.missiles.step(this.fuseList, this.flares.flares, dt);
     for (const f of this.list) {
+      f.flareAge += dt;
+      if (f.stunTimer > 0) f.stunTimer = Math.max(0, f.stunTimer - dt);
       if (f.invulnerableTimer > 0) f.invulnerableTimer = Math.max(0, f.invulnerableTimer - dt);
       if (f.resync) {
         f.resync = false;
@@ -242,13 +277,16 @@ export class PvpArena {
   }
 
   /** ミサイルの目標: クライアントのロックを信頼せず、巻き戻した位置で円錐（+ 余裕）の中か見直す。外れなら無誘導 */
-  private lockTarget(f: PvpFighter, c: Readonly<PvpControls>): PvpFighter | null {
+  private lockTarget(f: PvpFighter, c: Readonly<PvpControls>): ArenaFuseTarget | null {
     if (!c.locked) return null;
-    const o = f.others.find((r) => r.fighter.id === c.targetId);
-    if (!o?.fighter.alive) return null;
     const s = f.spec.targeting;
     const fwd = rotateVec3(this.forward, f.aircraft.state.orientation, LOCAL_FORWARD);
     const cone = s.lockConeDeg + PVP_CONFIG.lockConeToleranceDeg;
+    // 怪獣の部位（6-2）は巻き戻さない
+    const part = this.kaijuParts[c.targetId - KAIJU_ID_BASE];
+    if (part) return lockablePart(part, f.position, fwd, s.lockRange, cone);
+    const o = f.others.find((r) => r.fighter.id === c.targetId);
+    if (!o?.fighter.alive) return null;
     return inCone(f.position, fwd, o.position, s.lockRange, cone) ? o.fighter : null;
   }
 
@@ -265,7 +303,9 @@ export class PvpArena {
       f.others.length = 0;
       for (const o of this.list)
         if (!this.sameSide(f.id, o.id)) f.others.push(new RewoundTarget(o));
+      f.gunTargets.splice(0, f.gunTargets.length, ...f.others, ...this.kaijuParts);
     }
+    this.fuseList.splice(0, this.fuseList.length, ...this.list, ...this.kaijuParts);
   }
 
   private send(
@@ -288,10 +328,16 @@ export class PvpArena {
 
   private readonly handleGunHit = (
     shooter: PvpFighter,
-    hit: Readonly<GunHit<RewoundTarget>>,
+    hit: Readonly<GunHit<ArenaGunTarget>>,
   ): void => {
     const t = hit.target;
     if (!t) return;
+    if (t instanceof KaijuPart) {
+      shooter.hits++;
+      this.send('hit', shooter.id, KAIJU_ID_BASE + t.index, 0, hit);
+      t.damageBy(shooter.spec.gunDamage, shooter.id);
+      return;
+    }
     const victim = t.fighter;
     shooter.hits++;
     // 火花は対象の今の位置 + 巻き戻した位置からのずれ（見ていた機体の上に出す）
@@ -303,9 +349,12 @@ export class PvpArena {
   };
 
   /** 範囲ダメージ（撃った本人には入らない）。シングルと同じ splashDamage */
-  private readonly handleDetonation = (d: Readonly<Detonation<PvpFighter>>): void => {
+  private readonly handleDetonation = (d: Readonly<Detonation<ArenaFuseTarget>>): void => {
     const owner = this.fighters.get(d.owner) ?? null;
-    this.send('explode', d.owner, d.target ? d.target.id : NOBODY, d.serial & 0xff, d);
+    const t = d.target;
+    const hitId = t instanceof PvpFighter ? t.id : t ? KAIJU_ID_BASE + t.index : NOBODY;
+    this.send('explode', d.owner, hitId, d.serial & 0xff, d);
+    splashKaijuParts(this.kaijuParts, d, this.missiles.spec);
     for (const f of this.list) {
       if (!f.active || this.sameSide(f.id, d.owner)) continue;
       const p = f.position;

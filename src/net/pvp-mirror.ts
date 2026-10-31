@@ -4,7 +4,8 @@
 // 自機の索敵とロックはここで計算し、ロック完了と対象を入力に入れる（ホストは信頼せず見直す）。
 // 他機の機銃は発射の event から見た目の弾だけ出す。
 // 5-4: チーム戦の味方は索敵しない（レーダー・名札は味方の色）。初心者保護つきの復帰で最大 HP とミサイルを増やす。
-// 撃墜した相手（撃墜の画面）を覚える。Three.js 非依存
+// 撃墜した相手（撃墜の画面）を覚える。
+// 6-2: レイドの怪獣の部位も索敵・ロックの対象（入力の targetId は KAIJU_ID_BASE + 部位の番号）、咆哮のスタンを覚える。Three.js 非依存
 import { createCombatInput, type CombatInput } from '../combat/combat-input';
 import { MISSILE_CONFIG } from '../data/weapons';
 import { AIRCRAFT_COMBAT } from '../data/aircraft';
@@ -13,7 +14,7 @@ import { PVP_CONFIG } from '../data/pvp';
 import type { Bullet } from '../combat/gun';
 import type { Pool } from '../combat/pool';
 import { TEAM_ENEMY, TEAM_PLAYER, type CombatTarget } from '../combat/target';
-import { NOBODY, RESPAWN_BOOST } from '../combat/pvp-arena';
+import { KAIJU_ID_BASE, NOBODY, RESPAWN_BOOST } from '../combat/pvp-arena';
 import type { Vec3 } from '../flight/math';
 import type { FlightSession } from '../missions/flight-session';
 import { RivalProxy } from './rival-proxy';
@@ -31,6 +32,15 @@ export interface FeedItem {
 
 const NO_TARGETS: readonly CombatTarget[] = [];
 
+/** ロックできる怪獣の部位（6-2。本体の KaijuPart と写しの MirrorPart） */
+export interface KaijuLockable extends CombatTarget {
+  readonly kaijuIndex: number;
+}
+
+function isKaijuLockable(t: CombatTarget): t is KaijuLockable {
+  return 'kaijuIndex' in t;
+}
+
 export class PvpMirror {
   readonly rivals = new Map<number, RivalProxy>();
   readonly local: LocalCombat = createLocalCombat();
@@ -47,8 +57,11 @@ export class PvpMirror {
   /** 今の命が初心者保護つきか（5-4） */
   ownBoosted = false;
   private readonly rivalList: RivalProxy[] = [];
-  /** 索敵の対象（チーム戦の味方を除く） */
-  private readonly targetList: RivalProxy[] = [];
+  /** 索敵の対象（チーム戦の味方を除く。レイドは怪獣の部位も） */
+  private readonly targetList: CombatTarget[] = [];
+  private kaijuTargets: readonly KaijuLockable[] = [];
+  /** 自機のスタンの残り秒数（6-2。操作を使わない・HUD のノイズ） */
+  ownStun = 0;
   private readonly baseMaxHp: number;
   private readonly baseMissiles: number;
   private readonly missileView: MissileMirror;
@@ -87,9 +100,18 @@ export class PvpMirror {
       this.rivalList.push(r);
       if (!r.ally) this.targetList.push(r);
     }
+    this.targetList.push(...this.kaijuTargets);
     const list = this.session.rivals;
     list.length = 0;
     list.push(...this.rivalList);
+  }
+
+  /** レイドの怪獣の部位を索敵の対象にする（6-2。ホストは本体の部位、クライアントは写しの部位） */
+  setKaijuTargets(parts: readonly KaijuLockable[]): void {
+    this.kaijuTargets = parts;
+    this.targetList.length = 0;
+    for (const r of this.rivalList) if (!r.ally) this.targetList.push(r);
+    this.targetList.push(...parts);
   }
 
   /** 他プレイヤーの見た目の機銃の弾（描画） */
@@ -130,7 +152,12 @@ export class PvpMirror {
     l.targetNext = i.targetNext;
     l.locked = c.targeting.locked;
     const sel = c.targeting.selected;
-    l.targetId = sel instanceof RivalProxy ? sel.id : NO_TARGET;
+    l.targetId =
+      sel instanceof RivalProxy
+        ? sel.id
+        : sel && isKaijuLockable(sel)
+          ? KAIJU_ID_BASE + sel.kaijuIndex
+          : NO_TARGET;
     c.gun.step(l.fire, own, NO_TARGETS, dt);
     return l;
   }
@@ -150,6 +177,7 @@ export class PvpMirror {
     }
     s.player.step(dt);
     this.ownInvulnerable = Math.max(0, this.ownInvulnerable - dt);
+    this.ownStun = s.player.active ? Math.max(0, this.ownStun - dt) : 0;
     // HP はホストの値に合わせる（減った分を被弾にする: 赤い光・ダメージの記録）。0 は撃墜の event で
     const hp = Math.max(1, net.ownHp);
     if (s.player.active && hp < s.player.hp) s.player.applyDamage(s.player.hp - hp);
@@ -232,6 +260,9 @@ export class PvpMirror {
         if (r && e.a !== this.localId) c.flares.release(r, TEAM_ENEMY);
         break;
       }
+      case 'stun':
+        if (e.a === this.localId) this.ownStun = Math.max(this.ownStun, e.n / 100);
+        break;
       case 'respawn':
         if (e.a === this.localId) {
           // 初心者保護（5-4）: 最大 HP とミサイルの数をこの命の間だけ増やす（revived で満タンにする）

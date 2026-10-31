@@ -3,6 +3,7 @@
 import type { Object3D, Scene } from 'three';
 import type { Vec3 } from '../flight/math';
 import type { AircraftDetail } from '../data/aircraft-model';
+import type { KaijuBodyView, KaijuEffectsView } from '../entities/kaiju-display';
 import type { FlightSession } from '../missions/flight-session';
 import { CombatView } from './combat-view';
 import { AAA_CONFIG } from '../data/ground-targets';
@@ -64,6 +65,11 @@ export class FlightViews {
   setAircraftDetail(detail: AircraftDetail): void {
     this.enemies.setDetail(detail);
     this.props.setDetail(detail);
+  }
+
+  /** 怪獣の表示元を差し替える（協力のクライアント。6-2。null でミッションの怪獣） */
+  setKaijuSource(body: KaijuBodyView | null, fx: KaijuEffectsView | null = null): void {
+    this.props.setKaijuSource(body, fx);
   }
 
   /** 演出を全部消す（フリーフライトのやり直し） */

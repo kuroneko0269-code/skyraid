@@ -84,9 +84,9 @@ export class PvpEntry {
       }
     }
     screens.setPvpHandlers({
-      onSelect: () => {
+      onSelect: (raid) => {
         void this.load().then((l) => {
-          l.openLobby();
+          l.openLobby(undefined, raid);
         });
       },
       onBack: () => this.link?.back(),

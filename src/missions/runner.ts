@@ -221,6 +221,7 @@ export class MissionRunner {
     for (const c of this.def.failConditions) {
       if (c === 'playerDown' && w.playerDowns > this.initialDowns) return c;
       if (c === 'escortLost' && w.escortLost) return c;
+      if (c === 'kaijuReachedCity' && w.kaijuReachedCity) return c;
       if (c === 'outOfBounds' && this.boundary.expired) return c;
       if (c === 'timeUp' && this.timeLeft !== null && this.timeLeft <= 1e-9) return c;
     }

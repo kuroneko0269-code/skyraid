@@ -5,9 +5,8 @@ import { createCombatInput } from '../src/combat/combat-system';
 import { TEAM_PLAYER } from '../src/combat/target';
 import { detectLocale } from '../src/core/locale';
 import { ESCORT_ATTACK_CONFIG } from '../src/data/ai';
-import { KAIJU_PLACEHOLDER_CONFIG, TRANSPORT_CONFIG } from '../src/data/mission-props';
+import { TRANSPORT_CONFIG } from '../src/data/mission-props';
 import { headingQuat } from '../src/entities/enemy-aircraft';
-import { KaijuPlaceholder } from '../src/entities/kaiju-placeholder';
 import { Transport } from '../src/entities/transport';
 import { quatIdentity } from '../src/flight/math';
 import { FlightSession } from '../src/missions/flight-session';
@@ -40,56 +39,6 @@ describe('輸送機', () => {
   });
 });
 
-describe('怪獣の仮実装', () => {
-  const sea = (): number => -60;
-
-  it('海の中から riseSeconds で浮かび上がり、そのあと walkTo へ walkSpeed で歩いて止まる', () => {
-    const k = new KaijuPlaceholder(sea);
-    k.emerge(1000, 0, 0, 0, 0.2);
-    expect(k.phase).toBe('rising');
-    expect(k.feet.y).toBe(-KAIJU_PLACEHOLDER_CONFIG.height);
-    for (let i = 0; i < KAIJU_PLACEHOLDER_CONFIG.riseSeconds * 60; i++) k.step(DT);
-    expect(k.phase).toBe('walking');
-    // 海の上では海面に立つ（海底ではない）
-    expect(k.feet.y).toBeCloseTo(0, 6);
-    expect(k.position.y).toBeCloseTo(KAIJU_PLACEHOLDER_CONFIG.centerHeight, 6);
-    for (let i = 0; i < 10 * 60; i++) k.step(DT);
-    expect(k.feet.x).toBeCloseTo(1000 - KAIJU_PLACEHOLDER_CONFIG.walkSpeed * 10, 3);
-    for (let i = 0; i < 400 * 60; i++) k.step(DT);
-    expect(k.feet.x).toBeCloseTo(0, 6);
-    expect(k.velocity.x).toBe(0);
-  });
-
-  it('全体の HP だけ。retreatRatio のダメージで引き返して沈み、撃墜はされない', () => {
-    const k = new KaijuPlaceholder(sea);
-    k.emerge(1000, 0, 0, 0, 0.2);
-    expect(k.maxHp).toBe(KAIJU_PLACEHOLDER_CONFIG.maxHp);
-    // 浮かび上がって 20 秒歩いたところで撃つ
-    for (let i = 0; i < (KAIJU_PLACEHOLDER_CONFIG.riseSeconds + 20) * 60; i++) k.step(DT);
-    expect(k.applyDamage(KAIJU_PLACEHOLDER_CONFIG.maxHp * 0.1)).toBe(false);
-    expect(k.phase).toBe('walking');
-    expect(k.damageRatio).toBeCloseTo(0.1, 9);
-    k.applyDamage(KAIJU_PLACEHOLDER_CONFIG.maxHp * 0.1);
-    expect(k.phase).toBe('retreating');
-    expect(k.active).toBe(false);
-    // 引き返している間は当たらない
-    expect(k.applyDamage(100000)).toBe(false);
-    expect(k.isDestroyed).toBe(false);
-    for (let i = 0; i < 3 * 60; i++) k.step(DT);
-    expect(k.velocity.x).toBeGreaterThan(0);
-    for (let i = 0; i < KAIJU_PLACEHOLDER_CONFIG.sinkSeconds * 60; i++) k.step(DT);
-    expect(k.phase).toBe('gone');
-    expect(k.visible).toBe(false);
-  });
-
-  it('HP を一度に全部削っても 1 残る（倒せない）', () => {
-    const k = new KaijuPlaceholder(sea);
-    k.emerge(0, 0, 0, 0, 1);
-    k.applyDamage(1e9);
-    expect(k.hp).toBe(1);
-  });
-});
-
 describe('出現物と戦闘', () => {
   function missionSession(): FlightSession {
     const s = new FlightSession({ rng: () => 0.5 });
@@ -97,7 +46,7 @@ describe('出現物と戦闘', () => {
     return s;
   }
 
-  it('怪獣・地上目標はプレイヤーが撃てる（ロックの候補）。輸送機は候補に入らない', () => {
+  it('怪獣の部位・地上目標はプレイヤーが撃てる（ロックの候補）。輸送機は候補に入らない', () => {
     const s = missionSession();
     s.spawn({
       kind: 'transport',
@@ -106,7 +55,7 @@ describe('出現物と戦闘', () => {
       from: { x: 0, y: 1500, z: -1500 },
       to: { x: 0, y: 1500, z: -9000 },
     });
-    expect(s.combat.allTargets).toContain(s.props.kaiju);
+    for (const part of s.props.kaiju.parts) expect(s.combat.allTargets).toContain(part);
     expect(s.combat.allTargets).not.toContain(s.props.transports[0]);
     expect(s.combat.allies).toContain(s.props.transports[0]);
     expect(s.combat.fuseTargets).toContain(s.props.transports[0]);

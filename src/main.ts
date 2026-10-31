@@ -33,6 +33,8 @@ import { DamageOverlay } from './ui/damage-overlay';
 import { AssistControl } from './core/assist-control';
 import { Hud } from './ui/hud';
 import { MissionHud } from './ui/mission-hud';
+import { KaijuHud } from './ui/kaiju-hud';
+import { KaijuHudLink } from './render/kaiju-hud-link';
 import { installTouchGuards } from './ui/mobile';
 import { createDisplaySettings, createGameSettings } from './ui/settings-link';
 import { FlightFrame } from './render/flight-frame';
@@ -126,6 +128,8 @@ const session = new FlightSession({
   start: WORLD_CONFIG.start,
 });
 const play = new GamePlay(session);
+// 怪獣の HUD（6-2）: 体力バー・フェーズ・ロック中の部位・予兆・スタンのノイズ
+const kaijuHud = new KaijuHudLink(new KaijuHud(document.body), hud, session);
 const { aircraft } = session;
 const assistFlags = createGameSettings(settingsParts, session);
 const assist = new AssistControl(session, assistFlags, () => input.lastDevice);
@@ -164,6 +168,12 @@ const pvp = new PvpEntry(screens, search, {
   scoreKeyDown: () => input.isDown('targetNext'),
   otherGun: (x, y, z) => {
     fxEvents.otherGun(x, y, z);
+  },
+  // 6-2: レイドの協力の怪獣（ホストは本体、クライアントは state の写し）を描画・HUD・音に出す
+  kaijuSource: (src) => {
+    views.setKaijuSource(src?.body ?? null, src?.fx ?? null);
+    kaijuHud.setSource(src ? src.hud : null);
+    audio.setKaijuSource(src?.body ?? null);
   },
 });
 // 機体モデルの細かさ（4-3。画質「低」は LOD）と陽炎の屈折（4-4。「高」だけ）
@@ -292,6 +302,7 @@ loop.onUpdate((dt) => {
 loop.onRender((alpha) => {
   pvp.render(alpha);
   frame.render(game.state, alpha, keys.menuTick);
+  if (game.state === 'flight') kaijuHud.update();
   tutorial.update(game.state === 'flight');
 });
 loop.start();

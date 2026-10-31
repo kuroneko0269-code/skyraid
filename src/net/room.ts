@@ -138,9 +138,10 @@ export class HostRoom extends RoomBase {
   }
 
   /** 対戦の終わり（5-3）: 全員に知らせ、ロビーに戻す。準備と「もう一度」は全員やり直し（5-4） */
-  endMatch(tick: number): void {
+  /** outcome はレイドの結果（6-2。raid-host.ts の RAID_OUTCOME。PvP は 0） */
+  endMatch(tick: number, outcome = 0): void {
     if (!this.started || this.ended) return;
-    this.broadcast(eventMsg('over', 0, 0, tick), 'reliable');
+    this.broadcast(eventMsg('over', 0, outcome, tick), 'reliable');
     this.started = false;
     for (const p of this.players) {
       p.ready = p.id === 0;

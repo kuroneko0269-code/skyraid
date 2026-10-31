@@ -18,7 +18,7 @@ import { Magazine } from './magazine';
 import { MissileSystem, splashDamage, type Detonation } from './missile';
 import type { Impact } from './projectile';
 import { RocketPod } from './rocket';
-import { TEAM_PLAYER, teamOf, type CombatTarget } from './target';
+import { TEAM_PLAYER, nearestPerGroup, teamOf, type CombatTarget } from './target';
 import { Targeting } from './targeting';
 import type { CombatInput } from './combat-input';
 
@@ -234,8 +234,7 @@ export class CombatSystem {
     onTarget = true,
   ): void {
     for (const fn of this.explosionListeners) fn(x, y, z, onTarget, spec.radius);
-    for (const t of this.fuseTargets) {
-      if (!t.active || (spareTeam !== null && teamOf(t) === spareTeam)) continue;
+    for (const t of this.inBlast(x, y, z, spec.radius, spareTeam)) {
       const p = t.position;
       const dist = Math.hypot(p.x - x, p.y - y, p.z - z) - t.hitRadius;
       const amount = blastDamage(spec, dist);
@@ -268,6 +267,28 @@ export class CombatSystem {
     return n;
   }
 
+  /** 爆心から半径 radius 以内（表面まで）の対象。spareTeam の陣営は除き、怪獣の部位は最も近い 1 つだけ（6-1） */
+  private inBlast(
+    x: number,
+    y: number,
+    z: number,
+    radius: number,
+    spareTeam: number | null,
+  ): CombatTarget[] {
+    const list: CombatTarget[] = [];
+    const dist: number[] = [];
+    for (const t of this.fuseTargets) {
+      if (!t.active || (spareTeam !== null && teamOf(t) === spareTeam)) continue;
+      const p = t.position;
+      const d = Math.hypot(p.x - x, p.y - y, p.z - z) - t.hitRadius;
+      if (d >= radius) continue;
+      list.push(t);
+      dist.push(d);
+    }
+    // 誘爆（dealDamage の中の applyBlast）で入れ物が書き換わらないよう、結果は新しい配列にする
+    return nearestPerGroup(list, dist, []);
+  }
+
   private readonly handleHit = (hit: Readonly<GunHit<CombatTarget>>): void => {
     const target = hit.target;
     this.reportImpact(hit.x, hit.y, hit.z, target !== null);
@@ -297,8 +318,7 @@ export class CombatSystem {
     const spec = this.missiles.spec;
     for (const fn of this.explosionListeners)
       fn(d.x, d.y, d.z, d.target !== null, spec.blastRadius);
-    for (const t of this.fuseTargets) {
-      if (!t.active || teamOf(t) === d.owner) continue;
+    for (const t of this.inBlast(d.x, d.y, d.z, spec.blastRadius, d.owner)) {
       const p = t.position;
       const dist = Math.hypot(p.x - d.x, p.y - d.y, p.z - d.z) - t.hitRadius;
       const amount = splashDamage(spec, dist);

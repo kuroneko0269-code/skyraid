@@ -29,6 +29,8 @@ export class FlareField {
   /** 自機の回数とクールダウン */
   readonly magazine: Magazine;
   private burstSerial = 0;
+  /** 陣営ごとの放出の回数（怪獣の咆哮をフレアで防ぐ判定。6-2） */
+  readonly releases = new Map<number, number>();
   private readonly forward = vec3();
   private readonly right = vec3();
   private readonly up = vec3();
@@ -62,6 +64,7 @@ export class FlareField {
     const o = rotateVec3(this.offset, q, s.offset);
     const p = shooter.position;
     const burst = ++this.burstSerial;
+    this.releases.set(owner, (this.releases.get(owner) ?? 0) + 1);
     for (let i = 0; i < s.perBurst; i++) {
       const fl = this.flares.acquire();
       if (!fl) return;

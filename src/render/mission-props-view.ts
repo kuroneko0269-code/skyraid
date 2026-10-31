@@ -1,28 +1,23 @@
-// ミッションの出現物（2-5）の描画: 輸送機（4-3 の機体モデルの生成器。太い胴体・高翼・4 発）と怪獣の仮実装（プリミティブ）。
-// 種類ごとに InstancedMesh / Mesh 1 つ（追加の draw call は最大 2。出ていないものは描かない）。
-// 怪獣は 6-1 で作り直す。地上目標（2-6）は ground-target-view.ts
+// ミッションの出現物（2-5）の描画: 輸送機（4-3 の機体モデルの生成器。太い胴体・高翼・4 発）と怪獣（6-1。
+// 手続き生成のモデル kaiju-model/。部位 6 + 熱線 + 岩で draw call 8）。出ていないものは描かない。
+// 怪獣の表示元は差し替えられる（協力のクライアントはホストの状態の写し。6-2）。地上目標（2-6）は ground-target-view.ts
 import {
-  BoxGeometry,
   Color,
-  ConeGeometry,
   DynamicDrawUsage,
-  Float32BufferAttribute,
   InstancedMesh,
   Matrix4,
-  Mesh,
-  MeshStandardMaterial,
   Vector3,
   type BufferGeometry,
   type Scene,
 } from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { KAIJU_PLACEHOLDER_CONFIG as KAIJU } from '../data/mission-props';
+import type { KaijuBodyView, KaijuEffectsView } from '../entities/kaiju-display';
 import type { MissionProps } from '../missions/mission-props';
 import type { AircraftDetail } from '../data/aircraft-model';
 import { TRANSPORT_SHAPE } from '../data/aircraft-shapes';
 import { hitFlashScale } from './aircraft-model/accumulator';
 import { buildAircraft } from './aircraft-model/build';
 import { createPaintMaterial } from './aircraft-model/material';
+import { KaijuObject } from './kaiju-model/kaiju-object';
 
 const WHITE = new Color(0xffffff);
 const FLASH = 0.75;
@@ -36,30 +31,6 @@ const back = new Vector3();
 /** 輸送機: 機体モデルの生成器（キャノピーも機体に入れる。ミサイルなし） */
 function createTransportGeometry(detail: AircraftDetail): BufferGeometry {
   return buildAircraft(TRANSPORT_SHAPE, { detail, missiles: 0, mergeCanopy: true }).body;
-}
-
-/** 怪獣: 胴（箱）+ 頭（円錐）。足元が原点、前方 -Z。頭だけ色を変える（頂点カラー） */
-function createKaijuGeometry(): BufferGeometry {
-  const b = KAIJU.body;
-  const headHeight = KAIJU.height - b.height;
-  const body = new BoxGeometry(b.width, b.height, b.depth).translate(0, b.height / 2, 0);
-  const head = new ConeGeometry(KAIJU.headRadius, headHeight, 12).translate(
-    0,
-    b.height + headHeight / 2,
-    0,
-  );
-  const paint = (g: BufferGeometry, hex: number): BufferGeometry => {
-    const c = new Color(hex);
-    const n = g.getAttribute('position').count;
-    const colors = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) c.toArray(colors, i * 3);
-    g.setAttribute('color', new Float32BufferAttribute(colors, 3));
-    return g.index ? g.toNonIndexed() : g;
-  };
-  const parts = [paint(body, KAIJU.color), paint(head, KAIJU.headColor)];
-  const merged = mergeGeometries(parts);
-  for (const p of parts) p.dispose();
-  return merged;
 }
 
 function createInstanced(geometry: BufferGeometry, hex: number, count: number): InstancedMesh {
@@ -76,9 +47,11 @@ function createInstanced(geometry: BufferGeometry, hex: number, count: number): 
 
 export class MissionPropsView {
   private readonly transports: InstancedMesh;
-  private readonly kaiju: Mesh;
-  private readonly kaijuMaterial: MeshStandardMaterial;
+  private readonly kaiju: KaijuObject;
+  /** 怪獣の表示元（null はミッションの怪獣） */
+  private kaijuSource: { body: KaijuBodyView; fx: KaijuEffectsView | null } | null = null;
   private detail: AircraftDetail = 'high';
+  private lastMs: number | null = null;
 
   constructor(
     scene: Scene,
@@ -90,11 +63,8 @@ export class MissionPropsView {
       0xffffff,
       props.transports.length,
     );
-    this.kaijuMaterial = new MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
-    this.kaiju = new Mesh(createKaijuGeometry(), this.kaijuMaterial);
-    this.kaiju.castShadow = true;
-    this.kaiju.visible = false;
-    scene.add(this.transports, this.kaiju);
+    this.kaiju = new KaijuObject('high');
+    scene.add(this.transports, ...this.kaiju.objects);
   }
 
   /** 画質（「低」は LOD）。変わったら輸送機のジオメトリを作り直す */
@@ -103,6 +73,12 @@ export class MissionPropsView {
     this.detail = detail;
     this.transports.geometry.dispose();
     this.transports.geometry = createTransportGeometry(detail);
+    this.kaiju.setDetail(detail);
+  }
+
+  /** 怪獣の表示元を差し替える（協力のクライアント。null でミッションの怪獣に戻す） */
+  setKaijuSource(body: KaijuBodyView | null, fx: KaijuEffectsView | null = null): void {
+    this.kaijuSource = body ? { body, fx } : null;
   }
 
   /** 描画フレームごとに呼ぶ。動くもの（輸送機・怪獣）は前ステップとの間を補間する */
@@ -138,19 +114,12 @@ export class MissionPropsView {
   }
 
   private updateKaiju(alpha: number): void {
-    const k = this.props.kaiju;
-    this.kaiju.visible = k.visible;
-    if (!k.visible) return;
-    const p = k.feet;
-    const q = k.prevFeet;
-    this.kaiju.position.set(
-      q.x + (p.x - q.x) * alpha,
-      q.y + (p.y - q.y) * alpha,
-      q.z + (p.z - q.z) * alpha,
-    );
-    // 前方（-Z）を向いている方位へ
-    this.kaiju.rotation.set(0, Math.atan2(-k.facing.x, -k.facing.z), 0);
-    this.kaijuMaterial.emissive.setScalar(k.flashTimer > 0 ? 0.5 : 0);
+    const now = performance.now();
+    const dt = this.lastMs === null ? 0 : Math.min(0.1, (now - this.lastMs) / 1000);
+    this.lastMs = now;
+    const src = this.kaijuSource;
+    if (src) this.kaiju.update(src.body, src.fx, alpha, dt);
+    else this.kaiju.update(this.props.kaiju, this.props.kaijuAi, alpha, dt);
   }
 }
 

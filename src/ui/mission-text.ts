@@ -37,6 +37,7 @@ export const FAIL_REASON_TEXT: Record<FailCondition, string> = {
   playerDown: '撃墜された',
   escortLost: '護衛対象を失った',
   timeUp: '時間切れ',
+  kaijuReachedCity: '怪獣が街に到達した',
   outOfBounds: '戦域を離脱した',
 };
 

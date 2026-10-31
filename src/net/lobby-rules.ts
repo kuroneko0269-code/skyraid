@@ -1,7 +1,8 @@
 // ロビーの判定（5-4）: 開始できるか（全員 Ready・再接続待ちなし・チーム戦は両チームに 1 人以上）、
 // チームの自動割当、全員が「もう一度」を押したか。ホストもクライアントも同じ判定で表示する。Three.js・DOM 非依存
 import type { PvpMode } from '../data/pvp';
-import type { PlayerInfo, UpgradeLevelsMsg } from './protocol';
+import { NET_CONFIG } from '../data/net';
+import type { GameSettings, PlayerInfo, UpgradeLevelsMsg } from './protocol';
 import type { PlayerProfile } from './room-code';
 
 /** 開始できない理由（null は開始できる） */
@@ -55,7 +56,7 @@ export function sameSide(
   mode: PvpMode,
   teamOf: (id: number) => number | undefined,
 ): boolean {
-  if (a === b) return true;
+  if (a === b || mode === 'raid') return true;
   if (mode !== 'team') return false;
   const ta = teamOf(a);
   return ta !== undefined && ta === teamOf(b);
@@ -105,4 +106,9 @@ export class ChatGate {
     this.last.set(from, nowMs);
     return true;
   }
+}
+
+/** 部屋を作るときの設定（6-2: モード選択の「レイド」の「協力」から作るならレイド。それ以外は既定） */
+export function initialSettings(raid: boolean): GameSettings | undefined {
+  return raid ? { ...NET_CONFIG.defaultSettings, mode: 'raid' } : undefined;
 }

@@ -1,0 +1,196 @@
+/* 怪獣の HUD（6-2）。画面上部の中央（⏸ ボタン・残り時間と重ならない幅） */
+.kaiju-hud {
+  --kaiju-color: rgba(255, 120, 70, 0.95);
+  --kaiju-warn: rgba(255, 210, 60, 0.98);
+  position: fixed;
+  inset: 0;
+  z-index: 16;
+  pointer-events: none;
+  color: var(--kaiju-color);
+  font:
+    700 13px/1.25 system-ui,
+    sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+:root:not([data-screen='flight']):not([data-screen='pause']) .kaiju-hud {
+  display: none;
+}
+
+.kaiju-hud[hidden],
+.kaiju-hud [hidden] {
+  display: none;
+}
+
+.kaiju-top {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(460px, calc(100vw - 180px));
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.kaiju-head {
+  display: flex;
+  justify-content: space-between;
+  letter-spacing: 0.06em;
+}
+
+.kaiju-phase.is-final {
+  color: #ff4a3a;
+}
+
+.kaiju-bar {
+  position: relative;
+  height: 9px;
+  background: rgba(20, 0, 0, 0.55);
+  border: 1px solid var(--kaiju-color);
+}
+
+.kaiju-bar-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #ff3a10, #ff8a3a);
+}
+
+.kaiju-bar-tick {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.kaiju-part {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(110, 240, 255, 0.92);
+  font-size: 12px;
+}
+
+.kaiju-part.is-broken {
+  color: rgba(170, 180, 190, 0.85);
+}
+
+.kaiju-part-bar {
+  position: relative;
+  flex: 0 0 120px;
+  height: 5px;
+  background: rgba(0, 20, 30, 0.5);
+  border: 1px solid currentColor;
+}
+
+.kaiju-part-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: currentColor;
+}
+
+/* 予兆の警告: 画面の上 1/4。点滅 */
+.kaiju-warning {
+  position: absolute;
+  top: 24%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 14px;
+  color: var(--kaiju-warn);
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  border-top: 2px solid var(--kaiju-warn);
+  border-bottom: 2px solid var(--kaiju-warn);
+  background: rgba(40, 20, 0, 0.35);
+  animation: kaiju-blink 0.4s steps(2, start) infinite;
+}
+
+.kaiju-break {
+  position: absolute;
+  top: 33%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff27a;
+  font-size: 30px;
+  font-style: italic;
+  letter-spacing: 0.1em;
+  text-shadow:
+    0 0 10px rgba(255, 200, 40, 0.9),
+    0 2px 2px rgba(0, 0, 0, 0.7);
+}
+
+.kaiju-down {
+  position: absolute;
+  top: calc(84px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  color: #9cff7a;
+  font-size: 15px;
+}
+
+/* 咆哮のスタン: 画面全体の走査線のノイズ */
+.kaiju-noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 5px);
+  mix-blend-mode: screen;
+  transition: opacity 0.15s;
+}
+
+.kaiju-noise.is-on {
+  opacity: 1;
+  animation: kaiju-noise 0.12s steps(3) infinite;
+}
+
+/* スタン中は HUD もゆらす */
+:root[data-stunned] .hud {
+  animation: kaiju-jitter 0.1s steps(2) infinite;
+  filter: blur(0.6px) hue-rotate(40deg);
+}
+
+@keyframes kaiju-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes kaiju-noise {
+  0% {
+    background-position:
+      0 0,
+      0 0;
+  }
+  50% {
+    background-position:
+      0 2px,
+      3px 0;
+  }
+  100% {
+    background-position:
+      0 -1px,
+      -2px 0;
+  }
+}
+
+@keyframes kaiju-jitter {
+  0% {
+    transform: translate(2px, -1px);
+  }
+  100% {
+    transform: translate(-2px, 1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kaiju-warning,
+  .kaiju-noise.is-on,
+  :root[data-stunned] .hud {
+    animation: none;
+  }
+}

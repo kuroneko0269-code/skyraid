@@ -8,6 +8,7 @@ import type { AudioEngine } from '../engine';
 import { createHitCompressor, explosionSound, hitCompression } from '../params';
 import type { Voice } from '../voices';
 import { CombatSounds } from './combat-sounds';
+import { KaijuSounds } from './kaiju-sounds';
 import { SfxKit, envelope, type Position } from './kit';
 
 export type { Position } from './kit';
@@ -19,10 +20,13 @@ export class OneShots {
   private readonly kit: SfxKit;
   private readonly combat: CombatSounds;
   private readonly hitComp = createHitCompressor();
+  /** 怪獣の音（6-2） */
+  readonly kaiju: KaijuSounds;
 
   constructor(engine: AudioEngine, listener: Readonly<Position>) {
     this.kit = new SfxKit(engine, listener);
     this.combat = new CombatSounds(this.kit);
+    this.kaiju = new KaijuSounds(this.kit, this.combat);
   }
 
   private get engine(): AudioEngine {

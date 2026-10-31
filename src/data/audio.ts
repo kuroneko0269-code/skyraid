@@ -300,3 +300,55 @@ export type BgmTrack = keyof typeof BGM_CONFIG.tracks;
 export const UI_SOUND_EVENTS = {
   purchase: 'skyraid:purchase',
 } as const;
+
+/**
+ * 怪獣の音（6-2。src/audio/sfx/kaiju-sounds.ts）。巨大なので 3D の距離減衰（refDistance 120m）は使わず定位なしで鳴らし、
+ * 音量だけを距離で下げる（refDistance まで 1、その先は refDistance / 距離。minGain で下げ止める）
+ */
+export const KAIJU_SOUND = {
+  distance: { refDistance: 700, minGain: 0.12 },
+  /** 足音: 低い三角波の落ち込み + 地鳴りのノイズ（ローパス） */
+  footstep: {
+    gain: 0.9,
+    thump: {
+      startFreq: 58,
+      endFreq: 28,
+      duration: 1.4,
+      hold: 0.25,
+      cutoff: 260,
+      gain: 1,
+      wave: 'triangle',
+    },
+    rumble: { cutoff: 140, gain: 0.55, duration: 1.6 },
+  },
+  /** 咆哮: 低いうなり（鋸歯波 2 本のうなり + ローパス）+ 高域のきしみ（バンドパスのノイズと矩形波の揺れ） */
+  roar: {
+    gain: 0.8,
+    duration: 2.4,
+    growl: { freqs: [62, 66.5], endScale: 0.75, cutoff: 520, gain: 0.7 },
+    screech: { freq: 2600, q: 5, gain: 0.35, tone: 1150, toneGain: 0.06, vibrato: 7 },
+  },
+  /** 熱線: 予兆の高まる音と、照射中の持続ノイズ（バンドパスの唸り + 高域のジリジリ） */
+  beam: {
+    gain: 0.65,
+    charge: { from: 180, to: 900, gain: 0.25 },
+    hum: { freq: 140, cutoff: 900, gain: 0.5 },
+    hiss: { freq: 3200, q: 0.8, gain: 0.35 },
+  },
+  /** 部位破壊: 砕ける音（低いドン + 広いノイズの破裂 + 結晶なら高い響き） */
+  partBreak: {
+    gain: 0.9,
+    thump: {
+      startFreq: 90,
+      endFreq: 35,
+      duration: 0.9,
+      hold: 0.1,
+      cutoff: 400,
+      gain: 1,
+      wave: 'triangle',
+    },
+    crunch: { cutoff: 1800, gain: 0.7, duration: 0.7 },
+  },
+  /** ブレイク: 明るい 3 和音の合図（定位なし） */
+  breakChime: { gain: 0.35, freqs: [880, 1320, 1760], duration: 0.6 },
+} as const;

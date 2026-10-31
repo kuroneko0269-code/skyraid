@@ -12,7 +12,7 @@ import type { CombatInput } from '../combat/combat-input';
 import type { AircraftControls, GroundHeightFn } from '../entities/aircraft';
 import type { FlightSession } from '../missions/flight-session';
 import { ClientRoom } from '../net/client-room';
-import { allAgain } from '../net/lobby-rules';
+import { allAgain, initialSettings } from '../net/lobby-rules';
 import { netLoadout } from '../net/loadout';
 import { openLocalTransport } from '../net/local-transport';
 import { openPeerTransport } from '../net/peerjs-transport';
@@ -27,7 +27,7 @@ import { findAircraftModel } from '../data/aircraft';
 import { LobbyScreen } from './lobby';
 import { JOIN_ERRORS, lobbyActions, rosterNotices, type RosterSnapshot } from './pvp-lobby-actions';
 import { PvpBoard, onRadarTap } from './pvp-board';
-import { PvpFlight, type PvpSound } from './pvp-flight';
+import { PvpFlight, type KaijuSource, type PvpSound } from './pvp-flight';
 import { PvpHud } from './pvp-hud';
 import { PvpOverlay } from './pvp-overlay';
 import { buildJoinUrl } from './pvp-entry';
@@ -54,6 +54,8 @@ export interface PvpDeps {
   readonly otherGun: (x: number, y: number, z: number) => void;
   /** カウントダウン・GO・残り時間の警告の音（5-4） */
   readonly sound: (kind: PvpSound) => void;
+  /** レイドの怪獣の表示元（6-2） */
+  readonly kaijuSource: (src: KaijuSource | null) => void;
 }
 
 /** 部屋の tick（ping・無通信の検知・再接続）の間隔（ms） */
@@ -73,6 +75,8 @@ export class PvpLink {
   private attempt = 0;
   /** 直前の名簿（切断・再接続・離脱のお知らせ） */
   private roster: RosterSnapshot = new Map();
+  /** モード選択の「レイド」の「協力」から開いた（部屋を作るときレイドの設定にする。6-2） */
+  private raidLobby = false;
 
   constructor(private readonly deps: PvpDeps) {
     this.open = deps.transport === 'local' ? openLocalTransport : openPeerTransport;
@@ -124,8 +128,9 @@ export class PvpLink {
     return this.flight !== null;
   }
 
-  /** ロビーを開く。code があればすぐ参加する（?room） */
-  openLobby(code?: string): void {
+  /** ロビーを開く。code があればすぐ参加する（?room）。raid はレイドの協力（6-2）として部屋を作る */
+  openLobby(code?: string, raid = false): void {
+    this.raidLobby = raid;
     const game = this.deps.game;
     if (game.state !== 'mode_select') game.transition('mode_select');
     game.transition('lobby');
@@ -175,7 +180,8 @@ export class PvpLink {
     const attempt = ++this.attempt;
     this.lobby.showConnecting('部屋を作っています…');
     try {
-      const room = await HostRoom.create({ open: this.open, profile: this.profile() });
+      const settings = initialSettings(this.raidLobby);
+      const room = await HostRoom.create({ open: this.open, profile: this.profile(), settings });
       if (attempt !== this.attempt) {
         room.leave();
         return;
@@ -272,17 +278,11 @@ export class PvpLink {
     if (!room) return;
     const d = this.deps;
     this.flight = new PvpFlight(room, {
-      session: d.session,
-      playerView: d.playerView,
-      camera: d.camera,
-      groundHeight: d.groundHeight,
+      ...d,
       remotes: this.remotes,
       hud: this.hud,
       board: this.board,
       overlay: this.overlay,
-      scoreKeyDown: d.scoreKeyDown,
-      otherGun: d.otherGun,
-      sound: d.sound,
     });
     const model = findAircraftModel(this.ownAircraftId()) ?? d.hangar.selectedModel;
     const missiles = this.loadout().missiles;

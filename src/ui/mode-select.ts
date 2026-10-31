@@ -18,11 +18,12 @@ const MODE_ENTRIES: readonly { mode: GameMode; label: string; note: string; enab
   { mode: 'hangar', label: 'ハンガー', note: '機体の購入・強化', enabled: true },
   // PvP（5-1）: 今は同じ空を飛ぶまで（撃ち合いは 5-3）
   { mode: 'pvp', label: 'PvP', note: '2〜4 人で同じ空を飛ぶ', enabled: true },
-  { mode: 'raid', label: 'レイド', note: '巨大怪獣を協力撃破', enabled: false },
+  // レイド（6-2）: ソロはすぐ出撃、協力は PvP のロビーを使う
+  { mode: 'raid', label: 'レイド', note: '巨大怪獣ヴォルガスを撃破（1〜4 人）', enabled: true },
 ];
 
 /**
- * モード選択画面。チュートリアル（4-11）・フリーフライトとキャンペーン（2-4）・ハンガー（3-3）・PvP（5-1）を選べる。
+ * モード選択画面。チュートリアル（4-11）・フリーフライトとキャンペーン（2-4）・ハンガー（3-3）・PvP（5-1）・レイド（6-2）を選べる。
  * 初回起動（パイロット名の入力の後）に 1 度だけ「チュートリアルを始めますか？」を重ねて出す
  */
 export class ModeSelectScreen {
@@ -31,11 +32,18 @@ export class ModeSelectScreen {
   private freeNote: HTMLSpanElement | null = null;
   private readonly prompt: HTMLDivElement;
   private readonly promptStart: HTMLButtonElement;
+  private readonly raidPrompt: HTMLDivElement;
+  private readonly raidSolo: HTMLButtonElement;
 
   constructor(
     parent: HTMLElement,
     tutorial: TutorialStrings,
-    handlers: { onSelect: (mode: GameMode) => void; onBack: () => void },
+    handlers: {
+      onSelect: (mode: GameMode) => void;
+      onBack: () => void;
+      /** レイドの人数を選んだ（6-2）: solo はすぐ出撃、coop は PvP のロビーへ */
+      onRaid: (kind: 'solo' | 'coop') => void;
+    },
   ) {
     const root = createScreen(parent, 'mode-select-screen');
     const heading = document.createElement('h2');
@@ -82,7 +90,42 @@ export class ModeSelectScreen {
         handlers.onSelect('tutorial');
       },
     );
+    // レイドの人数の選択（6-2）
+    this.raidPrompt = el('div', 'mode-prompt', root);
+    this.raidPrompt.hidden = true;
+    const raidBox = el('div', 'ui-dialog mode-prompt-box', this.raidPrompt);
+    el('h3', 'ui-heading mode-prompt-title', raidBox, 'レイド：ヴォルガス');
+    el(
+      'p',
+      'mode-prompt-text',
+      raidBox,
+      '1 人ならすぐ出撃。2〜4 人は部屋を作るか、部屋コードで参加します（全員が同じチーム）。',
+    );
+    const raidButtons = el('div', 'campaign-buttons', raidBox);
+    createButton(raidButtons, 'ui-button is-ghost campaign-back', '戻る', () => {
+      this.closeDialog();
+      this.firstEnabled?.focus({ preventScroll: true });
+    });
+    createButton(raidButtons, 'ui-button campaign-go', '協力（2〜4 人）', () => {
+      this.closeDialog();
+      handlers.onRaid('coop');
+    });
+    this.raidSolo = createButton(
+      raidButtons,
+      'ui-button is-primary campaign-go',
+      'ソロで出撃',
+      () => {
+        this.closeDialog();
+        handlers.onRaid('solo');
+      },
+    );
     this.root = root;
+  }
+
+  /** レイドの人数の選択を出す（6-2） */
+  showRaidPrompt(): void {
+    this.raidPrompt.hidden = false;
+    this.raidSolo.focus({ preventScroll: true });
   }
 
   /** 「チュートリアルを始めますか？」を出す */
@@ -93,8 +136,9 @@ export class ModeSelectScreen {
 
   /** 案内が開いていれば閉じて true（Esc） */
   closeDialog(): boolean {
-    if (this.prompt.hidden) return false;
+    if (this.prompt.hidden && this.raidPrompt.hidden) return false;
     this.prompt.hidden = true;
+    this.raidPrompt.hidden = true;
     return true;
   }
 

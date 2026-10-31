@@ -27,4 +27,6 @@ export interface MissionWorld {
   escort(group: string): EscortState | null;
   /** 怪獣に与えたダメージの割合（0〜1。出ていなければ 0） */
   readonly kaijuDamageRatio: number;
+  /** 怪獣が最終フェーズの時間切れで街に到達したか（6-2） */
+  readonly kaijuReachedCity: boolean;
 }

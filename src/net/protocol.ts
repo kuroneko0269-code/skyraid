@@ -135,11 +135,52 @@ export interface MissileStateMsg {
   velocity: Vec3;
 }
 
+/** 怪獣の部位 1 つ（6-2。レイド） */
+export interface KaijuPartStateMsg {
+  /** 部位 HP の割合（0〜1） */
+  hpRatio: number;
+  /** ブレイクの残り秒数 */
+  breakTimer: number;
+}
+
+/**
+ * 怪獣の状態（6-2。レイドのときだけ state に入る。ホストが動かし、クライアントは表示と HUD に使う）。
+ * 判定（当たり・ダメージ）はホストだけ。本格的な同期（補間・演出）は 6-6
+ */
+export interface KaijuStateMsg {
+  /** KAIJU_STAGES の番号 */
+  stage: number;
+  feet: Vec3;
+  heading: number;
+  /** 攻撃（KAIJU_ATTACKS の番号。NO_ATTACK はなし）と段階（ATTACK_STEPS の番号）・経過・長さ（秒） */
+  attack: number;
+  attackStep: number;
+  attackTime: number;
+  attackDuration: number;
+  downTimer: number;
+  walkPhase: number;
+  hp: number;
+  maxHp: number;
+  phase: number;
+  /** 最終フェーズの残り秒数（null は始まっていない） */
+  finalRemaining: number | null;
+  parts: KaijuPartStateMsg[];
+  /** 熱線の向き（null は撃っていない） */
+  beam: Vec3 | null;
+  /** 飛んでいる岩の位置 */
+  rocks: Vec3[];
+}
+
+/** KaijuStateMsg.attack: 攻撃していない */
+export const NO_ATTACK = 255;
+
 export interface StateMsg {
   type: 'state';
   tick: number;
   aircraft: AircraftStateMsg[];
   missiles: MissileStateMsg[];
+  /** レイドの怪獣（6-2。レイドでなければ null） */
+  kaiju: KaijuStateMsg | null;
 }
 
 export const EVENT_KINDS = [
@@ -153,6 +194,7 @@ export const EVENT_KINDS = [
   'respawn',
   'over',
   'bye',
+  'stun',
 ] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
@@ -166,7 +208,8 @@ export const KILLER_NONE = 255;
  * explode: ミサイルの起爆（a = 撃った人、b = 当たった人 or NO_TARGET、n = netId、xyz = 爆心）/
  * kill: 撃墜（a = 撃墜した人 or KILLER_NONE、b = された人、xyz = 位置）/ flare: フレア（a = 撒いた人）/
  * respawn: 復帰（a = 人、b = 出現位置の番号（+ RESPAWN_BOOST は初心者保護つき。pvp-arena.ts）、n = その機体に最後に使った入力の seq）/
- * bye: クライアントが自分から抜ける（5-4。ホストは再接続を待たずに消す）
+ * bye: クライアントが自分から抜ける（5-4。ホストは再接続を待たずに消す）/
+ * stun: 怪獣の咆哮でスタン（6-2。a = 人、n = 秒 × 100）
  */
 export interface EventMsg {
   type: 'event';

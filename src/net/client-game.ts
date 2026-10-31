@@ -16,6 +16,7 @@ import {
   createNetControls,
   quantizeControls,
   type EventMsg,
+  type KaijuStateMsg,
   type MissileStateMsg,
   type NetControls,
   type StateMsg,
@@ -62,6 +63,9 @@ export class ClientGame extends NetGameEvents implements NetGame {
   readonly countdown: Countdown;
   missiles: MissileStateMsg[] = [];
   missileVersion = 0;
+  /** レイドの怪獣（6-2） */
+  kaiju: KaijuStateMsg | null = null;
+  kaijuVersion = 0;
   readonly prediction = new OwnPrediction();
   private readonly sender = new InputSender();
   private readonly view = new RemoteInterpolation();
@@ -235,6 +239,8 @@ export class ClientGame extends NetGameEvents implements NetGame {
       this.lastStateTick = msg.tick;
       this.missiles = msg.missiles;
       this.missileVersion++;
+      this.kaiju = msg.kaiju;
+      this.kaijuVersion++;
     }
     for (const a of msg.aircraft) {
       if (a.id === this.localId) {

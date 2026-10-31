@@ -1,6 +1,7 @@
 // 護衛・破壊・怪獣の目標を使うミッション（2-5 の M3〜M5。データだけ、ロジックなし）。一覧（MISSIONS）は src/data/missions.ts。
 // タイトル・ブリーフィング文は src/data/i18n/*.json の missions[id]。距離は m、時間は秒、北は -Z、向きは -Z から右回り
 import type { MissionDef } from '../missions/types';
+import { RAID_CONFIG } from './kaiju';
 
 /** M3 の輸送機の経路（東岸の沖 → 西岸）。高度 800m は経路の真下の地表（最高 約 450m）より 300m 以上上 */
 export const ESCORT_ROUTE = {
@@ -151,7 +152,8 @@ export const KAIJU_ROUTE = {
 } as const;
 
 /**
- * M5 遭遇: 島の南東で敵機 2 機（easy。怪獣に集中できるよう M2 より弱い）と戦っていると、30 秒後に怪獣（仮実装）が海から現れ、島に向かって歩く。
+ * M5 遭遇: 島の南東で敵機 2 機（easy。怪獣に集中できるよう M2 より弱い）と戦っていると、30 秒後に怪獣ヴォルガス（6-1）が海から現れ、
+ * 島に向かって歩く。攻撃は咆哮と投擲だけ（熱線・薙ぎ払いは未開放）。
  * 怪獣の HP を 20% 削ると海へ引き返して成功。敵機の撃墜は任意
  */
 export const ENCOUNTER_MISSION: MissionDef = {
@@ -184,6 +186,9 @@ export const ENCOUNTER_MISSION: MissionDef = {
       position: KAIJU_ROUTE.position,
       walkTo: KAIJU_ROUTE.walkTo,
       retreatDamageRatio: 0.2,
+      stopRadius: 0,
+      attacks: ['roar', 'throw'],
+      finalTimer: false,
     },
   ],
   objectives: [
@@ -201,4 +206,37 @@ export const ENCOUNTER_MISSION: MissionDef = {
   success: 'allRequiredObjectives',
   failConditions: ['playerDown', 'timeUp', 'outOfBounds'],
   reward: { baseCredits: 3000 },
+};
+
+/**
+ * レイド（6-2。ソロ）: 怪獣ヴォルガスが島の南東の海から上陸し、島の中心（街の予定地）へ歩く。倒せば成功、最終フェーズの
+ * 3 分が切れて街に到達されたら失敗。撃墜されても開始位置へ戻って続けられる（失敗にしない）。ミッション一覧には出さない
+ */
+export const RAID_MISSION: MissionDef = {
+  id: 'raid',
+  mapId: 'island',
+  start: RAID_CONFIG.start,
+  parTimeSeconds: RAID_CONFIG.parTimeSeconds,
+  spawns: [
+    {
+      kind: 'kaiju',
+      trigger: { type: 'start' },
+      position: RAID_CONFIG.kaijuFrom,
+      walkTo: RAID_CONFIG.cityCenter,
+      retreatDamageRatio: 1,
+    },
+  ],
+  objectives: [
+    {
+      id: 'kaiju',
+      type: 'kaiju',
+      required: true,
+      start: 'withPrevious',
+      damageRatio: 1,
+      label: 'ヴォルガス撃破',
+    },
+  ],
+  success: 'allRequiredObjectives',
+  failConditions: ['kaijuReachedCity', 'outOfBounds'],
+  reward: { baseCredits: RAID_CONFIG.reward },
 };

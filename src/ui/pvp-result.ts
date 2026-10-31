@@ -20,8 +20,8 @@ export interface ResultRow {
 }
 
 export interface ResultView {
-  /** 終わり方（撃墜数に達した / 時間切れ） */
-  reason: 'score' | 'time';
+  /** 終わり方（撃墜数に達した / 時間切れ / レイドの成功・失敗。6-2） */
+  reason: 'score' | 'time' | 'raidClear' | 'raidFail';
   localId: number;
   rows: readonly ResultRow[];
   /** ベストプレイヤー（誰も撃墜していなければ null） */
@@ -30,7 +30,16 @@ export interface ResultView {
   teamTotals: readonly [number, number] | null;
 }
 
+const REASON_TEXT: Readonly<Record<ResultView['reason'], string>> = {
+  score: '撃墜数に到達',
+  time: '時間切れ',
+  raidClear: '全員で怪獣を倒した（報酬は全員同じ）',
+  raidFail: '怪獣が街に到達した',
+};
+
 function title(r: Readonly<ResultView>): string {
+  if (r.reason === 'raidClear') return 'ヴォルガス撃破';
+  if (r.reason === 'raidFail') return '作戦失敗';
   const t = r.teamTotals;
   if (t) {
     if (t[0] === t[1]) return '引き分け';
@@ -48,7 +57,7 @@ export function renderResult(parent: HTMLElement, r: Readonly<ResultView>): void
   parent.replaceChildren();
   el('div', 'ui-kicker campaign-kicker', parent, 'RESULT');
   el('h2', 'ui-title campaign-title', parent, title(r));
-  el('p', 'briefing-text', parent, r.reason === 'score' ? '撃墜数に到達' : '時間切れ');
+  el('p', 'briefing-text', parent, REASON_TEXT[r.reason]);
   const t = r.teamTotals;
   if (t) {
     const line = el('div', 'pvp-result-teams', parent);

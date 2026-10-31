@@ -4,6 +4,7 @@
 import { FLARE_CONFIG, GUN_CONFIG, MISSILE_CONFIG, type TargetingSpec } from '../data/weapons';
 import { PVP_CONFIG } from '../data/pvp';
 import type { Aircraft } from '../entities/aircraft';
+import type { KaijuPart } from '../entities/kaiju-part';
 import { vec3, type Vec3 } from '../flight/math';
 import { Health } from './damage';
 import { Gun, type GroundHeightFn, type GunHit, type GunTarget, type Rng } from './gun';
@@ -23,6 +24,9 @@ export interface FighterSpec {
   readonly targeting: TargetingSpec;
 }
 
+/** 機銃の当たり判定の対象: 他機（巻き戻した位置）か、レイドの怪獣の部位（6-2。巻き戻さない） */
+export type ArenaGunTarget = RewoundTarget | KaijuPart;
+
 /** 撃つ人から見た対象（遅延補償で巻き戻した位置）。機銃の当たり判定に使う */
 export class RewoundTarget implements GunTarget {
   readonly position: Vec3 = vec3();
@@ -40,12 +44,17 @@ export class PvpFighter implements FuseTarget, PlayerScore {
   readonly team: number;
   readonly hitRadius: number;
   readonly visualRadius: number;
-  readonly gun: Gun<RewoundTarget>;
+  readonly gun: Gun<ArenaGunTarget>;
   readonly missileAmmo: Magazine;
   readonly flareAmmo: Magazine;
   readonly history: LagHistory;
   /** この人から見た他機（撃つたびに巻き戻した位置を入れる） */
   readonly others: RewoundTarget[] = [];
+  /** 機銃の対象（others + レイドの怪獣の部位。6-2） */
+  readonly gunTargets: ArenaGunTarget[] = [];
+  /** 怪獣の咆哮のスタンの残り秒数（6-2。操作を使わない）と、最後にフレアを撒いてからの秒数（咆哮を防ぐ） */
+  stunTimer = 0;
+  flareAge = Infinity;
   /** 撃墜されてから復帰までの残り秒数（生きている間は 0） */
   respawnTimer = 0;
   /** 復帰後の無敵の残り秒数 */
@@ -71,7 +80,7 @@ export class PvpFighter implements FuseTarget, PlayerScore {
     readonly id: number,
     readonly aircraft: Aircraft,
     readonly spec: FighterSpec,
-    onGunHit: (shooter: PvpFighter, hit: Readonly<GunHit<RewoundTarget>>) => void,
+    onGunHit: (shooter: PvpFighter, hit: Readonly<GunHit<ArenaGunTarget>>) => void,
     groundHeight: GroundHeightFn | null,
     rng: Rng,
   ) {
@@ -79,10 +88,10 @@ export class PvpFighter implements FuseTarget, PlayerScore {
     this.hitRadius = spec.hitRadius;
     this.visualRadius = spec.visualRadius;
     this.health = new Health(spec.maxHp);
-    const hit = (h: Readonly<GunHit<RewoundTarget>>): void => {
+    const hit = (h: Readonly<GunHit<ArenaGunTarget>>): void => {
       onGunHit(this, h);
     };
-    this.gun = new Gun<RewoundTarget>(GUN_CONFIG, hit, groundHeight, rng);
+    this.gun = new Gun<ArenaGunTarget>(GUN_CONFIG, hit, groundHeight, rng);
     this.missileAmmo = new Magazine(spec.missiles, MISSILE_CONFIG.fireInterval);
     this.flareAmmo = new Magazine(spec.flares, FLARE_CONFIG.cooldownSeconds);
     this.history = new LagHistory(Math.round(PVP_CONFIG.historySeconds * 60));
@@ -144,5 +153,6 @@ export class PvpFighter implements FuseTarget, PlayerScore {
     this.flareAmmo.refill();
     this.gun.heat.reset();
     this.history.clear();
+    this.stunTimer = 0;
   }
 }
