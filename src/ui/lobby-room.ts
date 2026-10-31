@@ -1,7 +1,6 @@
 // ロビーの部屋の画面（5-4。lobby.ts から分けた）: 部屋コードと共有、ルール（ホストは選べる: 撃墜数・時間・モード・
 // 強化の無効・初心者保護）、参加者（色・名前・機体・チーム・準備）、定型文、退出 / ハンガー / 準備（クライアント）・開始（ホスト）。
 // すべてタッチで押せる大きさ。文字は textContent だけで入れる
-import { findAircraftModel } from '../data/aircraft';
 import {
   PVP_CONFIG,
   PVP_QUICK_PHRASES,
@@ -9,19 +8,19 @@ import {
   RAID_PHRASE_BASE,
   PVP_MODES,
   PVP_SCORE_LIMITS,
-  PVP_TEAM,
   PVP_TIME_LIMITS,
 } from '../data/pvp';
-import { isReady, normalizeSettings, startBlock, type StartBlock } from '../net/lobby-rules';
+import { normalizeSettings, startBlock, type StartBlock } from '../net/lobby-rules';
 import { findMap, SELECTABLE_MAPS } from '../data/maps';
 import { WEATHER_PRESETS, weatherLabel } from '../data/weather';
 import { RAID_DIFFICULTIES, RAID_DIFFICULTY_LABELS, RAID_QUICK_PHRASES } from '../data/raid';
 import type { GameSettings, PlayerInfo } from '../net/protocol';
 import { el } from './hud-dom';
 import { LobbyShare } from './lobby-share';
-import { playerColorCss, teamColorCss } from './lobby-colors';
+import { renderLobbyPlayers } from './lobby-players';
 import { createButton } from './screen';
-import { MODE_LABELS, numberSelect, parseMode, toggle } from './lobby-controls';
+import { MODE_LABELS, ruleSegment, parseMode, toggle } from './lobby-controls';
+import type { Segmented } from './segmented';
 
 export interface LobbyRoomView {
   code: string;
@@ -61,13 +60,13 @@ export class LobbyRoom {
   private readonly rulesText: HTMLSpanElement;
   private readonly optionsText: HTMLSpanElement;
   private readonly mapText: HTMLSpanElement;
-  private readonly mapSelect: HTMLSelectElement;
+  private readonly mapSelect: Segmented;
   private readonly weatherText: HTMLSpanElement;
-  private readonly weatherSelect: HTMLSelectElement;
+  private readonly weatherSelect: Segmented;
   private readonly rules: HTMLDivElement;
-  private readonly scoreSelect: HTMLSelectElement;
-  private readonly timeSelect: HTMLSelectElement;
-  private readonly modeSelect: HTMLSelectElement;
+  private readonly scoreSelect: Segmented;
+  private readonly timeSelect: Segmented;
+  private readonly modeSelect: Segmented;
   private readonly noUpgrades: HTMLButtonElement;
   private readonly rookie: HTMLButtonElement;
   private readonly list: HTMLUListElement;
@@ -75,7 +74,7 @@ export class LobbyRoom {
   private readonly waitText: HTMLParagraphElement;
   private readonly startButton: HTMLButtonElement;
   private readonly readyButton: HTMLButtonElement;
-  private readonly difficultySelect: HTMLSelectElement;
+  private readonly difficultySelect: Segmented;
   private readonly raidChat: HTMLButtonElement[];
   /** 定型文の吹き出し（プレイヤー ID → 文と消す時刻 ms） */
   private readonly bubbles = new Map<number, { text: string; until: number }>();
@@ -121,7 +120,7 @@ export class LobbyRoom {
       );
     };
     // 6-4: マップ（レイドは港湾都市に固定なので出さない）
-    this.mapSelect = numberSelect(
+    this.mapSelect = ruleSegment(
       this.rules,
       'マップ',
       SELECTABLE_MAPS.map((m) => m.id),
@@ -129,28 +128,29 @@ export class LobbyRoom {
       changed,
     );
     // 7-5: 天候（PvP・協力レイドとも。全員が同じ天候）
-    this.weatherSelect = numberSelect(
+    this.weatherSelect = ruleSegment(
       this.rules,
       '天候',
       WEATHER_PRESETS.map((w) => w.id),
       (id) => weatherLabel(String(id)),
       changed,
+      'lobby-seg-weather',
     );
-    this.scoreSelect = numberSelect(
+    this.scoreSelect = ruleSegment(
       this.rules,
       '撃墜数',
       PVP_SCORE_LIMITS,
       (v) => `${v} 機`,
       changed,
     );
-    this.timeSelect = numberSelect(
+    this.timeSelect = ruleSegment(
       this.rules,
       '制限時間',
       PVP_TIME_LIMITS,
       (v) => minutes(Number(v)),
       changed,
     );
-    this.modeSelect = numberSelect(
+    this.modeSelect = ruleSegment(
       this.rules,
       'モード',
       PVP_MODES,
@@ -158,7 +158,7 @@ export class LobbyRoom {
       changed,
     );
     // 6-6: レイドの難易度（レイドのときだけ出す）
-    this.difficultySelect = numberSelect(
+    this.difficultySelect = ruleSegment(
       this.rules,
       '難易度',
       RAID_DIFFICULTIES,
@@ -223,12 +223,9 @@ export class LobbyRoom {
     const raid = st.mode === 'raid';
     // 7-2: 防衛戦はマップ（島・港湾都市）と難易度を選ぶ（撃墜数・制限時間は使わない）
     const defense = st.mode === 'defense';
-    for (const s of [this.scoreSelect, this.timeSelect, this.mapSelect]) {
-      const row = s.parentElement;
-      if (row) row.hidden = raid || (defense && s !== this.mapSelect);
-    }
-    const diffRow = this.difficultySelect.parentElement;
-    if (diffRow) diffRow.hidden = !raid && !defense;
+    for (const s of [this.scoreSelect, this.timeSelect, this.mapSelect])
+      s.root.hidden = raid || (defense && s !== this.mapSelect);
+    this.difficultySelect.root.hidden = !raid && !defense;
     this.difficultySelect.value = st.hard ? 'hard' : 'normal';
     for (const b of this.raidChat) b.hidden = !raid;
     this.optionsText.textContent = `強化 ${st.noUpgrades ? '無効' : '有効'}・初心者保護 ${st.rookieGuard ? 'ON' : 'OFF'}`;
@@ -240,6 +237,9 @@ export class LobbyRoom {
     if (optionsFact) optionsFact.hidden = v.isHost;
     const weatherFact = this.weatherText.parentElement;
     if (weatherFact) weatherFact.hidden = v.isHost;
+    // マップもホストは選ぶ欄に出ている（レイドは港湾都市に固定で選ぶ欄がないので文字で出す。7-C）
+    const mapFact = this.mapText.parentElement;
+    if (mapFact) mapFact.hidden = v.isHost && !raid;
     this.mapSelect.value = st.mapId;
     this.weatherSelect.value = st.weather;
     this.scoreSelect.value = String(st.scoreLimit);
@@ -292,37 +292,6 @@ export class LobbyRoom {
   }
 
   private renderPlayers(v: Readonly<LobbyRoomView>): void {
-    const team = v.settings.mode === 'team';
-    const now = performance.now();
-    this.list.replaceChildren();
-    for (const p of v.players) {
-      const li = el('li', 'lobby-player', this.list);
-      li.classList.toggle('is-away', p.away);
-      const dot = el('span', 'lobby-dot', li);
-      dot.style.background = playerColorCss(p.id);
-      const who = el('span', 'lobby-who', li);
-      el('span', 'lobby-name', who, p.name);
-      el('span', 'lobby-craft', who, findAircraftModel(p.aircraftId)?.name ?? p.aircraftId);
-      const tags = [p.id === 0 ? 'ホスト' : '', p.id === v.localId ? 'あなた' : ''].filter(Boolean);
-      if (tags.length > 0) el('span', 'tag', li, tags.join('・'));
-      const bubble = this.bubbles.get(p.id);
-      if (bubble && bubble.until > now) el('span', 'lobby-bubble', li, bubble.text);
-      if (team) this.teamChip(li, p, v.isHost);
-      const status = p.away ? '再接続中' : p.id === 0 ? 'HOST' : p.ready ? 'READY' : '準備中';
-      const s = el('span', 'lobby-status', li, status);
-      s.classList.toggle('is-ready', isReady(p) && !p.away);
-    }
-  }
-
-  /** チームの印。ホストは押すと A ⇄ B を入れ替える */
-  private teamChip(li: HTMLElement, p: Readonly<PlayerInfo>, isHost: boolean): void {
-    const name = PVP_TEAM.names[p.team === 1 ? 1 : 0];
-    const label = `チーム ${name}`;
-    const chip = isHost
-      ? createButton(li, 'ui-button lobby-team', label, () => {
-          this.h.onTeam(p.id, p.team === 1 ? 0 : 1);
-        })
-      : el('span', 'lobby-team', li, label);
-    chip.style.color = teamColorCss(p.team);
+    renderLobbyPlayers(this.list, v, this.bubbles, this.h.onTeam);
   }
 }

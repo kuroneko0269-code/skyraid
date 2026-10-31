@@ -70,6 +70,7 @@ export function startFromHeader(w: SimWorld, s: ReplayStart): void {
   const play = w.play;
   const session = play.session;
   w.pristine?.restore();
+  w.play.announceModes();
   session.setFreeEnemies(s.enemies);
   session.applyLoadout(loadoutFor(s));
   w.useMap(s.mapId);

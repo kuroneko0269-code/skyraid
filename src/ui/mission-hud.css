@@ -30,6 +30,9 @@
   padding: 6px 10px;
   background: rgba(0, 20, 30, 0.35);
   border-right: var(--hud-line, 2px) solid var(--hud-color);
+  /* 右の帯（7-C）: ALT の箱へ伸びない幅 */
+  max-width: 26vw;
+  box-sizing: border-box;
 }
 
 .mission-panel[hidden],

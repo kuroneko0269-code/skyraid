@@ -1,25 +1,28 @@
-// ロビーの部屋の画面の部品（6-6。lobby-room.ts から分けた）: 選択肢の select・押すと切り替わるボタン・モードの表示名
+// ロビーの部屋の画面の部品（6-6。lobby-room.ts から分けた）: 選択肢のセグメント・押すと切り替わるボタン・モードの表示名
 import type { PvpMode } from '../data/pvp';
-import { el } from './hud-dom';
 import { createButton } from './screen';
+import { Segmented } from './segmented';
 
-/** 選択肢の select（値は数、表示は label）。変えたら onChange */
-export function numberSelect(
+/**
+ * ホスト設定の選択肢（7-C で select からセグメントに。値は文字列、表示は text）。変えたら onChange。
+ * extraClass は並び方の調整（天候は 4 個ずつ）
+ */
+export function ruleSegment(
   parent: HTMLElement,
   label: string,
   values: readonly (number | string)[],
   text: (v: number | string) => string,
   onChange: () => void,
-): HTMLSelectElement {
-  const wrap = el('label', 'campaign-fact lobby-rule', parent);
-  el('span', 'campaign-fact-label', wrap, label);
-  const select = el('select', 'ui-field lobby-rule-select', wrap);
-  for (const v of values) {
-    const o = el('option', '', select, text(v));
-    o.value = String(v);
-  }
-  select.addEventListener('change', onChange);
-  return select;
+  extraClass = '',
+): Segmented {
+  return new Segmented(
+    parent,
+    label,
+    values.map((v) => ({ value: String(v), label: text(v) })),
+    String(values[0] ?? ''),
+    onChange,
+    `lobby-rule ${extraClass}`.trim(),
+  );
 }
 
 export function toggle(parent: HTMLElement, label: string, onClick: () => void): HTMLButtonElement {

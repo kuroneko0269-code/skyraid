@@ -1,8 +1,11 @@
-/* アプリの体裁（4-10）: 更新のお知らせと「ホーム画面に追加」の案内。画面の下中央（safe-area の内側） */
+/*
+ * アプリの体裁（4-10）: 更新のお知らせと「ホーム画面に追加」の案内。画面の上中央（safe-area の内側）。
+ * 7-C で下中央から移した（タイトルの「タップで開始」と重なっていた）
+ */
 .app-toast {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--ui-space-4) + var(--ui-safe-bottom));
+  top: calc(var(--ui-space-3) + var(--ui-safe-top));
   z-index: 85;
   max-width: calc(100% - var(--ui-space-6) - var(--ui-safe-left) - var(--ui-safe-right));
   transform: translateX(-50%);
@@ -18,7 +21,8 @@
 }
 
 .app-toast .ui-button {
-  min-width: 0;
+  /* 文字に合わせた最小幅（折り返さない。7-C） */
+  min-width: max-content;
   min-height: 36px;
   padding: 4px 12px;
   font-size: 14px;
@@ -27,7 +31,7 @@
 @keyframes app-toast-in {
   from {
     opacity: 0;
-    transform: translate(-50%, 8px);
+    transform: translate(-50%, -8px);
   }
 }
 

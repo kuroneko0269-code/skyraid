@@ -199,6 +199,16 @@ export class GamePlay {
     if (fullThrottle) a.throttle = 1;
   }
 
+  /**
+   * 起動直後の写しの書き戻し（7-B の pristine.restore）は runner・race・defense を直接書き換えるので、購読者（HUD）には
+   * 届かない。書き戻しの後に今の値を知らせ直す（7-C。防衛戦の HUD がレイド・レースに残っていた）
+   */
+  announceModes(): void {
+    for (const fn of this.runnerListeners) fn(this.runner);
+    for (const fn of this.raceListeners) fn(this.race);
+    for (const fn of this.defenseListeners) fn(this.defense);
+  }
+
   /** ミッションを中断する（ポーズメニュー） */
   abortMission(): void {
     this.runner?.abort();

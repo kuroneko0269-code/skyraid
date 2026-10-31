@@ -1,6 +1,7 @@
 import './mobile.css';
 import { TOUCH_MODES, TOUCH_MODE_LABELS, type TouchMode } from '../data/touch';
 import { isTouchMode } from '../core/touch-settings';
+import { installTapFocus } from './tap-focus';
 
 /** タッチ操作の表示設定（自動 / 表示 / 非表示） */
 export function createTouchModeSelect(
@@ -123,9 +124,11 @@ export function createRotateHint(parent: HTMLElement): HTMLDivElement {
 
 /**
  * ピンチ拡大・ダブルタップ拡大・引っ張り更新・スクロールを止める。
- * 基本は CSS の touch-action: none。iOS Safari は viewport の拡大禁止を無視するため、ジェスチャーも止める
+ * 基本は CSS の touch-action: none。iOS Safari は viewport の拡大禁止を無視するため、ジェスチャーも止める。
+ * タップ後のホバー・フォーカスの貼り付き対策（7-C。tap-focus.ts）もここで入れる
  */
 export function installTouchGuards(target: Document): void {
+  installTapFocus(target);
   const prevent = (e: Event): void => {
     e.preventDefault();
   };
@@ -134,8 +137,25 @@ export function installTouchGuards(target: Document): void {
   target.addEventListener(
     'touchmove',
     (e) => {
+      // 1 本指で、中身がはみ出してスクロールできる画面・一覧の中ならスクロールさせる（7-C）
+      if (e.touches.length === 1 && canScrollFrom(e.target)) return;
       if (e.cancelable) e.preventDefault();
     },
     { passive: false },
   );
+}
+
+/** target から上へたどって、overflow が auto / scroll で中身がはみ出している要素があるか */
+export function canScrollFrom(target: EventTarget | null): boolean {
+  let node = target instanceof Element ? target : null;
+  while (node && node !== document.body) {
+    if (node instanceof HTMLElement) {
+      const cs = getComputedStyle(node);
+      const y = /(auto|scroll)/.test(cs.overflowY) && node.scrollHeight > node.clientHeight + 1;
+      const x = /(auto|scroll)/.test(cs.overflowX) && node.scrollWidth > node.clientWidth + 1;
+      if (x || y) return true;
+    }
+    node = node.parentElement;
+  }
+  return false;
 }
