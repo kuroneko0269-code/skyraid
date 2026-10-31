@@ -29,6 +29,7 @@ import { RAID_RULES } from '../data/raid';
 import type { RaidBriefing } from './raid-briefing';
 import { RaidFlight, type KaijuSource } from './raid-flight';
 import { DefenseFlight } from './defense-flight';
+import { isCoopMode } from '../net/lobby-rules';
 import type { DefenseHud } from './defense-hud';
 import type { DefenseSoundKind } from '../data/defense';
 
@@ -146,11 +147,8 @@ export class PvpFlight {
     // 抜けた人の名前はリザルトのために残す（名簿にいる人は新しい値で上書き）
     for (const p of this.room.players) this.players.set(p.id, p);
     this.localTeam = this.team ? this.players.get(this.net.localId)?.team : undefined;
-    this.mirror.syncRoster(
-      this.room.players,
-      this.localTeam,
-      this.room.settings.mode === 'defense',
-    );
+    // 協力（レイド・防衛戦）は全員が味方: 索敵・ロックの対象にしない（7-B の事前修正でレイドも防衛戦と同じ判定に）
+    this.mirror.syncRoster(this.room.players, this.localTeam, isCoopMode(this.room.settings.mode));
   }
 
   /** 固定ステップ 1 回分。カウントダウン・再接続中・スタン中（6-2）は戦闘の操作を使わない */

@@ -5,6 +5,7 @@ import { RAID_RULES } from '../data/raid';
 import type { GroundHeightFn } from '../entities/aircraft';
 import { DefenseHost } from './defense-host';
 import { startPose } from './net-game';
+import { isCoopMode } from './lobby-rules';
 import {
   ENEMY_OWNER,
   eventMsg,
@@ -26,7 +27,7 @@ export function modeTeams(room: {
 }): Map<number, number> | null {
   const mode = room.settings.mode;
   if (mode === 'team') return new Map(room.players.map((p) => [p.id, p.team]));
-  if (mode === 'raid' || mode === 'defense') return new Map(room.players.map((p) => [p.id, 0]));
+  if (isCoopMode(mode)) return new Map(room.players.map((p) => [p.id, 0]));
   return null;
 }
 

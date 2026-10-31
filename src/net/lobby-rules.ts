@@ -52,6 +52,11 @@ export function allAgain(players: Roster): boolean {
   return players.length > 0 && players.every((p) => p.again);
 }
 
+/** 全員が味方の協力モードか（6-6 レイド・7-2 防衛戦。索敵・ロック・名札の色・機銃の判定で味方として扱う） */
+export function isCoopMode(mode: PvpMode): boolean {
+  return mode === 'raid' || mode === 'defense';
+}
+
 /** 同じ側か（個人戦は本人だけ、チーム戦は同じチーム） */
 export function sameSide(
   a: number,
@@ -59,7 +64,7 @@ export function sameSide(
   mode: PvpMode,
   teamOf: (id: number) => number | undefined,
 ): boolean {
-  if (a === b || mode === 'raid' || mode === 'defense') return true;
+  if (a === b || isCoopMode(mode)) return true;
   if (mode !== 'team') return false;
   const ta = teamOf(a);
   return ta !== undefined && ta === teamOf(b);
