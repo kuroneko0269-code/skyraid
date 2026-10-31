@@ -2,7 +2,7 @@
 // 地表の最も低い所（足元の四隅と中心）に立てる。動かない・再出現しない。燃料タンクは壊れると周囲に範囲ダメージ。
 // 対空砲の射撃は src/combat/aaa.ts（砲身の向き・撃つ間隔の状態はここに持つ）。Three.js 非依存
 import { Health } from '../combat/damage';
-import type { CombatTarget } from '../combat/target';
+import { TEAM_ENEMY, type CombatTarget } from '../combat/target';
 import type { Difficulty } from '../data/ai';
 import {
   FUEL_TANK_BLAST,
@@ -40,6 +40,8 @@ export class GroundTarget implements CombatTarget {
   type: GroundTargetType = 'radar';
   spec: GroundTargetSpec = GROUND_TARGET_SPECS.radar;
   difficulty: Difficulty = 'normal';
+  /** 陣営（7-2: 防衛戦の基地は味方。既定は敵） */
+  team = TEAM_ENEMY;
   /** 置いた向き（方位、rad）。見た目だけ */
   heading = 0;
   deployed = false;
@@ -123,6 +125,7 @@ export class GroundTarget implements CombatTarget {
     this.position.x = x;
     this.position.y = y + this.spec.centerHeight;
     this.position.z = z;
+    this.team = TEAM_ENEMY;
     if (this.health.maxHp !== this.spec.maxHp) this.health = new Health(this.spec.maxHp);
     this.health.reset();
     this.deployed = true;
@@ -140,6 +143,20 @@ export class GroundTarget implements CombatTarget {
   withdraw(): void {
     this.deployed = false;
     this.group = '';
+    this.team = TEAM_ENEMY;
+  }
+
+  /** 陣営と最大 HP を変える（7-2: 防衛戦の基地。deploy の後に呼ぶ。HP は満タン） */
+  configure(team: number, maxHp: number = this.spec.maxHp): void {
+    this.team = team;
+    if (this.health.maxHp !== maxHp) this.health = new Health(maxHp);
+    this.health.reset();
+  }
+
+  /** HP をそのまま映す（協力のクライアント: ホストの判定を表示する） */
+  mirrorHp(hp: number): void {
+    const d = this.health.hp - Math.max(0, hp);
+    if (d > 0) this.applyDamage(d);
   }
 
   applyDamage(amount: number): boolean {

@@ -57,4 +57,10 @@ export class Magazine {
     this.remaining = this.capacity;
     this.cooldownLeft = 0;
   }
+
+  /** 満タンの fraction（切り上げ）だけ足す（7-2: 燃料タンクを失った後の防衛戦の補給） */
+  refillPart(fraction: number): void {
+    this.remaining = Math.min(this.capacity, this.remaining + Math.ceil(this.capacity * fraction));
+    this.cooldownLeft = 0;
+  }
 }

@@ -13,7 +13,7 @@ import { getGroundHeight } from '../src/render/terrain-height';
 const DT = 1 / 60;
 
 describe('地上目標の種類と接地', () => {
-  it('HP はレーダー 300・燃料タンク 200・格納庫 600・対空砲 250', () => {
+  it('HP はレーダー 300・燃料タンク 200・格納庫 600・対空砲 250・司令部 2000（7-2）', () => {
     const hp = GROUND_TARGET_TYPES.map((t) => {
       const g = new GroundTarget();
       g.deploy('g', t, 0, 0);
@@ -24,6 +24,7 @@ describe('地上目標の種類と接地', () => {
       ['fuelTank', 200, 200],
       ['hangar', 600, 600],
       ['aaa', 250, 250],
+      ['command', 2000, 2000],
     ]);
   });
 

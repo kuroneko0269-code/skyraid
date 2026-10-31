@@ -251,6 +251,9 @@ export class FlightSession implements MissionWorld {
     this.combat.notifyDestroyed(this.player);
   }
 
+  /** 地表の高さ（7-2: 防衛戦のランナーが使う） */
+  readonly groundAt = (x: number, z: number): number => this.ground(x, z);
+
   /** プレイヤーを追っている敵のミサイルの数（HUD の MISSILE 警告） */
   get incomingMissiles(): number {
     return this.player.active ? this.combat.incomingMissiles(this.player) : 0;

@@ -62,7 +62,7 @@ export class FlightViews {
     this.props = added(g.enemies, () => new MissionPropsView(scene, ff.props));
     this.groundTargets = added(
       g.enemies,
-      () => new GroundTargetView(scene, ff.props.groundTargets),
+      () => new GroundTargetView(scene, ff.props.allGroundTargets),
     );
     this.ordnance = added(g.effects, () => new OrdnanceView(scene, ff.combat));
     this.fx = added(g.effects, () => new FxLink(scene, events, ff.enemies, camera, shake));
