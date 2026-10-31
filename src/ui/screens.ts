@@ -17,6 +17,7 @@ import { ResultScreen } from './result';
 import { FadeCurtain, LoadingScreen, applyScreenFade } from './screen';
 import { TitleScreen } from './title';
 import { TUTORIAL_MISSION } from '../data/tutorial';
+import { MAPS } from '../data/maps';
 import { RAID_MISSION, raidMission } from '../data/missions-special';
 import { tutorialStrings, type TutorialStrings } from './tutorial-text';
 
@@ -182,6 +183,9 @@ export class Screens {
     });
     this.loading = new LoadingScreen(parent);
     this.curtain = new FadeCurtain(parent);
+    // 開発用: ?map=harbor でフリーフライト（?skipTitle も）のマップを選んでおく（6-4。main.ts から移した）
+    const mapParam = new URLSearchParams(search).get('map');
+    if (mapParam && MAPS[mapParam]) this.modeSelect.freeMapId = mapParam;
     this.show(game.state);
     game.onChange(({ from, to }) => {
       // デモカメラ ⇄ 追従カメラの切り替わり（とリザルトからのやり直し）は暗転で隠す（読み込み画面からは不要）

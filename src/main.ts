@@ -1,28 +1,21 @@
 import { WebGLRenderer } from 'three';
 import { GameLoop } from './core/loop';
-import { Input } from './core/input';
-import { GamepadInput, browserGamepads } from './core/gamepad';
-import { parseDebugFlags, parseSkipTitle } from './core/debug-flags';
+import { parseSkipTitle } from './core/debug-flags';
 import { BOOT_TASKS, runBoot } from './core/boot';
-import { GameState, syncLoopWithState, usesDemoCamera } from './core/game-state';
+import { GameState } from './core/game-state';
 import { parseFlightOptions, parseFlightOverrides } from './core/flight-options';
-import { CommonKeys } from './core/common-keys';
 import { WORLD_CONFIG } from './data/terrain';
 import { MISSIONS } from './data/missions';
-import { MAPS } from './data/maps';
 import { createControls } from './entities/aircraft';
 import { createCombatInput } from './combat/combat-system';
 import { WeaponInput } from './core/weapon-input';
-import { readFlightControls } from './core/flight-input';
 import { FlightSession } from './missions/flight-session';
 import { GamePlay } from './missions/game-play';
-import { bindMissionRewards } from './progression/mission-rewards';
 import { FlightViews } from './render/flight-views';
 import { HudLink } from './render/hud-link';
 import { MissionLink } from './render/mission-link';
 import { RingView } from './render/ring-view';
 import { HangarStage } from './render/hangar-stage';
-import { DebugLink } from './render/debug-link';
 import { PlayerView } from './render/player-view';
 import { ChaseCamera } from './render/chase-camera';
 import { DemoCamera } from './render/demo-camera';
@@ -30,17 +23,12 @@ import { RenderPipeline } from './render/pipeline';
 import { QualityLink } from './render/quality-link';
 import { createWorldScene } from './render/scene';
 import { ActiveMap } from './missions/active-map';
-import { applyKaijuToCity } from './combat/city-damage';
-import { raidLinkDeps } from './ui/raid-briefing';
-import type { KaijuBodyView, KaijuEffectsView } from './entities/kaiju-display';
 import { DamageOverlay } from './ui/damage-overlay';
 import { AssistControl } from './core/assist-control';
-import { Hud } from './ui/hud';
-import { MissionHud } from './ui/mission-hud';
 import { KaijuHud } from './ui/kaiju-hud';
 import { KaijuHudLink } from './render/kaiju-hud-link';
 import { installTouchGuards } from './ui/mobile';
-import { createDisplaySettings, createGameSettings } from './ui/settings-link';
+import { createGameSettings } from './ui/settings-link';
 import { FlightFrame } from './render/flight-frame';
 import { createControlsLink } from './ui/controls-link';
 import { TutorialLink } from './ui/tutorial-link';
@@ -50,9 +38,12 @@ import { installAppShell } from './ui/app-shell';
 import { createGameAudio } from './audio/setup';
 import { FxEvents } from './render/fx/fx-events';
 import { FrameFx } from './render/frame-fx';
-import { PvpEntry } from './ui/pvp-entry';
 import { createFlightStarter } from './ui/flight-start';
 import { linkWeather } from './ui/weather-link';
+import { linkFlightLoop } from './ui/flight-loop';
+import { createPvpWiring } from './ui/pvp-wiring';
+import { linkMissionEvents } from './ui/mission-wiring';
+import { createAppControls } from './ui/app-controls';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app が見つかりません');
@@ -87,9 +78,6 @@ const game = new GameState();
 const screens = new Screens(document.body, game, MISSIONS, save, () => {
   play.abortMission();
 });
-// 開発用: ?map=harbor でフリーフライト（?skipTitle も）のマップを選んでおく（6-4）
-const mapParam = new URLSearchParams(window.location.search).get('map');
-if (mapParam && MAPS[mapParam]) screens.modeSelect.freeMapId = mapParam;
 screens.onAircraftView((model) => {
   hangarStage.setModel(model, screens.hangar.loadout(model.id).missiles);
 });
@@ -106,33 +94,14 @@ window.addEventListener('resize', () => {
   pipeline.resize(window.innerWidth, window.innerHeight);
 });
 
-const input = new Input();
-input.attach(window);
-
-// ゲームパッド: 接続されたら自動で読む
-const gamepad = new GamepadInput(input, browserGamepads);
-gamepad.attach(window);
-
-const hud = new Hud(document.body);
-const missionHud = new MissionHud(document.body);
-// ポーズメニューの設定: タッチ・HUD・全画面（ここ）→ 敵・操作補助・セーブデータ（セッションの後）
-const settingsParts = {
-  panel: settingsPanel,
-  input,
-  storage,
+const { input, gamepad, hud, missionHud, settingsParts, touch, debug, keys } = createAppControls({
+  game,
+  screens,
   save,
-  hud,
-  missionHud,
-  modeSelect: screens.modeSelect,
-  inFlight: () => game.state === 'flight',
-};
-const { touch, hudToggle } = createDisplaySettings(settingsParts);
-
-// ?debug でデバッグ表示を初期表示、?debug=input で押したアクション名をコンソールに出す
-const debugFlags = parseDebugFlags(window.location.search);
-const debug = new DebugLink(document.body, debugFlags.overlay, pipeline, world);
-const back = screens.navigateBack.bind(screens, game);
-const keys = new CommonKeys(input, gamepad, { debug, hud: hudToggle }, back, debugFlags.logInput);
+  storage,
+  pipeline,
+  world,
+});
 
 // 飛行: フリーフライトは島の沖合から、ミッション（2-4）は定義の開始位置から。?autolevel=off / ?invert で操作設定を変える。
 // 射撃（2-1）・ロックオンとミサイル（2-2）・敵機（2-3）。判定は固定ステップ、演出は描画フレーム
@@ -143,16 +112,8 @@ const session = new FlightSession({
   start: WORLD_CONFIG.start,
 });
 const play = new GamePlay(session);
-// 6-4: 爆弾・ロケットは建物の屋根・壁でも起爆し、当たった建物を壊す（HP 1 回分）
-session.combat.ordnanceGround = activeMap.ordnanceGround;
-session.combat.onOrdnance((x, y, z, radius) => {
-  activeMap.buildings?.hitSphere(x, y, z, radius, 'player');
-});
-// 協力のレイドの怪獣（写し）。シングルは session の怪獣
-let coopKaiju: { body: KaijuBodyView; fx: KaijuEffectsView | null } | null = null;
 // 怪獣の HUD（6-2）: 体力バー・フェーズ・ロック中の部位・予兆・スタンのノイズ
 const kaijuHud = new KaijuHudLink(new KaijuHud(document.body), hud, session);
-const { aircraft } = session;
 const assistFlags = createGameSettings(settingsParts, session);
 const assist = new AssistControl(session, assistFlags, () => input.lastDevice);
 const damageOverlay = new DamageOverlay(document.body);
@@ -173,64 +134,37 @@ const tutorial = new TutorialLink(document.body, save, input, touch, hud, () => 
 const frameFx = new FrameFx(pipeline, playerView, camera, audio);
 // PvP（5-1）: 選んだとき・?room のときだけ通信の部分を読み込む
 const search = window.location.search;
-const pvp = new PvpEntry(screens, search, {
+const { pvp, coopKaiju } = createPvpWiring({
+  screens,
+  search,
   game,
   scene,
   camera,
   session,
   playerView,
-  pilotName: () => save.pilotName,
-  needsPilotName: () => save.needsPilotName,
-  // 5-4: カウントダウン・GO・残り時間の警告の音
-  sound: (kind) => {
-    audio.playUi(kind);
-  },
+  save,
+  audio,
   groundHeight: getGroundHeight,
-  obstacles: (a, b) => activeMap.buildings?.collides(a, b) ?? false,
-  protectedBuildings: () => session.protectedBuildings,
-  // 6-6: 協力レイドの建物（ホストだけが壊して配る）・報酬・ブリーフィングを見たか
-  ...raidLinkDeps(save, () => activeMap.buildings),
-  // 5-3: スコアボードは Tab（ターゲット切替のキー）の長押し、他プレイヤーの機銃は敵機と同じ位置付きの音
-  scoreKeyDown: () => input.isDown('targetNext'),
-  otherGun: (x, y, z) => {
-    fxEvents.otherGun(x, y, z);
-  },
-  // 6-2: レイドの協力の怪獣（ホストは本体、クライアントは state の写し）を描画・HUD・音に出す
-  kaijuSource: (src) => {
-    coopKaiju = src ? { body: src.body, fx: src.fx } : null;
-    views.setKaijuSource(src?.body ?? null, src?.fx ?? null);
-    kaijuHud.setSource(src ? src.hud : null);
-    audio.setKaijuSource(src?.body ?? null);
-  },
-});
-// 機体モデルの細かさ（4-3。画質「低」は LOD）と陽炎の屈折（4-4。「高」だけ）
-quality.onPreset((preset) => {
-  playerView.setDetail(preset.aircraftDetail);
-  views.setAircraftDetail(preset.aircraftDetail);
-  playerView.setHazeRefraction(preset.heatHazeRefraction);
-  pvp.setAircraftDetail(preset.aircraftDetail);
+  activeMap,
+  input,
+  fxEvents,
+  views,
+  kaijuHud,
+  quality,
 });
 const ringView = new RingView(scene);
 const missionLink = new MissionLink(missionHud, camera, aircraftMesh, play);
-play.onRunnerChange((runner) => {
-  const inTutorial = screens.inTutorial;
-  missionHud.attach(runner);
-  screens.pause.setInMission(
-    runner !== null,
-    inTutorial ? screens.tutorialText.abortMenu : undefined,
-  );
-  tutorial.attach(runner, inTutorial);
-  // 成功の記録と報酬をセーブへ（3-2）。チュートリアルの報酬は初回だけ（TutorialLink）
-  if (runner && !inTutorial) bindMissionRewards(runner.bus, save, screens.progress);
-});
-// 撃墜（地面への墜落も）されたら揺らし、リスポーンしたら機体とカメラを新しい位置へすぐ移す（4-12b。
-// 次の描画を待つと、揺れ・地面の高さ・飛行機雲が撃墜された場所のまま 1 フレーム残る）
-session.onPlayerDown(() => {
-  chaseCamera.addImpact();
-});
-session.onRespawn(() => {
-  playerView.respawn(aircraft);
-  chaseCamera.snapTo(aircraftMesh, aircraft.state, getGroundHeight);
+linkMissionEvents({
+  session,
+  activeMap,
+  play,
+  screens,
+  missionHud,
+  tutorial,
+  save,
+  chaseCamera,
+  playerView,
+  groundHeight: getGroundHeight,
 });
 const combatInput = createCombatInput();
 // 武器の操作（タッチ・パッドの長押しで兵装の切替・爆弾。2-6）
@@ -262,25 +196,27 @@ const startFlight = createFlightStarter({
 linkWeather(world.weather, { game, screens, pvp, hud, hudLink, audio, save });
 
 const loop = new GameLoop();
-// 固定ステップ更新は飛行中だけ（ポーズ・メニュー中は GameLoop ごと止める）
-syncLoopWithState(game, loop);
-game.onChange(({ from, to }) => {
-  // 6-4: タイトルの背景（デモカメラ）は島
-  if (to === 'title') activeMap.use('island');
-  if (to === 'flight' && from !== 'pause') startFlight(screens.nextMission, from === 'lobby');
-  if (to === 'pause') play.runner?.pause();
-  else if (to === 'flight') play.runner?.resume();
-  // 止めている間に押されたキー（再開に使った Esc など）を飛行に持ち込まない
-  if (to === 'flight') {
-    input.endStep();
-    weaponInput.reset();
-  }
-  // 撃墜されたまま（ミッション失敗）のリザルトでは機体を隠す。ハンガーでは展示の機体だけ
-  aircraftMesh.visible = !usesDemoCamera(to) && to !== 'hangar' && session.player.active;
-  hangarStage.setShown(to === 'hangar');
-  touch.refresh();
-  if (to === 'flight' && from !== 'pause')
-    tutorial.onFlightStart(screens.inTutorial ? 'tutorial' : play.runner ? 'mission' : 'free');
+linkFlightLoop(loop, {
+  game,
+  input,
+  gamepad,
+  keys,
+  controls,
+  combatInput,
+  weaponInput,
+  assist,
+  pvp,
+  play,
+  session,
+  activeMap,
+  chaseCamera,
+  screens,
+  tutorial,
+  coopKaiju,
+  touch,
+  hangarStage,
+  aircraftMesh,
+  startFlight,
 });
 aircraftMesh.visible = false;
 const frame = new FlightFrame({
@@ -309,35 +245,6 @@ const frame = new FlightFrame({
   groundHeight: getGroundHeight,
 });
 
-loop.onUpdate((dt) => {
-  gamepad.poll();
-  // PvP の飛行中はゲームを止めず、Esc で PvP のメニュー
-  if (input.wasPressed('pause') && !pvp.togglePause()) {
-    input.endStep();
-    game.transition('pause');
-    return;
-  }
-  readFlightControls(input, controls);
-  assist.apply(controls);
-  weaponInput.read(input, combatInput, dt);
-  if (pvp.flying) pvp.step(controls, combatInput, dt);
-  else play.step(controls, combatInput, dt);
-  // 6-4: 街の建物が崩れる時間と、怪獣（歩行・薙ぎ払い・熱線）が壊す建物
-  const buildings = activeMap.buildings;
-  if (buildings) {
-    buildings.step(dt);
-    // 協力（6-6）はホストの RaidHost だけが壊して番号を配り、クライアントは受け取って壊す（ここでは判定しない）
-    if (!coopKaiju) applyKaijuToCity(buildings, session.props.kaiju, session.props.kaijuAi);
-  }
-  if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
-  keys.handle();
-  // ミッションが終わり、大きな文字を出し終えたらリザルトへ（固定更新もここで止まる）
-  const runner = play.runner;
-  if (runner?.readyForResult && runner.result) {
-    screens.showResult(runner.result, tutorial.paid);
-    game.transition('result');
-  }
-});
 loop.onRender((alpha) => {
   pvp.render(alpha);
   frame.render(game.state, alpha, keys.menuTick);
