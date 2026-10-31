@@ -1,5 +1,5 @@
-// 防衛戦（7-2）の HUD: 上中央に波数と残りの敵・司令部の HP バー・施設の状態（アイコン）、準備の間は残り秒数とスキップのボタン・
-// 次の波の予告（レーダーが残っていれば）・補給の案内。中央に大きな文字（WAVE 3・CLEAR・補給完了など）。
+// 防衛戦（7-2）の HUD: 上中央に波数と残りの敵・司令部の HP バー、準備の間は残り秒数とスキップのボタン・補給の案内。
+// 左上の帯に施設の状態（アイコン）・次の波の予告（レーダーが残っていれば）（7-C で上中央から分けた。SPD/ALT の箱と重なっていた）。中央に大きな文字（WAVE 3・CLEAR・補給完了など）。
 // 巡航ミサイルは専用の赤い警告マーカー（優先目標。画面外は画面端の赤い三角）。ソロも協力も同じ表示（値の出どころが違う）
 import './defense.css';
 import { DEFENSE_CONFIG, FACILITY_KINDS } from '../data/defense';
@@ -66,15 +66,15 @@ export class DefenseHud {
   constructor(parent: HTMLElement) {
     const root = el('div', 'defense-hud', parent);
     root.hidden = true;
+    // 上中央の帯（幅 50% 以内・SPD/ALT の箱より上。7-C）: 波数と司令部の HP を 1 行、準備の間は残り秒数とスキップ
     const top = el('div', 'defense-top', root);
-    this.waveText = el('div', 'defense-wave', top);
-    const hq = el('div', 'defense-hq', top);
+    const row = el('div', 'defense-top-row', top);
+    this.waveText = el('div', 'defense-wave', row);
+    const hq = el('div', 'defense-hq', row);
     el('span', 'defense-hq-label', hq, 'HQ');
     const track = el('div', 'defense-hq-track', hq);
     this.hqFill = el('div', 'defense-hq-fill', track);
     this.hqText = el('span', 'defense-hq-value', hq);
-    const icons = el('div', 'defense-icons', top);
-    for (const k of FACILITY_KINDS) this.icons.push(el('span', 'defense-icon', icons, ICONS[k]));
     this.prep = el('div', 'defense-prep', top);
     this.prepText = el('span', 'defense-prep-text', this.prep);
     this.skip = el('button', 'ui-button defense-skip', this.prep, 'スキップ (N)');
@@ -82,14 +82,18 @@ export class DefenseHud {
     this.skip.addEventListener('click', () => {
       this.onSkip();
     });
-    this.forecast = el('div', 'defense-forecast', top);
-    const s = DEFENSE_CONFIG.supply;
+    const sup = DEFENSE_CONFIG.supply;
     this.supply = el(
       'div',
       'defense-supply',
       top,
-      `補給: 基地の上空を高度 ${s.maxAgl}m 以下・速度 ${s.maxSpeed} 以下で通過`,
+      `補給: 基地の上空を高度 ${sup.maxAgl}m 以下・速度 ${sup.maxSpeed} 以下で通過`,
     );
+    // 左上の帯（左上のボタンの右・ゲージより上。7-C）: 施設の状態・次の波の予告
+    const side = el('div', 'defense-side', root);
+    const icons = el('div', 'defense-icons', side);
+    for (const k of FACILITY_KINDS) this.icons.push(el('span', 'defense-icon', icons, ICONS[k]));
+    this.forecast = el('div', 'defense-forecast', side);
     const big = el('div', 'defense-big', root);
     this.bigMain = el('div', 'defense-big-main', big);
     this.bigSub = el('div', 'defense-big-sub', big);

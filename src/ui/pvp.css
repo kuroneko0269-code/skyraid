@@ -145,11 +145,6 @@
   display: none;
 }
 
-.lobby-rule-select {
-  min-width: 6em;
-  padding-block: 4px;
-}
-
 /* ---- 5-4: カウントダウン・残り時間の警告・撃墜の画面・無敵・再接続中（押せない。タッチ操作の邪魔をしない） ---- */
 .pvp-overlay {
   position: fixed;

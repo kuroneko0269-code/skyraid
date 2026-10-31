@@ -138,7 +138,8 @@
 }
 
 .hangar-action {
-  min-width: 0;
+  /* 文字に合わせた最小幅（折り返さない。7-C） */
+  min-width: max-content;
 }
 
 .hangar-notice {
@@ -181,7 +182,8 @@
 .hangar-upgrade-button {
   grid-column: 2;
   grid-row: 1 / span 2;
-  min-width: 0;
+  /* 文字に合わせた最小幅（折り返さない。7-C） */
+  min-width: max-content;
   min-height: 40px;
   padding: 6px 10px;
   font-size: 13px;
@@ -266,6 +268,6 @@
   }
 
   .hangar-upgrade-button {
-    min-height: 36px;
+    min-height: 40px;
   }
 }

@@ -2,6 +2,7 @@
 // （マップ・天候・リング・ゴールドタイム・制限時間・ベスト 5）と機体の選択（所持機体。ハンガーの選択も変わる）と「スタート」
 import './campaign.css';
 import './race.css';
+import './segmented.css';
 import { AIRCRAFT_MODELS } from '../data/aircraft';
 import { findMap } from '../data/maps';
 import { RACE_CONFIG } from '../data/race';
@@ -84,6 +85,7 @@ export class RaceSelectScreen {
     this.times = el('table', 'race-times', detail);
     el('div', 'campaign-label', detail, '機体');
     this.aircraft = el('div', 'race-aircraft', detail);
+    this.aircraft.setAttribute('role', 'radiogroup');
     const buttons = el('div', 'campaign-buttons', root);
     createButton(buttons, 'ui-button is-ghost campaign-back', '← モード選択', handlers.onBack);
     this.start = createButton(buttons, 'ui-button is-primary campaign-go', 'スタート', () => {
@@ -146,11 +148,13 @@ export class RaceSelectScreen {
     const selectedId = this.hangar.selectedId;
     for (const m of AIRCRAFT_MODELS) {
       if (this.hangar.status(m.id) !== 'owned') continue;
-      const b = createButton(this.aircraft, 'ui-toggle', m.name, () => {
+      // 7-C: 選択はセグメント（theme.css の .ui-seg-item。高さ 48px・選択中は塗りつぶし）
+      const b = createButton(this.aircraft, 'ui-seg-item', m.name, () => {
         this.hangar.select(m.id);
         this.renderAircraft();
       });
-      b.setAttribute('aria-pressed', String(m.id === selectedId));
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(m.id === selectedId));
     }
   }
 

@@ -34,7 +34,8 @@
 }
 
 .lobby-join-button {
-  min-width: 0;
+  /* 文字に合わせた最小幅（折り返さない。7-C） */
+  min-width: max-content;
   flex: 0 0 auto;
 }
 
@@ -231,7 +232,8 @@
 
 .lobby-share-button {
   flex: 1 1 0;
-  min-width: 0;
+  /* 文字に合わせた最小幅（折り返さない。7-C） */
+  min-width: max-content;
   min-height: 44px;
 }
 
@@ -239,6 +241,27 @@
   min-height: 1.3em;
   font-size: 12px;
   color: var(--ui-accent);
+}
+
+/* ホストの設定（7-C でセグメントに）: 1 行に 1 項目 */
+.lobby-rules {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ui-space-2);
+}
+
+.lobby-rules .ui-seg-label {
+  min-width: 5.5em;
+}
+
+.lobby-rules .ui-seg-item {
+  padding-inline: 10px;
+  font-size: 14px;
+}
+
+.lobby-seg-weather .ui-seg-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .lobby-toggles {
@@ -250,7 +273,7 @@
 
 .lobby-toggle {
   flex: 1 1 140px;
-  min-height: 44px;
+  min-height: 48px;
   padding: 0 var(--ui-space-3);
   color: var(--ui-text-dim);
 }
@@ -297,8 +320,9 @@
 }
 
 .lobby-team {
-  min-width: 0;
-  min-height: 36px;
+  /* 文字に合わせた最小幅（7-C） */
+  min-width: max-content;
+  min-height: 40px;
   padding: 0 var(--ui-space-2);
   font-size: 12px;
   font-weight: 600;
@@ -338,7 +362,8 @@
 }
 
 .lobby-chat-button {
-  min-width: 0;
+  /* 文字に合わせた最小幅（折り返さない。7-C） */
+  min-width: max-content;
   min-height: 44px;
   padding: 0 var(--ui-space-1);
   font-size: 13px;
@@ -486,7 +511,8 @@
     z-index: 1;
     margin: 0 -16px -10px;
     padding: var(--ui-space-2) 16px 10px;
-    background: var(--ui-bg-strong);
+    /* 下の文字（待ちの案内）が透けないように不透明（7-C） */
+    background: var(--ui-bg-solid);
   }
 
   .lobby-buttons .ui-button {

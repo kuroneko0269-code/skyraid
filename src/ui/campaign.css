@@ -5,11 +5,11 @@
   background: var(--ui-scrim);
 }
 
-/* 横画面のスマホで一覧が画面に収まらないときは上から並べてスクロール（中央寄せのままだと上が切れる）。
-   screen.css の .screen より後に読まれるとは限らないので詳細度を上げる */
+/* 横画面のスマホで一覧が画面に収まらないときのスクロールは screen.css（7-C で全画面に共通化）。
+   余白は screen.css の .screen（safe-area だけ）より後に読まれるとは限らないので詳細度を上げる（7-C。端に貼り付いていた） */
 .screen.campaign-screen {
-  justify-content: safe center;
-  overflow-y: auto;
+  padding: max(var(--ui-space-3), var(--ui-safe-top)) max(var(--ui-space-3), var(--ui-safe-right))
+    max(var(--ui-space-3), var(--ui-safe-bottom)) max(var(--ui-space-3), var(--ui-safe-left));
 }
 
 .mission-list {
@@ -67,7 +67,8 @@
 }
 
 .campaign-back {
-  min-width: 0;
+  /* 文字に合わせた最小幅（折り返さない。7-C） */
+  min-width: max-content;
   min-height: 44px;
   font-size: 15px;
 }
@@ -140,6 +141,8 @@
 .campaign-fact-label {
   font-size: 12px;
   color: var(--ui-text-dim);
+  /* 「モード」が 1 文字ずつ縦に折れていた（7-C） */
+  white-space: nowrap;
 }
 
 .campaign-fact-value {
@@ -149,13 +152,15 @@
 
 .campaign-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
   margin-top: 6px;
 }
 
 .campaign-buttons .ui-button {
-  min-width: 0;
+  /* 文字に合わせた最小幅（折り返さない。7-C） */
+  min-width: max-content;
   flex: 1 1 0;
   padding-inline: var(--ui-space-3);
   letter-spacing: 0.02em;

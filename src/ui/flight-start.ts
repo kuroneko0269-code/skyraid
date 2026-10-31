@@ -141,6 +141,7 @@ function startUnrecorded(p: FlightStartParts, def: MissionDef | null, net: boole
   if (!net) {
     const enemies = p.session.freeEnemies;
     p.world.pristine?.restore();
+    p.play.announceModes();
     p.session.setFreeEnemies(enemies);
   }
   p.session.applyLoadout(loadout);

@@ -1,4 +1,4 @@
-/* 怪獣の HUD（6-2）。画面上部の中央（⏸ ボタン・残り時間と重ならない幅） */
+/* 怪獣の HUD（6-2）。画面上部の中央（⏸ ボタン・残り時間・SPD/ALT の箱と重ならない幅と高さ） */
 .kaiju-hud {
   --kaiju-color: rgba(255, 120, 70, 0.95);
   --kaiju-warn: rgba(255, 210, 60, 0.98);
@@ -22,12 +22,13 @@
   display: none;
 }
 
+/* 上中央の帯（7-C。幅 50% 以内・SPD/ALT の箱より上。theme.css の --ui-hud-*） */
 .kaiju-top {
   position: absolute;
-  top: calc(10px + env(safe-area-inset-top, 0px));
+  top: var(--ui-hud-band-top);
   left: 50%;
   transform: translateX(-50%);
-  width: min(460px, calc(100vw - 180px));
+  width: min(460px, var(--ui-hud-band-width));
   display: flex;
   flex-direction: column;
   gap: 3px;

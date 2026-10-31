@@ -24,9 +24,12 @@
   display: none;
 }
 
+/* 上中央の帯（7-C。幅 50% 以内・SPD/ALT の箱より上。theme.css の --ui-hud-*） */
 .race-top {
   position: absolute;
-  top: calc(12px + env(safe-area-inset-top, 0px));
+  top: var(--ui-hud-band-top);
+  max-width: var(--ui-hud-band-width);
+  box-sizing: border-box;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -242,11 +245,6 @@
   gap: 6px;
 }
 
-.race-aircraft .ui-toggle[aria-pressed='true'] {
-  border-color: var(--ui-line-strong);
-  background: var(--ui-accent-fill-hover);
-}
-
 .race-rank-s {
   color: var(--ui-gold);
 }
@@ -269,4 +267,32 @@
   color: var(--ui-gold);
   font-weight: 700;
   letter-spacing: 0.1em;
+}
+
+/* 背の低い横画面（スマホ）: タイムと RING・ゴースト差を 1 行に並べ、帯を低くする（7-C） */
+@media (max-height: 480px) {
+  .race-top {
+    flex-flow: row wrap;
+    justify-content: center;
+    column-gap: 12px;
+    row-gap: 0;
+    padding: 2px 12px 3px;
+  }
+
+  .race-time {
+    font-size: 22px;
+  }
+
+  .race-sub {
+    flex-direction: column;
+    gap: 0;
+    font-size: 12px;
+  }
+
+  .race-flash {
+    flex-basis: 100%;
+    margin-top: 0;
+    font-size: 14px;
+    text-align: center;
+  }
 }

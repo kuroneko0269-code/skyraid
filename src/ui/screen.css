@@ -20,6 +20,28 @@
     visibility 0s linear var(--screen-fade);
 }
 
+/*
+ * 背の低い横画面（スマホ 844×390 など）で中身が画面より高いとき（7-C）: 中央寄せのままだと上下が切れ、
+ * 子が縮んで文字が重なるので、子は縮めずに画面ごとスクロールする。中央寄せは前後の伸びる空白で行う
+ * （justify-content: safe center は古い Safari で効かない）。タイトル・読み込み中は全面の演出なので対象外
+ */
+.screen:not(.title-screen, .loading-screen) {
+  justify-content: flex-start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.screen:not(.title-screen, .loading-screen) > * {
+  flex-shrink: 0;
+}
+
+.screen:not(.title-screen, .loading-screen)::before,
+.screen:not(.title-screen, .loading-screen)::after {
+  content: '';
+  flex: 1 0 0;
+}
+
 .screen.is-shown {
   opacity: 1;
   visibility: visible;

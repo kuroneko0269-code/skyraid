@@ -2,7 +2,11 @@
  * デザインシステム（4-10）。部品のセレクタはすべて :where() で詳細度 0 にして、読み込み順によらず各画面の CSS で上書きできるようにする。方向性は「軍用コックピット風 × ミニマル」。
  * 色・余白・角（チャンファー）・影・フォントはここの CSS 変数だけを使い、各画面の CSS は変数とクラスを組み合わせる。
  * 共通部品: .ui-button（.is-primary / .is-ghost / .is-danger）/ .ui-panel / .ui-dialog / .ui-item / .ui-toggle /
- * .ui-field / .ui-heading / .ui-title / .ui-kicker / .ui-toast
+ * .ui-field / .ui-heading / .ui-title / .ui-kicker / .ui-toast。セグメント（.ui-seg。7-C）は segmented.css
+ *
+ * タッチ端末（7-C）: ホバーの見た目は @media (hover: hover) の中だけに書く（タップした位置に :hover が残るため）。
+ * :focus-visible の枠は <html data-input="touch">（ui/tap-focus.ts）の間は出さない。タッチの押下は :active で返す。
+ * ボタンの文字は折り返さない（white-space: nowrap）。最小幅は文字に合わせる（min-width: max-content）
  */
 :root {
   /* 色: 半透明の濃紺〜黒のパネル、白文字、アクセントはシアン 1 色（HUD と同じ）、警告は赤 */
@@ -12,6 +16,8 @@
   --ui-bg-hover: rgba(14, 48, 66, 0.86);
   --ui-bg-active: rgba(22, 78, 98, 0.92);
   --ui-bg-sunken: rgba(0, 0, 0, 0.42);
+  /* 下に文字が透けてはいけない帯（ロビーの下端に貼り付けたボタンの帯。7-C） */
+  --ui-bg-solid: rgb(3, 8, 15);
   --ui-scrim: rgba(0, 6, 14, 0.5);
   --ui-text: #fff;
   --ui-text-dim: rgba(255, 255, 255, 0.7);
@@ -58,6 +64,16 @@
     ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   --ui-font-size: 14px;
 
+  /*
+   * HUD の上部パネルの領域（7-C）。防衛戦・レイド・レース・ミッションの上のパネルは「上中央の帯」（幅 50% 以内。
+   * SPD/ALT の箱は画面の中央 − ラダーの半分の高さにあり、帯はそれより上に収める）と「左上の帯」（左上のボタンの右から
+   * 上中央の帯の左まで・ゲージより上）に分ける。SPD/ALT の箱の位置はモードによらず変えない
+   */
+  --ui-hud-band-width: 50vw;
+  --ui-hud-band-top: calc(8px + var(--ui-safe-top));
+  --ui-hud-side-left: calc(80px + var(--ui-safe-left));
+  --ui-hud-side-width: min(200px, calc(25vw - 88px - var(--ui-safe-left)));
+
   /* safe-area（ホーム画面から standalone で起動したときのノッチ・ホームバー） */
   --ui-safe-top: env(safe-area-inset-top, 0px);
   --ui-safe-right: env(safe-area-inset-right, 0px);
@@ -71,7 +87,8 @@
 :where(.ui-dialog),
 :where(.ui-toggle),
 :where(.ui-field),
-:where(.ui-toast) {
+:where(.ui-toast),
+:where(.ui-seg-item) {
   --cut: var(--ui-cut);
   --fill: var(--ui-bg-raised);
   --edge: var(--ui-line);
@@ -114,7 +131,9 @@
 .ui-dialog[hidden],
 .ui-toggle[hidden],
 .ui-field[hidden],
-.ui-toast[hidden] {
+.ui-toast[hidden],
+.ui-seg[hidden],
+.ui-seg-item[hidden] {
   display: none;
 }
 
@@ -130,6 +149,7 @@
   padding: 10px 20px;
   font: 600 17px/1.2 var(--ui-font-display);
   letter-spacing: 0.06em;
+  white-space: nowrap;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -161,24 +181,20 @@
   transform-origin: right;
 }
 
-:where(.ui-button:hover:not(:disabled)),
 :where(.ui-button:focus-visible) {
-  --fill: var(--ui-bg-hover);
-  --edge: var(--ui-line-strong);
   outline: none;
 }
 
-:where(.ui-button:hover:not(:disabled))::before,
-:where(.ui-button:hover:not(:disabled))::after,
-:where(.ui-button:focus-visible)::before,
-:where(.ui-button:focus-visible)::after,
+:where(:root:not([data-input='touch']) .ui-button:focus-visible) {
+  --fill: var(--ui-bg-hover);
+  --edge: var(--ui-line-strong);
+}
+
+:where(:root:not([data-input='touch']) .ui-button:focus-visible)::before,
+:where(:root:not([data-input='touch']) .ui-button:focus-visible)::after,
 :where(.ui-button:active:not(:disabled))::before,
 :where(.ui-button:active:not(:disabled))::after {
   transform: scaleX(1);
-}
-
-:where(.ui-button:active:not(:disabled)) {
-  --fill: var(--ui-bg-active);
 }
 
 :where(.ui-button:disabled) {
@@ -193,8 +209,7 @@
   --edge: var(--ui-accent);
 }
 
-:where(.ui-button.is-primary:hover:not(:disabled)),
-:where(.ui-button.is-primary:focus-visible) {
+:where(:root:not([data-input='touch']) .ui-button.is-primary:focus-visible) {
   --fill: var(--ui-accent-fill-hover);
 }
 
@@ -204,8 +219,7 @@
   color: var(--ui-text-dim);
 }
 
-:where(.ui-button.is-ghost:hover:not(:disabled)),
-:where(.ui-button.is-ghost:focus-visible) {
+:where(:root:not([data-input='touch']) .ui-button.is-ghost:focus-visible) {
   color: var(--ui-text);
 }
 
@@ -215,8 +229,7 @@
   --run: var(--ui-warn);
 }
 
-:where(.ui-button.is-danger:hover:not(:disabled)),
-:where(.ui-button.is-danger:focus-visible) {
+:where(:root:not([data-input='touch']) .ui-button.is-danger:focus-visible) {
   --fill: var(--ui-warn-fill);
   --edge: var(--ui-warn);
 }
@@ -227,6 +240,17 @@
   justify-content: flex-start;
   min-width: 0;
   text-align: left;
+  /* カード・一覧の項目は 2 行（題と説明）を持つので、各行の中だけ折り返さない */
+  white-space: normal;
+  /* 高さを決めた一覧（スクロール）の中で縮んで文字が重ならないように（7-C） */
+  flex-shrink: 0;
+}
+
+:where(.ui-item) > * {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 :where(.ui-item.is-selected) {
@@ -259,13 +283,18 @@
 :where(button.ui-toggle) {
   cursor: pointer;
   touch-action: manipulation;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
 }
 
-:where(button.ui-toggle:hover),
-:where(button.ui-toggle:focus-visible),
-:where(.ui-toggle:focus-within) {
-  --edge: var(--ui-line-strong);
+:where(button.ui-toggle:focus-visible) {
   outline: none;
+}
+
+:where(:root:not([data-input='touch']) button.ui-toggle:focus-visible),
+:where(.ui-toggle:focus-within:has(select, input)),
+:where(button.ui-toggle:active) {
+  --edge: var(--ui-line-strong);
 }
 
 :where(.ui-toggle[aria-pressed='true']) {
@@ -328,6 +357,41 @@
   gap: var(--ui-space-3);
   padding: var(--ui-space-2) var(--ui-space-3);
   font: 13px/1.4 var(--ui-font-body);
+}
+
+/* ホバー（マウス・トラックパッドの端末だけ。7-C）。部品の基本の色より後に置く */
+@media (hover: hover) {
+  :where(.ui-button:hover:not(:disabled, .is-selected)) {
+    --fill: var(--ui-bg-hover);
+    --edge: var(--ui-line-strong);
+  }
+
+  :where(.ui-button:hover:not(:disabled))::before,
+  :where(.ui-button:hover:not(:disabled))::after {
+    transform: scaleX(1);
+  }
+
+  :where(.ui-button.is-primary:hover:not(:disabled)) {
+    --fill: var(--ui-accent-fill-hover);
+  }
+
+  :where(.ui-button.is-ghost:hover:not(:disabled)) {
+    color: var(--ui-text);
+  }
+
+  :where(.ui-button.is-danger:hover:not(:disabled)) {
+    --fill: var(--ui-warn-fill);
+    --edge: var(--ui-warn);
+  }
+
+  :where(button.ui-toggle:hover) {
+    --edge: var(--ui-line-strong);
+  }
+}
+
+/* タッチの押下（:active）は端末によらず返す。ホバーより後に置く */
+:where(.ui-button:active:not(:disabled)) {
+  --fill: var(--ui-bg-active);
 }
 
 @media (prefers-reduced-motion: reduce) {

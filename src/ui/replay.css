@@ -65,7 +65,8 @@
 .replay-bar .replay-btn {
   flex: 0 0 auto;
   width: auto;
-  min-width: 0;
+  /* 文字に合わせた最小幅（折り返さない。7-C） */
+  min-width: max-content;
   min-height: 30px;
   padding: 2px 10px;
   font-size: 13px;

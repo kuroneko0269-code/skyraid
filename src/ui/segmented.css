@@ -1,0 +1,81 @@
+/*
+ * セグメント（7-C。ui/segmented.ts）: 横並びのトグルで 1 つだけ選ぶ。高さ 48px 以上・選択中はアクセントの塗りつぶし。
+ * 枠（チャンファー）は theme.css の共通の枠。theme.css の部品（:where で詳細度 0）より後に読まれるとは限らないので、
+ * ここはふつうのクラスのセレクタにする（各画面の CSS は 2 段のセレクタで上書きする）
+ */
+.ui-seg {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--ui-space-2);
+  min-width: 0;
+}
+
+.ui-seg-label {
+  flex: 0 0 auto;
+  align-self: center;
+  min-width: 4.5em;
+  font: 600 13px/1.2 var(--ui-font-display);
+  letter-spacing: 0.12em;
+  color: var(--ui-text-dim);
+  white-space: nowrap;
+}
+
+.ui-seg-items {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  gap: var(--ui-space-1);
+  min-width: 0;
+}
+
+.ui-seg-item {
+  --cut: var(--ui-cut-sm);
+  --fill: var(--ui-bg-sunken);
+  --edge: var(--ui-line-faint);
+  flex: 1 0 auto;
+  min-height: 48px;
+  padding: 6px 14px;
+  font: 600 15px/1.2 var(--ui-font-display);
+  letter-spacing: 0.04em;
+  color: var(--ui-text-dim);
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ui-seg-item:focus-visible {
+  outline: none;
+}
+
+:root:not([data-input='touch']) .ui-seg-item:focus-visible:not([aria-checked='true']),
+.ui-seg-item:active:not(:disabled, [aria-checked='true']) {
+  --edge: var(--ui-line-strong);
+  color: var(--ui-text);
+}
+
+.ui-seg-item[aria-checked='true'] {
+  --fill: var(--ui-accent);
+  --edge: var(--ui-accent);
+  color: var(--ui-bg-strong);
+  text-shadow: none;
+}
+
+.ui-seg-item:disabled {
+  color: var(--ui-text-faint);
+  cursor: default;
+}
+
+/* ホバー（マウス・トラックパッドの端末だけ） */
+@media (hover: hover) {
+  .ui-seg-item:hover:not(:disabled, [aria-checked='true']) {
+    --edge: var(--ui-line-strong);
+    color: var(--ui-text);
+  }
+}
+
+/* 選択中にキーボードのフォーカスがあるときは枠を白く */
+:root:not([data-input='touch']) .ui-seg-item[aria-checked='true']:focus-visible {
+  --edge: var(--ui-text);
+}
