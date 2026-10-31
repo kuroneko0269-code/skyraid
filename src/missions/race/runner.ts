@@ -9,7 +9,6 @@ import type { Quat, Vec3 } from '../../flight/math';
 import { crossesRing } from '../objectives/ring';
 import type { Pose } from '../types';
 import { anglesOf, buildRaceRings, type RaceRing } from './course';
-import { GhostRecorder } from './ghost';
 import { raceRank, raceTime } from './score';
 import type { CourseDef } from './types';
 
@@ -63,7 +62,6 @@ export class RaceRunner {
   readonly bus = new EventBus<RaceEvents>();
   readonly rings: readonly RaceRing[];
   readonly status: RingStatus[];
-  readonly recorder = new GhostRecorder();
   phase: RacePhase = 'countdown';
   countdownLeft: number = RACE_CONFIG.countdownSeconds;
   /** 走行の時計（GO から） */
@@ -133,7 +131,6 @@ export class RaceRunner {
       if (this.countdownLeft <= 1e-6) {
         this.countdownLeft = 0;
         this.phase = 'racing';
-        this.recorder.record(0, world.playerPosition, world.playerOrientation);
         this.bus.emit('race:start', {});
       } else if (Math.ceil(this.countdownLeft - 1e-6) !== this.lastCount) this.emitCount();
       return;
@@ -149,9 +146,8 @@ export class RaceRunner {
         }
       }
     }
-    // ゴールしたら記録を止める（pass の中で finish する）
+    // ゴールしたら終わり（pass の中で finish する）
     if (this.result) return;
-    this.recorder.record(this.elapsed, world.playerPosition, world.playerOrientation);
     if (this.elapsed >= this.course.timeLimitSeconds) this.finish('timeout');
   }
 

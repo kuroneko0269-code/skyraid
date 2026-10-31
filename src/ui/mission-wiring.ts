@@ -22,6 +22,8 @@ export interface MissionWiringParts {
   readonly chaseCamera: ChaseCamera;
   readonly playerView: PlayerView;
   readonly groundHeight: (x: number, z: number) => number;
+  /** 7-B: リプレイの再生中か（報酬・記録をセーブに入れない） */
+  readonly replaying: () => boolean;
 }
 
 export function linkMissionEvents(p: MissionWiringParts): void {
@@ -34,13 +36,16 @@ export function linkMissionEvents(p: MissionWiringParts): void {
   p.play.onRunnerChange((runner) => {
     const inTutorial = screens.inTutorial;
     p.missionHud.attach(runner);
+    const replaying = p.replaying();
     screens.pause.setInMission(
       runner !== null,
       inTutorial ? screens.tutorialText.abortMenu : undefined,
     );
     p.tutorial.attach(runner, inTutorial);
     // 成功の記録と報酬をセーブへ（3-2）。チュートリアルの報酬は初回だけ（TutorialLink）
-    if (runner && !inTutorial) bindMissionRewards(runner.bus, p.save, screens.progress);
+    // 7-B: 再生中は記録・報酬を入れない
+    if (runner && !inTutorial && !replaying)
+      bindMissionRewards(runner.bus, p.save, screens.progress);
   });
   // 撃墜（地面への墜落も）されたら揺らし、リスポーンしたら機体とカメラを新しい位置へすぐ移す（4-12b。
   // 次の描画を待つと、揺れ・地面の高さ・飛行機雲が撃墜された場所のまま 1 フレーム残る）

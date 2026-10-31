@@ -16,6 +16,7 @@ export const GAME_MODES = [
   'hangar',
   'pvp',
   'raid',
+  'replay',
 ] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
@@ -37,6 +38,8 @@ const MODE_ENTRIES: readonly { mode: GameMode; label: string; note: string; enab
   { mode: 'pvp', label: 'PvP', note: '2〜4 人で同じ空を飛ぶ', enabled: true },
   // レイド（6-2）: ソロはすぐ出撃、協力は PvP のロビーを使う
   { mode: 'raid', label: 'レイド', note: '巨大怪獣ヴォルガスを撃破（1〜4 人）', enabled: true },
+  // リプレイ（7-B）: シングルプレイの記録の一覧と再生
+  { mode: 'replay', label: 'リプレイ', note: '直近 10 本と保存した記録を見る', enabled: true },
 ];
 
 /**

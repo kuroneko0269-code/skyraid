@@ -30,10 +30,6 @@ export const RACE_CONFIG = {
   bestTimes: 5,
   /** スプリット・ゴーストとの差・タイム加減の表示秒数 */
   splitShowSeconds: 3,
-  /** ゴースト: 位置・姿勢を記録する頻度（Hz） */
-  ghostHz: 15,
-  /** ゴーストの位置の量子化（m。Int16 なので ±8191m まで） */
-  ghostPositionStep: 0.25,
   /** ゴーストの機体の不透明度 */
   ghostOpacity: 0.35,
   /** コースの保証条件（tests/race-course.test.ts）: リングの中心は地表から minRingAgl m 以上 */

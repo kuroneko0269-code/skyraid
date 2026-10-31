@@ -17,6 +17,7 @@ import { DefenseHudLink } from '../render/defense-hud-link';
 import { DefenseHud, type DefenseHudState } from './defense-hud';
 import { DefenseResultScreen } from './defense-result';
 import type { Screens } from './screens';
+import type { ReplayHub } from '../replay/hub';
 
 export interface DefenseLinkParts {
   readonly game: GameState;
@@ -26,6 +27,8 @@ export interface DefenseLinkParts {
   readonly audio: GameAudio;
   readonly camera: PerspectiveCamera;
   readonly aircraft: Object3D;
+  /** 7-B: スキップは記録を通す。再生中は報酬・リザルトなし */
+  readonly replay: ReplayHub;
 }
 
 export interface DefenseSelection {
@@ -36,12 +39,14 @@ export interface DefenseSelection {
 export interface DefenseLink {
   /** 飛ぶ（飛んだばかりの）防衛戦（ソロ）。メニューへ戻ると null */
   readonly selection: DefenseSelection | null;
-  /** 飛行の始めに呼ぶ（ui/flight-start.ts） */
-  begin(): void;
+  /** 防衛戦を始めた直後（ui/flight-start.ts。世界は startFromHeader が作る） */
+  afterStart(): void;
   /** 描画フレームごと */
   render(width: number, height: number): void;
   /** 協力の飛行も同じ HUD を使う（net 側が値を入れる） */
   readonly hud: DefenseHud;
+  /** リザルトの追加の欄（7-B: リプレイを保存） */
+  readonly resultExtras: HTMLElement;
 }
 
 /** 施設が壊れたときの文 */
@@ -62,7 +67,7 @@ export function createDefenseLink(p: DefenseLinkParts): DefenseLink {
   let pending: { score: DefenseScore; at: number } | null = null;
   const hud = new DefenseHud(document.body);
   const soloSkip = (): void => {
-    play.defense?.skip();
+    if (play.defense && !p.replay.playing) p.replay.dispatch({ kind: 'skip' });
   };
   hud.onSkip = soloSkip;
   const hudLink = new DefenseHudLink(hud, p.camera, p.aircraft, play.session.props.cruiseMissiles);
@@ -83,15 +88,13 @@ export function createDefenseLink(p: DefenseLinkParts): DefenseLink {
     skipped: false,
   };
   const link: DefenseLink = {
+    resultExtras: result.extras,
     get selection() {
       return selection;
     },
     hud,
-    begin() {
+    afterStart() {
       hud.onSkip = soloSkip;
-      const s = selection;
-      if (!s) return;
-      play.startDefense(findDefenseMap(s.mapId), s.difficulty);
       screens.pause.setInMission(true, '防衛戦を中断');
     },
     render(width, height) {
@@ -141,6 +144,8 @@ export function createDefenseLink(p: DefenseLinkParts): DefenseLink {
   const bind = (d: DefenseRunner): void => {
     bindDefenseFeedback(d, hud, audio, (id) => id === 0);
     d.bus.on('defense:end', ({ outcome }) => {
+      // 7-B: 再生中は報酬・リザルトなし
+      if (p.replay.playing) return;
       const score: DefenseScore = {
         outcome,
         wavesCleared: d.wavesCleared,

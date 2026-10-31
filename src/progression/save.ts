@@ -113,6 +113,7 @@ const V1_STARTER_ID = 'starter';
  * - v3 → v4（4-12）: 設定に操作補助（settings.assist）を足す（初期値）
  * - v4 → v5（4-11）: 設定に操作（settings.controls）、案内の記録（flags）を足す（初期値。どれもまだ出していない扱い）
  * - v5 → v6（7-1）: リングレースの記録（races）を空で足す
+ * - v6 → v7（7-B）: ゴーストを入力の記録に変えたので、古いゴースト（15Hz の位置）を捨てる（ベストタイム・ランクは残す）
  * 難易度の一度だけの normal → easy（4-11 の事前修正）は版によらず normalizeSettings で（印 settings.difficultyEased）
  */
 export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
@@ -170,6 +171,7 @@ export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
     };
   },
   5: (d) => ({ ...d, version: 6, races: {} }),
+  6: (d) => ({ ...d, version: 7, races: dropGhosts(d.races) }),
 };
 
 /**
@@ -297,4 +299,13 @@ export function decodeSave(text: string): SaveData | null {
 
 function isRank(v: unknown): v is Rank {
   return isOneOf(RANKS, v);
+}
+
+/** v6 → v7: races の各コースのゴーストを捨てる（形が違うものはそのまま。normalizeRaces が確かめる） */
+function dropGhosts(races: unknown): unknown {
+  if (typeof races !== 'object' || races === null || Array.isArray(races)) return races;
+  const out: Record<string, unknown> = {};
+  for (const [id, r] of Object.entries(races as Record<string, unknown>))
+    out[id] = typeof r === 'object' && r !== null ? { ...r, ghost: null } : r;
+  return out;
 }

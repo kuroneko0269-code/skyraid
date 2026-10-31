@@ -26,6 +26,8 @@ export interface DefenseResultExtras {
 }
 
 export class DefenseResultScreen {
+  /** ボタンの上の追加の欄（7-B: リプレイを保存） */
+  readonly extras: HTMLDivElement;
   readonly root: HTMLDivElement;
   private readonly info: HTMLDivElement;
   private readonly outcome: HTMLHeadingElement;
@@ -46,6 +48,7 @@ export class DefenseResultScreen {
     this.outcome = el('h2', 'ui-title campaign-title result-outcome', panel);
     this.facts = el('div', 'campaign-facts', panel);
     this.table = el('div', 'defense-result-table', panel);
+    this.extras = el('div', 'result-extras', panel);
     const buttons = el('div', 'campaign-buttons', panel);
     createButton(buttons, 'ui-button is-ghost campaign-back', 'モード選択へ', handlers.onList);
     this.retry = createButton(

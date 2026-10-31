@@ -1,0 +1,120 @@
+// 飛行の実行の組み立て（main.ts から分けた。7-B で main.ts が 300 行を超えたため。並びと挙動は変えていない）:
+// 飛行の始め方・固定ステップ（記録・再生も）・描画フレーム・フォトモード（7-A）・リプレイ（7-B）をつないでゲームループを回す
+import type { GameAudio } from '../audio/game-audio';
+import { GameLoop } from '../core/loop';
+import type { SaveStore } from '../progression/save-store';
+import { FlightFrame, type FlightFrameParts } from '../render/flight-frame';
+import type { ReplayHub } from '../replay/hub';
+import { simSkip, type SimWorld } from '../replay/sim';
+import { StateSnapshot } from '../replay/state-walk';
+import type { DefenseLink } from './defense-link';
+import { linkFlightLoop, type FlightLoopParts } from './flight-loop';
+import { createFlightStarter, type FlightStartParts } from './flight-start';
+import type { KaijuHudLink } from '../render/kaiju-hud-link';
+import { createPhotoMode, type PhotoLink } from './photo/photo-link';
+import type { RaceLink } from './race-link';
+import { createReplayWiring } from './replay-wiring';
+
+export type FlightRuntimeParts = Omit<FlightStartParts, 'world' | 'replay' | 'race' | 'defense'> &
+  Omit<FlightLoopParts, 'startFlight' | 'replay' | 'afterStep'> &
+  Omit<FlightFrameParts, 'touch'> & {
+    /** 描画のタッチ操作（スロットルの表示）。FlightLoopParts の touch は TouchLink */
+    readonly touchControls: FlightFrameParts['touch'];
+    readonly race: RaceLink;
+    readonly defense: DefenseLink;
+    readonly canvas: HTMLElement;
+    readonly audio: GameAudio;
+    readonly save: SaveStore;
+    readonly kaijuHud: KaijuHudLink;
+    readonly replayHub: ReplayHub;
+    /** 記録と再生で同じ始め方をする世界（起動直後の写しはここで撮る） */
+    readonly simWorld: SimWorld & { pristine: StateSnapshot | null };
+  };
+
+export function startFlightRuntime(p: FlightRuntimeParts): { photo: PhotoLink } {
+  const { game, screens, race, defense, replayHub, simWorld, pvp, touch } = p;
+  const startFlight = createFlightStarter({
+    ...p,
+    world: simWorld,
+    replay: {
+      takePending: () => replay.link.hooks.takePending(),
+      liveStarted: (s) => {
+        replay.link.hooks.liveStarted(s);
+      },
+      unrecordedStarted: () => {
+        replay.link.hooks.unrecordedStarted();
+      },
+      replayStarted: () => {
+        replay.link.hooks.replayStarted();
+      },
+    },
+  });
+
+  const loop = new GameLoop();
+  const { simulate } = linkFlightLoop(loop, {
+    ...p,
+    startFlight,
+    replay: {
+      hub: replayHub,
+      update: () => {
+        replay.playback.update();
+      },
+      stepOnce: () => {
+        replay.playback.stepOnce();
+      },
+    },
+    afterStep: () => {
+      race.afterStep();
+    },
+  });
+  p.aircraftMesh.visible = false;
+  const frame = new FlightFrame({ ...p, touch: p.touchControls });
+  // フォトモード（7-A）: ポーズメニュー・P キー。フリーフライト・キャンペーン・ソロのレイド（7-B: リプレイも）だけ（時間は止める）
+  const photo = createPhotoMode({
+    game,
+    canvas: p.canvas,
+    camera: p.camera,
+    pipeline: p.pipeline,
+    playerView: p.playerView,
+    views: p.views,
+    pause: screens.pause,
+    groundHeight: p.groundHeight,
+    weather: p.world.weather,
+    audio: p.audio,
+    save: p.save,
+    allowed: () => !pvp.flying && !screens.inTutorial,
+    simulate,
+    stepSeconds: loop.stepSeconds,
+    refreshTouch: () => {
+      touch.refresh();
+    },
+  });
+  frame.photo = photo;
+  // リプレイ（7-B）: 一覧・再生・保存
+  const replay = createReplayWiring({
+    ...p,
+    hub: replayHub,
+    world: simWorld,
+    loop,
+    frame,
+    weather: p.world.weather,
+    photo: () => {
+      photo.toggle();
+    },
+    resultExtras: [screens.result.extras, race.resultExtras, defense.resultExtras],
+  });
+  // 起動直後の世界の写し（飛行の始めに前の飛行の名残を消す）は配線の最後に撮る
+  simWorld.pristine = StateSnapshot.take([p.play], simSkip(p.play));
+
+  loop.onRender((alpha) => {
+    replay.playback.render();
+    pvp.render(alpha);
+    race.render(alpha);
+    defense.render(window.innerWidth, window.innerHeight);
+    frame.render(game.state, alpha, p.keys.menuTick);
+    if (game.state === 'flight') p.kaijuHud.update();
+    p.tutorial.update(game.state === 'flight');
+  });
+  loop.start();
+  return { photo };
+}

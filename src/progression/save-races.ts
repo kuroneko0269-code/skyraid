@@ -16,11 +16,10 @@ export interface RaceTimeEntry {
   missed: number;
 }
 
-/** ベストタイムの走行のゴースト（位置・姿勢 15Hz を base64。src/missions/race/ghost.ts） */
+/** ベストタイムの走行のゴースト（7-B から入力の記録（.skyreplay と同じ形）を base64。src/missions/race/ghost.ts） */
 export interface RaceGhost {
   time: number;
   aircraftId: string;
-  hz: number;
   data: string;
   /** 各リングのタイム（ゴーストとの差・スプリットに使う） */
   ringTimes: number[];
@@ -57,10 +56,10 @@ function normalizeEntry(v: unknown): RaceTimeEntry | null {
 
 function normalizeGhost(v: unknown): RaceGhost | null {
   if (!isObject(v)) return null;
-  const { time, aircraftId, hz, data, ringTimes } = v;
-  if (!isNum(time) || !isStr(aircraftId) || !isNum(hz) || hz <= 0 || !isStr(data)) return null;
+  const { time, aircraftId, data, ringTimes } = v;
+  if (!isNum(time) || !isStr(aircraftId) || !isStr(data)) return null;
   if (!Array.isArray(ringTimes) || !ringTimes.every(isNum)) return null;
-  return { time, aircraftId, hz, data, ringTimes: [...ringTimes] };
+  return { time, aircraftId, data, ringTimes: [...ringTimes] };
 }
 
 /** 読み込んだ races を確かめる。オブジェクトでなければ空。壊れた行・ゴーストはその項目だけ捨てる */

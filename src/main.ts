@@ -1,5 +1,4 @@
 import { WebGLRenderer } from 'three';
-import { GameLoop } from './core/loop';
 import { parseSkipTitle } from './core/debug-flags';
 import { BOOT_TASKS, runBoot } from './core/boot';
 import { GameState } from './core/game-state';
@@ -29,7 +28,6 @@ import { KaijuHud } from './ui/kaiju-hud';
 import { KaijuHudLink } from './render/kaiju-hud-link';
 import { installTouchGuards } from './ui/mobile';
 import { createGameSettings } from './ui/settings-link';
-import { FlightFrame } from './render/flight-frame';
 import { createControlsLink } from './ui/controls-link';
 import { TutorialLink } from './ui/tutorial-link';
 import { openBrowserSave } from './ui/save-link';
@@ -38,18 +36,19 @@ import { installAppShell } from './ui/app-shell';
 import { createGameAudio } from './audio/setup';
 import { FxEvents } from './render/fx/fx-events';
 import { FrameFx } from './render/frame-fx';
-import { createFlightStarter } from './ui/flight-start';
 import { linkWeather } from './ui/weather-link';
-import { linkFlightLoop } from './ui/flight-loop';
 import { createPvpWiring } from './ui/pvp-wiring';
 import { linkMissionEvents } from './ui/mission-wiring';
 import { createAppControls } from './ui/app-controls';
-import { createPhotoMode } from './ui/photo/photo-link';
 import { createRaceLink } from './ui/race-link';
 import { GhostView } from './render/ghost-view';
 import { createDefenseLink } from './ui/defense-link';
 import { FREE_FLIGHT_ENEMIES } from './data/ai';
 import { DEFENSE_CONFIG } from './data/defense';
+import { ReplayHub } from './replay/hub';
+import type { SimWorld } from './replay/sim';
+import { StateSnapshot } from './replay/state-walk';
+import { startFlightRuntime } from './ui/flight-runtime';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app が見つかりません');
@@ -107,9 +106,9 @@ const { input, gamepad, hud, missionHud, settingsParts, touch, debug, keys } = c
   storage,
   pipeline,
   world,
-  photoTouch: () => photo.showsTouch,
+  photoTouch: () => runtime.photo.showsTouch,
   photoToggle: () => {
-    photo.toggle();
+    runtime.photo.toggle();
   },
 });
 
@@ -125,9 +124,24 @@ const session = new FlightSession({
   enemies: { ...FREE_FLIGHT_ENEMIES, maxCount: DEFENSE_CONFIG.hostFighterPool },
 });
 const play = new GamePlay(session);
+// リプレイ（7-B）: 本番の飛行の記録・再生中かどうか・外部の操作の通り道。world は記録と再生で同じ始め方をする世界
+const replayHub = new ReplayHub(play);
+const simWorld: SimWorld & { pristine: StateSnapshot | null } = {
+  play,
+  useMap: (id) => {
+    activeMap.use(id);
+  },
+  buildings: () => activeMap.buildings,
+  pristine: null,
+};
 // 怪獣の HUD（6-2）: 体力バー・フェーズ・ロック中の部位・予兆・スタンのノイズ
 const kaijuHud = new KaijuHudLink(new KaijuHud(document.body), hud, session);
-const assistFlags = createGameSettings(settingsParts, session);
+const assistFlags = createGameSettings(settingsParts, session, (enabled, difficulty) => {
+  // 記録中の敵の設定の変更はリプレイに残す（7-B）
+  if (replayHub.recording)
+    replayHub.dispatch({ kind: 'enemies', enabled, difficulty, count: session.freeEnemies.count });
+  else session.configureEnemies(enabled, difficulty);
+});
 const assist = new AssistControl(session, assistFlags, () => input.lastDevice);
 const damageOverlay = new DamageOverlay(document.body);
 const controls = createControls();
@@ -154,6 +168,7 @@ const defense = createDefenseLink({
   audio,
   camera,
   aircraft: aircraftMesh,
+  replay: replayHub,
 });
 // PvP（5-1）: 選んだとき・?room のときだけ通信の部分を読み込む
 const search = window.location.search;
@@ -189,6 +204,7 @@ linkMissionEvents({
   chaseCamera,
   playerView,
   groundHeight: getGroundHeight,
+  replaying: () => replayHub.playing,
 });
 const combatInput = createCombatInput();
 // 武器の操作（タッチ・パッドの長押しで兵装の切替・爆弾。2-6）
@@ -203,7 +219,13 @@ const hudLink = new HudLink(
   () => assistFlags.hud,
 );
 // HUD の対象をタップ（クリック）すると選ぶ。スティック・ボタンの上は canvas に届かない
-hudLink.bindTap(renderer.domElement, () => game.state === 'flight');
+hudLink.bindTap(
+  renderer.domElement,
+  () => game.state === 'flight' && !replayHub.playing,
+  (t) => {
+    replayHub.select(t);
+  },
+);
 
 // 天候（7-5）: 飛行・メニュー・ブリーフィング・ロビーの天候、HUD のマーカーと夜の減光、環境音
 linkWeather(world.weather, { game, screens, pvp, hud, hudLink, audio, save });
@@ -218,8 +240,11 @@ const race = createRaceLink({
   weather: world.weather,
   ghost,
   hud,
+  activeMap,
+  replay: replayHub,
 });
-const startFlight = createFlightStarter({
+// 飛行の始め・固定ステップ・描画・フォトモード（7-A）・リプレイ（7-B）を組み立ててゲームループを回す
+const runtime = startFlightRuntime({
   activeMap,
   screens,
   session,
@@ -231,10 +256,6 @@ const startFlight = createFlightStarter({
   pvp,
   race,
   defense,
-});
-
-const loop = new GameLoop();
-const { simulate } = linkFlightLoop(loop, {
   game,
   input,
   gamepad,
@@ -243,76 +264,32 @@ const { simulate } = linkFlightLoop(loop, {
   combatInput,
   weaponInput,
   assist,
-  pvp,
-  play,
-  session,
-  activeMap,
-  chaseCamera,
-  screens,
-  tutorial,
   coopKaiju,
   touch,
+  touchControls: touch.controls,
   hangarStage,
   aircraftMesh,
-  startFlight,
-});
-aircraftMesh.visible = false;
-const frame = new FlightFrame({
+  tutorial,
   pipeline,
   world,
   camera,
-  playerView,
-  chaseCamera,
   demoCamera,
-  hangarStage,
-  views,
   ringView,
   damageOverlay,
   hud,
   hudLink,
   missionLink,
   frameFx,
-  quality,
   debug,
-  session,
-  play,
-  controls,
-  touch: touch.controls,
-  weaponInput,
   assistFlags,
   groundHeight: getGroundHeight,
-});
-// フォトモード（7-A）: ポーズメニュー・P キー。フリーフライト・キャンペーン・ソロのレイドだけ（時間は止める）
-const photo = createPhotoMode({
-  game,
   canvas: renderer.domElement,
-  camera,
-  pipeline,
-  playerView,
-  views,
-  pause: screens.pause,
-  groundHeight: getGroundHeight,
-  weather: world.weather,
   audio,
   save,
-  allowed: () => !pvp.flying && !screens.inTutorial,
-  simulate,
-  stepSeconds: loop.stepSeconds,
-  refreshTouch: () => {
-    touch.refresh();
-  },
+  kaijuHud,
+  replayHub,
+  simWorld,
 });
-frame.photo = photo;
-
-loop.onRender((alpha) => {
-  pvp.render(alpha);
-  race.render(alpha);
-  defense.render(window.innerWidth, window.innerHeight);
-  frame.render(game.state, alpha, keys.menuTick);
-  if (game.state === 'flight') kaijuHud.update();
-  tutorial.update(game.state === 'flight');
-});
-loop.start();
 
 // 起動シーケンス: 読み込み（今はアセットなしで即完了）を待ってからタイトルへ。?skipTitle なら飛行へ直行
 void runBoot(BOOT_TASKS, (progress) => {

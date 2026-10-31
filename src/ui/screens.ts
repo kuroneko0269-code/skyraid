@@ -121,6 +121,7 @@ export class Screens {
           game.transition('flight');
         } else if (mode === 'campaign') game.transition('mission_select');
         else if (mode === 'race') game.transition('race_select');
+        else if (mode === 'replay') game.transition('replay_select');
         else if (mode === 'hangar') this.openHangar(game, 'mode_select');
         else if (mode === 'pvp') this.pvp?.onSelect(false);
         else if (mode === 'defense') this.modeSelect.showDefensePrompt();
@@ -267,7 +268,8 @@ export class Screens {
     else if (state === 'mode_select') {
       if (!this.modeSelect.closeDialog()) game.transition('title');
     } else if (state === 'pilot_name') game.transition('title');
-    else if (state === 'mission_select' || state === 'race_select') game.transition('mode_select');
+    else if (state === 'mission_select' || state === 'race_select' || state === 'replay_select')
+      game.transition('mode_select');
     else if (state === 'briefing') game.transition('mission_select');
     else if (state === 'hangar') this.closeHangar(game);
     else if (state === 'lobby') this.pvp?.onBack();

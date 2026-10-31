@@ -111,6 +111,13 @@ export class EnemySquadron {
     this.reset();
   }
 
+  /** 敵の有無・難易度・機数だけを変える（出し直さない。7-B: 次の reset で使う） */
+  setConfig(enabled: boolean, difficulty: Difficulty, count: number): void {
+    this.enabledFlag = enabled;
+    this.difficultyValue = difficulty;
+    this.countValue = Math.max(0, Math.min(count, this.enemies.length));
+  }
+
   /** 全機を出し直す（無効なら全機引っ込める）。弾も消す。経路・難易度はフリーフライトの設定に戻す */
   reset(): void {
     this.units.forEach((u, i) => {
