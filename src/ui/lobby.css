@@ -126,10 +126,14 @@
   color: var(--ui-text-dim);
 }
 
-/* PvP 中の Esc / ⏸ のメニュー（ゲームは止まらない） */
+/*
+ * PvP 中の Esc / ⏸ のメニュー（ゲームは止まらない）。タッチ操作（z-index 20。左のスティックの範囲は
+ * pointer-events: auto）より上に置く（5-3 の事前修正: 下にあると左側の「退出する」がスティックに取られて押せなかった）
+ */
 .pvp-menu {
   position: fixed;
   inset: 0;
+  z-index: 55;
   display: flex;
   align-items: center;
   justify-content: center;

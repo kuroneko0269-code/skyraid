@@ -39,7 +39,8 @@ export class PvpHud {
     el('h3', 'ui-heading', box, 'PvP');
     el('p', 'briefing-text', box, '対戦中は一時停止できません（機体は飛び続けます）');
     const buttons = el('div', 'campaign-buttons', box);
-    createButton(buttons, 'ui-button is-ghost campaign-back', '退出する', handlers.onLeave);
+    // 押せないように見えないよう、灰色の is-ghost ではなく赤（確認なしで 1 回で抜ける。再接続はロビーから）
+    createButton(buttons, 'ui-button is-danger campaign-back', '退出する', handlers.onLeave);
     createButton(buttons, 'ui-button is-primary campaign-go', '続ける', handlers.onContinue);
     this.toast = el('div', 'ui-toast pvp-toast', parent);
     this.toast.setAttribute('role', 'status');
