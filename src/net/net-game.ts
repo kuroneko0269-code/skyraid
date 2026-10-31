@@ -3,6 +3,7 @@
 import { NET_CONFIG } from '../data/net';
 import { WORLD_CONFIG } from '../data/terrain';
 import type { AircraftControls } from '../entities/aircraft';
+import { headingQuat } from '../entities/enemy-aircraft';
 import type { Quat, Vec3 } from '../flight/math';
 import {
   NO_TARGET,
@@ -12,16 +13,20 @@ import {
   type ScoreMsg,
 } from './protocol';
 
-/** 開始位置（ID 0〜3 を島の沖合に横一列。機首は -Z） */
+/** 開始位置（ID 0〜3 を島の沖合に横一列。高度 800m。5-4 の事前修正） */
 export function spawnPosition(id: number, out: Vec3): Vec3 {
   const s = WORLD_CONFIG.start;
   out.x = s.x + (id - (NET_CONFIG.maxPlayers - 1) / 2) * NET_CONFIG.spawn.spacing;
-  out.y = s.y;
+  out.y = NET_CONFIG.spawn.altitude;
   out.z = s.z;
   return out;
 }
 
-export const SPAWN_ORIENTATION: Readonly<Quat> = { x: 0, y: 0, z: 0, w: 1 };
+/** 開始の姿勢: 機首は海側（+Z。島の外向き） */
+export const SPAWN_ORIENTATION: Readonly<Quat> = headingQuat(
+  { x: 0, y: 0, z: 0, w: 1 },
+  NET_CONFIG.spawn.headingDeg,
+);
 
 /** 他機 1 機の描画用の値（描画フレームごとに書き換える入れ物） */
 export interface RemoteSample {
