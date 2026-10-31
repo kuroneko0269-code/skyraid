@@ -2,22 +2,24 @@
 // FlightSession（session.combat・session.player・session.rivals）に映す。これで HUD・エフェクト・3D の音は
 // シングルプレイと同じものが動く。判定はしない（自機の機銃の弾は見た目だけで、他機に当たらない）。
 // 自機の索敵とロックはここで計算し、ロック完了と対象を入力に入れる（ホストは信頼せず見直す）。
-// 他機の機銃は発射の event から見た目の弾だけ出す。Three.js 非依存
+// 他機の機銃は発射の event から見た目の弾だけ出す。
+// 5-4: チーム戦の味方は索敵しない（レーダー・名札は味方の色）。初心者保護つきの復帰で最大 HP とミサイルを増やす。
+// 撃墜した相手（撃墜の画面）を覚える。Three.js 非依存
 import { createCombatInput, type CombatInput } from '../combat/combat-input';
 import { MISSILE_CONFIG } from '../data/weapons';
 import { AIRCRAFT_COMBAT } from '../data/aircraft';
 import { HUD_CONFIG } from '../data/hud';
 import { PVP_CONFIG } from '../data/pvp';
 import type { Bullet } from '../combat/gun';
-import type { Missile } from '../combat/missile';
 import type { Pool } from '../combat/pool';
 import { TEAM_ENEMY, TEAM_PLAYER, type CombatTarget } from '../combat/target';
-import { NOBODY } from '../combat/pvp-arena';
+import { NOBODY, RESPAWN_BOOST } from '../combat/pvp-arena';
 import type { Vec3 } from '../flight/math';
 import type { FlightSession } from '../missions/flight-session';
 import { RivalProxy } from './rival-proxy';
 import { createLocalCombat, type LocalCombat, type NetGame, type RemoteSample } from './net-game';
-import { NO_TARGET, type EventMsg, type MissileStateMsg, type PlayerInfo } from './protocol';
+import { NO_TARGET, type EventMsg, type PlayerInfo } from './protocol';
+import { MissileMirror } from './missile-mirror';
 
 /** 撃墜のフィードの 1 件（killer が null なら墜落） */
 export interface FeedItem {
@@ -39,11 +41,17 @@ export class PvpMirror {
   ownInvulnerable = 0;
   /** 経過秒数（フィードの時刻） */
   time = 0;
+  /** 自機を最後に撃墜した人（null は墜落）と時刻（撃墜の画面。5-4。undefined はまだ撃墜されていない） */
+  downedBy: number | null | undefined = undefined;
+  downedAt = 0;
+  /** 今の命が初心者保護つきか（5-4） */
+  ownBoosted = false;
   private readonly rivalList: RivalProxy[] = [];
-  private readonly shown = new Map<number, Missile>();
-  private readonly seen = new Set<number>();
-  /** 起爆した netId と時刻（起爆の event の後に、順不同で遅れて届いた前の状態で生き返らせない） */
-  private readonly exploded = new Map<number, number>();
+  /** 索敵の対象（チーム戦の味方を除く） */
+  private readonly targetList: RivalProxy[] = [];
+  private readonly baseMaxHp: number;
+  private readonly baseMissiles: number;
+  private readonly missileView: MissileMirror;
   private missileVersion = -1;
   private readonly noInput = createCombatInput();
   private readonly pools: Pool<Bullet>[] = [];
@@ -53,20 +61,32 @@ export class PvpMirror {
     readonly localId: number,
     /** 他プレイヤーの機銃の発射音（位置付き） */
     private readonly onOtherGun: (x: number, y: number, z: number) => void = () => undefined,
-  ) {}
+  ) {
+    this.missileView = new MissileMirror(session, localId, this.rivals);
+    this.baseMaxHp = session.player.maxHp;
+    this.baseMissiles = session.combat.missileAmmo.capacity;
+  }
 
-  /** 名簿に合わせて他プレイヤーを作る・消す */
-  syncRoster(players: readonly PlayerInfo[]): void {
+  /** 名簿に合わせて他プレイヤーを作る・消す。team はチーム戦のときの自分のチーム（個人戦は undefined） */
+  syncRoster(players: readonly PlayerInfo[], team?: number): void {
     const ids = new Set<number>();
     for (const p of players) {
       if (p.id === this.localId) continue;
       ids.add(p.id);
-      if (!this.rivals.has(p.id))
-        this.rivals.set(p.id, new RivalProxy(p.id, p.aircraftId, p.maxHp));
+      let r = this.rivals.get(p.id);
+      if (!r) {
+        r = new RivalProxy(p.id, p.aircraftId, p.maxHp);
+        this.rivals.set(p.id, r);
+      }
+      r.team = team !== undefined && p.team === team ? TEAM_PLAYER : TEAM_ENEMY;
     }
     for (const id of [...this.rivals.keys()]) if (!ids.has(id)) this.rivals.delete(id);
     this.rivalList.length = 0;
-    for (const r of this.rivals.values()) this.rivalList.push(r);
+    this.targetList.length = 0;
+    for (const r of this.rivals.values()) {
+      this.rivalList.push(r);
+      if (!r.ally) this.targetList.push(r);
+    }
     const list = this.session.rivals;
     list.length = 0;
     list.push(...this.rivalList);
@@ -99,7 +119,7 @@ export class PvpMirror {
     const i = alive ? input : this.noInput;
     this.time += dt;
     c.hitMarkerTimer = Math.max(0, c.hitMarkerTimer - dt);
-    c.targeting.step(own, this.rivalList, i.targetNext, dt);
+    c.targeting.step(own, this.targetList, i.targetNext, dt);
     c.updateLead(own);
     c.missileAmmo.step(dt);
     const l = this.local;
@@ -120,8 +140,8 @@ export class PvpMirror {
     const s = this.session;
     if (net.missileVersion !== this.missileVersion) {
       this.missileVersion = net.missileVersion;
-      this.applyMissiles(net.missiles, dt);
-    } else this.advanceMissiles(dt);
+      this.missileView.sync(net.missiles, dt, this.time);
+    } else this.missileView.advance(dt);
     s.combat.flares.step(dt);
     for (const r of this.rivalList) {
       const shots = r.gun.shotCount;
@@ -187,13 +207,15 @@ export class PvpMirror {
         break;
       }
       case 'explode':
-        this.removeMissile(e.n);
-        this.exploded.set(e.n, this.time);
+        this.missileView.explode(e.n, this.time);
         c.reportExplosion(e.x, e.y, e.z, e.b !== NOBODY, MISSILE_CONFIG.blastRadius);
         break;
       case 'kill': {
-        if (e.b === this.localId) s.markDown();
-        else {
+        if (e.b === this.localId) {
+          s.markDown();
+          this.downedBy = e.a === NOBODY ? null : e.a;
+          this.downedAt = this.time;
+        } else {
           const r = this.rivals.get(e.b);
           if (r) {
             r.active = false;
@@ -212,67 +234,18 @@ export class PvpMirror {
       }
       case 'respawn':
         if (e.a === this.localId) {
+          // 初心者保護（5-4）: 最大 HP とミサイルの数をこの命の間だけ増やす（revived で満タンにする）
+          const boost = (e.b & RESPAWN_BOOST) !== 0;
+          const r = PVP_CONFIG.rookie;
+          this.ownBoosted = boost;
+          s.player.setMaxHp(Math.round(this.baseMaxHp * (boost ? r.hpScale : 1)));
+          s.combat.missileAmmo.setCapacity(this.baseMissiles + (boost ? r.extraMissiles : 0));
           s.revived();
           this.ownInvulnerable = PVP_CONFIG.invulnerableSeconds;
         }
         break;
       default:
         break;
-    }
-  }
-
-  /** ホストの最新のミサイルに合わせる（新しい netId は発射、なくなったものは消す） */
-  private applyMissiles(list: readonly MissileStateMsg[], dt: number): void {
-    const pool = this.session.combat.missiles.missiles;
-    this.seen.clear();
-    for (const [id, t] of this.exploded) if (t < this.time - 1) this.exploded.delete(id);
-    for (const m of list) {
-      this.seen.add(m.netId);
-      let d = this.shown.get(m.netId);
-      if (!d) {
-        if (this.exploded.has(m.netId)) continue;
-        const fresh = pool.acquire();
-        if (!fresh) continue;
-        d = fresh;
-        d.serial = this.session.combat.missiles.nextSerial();
-        d.age = 0;
-        d.checkedBurst = 0;
-        copy(d.prevPosition, m.position);
-        this.shown.set(m.netId, d);
-      } else {
-        copy(d.prevPosition, d.position);
-        d.age += dt;
-      }
-      copy(d.position, m.position);
-      copy(d.velocity, m.velocity);
-      d.owner = m.owner === this.localId ? TEAM_PLAYER : TEAM_ENEMY;
-      d.target =
-        m.targetId === this.localId ? this.session.player : (this.rivals.get(m.targetId) ?? null);
-    }
-    for (const id of [...this.shown.keys()]) if (!this.seen.has(id)) this.removeMissile(id);
-  }
-
-  /** 状態の間は速度で進める */
-  private advanceMissiles(dt: number): void {
-    for (const d of this.shown.values()) {
-      copy(d.prevPosition, d.position);
-      d.position.x += d.velocity.x * dt;
-      d.position.y += d.velocity.y * dt;
-      d.position.z += d.velocity.z * dt;
-      d.age += dt;
-    }
-  }
-
-  private removeMissile(netId: number): void {
-    const d = this.shown.get(netId);
-    if (!d) return;
-    this.shown.delete(netId);
-    const pool = this.session.combat.missiles.missiles;
-    for (let i = 0; i < pool.count; i++) {
-      if (pool.get(i) === d) {
-        pool.release(i);
-        return;
-      }
     }
   }
 }

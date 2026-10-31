@@ -5,7 +5,8 @@ import { HUD_CONFIG } from '../data/hud';
 import { el } from './hud-dom';
 import { changed, radarPoint, type RadarPoint } from './hud-math';
 
-export type RadarContactKind = 'enemy' | 'missile';
+/** ally: PvP のチーム戦の味方（5-4。シアンの点） */
+export type RadarContactKind = 'enemy' | 'ally' | 'missile';
 
 /** 高度差の印（4-12）: above = 自機より高い / below = 低い / '' = なし */
 export type RadarAltitude = '' | 'above' | 'below';

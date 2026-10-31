@@ -1,8 +1,11 @@
 // P2P 通信（5-1）の数値。仕組みは src/net/、決定は docs/decisions.md
 
 export const NET_CONFIG = {
-  /** プロトコルの版。join に入れ、ホストと違えば参加を断る（5-3 で 2: 戦闘の入力・ミサイル・成績） */
-  protocolVersion: 2,
+  /**
+   * プロトコルの版。join に入れ、ホストと違えば参加を断る（5-3 で 2: 戦闘の入力・ミサイル・成績。
+   * 5-4 で 3: ロビーの準備・機体変更・定型文・チーム・再接続・最長連続撃墜）
+   */
+  protocolVersion: 3,
   /** 部屋の最大人数（ホストを含む） */
   maxPlayers: 4,
   room: {
@@ -18,6 +21,15 @@ export const NET_CONFIG = {
     joinTimeoutSeconds: 15,
     /** この秒数なにも届かなければ相手が切断したとみなす（PeerJS の切断の検知は遅いことがある） */
     silenceTimeoutSeconds: 6,
+  },
+  /**
+   * クライアントの一時的な切断（5-4）。ホストは切断に気づいてから graceSeconds の間その人の枠と機体を残し
+   * （機体は止めて無敵・対象外）、同じ ID と合言葉（welcome の token）で戻れば続ける。過ぎたら離脱扱い。
+   * クライアントは気づいてから graceSeconds の間、retrySeconds ごとにつなぎ直す（ホストの ID が消えていれば即終了）
+   */
+  reconnect: {
+    graceSeconds: 10,
+    retrySeconds: 1,
   },
   /** パイロット名の最大文字数（送るとき切る。セーブの上限 8 より余裕を持たせる） */
   nameMaxLength: 16,
@@ -87,11 +99,17 @@ export const NET_CONFIG = {
   playerColors: [0xe0402a, 0x2a8fe0, 0xe0b82a, 0x3cc46a],
   /** 機体の胴体の色をプレイヤーの色へ寄せる割合（0 = 元の色。遠くからも見分けられるように） */
   playerBodyTint: 0.3,
-  /** ホストのゲーム設定の初期値（welcome で配る。撃墜数と制限時間は 5-3 からロビーでホストが選ぶ） */
+  /**
+   * ホストのゲーム設定の初期値（welcome で配る。撃墜数と制限時間は 5-3 から、モード・強化の無効・初心者保護は 5-4 から
+   * ロビーでホストが選ぶ）。強化の無効は公平のため初期 ON
+   */
   defaultSettings: {
     mapId: 'island',
     timeLimitSeconds: 300,
     scoreLimit: 10,
+    mode: 'ffa',
+    noUpgrades: true,
+    rookieGuard: false,
   },
   /** ?netdebug の表示を書き換える間隔（秒） */
   debugRefreshSeconds: 0.25,

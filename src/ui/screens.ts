@@ -48,6 +48,8 @@ export class Screens {
   private readonly curtain: FadeCurtain;
   /** ハンガーを閉じたら戻る画面（モード選択かブリーフィング） */
   private hangarReturn: 'mode_select' | 'briefing' = 'mode_select';
+  /** パイロット名を決めた後に呼ぶ（?room で初回起動したとき、ロビーへ。5-4） */
+  private afterPilotName: (() => void) | null = null;
   private readonly viewListeners: ((model: AircraftModel) => void)[] = [];
   /** PvP（5-1）: モード選択の「PvP」・ロビーの Esc・飛行中の ⏸（main が PvP を読み込んで差し込む） */
   private pvp: {
@@ -85,6 +87,13 @@ export class Screens {
       onSubmit: (name) => {
         this.title.setPilotName(save.setPilotName(name));
         game.transition('mode_select');
+        // ?room から来た（5-4）: チュートリアルの案内を出さずにロビーへ
+        const after = this.afterPilotName;
+        this.afterPilotName = null;
+        if (after) {
+          after();
+          return;
+        }
         // 初回起動だけ「チュートリアルを始めますか？」（4-11。1 度だけ）
         if (!save.flag('tutorialOffered')) {
           save.setFlag('tutorialOffered');
@@ -113,6 +122,8 @@ export class Screens {
       {
         onSelect: (mission) => {
           this.selectedMission = mission;
+          // PvP のロビーで機体を変えた後でも今の機体名を出す（5-4）
+          this.briefing.setAircraftName(this.hangar.selectedModel.name);
           this.briefing.show(mission);
           game.transition('briefing');
         },
@@ -189,6 +200,11 @@ export class Screens {
     onPause: () => boolean;
   }): void {
     this.pvp = handlers;
+  }
+
+  /** パイロット名を決めた後の行き先（5-4。?room の参加） */
+  setAfterPilotName(fn: () => void): void {
+    this.afterPilotName = fn;
   }
 
   /** ハンガーで見ている機体が変わったとき（展示の形） */

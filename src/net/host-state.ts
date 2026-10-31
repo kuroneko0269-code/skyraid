@@ -1,8 +1,14 @@
-// ホストの送る状態の組み立て（5-3。host-game.ts から分けた）: 機体の数値、機体の状態、ミサイルの状態。Three.js 非依存
+// ホストの送る状態の組み立て（5-3。host-game.ts から分けた）: 機体の数値、機体の状態、ミサイルの状態。
+// 5-4: 描画用の補間・止める・?netdebug の値も host-game.ts から分けた。Three.js 非依存
 import type { Missile } from '../combat/missile';
 import type { Pool } from '../combat/pool';
 import { PvpFighter, type FighterSpec } from '../combat/pvp-fighter';
+import type { Aircraft } from '../entities/aircraft';
+import { copyQuat, copyVec3 } from '../flight/math';
 import type { Loadout } from '../progression/loadout';
+import type { InputBuffer } from './input-buffer';
+import type { NetStats, RemoteSample } from './net-game';
+import { slerp } from './sync';
 import { NO_TARGET, type AircraftStateMsg, type MissileStateMsg } from './protocol';
 
 export function fighterSpec(l: Readonly<Loadout>): FighterSpec {
@@ -66,5 +72,75 @@ export function stateOf(f: PvpFighter, seq: number): AircraftStateMsg {
     speed: s.speed,
     throttle: a.throttle,
     hp: f.hp,
+  };
+}
+
+/** ホストの機体を固定ステップの間で補間して描画用の値に入れる */
+export function interpolateSample(f: PvpFighter, out: RemoteSample, alpha: number): RemoteSample {
+  const a = f.aircraft;
+  const p = a.state.position;
+  const q = a.prevPosition;
+  out.position.x = q.x + (p.x - q.x) * alpha;
+  out.position.y = q.y + (p.y - q.y) * alpha;
+  out.position.z = q.z + (p.z - q.z) * alpha;
+  slerp(out.orientation, a.prevOrientation, a.state.orientation, alpha);
+  out.alive = f.alive;
+  out.afterburner = a.state.afterburnerActive;
+  out.throttle = a.throttle;
+  out.velocity.x = f.velocity.x;
+  out.velocity.y = f.velocity.y;
+  out.velocity.z = f.velocity.z;
+  out.speed = a.state.speed;
+  out.hp = f.hp;
+  out.invulnerable = f.invulnerable;
+  return out;
+}
+
+/** 止める（前の位置のまま。補間の線が伸びないよう prev も合わせる） */
+export function holdAircraft(a: Aircraft): void {
+  copyVec3(a.prevPosition, a.state.position);
+  copyQuat(a.prevOrientation, a.state.orientation);
+}
+
+/** ?netdebug のホストの値（参加者の入力の溜め・推測・遅延補償の巻き戻し） */
+export function hostStats(
+  remotes: Iterable<{ readonly id: number; readonly input: InputBuffer }>,
+  rttOf: (id: number) => number | null,
+  tick: number,
+  stateRate: number,
+): NetStats {
+  let rtt = 0;
+  let n = 0;
+  let backlog = 0;
+  let guessed = 0;
+  let starved = 0;
+  let resyncs = 0;
+  let rewind = 0;
+  for (const r of remotes) {
+    const v = rttOf(r.id);
+    if (v !== null) {
+      rtt += v;
+      n++;
+    }
+    backlog = Math.max(backlog, r.input.backlog);
+    guessed += r.input.guessed;
+    starved += r.input.starved;
+    resyncs += r.input.resyncs;
+    const off = r.input.viewOffset;
+    if (off !== null) rewind = Math.max(rewind, tick - (r.input.lastApplied + off));
+  }
+  return {
+    role: 'host',
+    rttMs: n > 0 ? rtt / n : null,
+    stateRate,
+    interpDelayMs: 0,
+    bufferMarginMs: 0,
+    extrapolating: 0,
+    corrections: 0,
+    inputBacklog: backlog,
+    inputGuessed: guessed,
+    inputStarved: starved,
+    inputResyncs: resyncs,
+    rewindMs: (rewind * 1000) / 60,
   };
 }

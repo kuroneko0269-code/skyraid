@@ -22,6 +22,11 @@ export interface Transport {
   onMessage(fn: (peerId: string, data: ArrayBuffer) => void): Unsubscribe;
   onPeerJoin(fn: (peerId: string) => void): Unsubscribe;
   onPeerLeave(fn: (peerId: string) => void): Unsubscribe;
+  /**
+   * 1 人との接続だけ閉じる（5-4。黙った相手を切ってつなぎ直せるようにする）。自分にも onPeerLeave が届く。
+   * つながっていなければ何もしない
+   */
+  disconnect(peerId: string): void;
   /** すべての接続を閉じる。相手には onPeerLeave が届く */
   close(): void;
 }
@@ -92,6 +97,10 @@ export class MemoryNetwork {
   private time = 0;
   /** 経路ごとの最後の到着時刻（reliable の順番を守る） */
   private readonly lastReliable = new Map<string, number>();
+  /** 通信が途切れている端末（5-4。行き来するすべてのパケットを捨てる。接続は失敗する） */
+  private readonly offline = new Set<string>();
+  /** 送ったバイト数（"送り手>受け手" → 合計。5-4 の帯域の確認） */
+  readonly bytes = new Map<string, number>();
 
   constructor(options: MemoryNetworkOptions = {}) {
     this.latencyMs = options.latencyMs ?? 0;
@@ -121,8 +130,26 @@ export class MemoryNetwork {
     this.endpoints.delete(id);
   }
 
-  /** @internal 送る。届く時刻を決めて並べる */
-  deliver(from: string, to: string, channel: Channel | 'control', run: () => void): void {
+  /** テスト用: 端末の通信を途切れさせる / 戻す（タブは生きたまま電波が切れた） */
+  setOffline(id: string, offline: boolean): void {
+    if (offline) this.offline.add(id);
+    else this.offline.delete(id);
+  }
+
+  /** @internal */
+  isOffline(id: string): boolean {
+    return this.offline.has(id);
+  }
+
+  /** @internal 送る。届く時刻を決めて並べる（途切れている端末との間は捨てる。force はそれでも届ける） */
+  deliver(
+    from: string,
+    to: string,
+    channel: Channel | 'control',
+    run: () => void,
+    force = false,
+  ): void {
+    if (!force && (this.offline.has(from) || this.offline.has(to))) return;
     if (channel === 'unordered' && this.rng() < this.lossRate) return;
     let due = this.time + this.latencyMs;
     if (channel === 'unordered') due += this.rng() * this.jitterMs;
@@ -169,6 +196,20 @@ class MemoryTransport implements Transport {
     const remote = this.net.endpoint(peerId);
     if (this.closed) return Promise.reject(new TransportError('closed'));
     if (!remote) return Promise.reject(new TransportError('peer-unavailable', peerId));
+    if (this.net.isOffline(this.localId) || this.net.isOffline(peerId)) {
+      // 途切れている: 片道の遅延の後に失敗する
+      return new Promise((_resolve, reject) => {
+        this.net.deliver(
+          this.localId,
+          peerId,
+          'control',
+          () => {
+            reject(new TransportError('network', peerId));
+          },
+          true,
+        );
+      });
+    }
     return new Promise((resolve) => {
       // 接続の確立も片道の遅延 1 回ぶんかかる
       this.net.deliver(this.localId, peerId, 'control', () => {
@@ -194,6 +235,8 @@ class MemoryTransport implements Transport {
 
   send(peerId: string, data: ArrayBuffer, channel: Channel): void {
     if (this.closed || !this.peers.has(peerId)) return;
+    const key = `${this.localId}>${peerId}`;
+    this.net.bytes.set(key, (this.net.bytes.get(key) ?? 0) + data.byteLength);
     const copy = data.slice(0);
     this.net.deliver(this.localId, peerId, channel, () => {
       const remote = this.net.endpoint(peerId);
@@ -211,6 +254,14 @@ class MemoryTransport implements Transport {
 
   onPeerLeave(fn: (peerId: string) => void) {
     return this.leaves.add(fn);
+  }
+
+  disconnect(peerId: string): void {
+    if (!this.peers.has(peerId)) return;
+    this.net.deliver(this.localId, peerId, 'control', () => {
+      this.net.endpoint(peerId)?.unlinkFrom(this.localId);
+    });
+    this.unlinkFrom(peerId);
   }
 
   close(): void {

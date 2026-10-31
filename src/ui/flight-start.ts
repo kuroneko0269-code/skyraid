@@ -32,7 +32,8 @@ export function createFlightStarter(
 ): (def: MissionDef | null, net: boolean) => void {
   return (def, net) => {
     // ハンガーで選んだ機体と強化を自機に入れる（3-3）。見た目も機体の形に
-    const loadout = p.screens.hangar.loadout();
+    // PvP は強化の無効（ホストの設定）とロビーで選んだ機体（5-4）
+    const loadout = (net ? p.pvp.loadout() : null) ?? p.screens.hangar.loadout();
     p.session.applyLoadout(loadout);
     p.playerView.setModel(p.screens.hangar.selectedModel, loadout.missiles);
     if (net) {

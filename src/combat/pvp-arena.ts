@@ -2,7 +2,9 @@
 // 機銃・ミサイル・フレア・円錐の判定はシングルプレイと同じ部品（Gun / MissileSystem / FlareField / inCone）を使う。
 // 遅延補償: 機銃の弾は、撃った人が見ていた tick の位置へ巻き戻した対象と判定する（履歴は各機 0.5 秒）。
 // ミサイルの発射ではロックを信頼せず、巻き戻した対象の位置で円錐の条件を見直す（外れていれば無誘導）。
-// 撃墜（墜落も）されると 3 秒後、出現位置のうち他機から最も遠い所へ戻し、3 秒無敵にする。Three.js 非依存
+// 撃墜（墜落も）されると 3 秒後、出現位置のうち他機から最も遠い所へ戻し、3 秒無敵にする。
+// 5-4: チーム戦（味方の機銃・ミサイル・爆風は当たらない）、初心者保護（復帰時）、連続撃墜、再接続待ち（away）と
+// 再接続した人の位置合わせ（resync: 撃墜に数えずに出現位置へ戻す）。Three.js 非依存
 import { PVP_CONFIG, PVP_SPAWN_POINTS } from '../data/pvp';
 import { FLARE_CONFIG, MISSILE_CONFIG } from '../data/weapons';
 import type { Aircraft, AircraftControls } from '../entities/aircraft';
@@ -13,6 +15,8 @@ import { FlareField } from './flare';
 import type { GroundHeightFn, GunHit, Rng } from './gun';
 import { MissileSystem, splashDamage, type Detonation } from './missile';
 import { PvpFighter, RewoundTarget, type FighterSpec } from './pvp-fighter';
+import { isRookie } from './pvp-rules';
+import { farthestSpawn } from './pvp-spawn';
 import { inCone } from './targeting';
 
 /** 1 ステップ分の操作（NetControls と同じ形。飛行 + 戦闘） */
@@ -40,12 +44,18 @@ export interface ArenaEvent {
 
 /** 撃墜した人・当たった人が「いない」（墜落・地面での起爆） */
 export const NOBODY = 255;
+/** respawn の b（出現位置の番号）に足す印: 初心者保護つき（protocol.ts の RESPAWN_ROOKIE と同じ） */
+export const RESPAWN_BOOST = 0x80;
 
 export class PvpArena {
   /** 今の tick（ホストが step の初めに進める） */
   tick = 0;
   /** 遅延補償（テストで切って比べる） */
   lagCompensation = true;
+  /** 初心者保護（5-4。ホスト設定）: 撃墜数が最下位の人を HP +50%・ミサイル +2 で復帰させる */
+  rookieGuard = false;
+  /** チーム戦のチーム（プレイヤー ID → チーム。null は個人戦） */
+  private teams: ReadonlyMap<number, number> | null = null;
   readonly fighters = new Map<number, PvpFighter>();
   readonly missiles: MissileSystem<PvpFighter>;
   readonly flares: FlareField;
@@ -71,6 +81,35 @@ export class PvpArena {
       PVP_CONFIG.maxMissiles,
     );
     this.flares = new FlareField(FLARE_CONFIG, 4);
+    this.missiles.isFriendly = (target, owner) => this.sameSide(target.id, owner);
+  }
+
+  /** チーム戦にする（null は個人戦）。味方は機銃の判定（others）から外す */
+  setTeams(teams: ReadonlyMap<number, number> | null): void {
+    this.teams = teams;
+    this.rebuild();
+  }
+
+  /** 同じ側か（個人戦は本人だけ、チーム戦は同じチーム） */
+  sameSide(a: number, b: number): boolean {
+    if (a === b) return true;
+    const t = this.teams;
+    if (!t) return false;
+    const ta = t.get(a);
+    return ta !== undefined && ta === t.get(b);
+  }
+
+  /** 再接続待ちにする / 戻す（5-4）。戻すときは次の tick の終わりに出現位置へ（撃墜には数えない） */
+  setAway(id: number, away: boolean): void {
+    const f = this.fighters.get(id);
+    if (!f) return;
+    if (away) {
+      f.away = true;
+      this.setFiring(f, false);
+    } else if (f.away) {
+      f.away = false;
+      f.resync = true;
+    }
   }
 
   add(id: number, aircraft: Aircraft, spec: FighterSpec): PvpFighter {
@@ -103,8 +142,8 @@ export class PvpArena {
     const f = this.fighters.get(id);
     if (!f) return;
     const a = f.aircraft;
-    if (!f.alive) {
-      // 撃墜されている間は動かない（残骸の位置）。飛んでいる弾だけ進める
+    if (!f.alive || f.away || f.resync) {
+      // 撃墜されている間・再接続待ちの間は動かない（残骸の位置）。飛んでいる弾だけ進める
       copyVec3(a.prevPosition, a.state.position);
       copyQuat(a.prevOrientation, a.state.orientation);
       f.gun.step(false, a.state, f.others, dt);
@@ -148,7 +187,12 @@ export class PvpArena {
     this.missiles.step(this.list, this.flares.flares, dt);
     for (const f of this.list) {
       if (f.invulnerableTimer > 0) f.invulnerableTimer = Math.max(0, f.invulnerableTimer - dt);
-      if (f.alive) continue;
+      if (f.resync) {
+        f.resync = false;
+        this.respawn(f);
+        continue;
+      }
+      if (f.alive || f.away) continue;
       f.respawnTimer -= dt;
       if (f.respawnTimer <= 1e-9) this.respawn(f);
     }
@@ -156,21 +200,7 @@ export class PvpArena {
 
   /** 出現位置のうち、生きている他機までの最短距離が最も大きい所の番号 */
   farthestSpawn(excludeId: number): number {
-    let best = 0;
-    let bestDist = -1;
-    PVP_SPAWN_POINTS.forEach((s, i) => {
-      let d = Infinity;
-      for (const f of this.list) {
-        if (f.id === excludeId || !f.alive) continue;
-        const p = f.position;
-        d = Math.min(d, Math.hypot(p.x - s.x, p.y - s.y, p.z - s.z));
-      }
-      if (d > bestDist) {
-        bestDist = d;
-        best = i;
-      }
-    });
-    return best;
+    return farthestSpawn(this.list, excludeId);
   }
 
   private respawn(f: PvpFighter): void {
@@ -178,8 +208,9 @@ export class PvpArena {
     const s = PVP_SPAWN_POINTS[i] ?? PVP_SPAWN_POINTS[0];
     if (!s) return;
     f.aircraft.respawn(s, headingQuat(this.spawnOrientation, s.headingDeg));
-    f.revive(PVP_CONFIG.invulnerableSeconds);
-    this.send('respawn', f.id, i, 0, s);
+    const boost = this.rookieGuard && isRookie(f.id, this.list);
+    f.revive(PVP_CONFIG.invulnerableSeconds, boost);
+    this.send('respawn', f.id, i | (boost ? RESPAWN_BOOST : 0), 0, s);
   }
 
   /** 撃墜: 撃墜した人の撃墜数・された人の被撃墜数を数え、復帰のタイマーを始める */
@@ -187,7 +218,12 @@ export class PvpArena {
     victim.deaths++;
     victim.respawnTimer = PVP_CONFIG.respawnSeconds;
     victim.velocity.x = victim.velocity.y = victim.velocity.z = 0;
-    if (killer && killer !== victim) killer.kills++;
+    victim.streak = 0;
+    if (killer && killer !== victim) {
+      killer.kills++;
+      killer.streak++;
+      killer.bestStreak = Math.max(killer.bestStreak, killer.streak);
+    }
     this.setFiring(victim, false);
     this.send('kill', killer ? killer.id : NOBODY, victim.id, 0, victim.position);
   }
@@ -227,7 +263,8 @@ export class PvpArena {
     for (const f of this.fighters.values()) this.list.push(f);
     for (const f of this.list) {
       f.others.length = 0;
-      for (const o of this.list) if (o !== f) f.others.push(new RewoundTarget(o));
+      for (const o of this.list)
+        if (!this.sameSide(f.id, o.id)) f.others.push(new RewoundTarget(o));
     }
   }
 
@@ -270,7 +307,7 @@ export class PvpArena {
     const owner = this.fighters.get(d.owner) ?? null;
     this.send('explode', d.owner, d.target ? d.target.id : NOBODY, d.serial & 0xff, d);
     for (const f of this.list) {
-      if (!f.alive || f.team === d.owner) continue;
+      if (!f.active || this.sameSide(f.id, d.owner)) continue;
       const p = f.position;
       const dist = Math.hypot(p.x - d.x, p.y - d.y, p.z - d.z) - f.hitRadius;
       const amount = splashDamage(this.missiles.spec, dist);

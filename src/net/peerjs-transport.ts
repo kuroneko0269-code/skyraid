@@ -128,6 +128,12 @@ class PeerJsTransport implements Transport {
       link = { reliable: null, unordered: null, joined: false };
       this.links.set(id, link);
     }
+    // つなぎ直し（5-4）: 同じ相手の古い接続は、閉じたときに新しい接続まで消さないよう聞くのをやめてから閉じる
+    const old = link[channel];
+    if (old && old !== conn) {
+      old.removeAllListeners();
+      old.close();
+    }
     link[channel] = conn;
     const current = link;
     conn.on('open', () => {
@@ -163,6 +169,10 @@ class PeerJsTransport implements Transport {
       p.reject(new TransportError('network', '接続が閉じられました'));
     }
     if (link.joined) this.leaves.emit(id);
+  }
+
+  disconnect(peerId: string): void {
+    this.drop(peerId);
   }
 
   send(peerId: string, data: ArrayBuffer, channel: Channel): void {

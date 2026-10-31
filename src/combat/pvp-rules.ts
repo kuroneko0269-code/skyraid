@@ -1,4 +1,5 @@
 // PvP のルール（5-3）: 撃墜数と制限時間（ロビーでホストが選ぶ）。どちらかに達したら終わり、順位・撃墜・被撃墜・命中率を出す。
+// 5-4: チーム戦（チームの合計で撃墜数に達したら終わり）、初心者保護の条件、開始前のカウントダウン、ベストプレイヤー。
 // ホストが判定する。Three.js 非依存
 
 export interface MatchSettings {
@@ -22,7 +23,11 @@ export class PvpMatch {
   elapsed = 0;
   ended: MatchEnd | null = null;
 
-  constructor(readonly settings: MatchSettings) {}
+  constructor(
+    readonly settings: MatchSettings,
+    /** チーム戦ならプレイヤー ID → チーム（撃墜数はチームの合計で比べる）。個人戦は null */
+    private readonly teamOf: ((id: number) => number | undefined) | null = null,
+  ) {}
 
   get remainingSeconds(): number {
     return Math.max(0, this.settings.timeLimitSeconds - this.elapsed);
@@ -32,10 +37,20 @@ export class PvpMatch {
   step(dt: number, scores: Iterable<PlayerScore>): MatchEnd | null {
     if (this.ended) return null;
     this.elapsed += dt;
-    for (const s of scores) {
-      if (s.kills >= this.settings.scoreLimit) {
-        this.ended = 'score';
-        return this.ended;
+    const teamOf = this.teamOf;
+    if (teamOf) {
+      for (const total of teamTotals(scores, teamOf).values()) {
+        if (total >= this.settings.scoreLimit) {
+          this.ended = 'score';
+          return this.ended;
+        }
+      }
+    } else {
+      for (const s of scores) {
+        if (s.kills >= this.settings.scoreLimit) {
+          this.ended = 'score';
+          return this.ended;
+        }
       }
     }
     if (this.elapsed >= this.settings.timeLimitSeconds - 1e-9) {
@@ -70,4 +85,80 @@ export function standings<T extends PlayerScore>(scores: readonly T[]): Standing
     out.push({ rank: same ? prev.rank : i + 1, score });
   });
   return out;
+}
+
+/** チームごとの撃墜数の合計（チームの番号 → 合計。チームのない人は数えない） */
+export function teamTotals(
+  scores: Iterable<Readonly<PlayerScore>>,
+  teamOf: (id: number) => number | undefined,
+): Map<number, number> {
+  const out = new Map<number, number>();
+  for (const s of scores) {
+    const t = teamOf(s.id);
+    if (t === undefined) continue;
+    out.set(t, (out.get(t) ?? 0) + s.kills);
+  }
+  return out;
+}
+
+/**
+ * 初心者保護の対象か: 撃墜数が最下位（同じ最下位が複数なら全員）。全員が同じ撃墜数のとき（開始直後など）は誰も対象にしない
+ */
+export function isRookie(id: number, scores: readonly Readonly<PlayerScore>[]): boolean {
+  const me = scores.find((s) => s.id === id);
+  if (!me || scores.length < 2) return false;
+  let min = Infinity;
+  let max = -Infinity;
+  for (const s of scores) {
+    min = Math.min(min, s.kills);
+    max = Math.max(max, s.kills);
+  }
+  return max > min && me.kills === min;
+}
+
+/** ベストプレイヤー（最多撃墜。同じなら被撃墜の少ない方 → 命中率の高い方 → ID の小さい方）。誰も撃墜していなければ null */
+export function bestPlayer<T extends PlayerScore>(scores: readonly T[]): T | null {
+  let best: T | null = null;
+  for (const s of scores) {
+    if (s.kills <= 0) continue;
+    if (
+      !best ||
+      s.kills > best.kills ||
+      (s.kills === best.kills &&
+        (s.deaths < best.deaths || (s.deaths === best.deaths && accuracy(s) > accuracy(best))))
+    )
+      best = s;
+  }
+  return best;
+}
+
+/**
+ * 開始前のカウントダウン（5-4）。固定ステップで数え、終わるまで active。ホストもクライアントも飛行の始めから数える
+ * （クライアントは開始の知らせが届いた分だけ遅れて始まる）
+ */
+export class Countdown {
+  private remainingTicks: number;
+
+  constructor(
+    seconds: number,
+    private readonly tickHz = 60,
+  ) {
+    this.remainingTicks = Math.round(seconds * tickHz);
+  }
+
+  get active(): boolean {
+    return this.remainingTicks > 0;
+  }
+
+  /** 残り秒数（0 は終わり） */
+  get remainingSeconds(): number {
+    return this.remainingTicks / this.tickHz;
+  }
+
+  /** 1 ステップ進める。このステップの間カウント中だったら true（そのステップは操作を無視する） */
+  step(): boolean {
+    if (this.remainingTicks <= 0) return false;
+    this.remainingTicks--;
+    return true;
+  }
 }

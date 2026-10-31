@@ -56,7 +56,16 @@ export class PvpFighter implements FuseTarget, PlayerScore {
   hits = 0;
   /** 直前のステップで引き金を引いていたか（発射の event を変わったときだけ送る） */
   firing = false;
-  private readonly health: Health;
+  /** 今の連続撃墜（撃墜されると 0）と、その最大（5-4） */
+  streak = 0;
+  bestStreak = 0;
+  /** 切断して再接続を待っている（5-4。止まったまま、当たり判定・誘導の対象外、無敵の表示） */
+  away = false;
+  /** 次の tick の終わりに出現位置へ戻す（再接続した人の位置合わせ。撃墜には数えない。5-4） */
+  resync = false;
+  /** 今の命が初心者保護つきか（5-4） */
+  boosted = false;
+  private health: Health;
 
   constructor(
     readonly id: number,
@@ -95,13 +104,13 @@ export class PvpFighter implements FuseTarget, PlayerScore {
     return !this.health.isDestroyed;
   }
 
-  /** 当たり判定・誘導の対象か（撃墜されている間は false） */
+  /** 当たり判定・誘導の対象か（撃墜されている間・再接続待ちの間は false） */
   get active(): boolean {
-    return this.alive;
+    return this.alive && !this.away;
   }
 
   get invulnerable(): boolean {
-    return this.invulnerableTimer > 0;
+    return this.invulnerableTimer > 0 || this.away;
   }
 
   get shots(): number {
@@ -119,12 +128,19 @@ export class PvpFighter implements FuseTarget, PlayerScore {
     this.health.applyDamage(this.health.hp);
   }
 
-  /** 復帰: HP・弾・熱を戻し、無敵にする。位置の履歴は忘れる */
-  revive(invulnerableSeconds: number): void {
+  /**
+   * 復帰: HP・弾・熱を戻し、無敵にする。位置の履歴は忘れる。
+   * boost（初心者保護。5-4）なら最大 HP を hpScale 倍、ミサイルを extraMissiles 発増やす（次の復帰で元に戻る）
+   */
+  revive(invulnerableSeconds: number, boost = false): void {
+    const r = PVP_CONFIG.rookie;
+    this.boosted = boost;
+    const maxHp = Math.round(this.spec.maxHp * (boost ? r.hpScale : 1));
+    if (maxHp !== this.health.maxHp) this.health = new Health(maxHp);
     this.health.reset();
     this.respawnTimer = 0;
     this.invulnerableTimer = invulnerableSeconds;
-    this.missileAmmo.refill();
+    this.missileAmmo.setCapacity(this.spec.missiles + (boost ? r.extraMissiles : 0));
     this.flareAmmo.refill();
     this.gun.heat.reset();
     this.history.clear();

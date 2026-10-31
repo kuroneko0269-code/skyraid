@@ -12,7 +12,8 @@ import { SfxKit, envelope, type Position } from './kit';
 
 export type { Position } from './kit';
 
-export type UiSoundKind = 'tap' | 'confirm' | 'purchase';
+/** countdown・go・alert は PvP（5-4）のカウントダウンと残り時間の警告 */
+export type UiSoundKind = 'tap' | 'confirm' | 'purchase' | 'countdown' | 'go' | 'alert';
 
 export class OneShots {
   private readonly kit: SfxKit;
@@ -79,6 +80,12 @@ export class OneShots {
       this.notes([c.tap.freq], 0, c.tap.duration, c.gain * 0.6, 'sine');
     } else if (kind === 'confirm') {
       this.notes(c.confirm.freqs, c.confirm.step, c.confirm.duration, c.gain, 'triangle');
+    } else if (kind === 'countdown') {
+      this.notes([c.countdown.freq], 0, c.countdown.duration, c.gain, 'square');
+    } else if (kind === 'go') {
+      this.notes(c.go.freqs, c.go.step, c.go.duration, c.gain, 'square');
+    } else if (kind === 'alert') {
+      this.notes(c.alert.freqs, c.alert.step, c.alert.duration, c.gain, 'square');
     } else {
       this.notes(c.purchase.freqs, c.purchase.step, c.purchase.duration, c.gain, 'triangle');
     }

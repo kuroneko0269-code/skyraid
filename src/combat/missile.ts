@@ -66,6 +66,11 @@ export function splashDamage(spec: MissileSpec, d: number): number {
  */
 export class MissileSystem<T extends FuseTarget> {
   readonly missiles: Pool<Missile>;
+  /**
+   * 近接信管が反応しない相手か（撃った陣営と同じ）。PvP のチーム戦（5-4）は味方も含めるよう差し替える。
+   * シングルプレイは陣営（team）の比較のまま
+   */
+  isFriendly: (target: T, owner: number) => boolean = (target, owner) => teamOf(target) === owner;
   private serial = 0;
   private side = 1;
   private readonly detonation: Detonation<T> = {
@@ -247,7 +252,7 @@ export class MissileSystem<T extends FuseTarget> {
     let best = 2;
     let hit: T | null = null;
     for (const t of targets) {
-      if (!t.active || teamOf(t) === m.owner) continue;
+      if (!t.active || this.isFriendly(t, m.owner)) continue;
       const c = t.position;
       const r = t.hitRadius + this.spec.fuseMargin;
       const s = segmentSphere(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z, r);

@@ -1,0 +1,284 @@
+// ロビーの部屋の画面（5-4。lobby.ts から分けた）: 部屋コードと共有、ルール（ホストは選べる: 撃墜数・時間・モード・
+// 強化の無効・初心者保護）、参加者（色・名前・機体・チーム・準備）、定型文、退出 / ハンガー / 準備（クライアント）・開始（ホスト）。
+// すべてタッチで押せる大きさ。文字は textContent だけで入れる
+import { findAircraftModel } from '../data/aircraft';
+import {
+  PVP_CONFIG,
+  PVP_QUICK_PHRASES,
+  PVP_SCORE_LIMITS,
+  PVP_TEAM,
+  PVP_TIME_LIMITS,
+} from '../data/pvp';
+import { isReady, startBlock, type StartBlock } from '../net/lobby-rules';
+import type { GameSettings, PlayerInfo } from '../net/protocol';
+import { el } from './hud-dom';
+import { LobbyShare } from './lobby-share';
+import { playerColorCss, teamColorCss } from './lobby-colors';
+import { createButton } from './screen';
+
+export interface LobbyRoomView {
+  code: string;
+  /** 参加用 URL（?room=コード） */
+  joinUrl: string;
+  isHost: boolean;
+  localId: number;
+  players: readonly PlayerInfo[];
+  mapName: string;
+  settings: GameSettings;
+}
+
+export interface LobbyRoomHandlers {
+  onStart: () => void;
+  onLeave: () => void;
+  onHangar: () => void;
+  onReady: (ready: boolean) => void;
+  onSettings: (settings: GameSettings) => void;
+  onTeam: (playerId: number, team: number) => void;
+  onAutoTeams: () => void;
+  onChat: (phrase: number) => void;
+}
+
+const minutes = (s: number): string => `${Math.round(s / 60)} 分`;
+
+const BLOCK_TEXT: Record<Exclude<StartBlock, null>, string> = {
+  players: 'ほかのプレイヤーに部屋コードを伝えてください',
+  ready: '全員の「準備OK」を待っています',
+  away: '再接続を待っています',
+  teams: '両方のチームに 1 人以上入れてください',
+};
+
+/** 選択肢の select（値は数、表示は label）。変えたら onChange */
+function numberSelect(
+  parent: HTMLElement,
+  label: string,
+  values: readonly (number | string)[],
+  text: (v: number | string) => string,
+  onChange: () => void,
+): HTMLSelectElement {
+  const wrap = el('label', 'campaign-fact lobby-rule', parent);
+  el('span', 'campaign-fact-label', wrap, label);
+  const select = el('select', 'ui-field lobby-rule-select', wrap);
+  for (const v of values) {
+    const o = el('option', '', select, text(v));
+    o.value = String(v);
+  }
+  select.addEventListener('change', onChange);
+  return select;
+}
+
+function toggle(parent: HTMLElement, label: string, onClick: () => void): HTMLButtonElement {
+  const b = createButton(parent, 'ui-toggle lobby-toggle', label, onClick);
+  b.setAttribute('aria-pressed', 'false');
+  return b;
+}
+
+export class LobbyRoom {
+  readonly root: HTMLDivElement;
+  private readonly share: LobbyShare;
+  private readonly codeText: HTMLDivElement;
+  private readonly rulesText: HTMLSpanElement;
+  private readonly optionsText: HTMLSpanElement;
+  private readonly mapText: HTMLSpanElement;
+  private readonly rules: HTMLDivElement;
+  private readonly scoreSelect: HTMLSelectElement;
+  private readonly timeSelect: HTMLSelectElement;
+  private readonly modeSelect: HTMLSelectElement;
+  private readonly noUpgrades: HTMLButtonElement;
+  private readonly rookie: HTMLButtonElement;
+  private readonly list: HTMLUListElement;
+  private readonly autoTeams: HTMLButtonElement;
+  private readonly waitText: HTMLParagraphElement;
+  private readonly startButton: HTMLButtonElement;
+  private readonly readyButton: HTMLButtonElement;
+  /** 定型文の吹き出し（プレイヤー ID → 文と消す時刻 ms） */
+  private readonly bubbles = new Map<number, { text: string; until: number }>();
+  private bubbleTimer = 0;
+  private view: LobbyRoomView | null = null;
+
+  constructor(
+    parent: HTMLElement,
+    overlayParent: HTMLElement,
+    private readonly h: LobbyRoomHandlers,
+  ) {
+    this.root = el('div', 'lobby-view lobby-room', parent);
+    const left = el('div', 'lobby-col', this.root);
+    const right = el('div', 'lobby-col', this.root);
+    el('div', 'campaign-label', left, 'ROOM CODE');
+    this.codeText = el('div', 'lobby-code', left);
+    this.share = new LobbyShare(left, overlayParent);
+    const facts = el('div', 'campaign-facts', left);
+    const fact = (label: string): HTMLSpanElement => {
+      const f = el('div', 'campaign-fact', facts);
+      el('span', 'campaign-fact-label', f, label);
+      return el('span', 'campaign-fact-value', f);
+    };
+    this.mapText = fact('マップ');
+    this.rulesText = fact('ルール');
+    this.optionsText = fact('補正');
+    // ホストの設定（5-3: 撃墜数・時間、5-4: モード・強化の無効・初心者保護）
+    this.rules = el('div', 'campaign-facts lobby-rules', left);
+    const changed = (): void => {
+      const v = this.view;
+      if (!v) return;
+      h.onSettings({
+        ...v.settings,
+        scoreLimit: Number(this.scoreSelect.value),
+        timeLimitSeconds: Number(this.timeSelect.value),
+        mode: this.modeSelect.value === 'team' ? 'team' : 'ffa',
+      });
+    };
+    this.scoreSelect = numberSelect(
+      this.rules,
+      '撃墜数',
+      PVP_SCORE_LIMITS,
+      (v) => `${v} 機`,
+      changed,
+    );
+    this.timeSelect = numberSelect(
+      this.rules,
+      '制限時間',
+      PVP_TIME_LIMITS,
+      (v) => minutes(Number(v)),
+      changed,
+    );
+    this.modeSelect = numberSelect(
+      this.rules,
+      'モード',
+      ['ffa', 'team'],
+      (v) => (v === 'team' ? 'チーム戦（2 対 2）' : '個人戦'),
+      changed,
+    );
+    const toggles = el('div', 'lobby-toggles', this.rules);
+    const flip = (key: 'noUpgrades' | 'rookieGuard') => () => {
+      const v = this.view;
+      if (v) h.onSettings({ ...v.settings, [key]: !v.settings[key] });
+    };
+    this.noUpgrades = toggle(toggles, '強化を無効にする', flip('noUpgrades'));
+    this.rookie = toggle(toggles, '初心者保護', flip('rookieGuard'));
+    el('div', 'campaign-label', right, 'PILOTS');
+    this.list = el('ul', 'lobby-players', right);
+    this.autoTeams = createButton(
+      right,
+      'ui-button lobby-wide',
+      'チームを自動で分ける',
+      h.onAutoTeams,
+    );
+    el('div', 'campaign-label', right, 'MESSAGE');
+    const chat = el('div', 'lobby-chat', right);
+    PVP_QUICK_PHRASES.forEach((text, i) => {
+      createButton(chat, 'ui-button lobby-chat-button', text, () => {
+        h.onChat(i);
+      });
+    });
+    this.waitText = el('p', 'briefing-text lobby-wait', this.root);
+    const buttons = el('div', 'campaign-buttons lobby-buttons', this.root);
+    createButton(buttons, 'ui-button is-ghost campaign-back', '退出', h.onLeave);
+    createButton(buttons, 'ui-button lobby-hangar-button', 'ハンガー', h.onHangar);
+    this.readyButton = createButton(buttons, 'ui-button is-primary campaign-go', '準備OK', () => {
+      const v = this.view;
+      const me = v?.players.find((p) => p.id === v.localId);
+      if (me) h.onReady(!me.ready);
+    });
+    this.startButton = createButton(buttons, 'ui-button is-primary campaign-go', '開始', h.onStart);
+  }
+
+  /** 名簿・設定が変わるたびに描き直す */
+  render(v: Readonly<LobbyRoomView>): void {
+    this.view = v;
+    const st = v.settings;
+    this.codeText.textContent = v.code;
+    this.share.set(v.code, v.joinUrl);
+    this.mapText.textContent = v.mapName;
+    const mode = st.mode === 'team' ? 'チーム戦' : '個人戦';
+    this.rulesText.textContent = `${mode}・撃墜 ${st.scoreLimit} 機・${minutes(st.timeLimitSeconds)}`;
+    this.optionsText.textContent = `強化 ${st.noUpgrades ? '無効' : '有効'}・初心者保護 ${st.rookieGuard ? 'ON' : 'OFF'}`;
+    this.rules.hidden = !v.isHost;
+    // ホストは選ぶ欄に同じことが出ているので、文字のルールは出さない（横画面のスマホで縦に詰める）
+    const rulesFact = this.rulesText.parentElement;
+    const optionsFact = this.optionsText.parentElement;
+    if (rulesFact) rulesFact.hidden = v.isHost;
+    if (optionsFact) optionsFact.hidden = v.isHost;
+    this.scoreSelect.value = String(st.scoreLimit);
+    this.timeSelect.value = String(st.timeLimitSeconds);
+    this.modeSelect.value = st.mode;
+    this.noUpgrades.setAttribute('aria-pressed', String(st.noUpgrades));
+    this.rookie.setAttribute('aria-pressed', String(st.rookieGuard));
+    this.autoTeams.hidden = !(v.isHost && st.mode === 'team');
+    this.renderPlayers(v);
+    const block = startBlock(v.players, st.mode);
+    const me = v.players.find((p) => p.id === v.localId);
+    this.startButton.hidden = !v.isHost;
+    this.startButton.disabled = block !== null;
+    this.readyButton.hidden = v.isHost;
+    this.readyButton.textContent = me?.ready ? '準備を取り消す' : '準備OK';
+    this.readyButton.classList.toggle('is-primary', !me?.ready);
+    this.waitText.textContent = v.isHost
+      ? block === null
+        ? '全員の準備ができました。「開始」で 3 秒後に始まります'
+        : BLOCK_TEXT[block]
+      : me?.ready
+        ? 'ホストの開始を待っています'
+        : '機体を選んで「準備OK」を押してください';
+  }
+
+  /** 定型文を出す（その人の行に 3 秒） */
+  showChat(from: number, phrase: number): void {
+    const text = PVP_QUICK_PHRASES[phrase];
+    if (!text) return;
+    this.bubbles.set(from, { text, until: performance.now() + PVP_CONFIG.chat.showSeconds * 1000 });
+    if (this.view) this.renderPlayers(this.view);
+    window.clearTimeout(this.bubbleTimer);
+    this.bubbleTimer = window.setTimeout(
+      () => {
+        if (this.view) this.renderPlayers(this.view);
+      },
+      PVP_CONFIG.chat.showSeconds * 1000 + 50,
+    );
+  }
+
+  closeDialogs(): boolean {
+    if (!this.share.qrOpen) return false;
+    this.share.closeQr();
+    return true;
+  }
+
+  focusMain(): void {
+    const v = this.view;
+    (v?.isHost ? this.startButton : this.readyButton).focus({ preventScroll: true });
+  }
+
+  private renderPlayers(v: Readonly<LobbyRoomView>): void {
+    const team = v.settings.mode === 'team';
+    const now = performance.now();
+    this.list.replaceChildren();
+    for (const p of v.players) {
+      const li = el('li', 'lobby-player', this.list);
+      li.classList.toggle('is-away', p.away);
+      const dot = el('span', 'lobby-dot', li);
+      dot.style.background = playerColorCss(p.id);
+      const who = el('span', 'lobby-who', li);
+      el('span', 'lobby-name', who, p.name);
+      el('span', 'lobby-craft', who, findAircraftModel(p.aircraftId)?.name ?? p.aircraftId);
+      const tags = [p.id === 0 ? 'ホスト' : '', p.id === v.localId ? 'あなた' : ''].filter(Boolean);
+      if (tags.length > 0) el('span', 'tag', li, tags.join('・'));
+      const bubble = this.bubbles.get(p.id);
+      if (bubble && bubble.until > now) el('span', 'lobby-bubble', li, bubble.text);
+      if (team) this.teamChip(li, p, v.isHost);
+      const status = p.away ? '再接続中' : p.id === 0 ? 'HOST' : p.ready ? 'READY' : '準備中';
+      const s = el('span', 'lobby-status', li, status);
+      s.classList.toggle('is-ready', isReady(p) && !p.away);
+    }
+  }
+
+  /** チームの印。ホストは押すと A ⇄ B を入れ替える */
+  private teamChip(li: HTMLElement, p: Readonly<PlayerInfo>, isHost: boolean): void {
+    const name = PVP_TEAM.names[p.team === 1 ? 1 : 0];
+    const label = `チーム ${name}`;
+    const chip = isHost
+      ? createButton(li, 'ui-button lobby-team', label, () => {
+          this.h.onTeam(p.id, p.team === 1 ? 0 : 1);
+        })
+      : el('span', 'lobby-team', li, label);
+    chip.style.color = teamColorCss(p.team);
+  }
+}

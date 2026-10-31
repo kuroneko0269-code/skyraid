@@ -450,6 +450,16 @@
   background: transparent;
 }
 
+/* PvP のチーム戦の味方（5-4） */
+.hud-radar-dot.is-ally {
+  background: var(--hud-color);
+  border: 1px solid var(--hud-color);
+}
+
+.hud-radar-dot.is-ally.is-edge {
+  background: transparent;
+}
+
 .hud-radar-dot.is-missile {
   border-radius: 0;
   width: 9px;

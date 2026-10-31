@@ -1,87 +1,52 @@
-// PvP のロビー画面（5-1。最小限）: 「部屋を作る」「コードで参加」→ 接続中 → ロビー（部屋コード・参加者・ホストの「開始」）。
+// PvP のロビー画面（5-1）: 「部屋を作る」「コードで参加」→ 接続中 → ロビー（部屋の画面は lobby-room.ts）→
+// 対戦の後のリザルト（5-3）。5-4: 準備・ハンガー（lobby-hangar.ts）・共有・定型文・チーム、リザルトの「もう一度」の待ち。
 // 見た目は 4-10 のデザインシステム。通信はしない（ui/pvp-link.ts が呼ぶ）。文字は textContent だけで入れる
 import './lobby.css';
 import { NET_CONFIG } from '../data/net';
-import { PVP_SCORE_LIMITS, PVP_TIME_LIMITS } from '../data/pvp';
-import type { GameSettings, PlayerInfo } from '../net/protocol';
-import { renderResult, type ResultView } from './pvp-result';
+import type { PlayerInfo } from '../net/protocol';
+import { renderAgain, renderResult, type ResultView } from './pvp-result';
 import { el } from './hud-dom';
-import { playerColorCss } from './lobby-colors';
+import { LobbyHangar, type LobbyHangarEntry } from './lobby-hangar';
+import { LobbyRoom, type LobbyRoomHandlers, type LobbyRoomView } from './lobby-room';
 import { isolateKeys } from './pilot-name';
 import { createButton, createScreen, setScreenShown } from './screen';
 
-export interface LobbyHandlers {
+export type { LobbyRoomView };
+
+export interface LobbyHandlers extends LobbyRoomHandlers {
   onCreate: () => void;
   onJoin: (code: string) => void;
-  onStart: () => void;
-  /** 接続中の取り消し・ロビーからの退出 */
-  onLeave: () => void;
   /** モード選択へ戻る */
   onBack: () => void;
-  /** ホストがルール（撃墜数・制限時間）を変えた（5-3） */
-  onSettings: (scoreLimit: number, timeLimitSeconds: number) => void;
-  /** リザルトの「もう一度」（ロビーへ。5-3） */
+  /** リザルトの「もう一度」（全員そろうとロビーへ。5-4） */
   onAgain: () => void;
-}
-
-export interface LobbyRoomView {
-  code: string;
-  isHost: boolean;
-  localId: number;
-  players: readonly PlayerInfo[];
-  mapName: string;
-  settings: GameSettings;
+  /** ハンガーで機体を選んだ（5-4） */
+  onAircraft: (id: string) => void;
 }
 
 type View = 'menu' | 'connecting' | 'room' | 'result';
 
-/** 選択肢の select（値は数、表示は label）。変えたら onChange */
-function numberSelect(
-  parent: HTMLElement,
-  label: string,
-  values: readonly number[],
-  text: (v: number) => string,
-  onChange: () => void,
-): HTMLSelectElement {
-  const wrap = el('label', 'campaign-fact lobby-rule', parent);
-  el('span', 'campaign-fact-label', wrap, label);
-  const select = el('select', 'ui-field lobby-rule-select', wrap);
-  for (const v of values) {
-    const o = el('option', '', select, text(v));
-    o.value = String(v);
-  }
-  select.addEventListener('change', onChange);
-  return select;
-}
-
-const minutes = (s: number): string => `${Math.round(s / 60)} 分`;
-
 export class LobbyScreen {
   readonly root: HTMLDivElement;
   private view: View = 'menu';
+  private readonly panel: HTMLDivElement;
   private readonly menu: HTMLDivElement;
   private readonly connecting: HTMLDivElement;
   private readonly connectingText: HTMLParagraphElement;
-  private readonly room: HTMLDivElement;
+  private readonly room: LobbyRoom;
   private readonly codeInput: HTMLInputElement;
   private readonly error: HTMLParagraphElement;
-  private readonly codeText: HTMLDivElement;
-  private readonly mapText: HTMLSpanElement;
-  private readonly list: HTMLUListElement;
-  private readonly startButton: HTMLButtonElement;
-  private readonly waitText: HTMLParagraphElement;
   private readonly createButton: HTMLButtonElement;
-  private readonly rules: HTMLDivElement;
-  private readonly scoreSelect: HTMLSelectElement;
-  private readonly timeSelect: HTMLSelectElement;
-  private readonly rulesText: HTMLSpanElement;
   private readonly result: HTMLDivElement;
   private readonly resultBody: HTMLDivElement;
+  private readonly againBody: HTMLDivElement;
   private readonly againButton: HTMLButtonElement;
+  private readonly hangar: LobbyHangar;
 
   constructor(parent: HTMLElement, handlers: LobbyHandlers) {
     const root = createScreen(parent, 'campaign-screen lobby-screen');
     const panel = el('div', 'ui-panel campaign-panel lobby-panel', root);
+    this.panel = panel;
     el('div', 'ui-kicker campaign-kicker', panel, 'PVP');
 
     // 最初の選択: 部屋を作る / コードで参加
@@ -122,62 +87,39 @@ export class LobbyScreen {
     const cancel = el('div', 'campaign-buttons', this.connecting);
     createButton(cancel, 'ui-button is-ghost campaign-back', '取り消し', handlers.onLeave);
 
-    // ロビー
-    this.room = el('div', 'lobby-view', panel);
-    el('div', 'campaign-label', this.room, 'ROOM CODE');
-    this.codeText = el('div', 'lobby-code', this.room);
-    const facts = el('div', 'campaign-facts', this.room);
-    const map = el('div', 'campaign-fact', facts);
-    el('span', 'campaign-fact-label', map, 'マップ');
-    this.mapText = el('span', 'campaign-fact-value', map);
-    // ルール（5-3）: ホストは選べる、クライアントは文字だけ
-    const rule = el('div', 'campaign-fact', facts);
-    el('span', 'campaign-fact-label', rule, 'ルール');
-    this.rulesText = el('span', 'campaign-fact-value', rule);
-    this.rules = el('div', 'campaign-facts lobby-rules', this.room);
-    const changed = () => {
-      handlers.onSettings(Number(this.scoreSelect.value), Number(this.timeSelect.value));
-    };
-    this.scoreSelect = numberSelect(
-      this.rules,
-      '撃墜数',
-      PVP_SCORE_LIMITS,
-      (v) => `${v} 機`,
-      changed,
-    );
-    this.timeSelect = numberSelect(this.rules, '制限時間', PVP_TIME_LIMITS, minutes, changed);
-    el('div', 'campaign-label', this.room, 'PILOTS');
-    this.list = el('ul', 'lobby-players', this.room);
-    this.waitText = el('p', 'briefing-text', this.room);
-    const buttons = el('div', 'campaign-buttons', this.room);
-    createButton(buttons, 'ui-button is-ghost campaign-back', '退出', handlers.onLeave);
-    this.startButton = createButton(
-      buttons,
-      'ui-button is-primary campaign-go',
-      '開始',
-      handlers.onStart,
-    );
+    // ロビー（5-4 で lobby-room.ts に分けた）
+    this.room = new LobbyRoom(panel, root, handlers);
+    this.hangar = new LobbyHangar(root, handlers.onAircraft);
 
-    // リザルト（5-3）
+    // リザルト（5-3）と「もう一度」の待ち（5-4）
     this.result = el('div', 'lobby-view', panel);
     this.resultBody = el('div', 'lobby-result', this.result);
+    this.againBody = el('div', 'lobby-again', this.result);
     const again = el('div', 'campaign-buttons', this.result);
     createButton(again, 'ui-button is-ghost campaign-back', '退出', handlers.onLeave);
-    this.againButton = createButton(
-      again,
-      'ui-button is-primary campaign-go',
-      'もう一度',
-      handlers.onAgain,
-    );
+    this.againButton = createButton(again, 'ui-button is-primary campaign-go', 'もう一度', () => {
+      this.againButton.disabled = true;
+      this.againButton.textContent = 'ほかの人を待っています';
+      handlers.onAgain();
+    });
     this.root = root;
     this.show('menu');
   }
 
-  /** 対戦のリザルト（順位・撃墜・被撃墜・命中率）。「もう一度」でロビーへ */
-  showResult(r: Readonly<ResultView>): void {
+  /** 対戦のリザルト（順位・撃墜・被撃墜・命中率・連続撃墜・ベストプレイヤー）と「もう一度」の待ち */
+  showResult(r: Readonly<ResultView>, players: readonly Readonly<PlayerInfo>[]): void {
     renderResult(this.resultBody, r);
+    this.againButton.disabled = false;
+    this.againButton.textContent = 'もう一度';
+    this.updateAgain(players, r.localId);
+    this.hangar.close();
     this.show('result');
     this.againButton.focus({ preventScroll: true });
+  }
+
+  /** 「もう一度」を押した人の印を描き直す */
+  updateAgain(players: readonly Readonly<PlayerInfo>[], localId: number): void {
+    renderAgain(this.againBody, players, localId);
   }
 
   /** 部屋コードの入力欄に入れる（?room=XXXXXX） */
@@ -188,6 +130,7 @@ export class LobbyScreen {
   showMenu(error = ''): void {
     this.error.textContent = error;
     this.error.hidden = error === '';
+    this.hangar.close();
     this.show('menu');
   }
 
@@ -197,33 +140,29 @@ export class LobbyScreen {
   }
 
   showRoom(r: Readonly<LobbyRoomView>): void {
-    this.codeText.textContent = r.code;
-    this.mapText.textContent = r.mapName;
-    const st = r.settings;
-    this.rulesText.textContent = `撃墜 ${st.scoreLimit} 機・${minutes(st.timeLimitSeconds)}`;
-    this.rules.hidden = !r.isHost;
-    this.scoreSelect.value = String(st.scoreLimit);
-    this.timeSelect.value = String(st.timeLimitSeconds);
-    this.list.replaceChildren();
-    for (const p of r.players) {
-      const li = el('li', 'lobby-player', this.list);
-      const dot = el('span', 'lobby-dot', li);
-      dot.style.background = playerColorCss(p.id);
-      el('span', 'lobby-name', li, p.name);
-      const tags = [p.id === 0 ? 'ホスト' : '', p.id === r.localId ? 'あなた' : ''].filter(Boolean);
-      if (tags.length > 0) el('span', 'tag', li, tags.join('・'));
-    }
-    const enough = r.players.length >= 2;
-    this.startButton.hidden = !r.isHost;
-    this.startButton.disabled = !enough;
-    this.waitText.textContent = r.isHost
-      ? enough
-        ? '全員そろったら「開始」'
-        : 'ほかのプレイヤーに部屋コードを伝えてください'
-      : 'ホストの開始を待っています';
+    this.room.render(r);
     const firstShow = this.view !== 'room';
     this.show('room');
-    if (firstShow && r.isHost) this.startButton.focus({ preventScroll: true });
+    if (firstShow) this.room.focusMain();
+  }
+
+  /** 定型文（部屋の画面のその人の行に 3 秒） */
+  showChat(from: number, phrase: number): void {
+    this.room.showChat(from, phrase);
+  }
+
+  /** ハンガー（所持機体の一覧）を開く */
+  openHangar(entries: readonly LobbyHangarEntry[], note: string): void {
+    this.hangar.open(entries, note);
+  }
+
+  /** Esc: 開いているダイアログ（ハンガー・QR）を閉じたら true */
+  closeDialog(): boolean {
+    if (this.hangar.isOpen) {
+      this.hangar.close();
+      return true;
+    }
+    return this.room.closeDialogs();
   }
 
   get currentView(): View {
@@ -232,6 +171,10 @@ export class LobbyScreen {
 
   setShown(shown: boolean): void {
     setScreenShown(this.root, shown);
+    if (!shown) {
+      this.hangar.close();
+      this.room.closeDialogs();
+    }
     if (shown && this.view === 'menu') this.createButton.focus({ preventScroll: true });
   }
 
@@ -239,7 +182,8 @@ export class LobbyScreen {
     this.view = view;
     this.menu.hidden = view !== 'menu';
     this.connecting.hidden = view !== 'connecting';
-    this.room.hidden = view !== 'room';
+    this.room.root.hidden = view !== 'room';
     this.result.hidden = view !== 'result';
+    this.panel.classList.toggle('is-wide', view === 'room' || view === 'result');
   }
 }

@@ -5,7 +5,7 @@ import { NET_CONFIG } from '../data/net';
 import type { NetStats, RemoteSample } from '../net/net-game';
 import type { PlayerInfo } from '../net/protocol';
 import { el } from './hud-dom';
-import { playerColorCss } from './lobby-colors';
+import { playerColorCss, sideColorCss } from './lobby-colors';
 import { createButton } from './screen';
 
 const projected = new Vector3();
@@ -19,6 +19,7 @@ interface Tag {
   lastDist: number;
   lastHp: number;
   lastInvulnerable: boolean;
+  lastSide: string;
 }
 
 export class PvpHud {
@@ -86,6 +87,8 @@ export class PvpHud {
     camera: PerspectiveCamera,
     width: number,
     height: number,
+    /** チーム戦の敵味方（5-4。null は個人戦: プレイヤーの色） */
+    allyOf: ((id: number) => boolean) | null = null,
   ): void {
     this.tagLayer.hidden = false;
     for (const t of this.tags.values()) t.root.hidden = true;
@@ -111,6 +114,12 @@ export class PvpHud {
       if (s.invulnerable !== tag.lastInvulnerable) {
         tag.lastInvulnerable = s.invulnerable;
         tag.root.classList.toggle('is-invulnerable', s.invulnerable);
+      }
+      const side = allyOf === null ? '' : allyOf(s.id) ? 'ally' : 'enemy';
+      if (side !== tag.lastSide) {
+        tag.lastSide = side;
+        tag.root.style.color = side === '' ? playerColorCss(s.id) : sideColorCss(side === 'ally');
+        tag.root.classList.toggle('is-ally', side === 'ally');
       }
       if (name !== tag.lastName) {
         tag.lastName = name;
@@ -159,7 +168,17 @@ export class PvpHud {
       const dist = el('span', 'pvp-tag-dist', label);
       const bar = el('div', 'pvp-tag-hp', root);
       const hp = el('div', 'pvp-tag-hp-fill', bar);
-      t = { root, name, dist, hp, lastName: '', lastDist: -1, lastHp: -1, lastInvulnerable: false };
+      t = {
+        root,
+        name,
+        dist,
+        hp,
+        lastName: '',
+        lastDist: -1,
+        lastHp: -1,
+        lastInvulnerable: false,
+        lastSide: '',
+      };
       this.tags.set(id, t);
     }
     return t;

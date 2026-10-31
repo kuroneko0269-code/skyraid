@@ -1,10 +1,14 @@
 // クライアントの PvP の飛行（5-1）と戦闘（5-3）。自機は手元で先行計算し（OwnPrediction）、操作と戦闘の操作を
 // 30Hz で送る（InputSender）。ホストの状態（15Hz）は他機の補間の並び（SnapshotBuffer）に入れ、自機はずれを補正する。
 // 命中・撃墜・復帰はホストの event で知る（自分では判定しない）。撃墜されたら止まり、復帰の event の seq の後の操作を
-// 出現位置からやり直して（記録した操作で計算し直す）ホストと同じ位置にそろえる。Three.js 非依存
+// 出現位置からやり直して（記録した操作で計算し直す）ホストと同じ位置にそろえる。
+// 5-4: 開始前のカウントダウン（止まって操作を無視し、入力も送らない）、つなぎ直している間と、戻ってからホストの
+// 位置合わせの復帰が届くまでは止まる。初心者保護つきの復帰は最大 HP を増やす。Three.js 非依存
 import { NET_CONFIG } from '../data/net';
 import { PVP_CONFIG } from '../data/pvp';
 import { PVP_SPAWN_POINTS } from '../data/pvp';
+import { RESPAWN_BOOST } from '../combat/pvp-arena';
+import { Countdown } from '../combat/pvp-rules';
 import type { Aircraft, AircraftControls } from '../entities/aircraft';
 import { headingQuat } from '../entities/enemy-aircraft';
 import { copyQuat, copyVec3, quatIdentity } from '../flight/math';
@@ -18,19 +22,13 @@ import {
 } from './protocol';
 import { OwnPrediction, type PredictedBody } from './prediction';
 import type { ClientRoom } from './client-room';
-import {
-  HostClock,
-  InputSender,
-  SnapshotBuffer,
-  createSampledPose,
-  type SampledPose,
-} from './sync';
+import { InputSender, type SnapshotBuffer } from './sync';
+import { RemoteInterpolation } from './client-remotes';
 import {
   NetGameEvents,
   RateCounter,
   SPAWN_ORIENTATION,
   applyCombat,
-  createRemoteSample,
   spawnPosition,
   toNetControls,
   type LocalCombat,
@@ -39,14 +37,11 @@ import {
   type RemoteSample,
 } from './net-game';
 
-interface ClientRemote {
-  readonly buffer: SnapshotBuffer;
-  readonly sample: RemoteSample;
-}
-
 export interface ClientGameDeps {
   /** 自機（FlightSession の機体。HUD・カメラはこれを見る） */
   readonly own: Aircraft;
+  /** 開始前のカウントダウンの秒数（省略は PVP_CONFIG.countdownSeconds。テストで 0 にする） */
+  readonly countdownSeconds?: number;
 }
 
 const TICK_HZ = NET_CONFIG.rates.tickHz;
@@ -61,18 +56,19 @@ export class ClientGame extends NetGameEvents implements NetGame {
   private readonly maxHp: number;
   /** 撃墜されて復帰を待っている */
   down = false;
+  /** つなぎ直した後、ホストの位置合わせの復帰を待っている（5-4） */
+  awaitingResync = false;
+  /** 開始前のカウントダウン（5-4） */
+  readonly countdown: Countdown;
   missiles: MissileStateMsg[] = [];
   missileVersion = 0;
   readonly prediction = new OwnPrediction();
   private readonly sender = new InputSender();
-  private readonly clock = new HostClock();
-  private readonly remotes = new Map<number, ClientRemote>();
-  private readonly list: RemoteSample[] = [];
+  private readonly view = new RemoteInterpolation();
   private readonly received = new RateCounter();
   private readonly raw = createNetControls();
   /** seq ごとの量子化した操作（復帰のやり直し用） */
   private readonly inputs: NetControls[] = [];
-  private readonly pose: SampledPose = createSampledPose();
   private readonly body: PredictedBody;
   private readonly wreck = { x: 0, y: 0, z: 0 };
   private readonly wreckOrientation = quatIdentity();
@@ -82,10 +78,6 @@ export class ClientGame extends NetGameEvents implements NetGame {
   private lastStateTick = -1;
   /** 自機が最後に復帰した tick（それより前の状態の HP は使わない。復帰の event より遅れて届くことがある） */
   private respawnTick = -1;
-  private lastRenderTime: number | null = null;
-  private lastHostNow: number | null = null;
-  private extrapolating = 0;
-  private margin = 0;
 
   constructor(
     private readonly room: ClientRoom,
@@ -93,6 +85,7 @@ export class ClientGame extends NetGameEvents implements NetGame {
     private readonly now: () => number = () => performance.now(),
   ) {
     super();
+    this.countdown = new Countdown(deps.countdownSeconds ?? PVP_CONFIG.countdownSeconds, TICK_HZ);
     this.localId = room.localPlayerId;
     const own = deps.own;
     own.respawn(spawnPosition(this.localId, { x: 0, y: 0, z: 0 }), SPAWN_ORIENTATION);
@@ -116,6 +109,9 @@ export class ClientGame extends NetGameEvents implements NetGame {
     room.onRoster(() => {
       this.syncRoster();
     });
+    room.onReconnect((reconnecting) => {
+      if (!reconnecting) this.awaitingResync = true;
+    });
     room.onMessage((_id, msg) => {
       if (msg.type === 'state') this.onState(msg);
       else if (msg.type === 'event') this.handleEvent(msg);
@@ -127,37 +123,44 @@ export class ClientGame extends NetGameEvents implements NetGame {
     return this.hp;
   }
 
+  get countdownRemaining(): number {
+    return this.countdown.remainingSeconds;
+  }
+
+  get inputBlocked(): boolean {
+    return this.countdown.active || this.held;
+  }
+
+  /** 止まっている（撃墜・墜落の知らせ待ち・つなぎ直し・位置合わせ待ち） */
+  private get held(): boolean {
+    return this.down || this.crashHold > 0 || this.room.reconnecting || this.awaitingResync;
+  }
+
   /** 名簿にいない機体を消し、新しい機体の入れ物を作る */
   private syncRoster(): void {
-    const ids = new Set<number>();
-    for (const p of this.room.players) {
-      if (p.id === this.localId) continue;
-      ids.add(p.id);
-      if (!this.remotes.has(p.id)) {
-        this.remotes.set(p.id, {
-          buffer: new SnapshotBuffer(),
-          sample: createRemoteSample(p.id, p.aircraftId),
-        });
-      }
-    }
-    for (const id of [...this.remotes.keys()]) if (!ids.has(id)) this.remotes.delete(id);
+    this.view.syncRoster(this.room.players, this.localId);
   }
 
   step(controls: Readonly<AircraftControls>, combat: Readonly<LocalCombat>, dt: number): void {
     const own = this.deps.own;
+    // カウントダウン中は開始位置で止まり、操作を記録も送信もしない（ホストも全機を止めている）
+    if (this.countdown.step()) {
+      this.hold();
+      return;
+    }
     this.seq++;
     toNetControls(this.raw, controls, own.flight.options);
     applyCombat(this.raw, combat);
     const q = quantizeControls(this.inputs[this.seq % HISTORY] ?? createNetControls(), this.raw);
-    if (this.down || this.crashHold > 0) {
-      // 撃墜（墜落）されている間は止まる。撃てない
+    if (this.held) {
+      // 撃墜（墜落）されている間・つなぎ直している間は止まる。撃てない
       q.fire = q.missile = q.flare = false;
       this.hold();
       if (this.crashHold > 0) this.crashHold = Math.max(0, this.crashHold - dt);
     } else this.fly(q, dt);
     this.prediction.record(this.seq, this.body);
     this.sender.viewTick =
-      this.lastRenderTime === null ? 0 : Math.round(this.lastRenderTime * TICK_HZ);
+      this.view.renderTime === null ? 0 : Math.round(this.view.renderTime * TICK_HZ);
     this.sender.record(this.seq, q);
     if (this.sender.ready()) this.room.send(this.sender.message(), 'unordered');
   }
@@ -195,9 +198,11 @@ export class ClientGame extends NetGameEvents implements NetGame {
       this.hold();
     } else if (e.a === this.localId && e.kind === 'respawn') {
       this.respawnTick = e.tick;
-      this.hp = this.maxHp;
-      this.respawn(e.b, e.n);
-    } else if (e.kind === 'respawn') this.remotes.get(e.a)?.buffer.clear();
+      this.awaitingResync = false;
+      const boost = (e.b & RESPAWN_BOOST) !== 0;
+      this.hp = Math.round(this.maxHp * (boost ? PVP_CONFIG.rookie.hpScale : 1));
+      this.respawn(e.b & ~RESPAWN_BOOST, e.n);
+    } else if (e.kind === 'respawn') this.view.bufferOf(e.a)?.clear();
     this.emitEvent(e);
   }
 
@@ -224,7 +229,7 @@ export class ClientGame extends NetGameEvents implements NetGame {
     const t = this.now();
     this.received.hit(t);
     const hostTime = msg.tick / TICK_HZ;
-    this.clock.observe(hostTime, t / 1000);
+    this.view.clock.observe(hostTime, t / 1000);
     const newer = msg.tick > this.lastStateTick;
     if (newer) {
       this.lastStateTick = msg.tick;
@@ -236,67 +241,34 @@ export class ClientGame extends NetGameEvents implements NetGame {
         if (!newer) continue;
         if (a.alive && msg.tick >= this.respawnTick) this.hp = a.hp;
         if (a.alive && !this.down) this.prediction.reconcile(a, this.body, this.seq);
-      } else this.remotes.get(a.id)?.buffer.push(hostTime, a);
+      } else this.view.bufferOf(a.id)?.push(hostTime, a);
     }
   }
 
   /** 他機をホストの時刻で 100ms 遅らせて補間する（途切れたら外挿） */
   samples(_alpha: number, nowMs: number): readonly RemoteSample[] {
-    const list = this.list;
-    list.length = 0;
-    const local = nowMs / 1000;
-    const hostNow = this.clock.hostNow(local);
-    this.lastHostNow = hostNow;
-    if (hostNow === null) return list;
-    const t = hostNow - NET_CONFIG.sync.interpolationDelaySeconds;
-    this.lastRenderTime = t;
-    let extrapolating = 0;
-    let margin = Infinity;
-    for (const r of this.remotes.values()) {
-      const mode = r.buffer.sample(t, this.pose);
-      const latest = this.pose.latest;
-      if (mode === 'empty' || !latest) continue;
-      if (mode !== 'interpolated') extrapolating++;
-      margin = Math.min(margin, latest.time - t);
-      const out = r.sample;
-      copyVec3(out.position, this.pose.position);
-      copyQuat(out.orientation, this.pose.orientation);
-      out.alive = latest.alive;
-      out.afterburner = latest.afterburner;
-      out.throttle = latest.throttle;
-      copyVec3(out.velocity, latest.velocity);
-      out.speed = Math.hypot(latest.velocity.x, latest.velocity.y, latest.velocity.z);
-      out.hp = latest.hp;
-      out.invulnerable = latest.invulnerable;
-      list.push(out);
-    }
-    this.extrapolating = extrapolating;
-    this.margin = Number.isFinite(margin) ? margin * 1000 : 0;
-    return list;
+    return this.view.samples(nowMs);
   }
 
   /** 直前の samples() で他機を表示した時刻（ホストの秒） */
   get renderTime(): number | null {
-    return this.lastRenderTime;
+    return this.view.renderTime;
   }
 
   /** テスト用: 他機の補間の並び */
   bufferOf(id: number): SnapshotBuffer | null {
-    return this.remotes.get(id)?.buffer ?? null;
+    return this.view.bufferOf(id);
   }
 
   stats(nowMs: number): NetStats {
-    const delay =
-      this.lastHostNow !== null && this.lastRenderTime !== null
-        ? (this.lastHostNow - this.lastRenderTime) * 1000
-        : 0;
+    const v = this.view;
     return {
       role: 'client',
       rttMs: this.room.rtt(),
       stateRate: this.received.rate(nowMs),
-      interpDelayMs: delay,
-      bufferMarginMs: this.margin,
-      extrapolating: this.extrapolating,
+      interpDelayMs: v.delayMs,
+      bufferMarginMs: v.marginMs,
+      extrapolating: v.extrapolating,
       corrections: this.prediction.corrections,
       inputBacklog: 0,
       inputGuessed: 0,

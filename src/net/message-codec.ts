@@ -3,6 +3,16 @@
 import { PVP_CONFIG } from '../data/pvp';
 import { ByteReader, ByteWriter, readQuat, writeQuat } from './codec';
 import {
+  PL_AGAIN,
+  PL_READY,
+  readPlayer,
+  readSettings,
+  readUpgrades,
+  writePlayer,
+  writeSettings,
+  writeUpgrades,
+} from './codec-lobby';
+import {
   NO_TARGET as NO_TARGET_ID,
   readControls,
   writeControls,
@@ -18,14 +28,23 @@ import {
   type ScoreEntry,
 } from './protocol';
 
-const TYPE_IDS = { join: 1, welcome: 2, input: 3, state: 4, event: 5, ping: 6, score: 7 } as const;
+const TYPE_IDS = {
+  join: 1,
+  welcome: 2,
+  input: 3,
+  state: 4,
+  event: 5,
+  ping: 6,
+  score: 7,
+  lobby: 8,
+  chat: 9,
+} as const;
 /** 速度ベクトルの単位（1/16 m/s。int16 で ±2047 m/s） */
 const VELOCITY_SCALE = 16;
 const FLAG_ALIVE = 1;
 const FLAG_AB_STATE = 2;
 const FLAG_INVULNERABLE = 4;
 const MISSILE_STEP = PVP_CONFIG.missilePositionStep;
-
 function packVelocity(v: number): number {
   return Math.round(Math.min(32767, Math.max(-32767, v * VELOCITY_SCALE)));
 }
@@ -44,14 +63,22 @@ export function encodeMessage(msg: NetMessage): ArrayBuffer {
   switch (msg.type) {
     case 'join':
       w.u8(msg.version).str(msg.name).str(msg.aircraftId);
-      w.u8(msg.upgrades.engine).u8(msg.upgrades.airframe);
-      w.u8(msg.upgrades.weapons).u8(msg.upgrades.avionics);
+      writeUpgrades(w, msg.upgrades);
+      w.u8(msg.resumeId).u32(msg.token);
       break;
     case 'welcome':
-      w.u8(WELCOME_STATUS.indexOf(msg.status)).u8(msg.yourId);
-      w.str(msg.settings.mapId).u16(msg.settings.timeLimitSeconds).u8(msg.settings.scoreLimit);
+      w.u8(WELCOME_STATUS.indexOf(msg.status)).u8(msg.yourId).u32(msg.yourToken);
+      w.u8(msg.inMatch ? 1 : 0);
+      writeSettings(w, msg.settings);
       w.u8(msg.players.length);
-      for (const p of msg.players) w.u8(p.id).str(p.name).str(p.aircraftId).u16(clamp16(p.maxHp));
+      for (const p of msg.players) writePlayer(w, p);
+      break;
+    case 'lobby':
+      w.u8((msg.ready ? PL_READY : 0) | (msg.again ? PL_AGAIN : 0)).str(msg.aircraftId);
+      writeUpgrades(w, msg.upgrades);
+      break;
+    case 'chat':
+      w.u8(msg.from).u8(msg.phrase);
       break;
     case 'input':
       w.u32(msg.seq).u32(msg.viewTick).u8(msg.controls.length);
@@ -98,7 +125,7 @@ export function encodeMessage(msg: NetMessage): ArrayBuffer {
         .u8(msg.players.length);
       for (const p of msg.players) {
         w.u8(p.id).u8(Math.min(255, p.kills)).u8(Math.min(255, p.deaths));
-        w.u16(clamp16(p.shots)).u16(clamp16(p.hits));
+        w.u16(clamp16(p.shots)).u16(clamp16(p.hits)).u8(Math.min(255, p.bestStreak));
       }
       break;
     case 'ping':
@@ -128,20 +155,37 @@ function decodeBody(r: ByteReader): NetMessage | null {
       const version = r.u8();
       const name = r.str();
       const aircraftId = r.str();
-      const upgrades = { engine: r.u8(), airframe: r.u8(), weapons: r.u8(), avionics: r.u8() };
-      return { type: 'join', version, name, aircraftId, upgrades };
+      const upgrades = readUpgrades(r);
+      const resumeId = r.u8();
+      const token = r.u32();
+      return { type: 'join', version, name, aircraftId, upgrades, resumeId, token };
     }
     case TYPE_IDS.welcome: {
       const status = WELCOME_STATUS[r.u8()];
       if (!status) return null;
       const yourId = r.u8();
-      const settings = { mapId: r.str(), timeLimitSeconds: r.u16(), scoreLimit: r.u8() };
+      const yourToken = r.u32();
+      const inMatch = r.u8() === 1;
+      const settings = readSettings(r);
       const n = r.u8();
       const players: PlayerInfo[] = [];
-      for (let i = 0; i < n; i++)
-        players.push({ id: r.u8(), name: r.str(), aircraftId: r.str(), maxHp: r.u16() });
-      return { type: 'welcome', status, yourId, settings, players };
+      for (let i = 0; i < n; i++) players.push(readPlayer(r));
+      return { type: 'welcome', status, yourId, yourToken, inMatch, settings, players };
     }
+    case TYPE_IDS.lobby: {
+      const f = r.u8();
+      const aircraftId = r.str();
+      const upgrades = readUpgrades(r);
+      return {
+        type: 'lobby',
+        ready: (f & PL_READY) !== 0,
+        again: (f & PL_AGAIN) !== 0,
+        aircraftId,
+        upgrades,
+      };
+    }
+    case TYPE_IDS.chat:
+      return { type: 'chat', from: r.u8(), phrase: r.u8() };
     case TYPE_IDS.input: {
       const seq = r.u32();
       const viewTick = r.u32();
@@ -175,7 +219,14 @@ function decodeBody(r: ByteReader): NetMessage | null {
       const n = r.u8();
       const players: ScoreEntry[] = [];
       for (let i = 0; i < n; i++)
-        players.push({ id: r.u8(), kills: r.u8(), deaths: r.u8(), shots: r.u16(), hits: r.u16() });
+        players.push({
+          id: r.u8(),
+          kills: r.u8(),
+          deaths: r.u8(),
+          shots: r.u16(),
+          hits: r.u16(),
+          bestStreak: r.u8(),
+        });
       return { type: 'score', remainingSeconds, over, players };
     }
     case TYPE_IDS.ping:

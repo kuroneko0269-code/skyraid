@@ -15,16 +15,22 @@ function clock(seconds: number): string {
 export class PvpBoard {
   private readonly feed: HTMLDivElement;
   private readonly timer: HTMLDivElement;
+  private readonly teamScore: HTMLDivElement;
   private readonly board: HTMLDivElement;
   private readonly boardTime: HTMLSpanElement;
   private readonly rows: HTMLTableSectionElement;
   private feedKey = '';
   private boardKey = '';
   private lastClock = '';
+  private lastTeam = '';
+  private readonly clockText: Text;
 
   constructor(parent: HTMLElement) {
     this.feed = el('div', 'pvp-feed', parent);
     this.timer = el('div', 'pvp-timer', parent);
+    this.clockText = document.createTextNode('');
+    this.timer.appendChild(this.clockText);
+    this.teamScore = el('div', 'pvp-team-score', this.timer);
     this.board = el('div', 'ui-dialog pvp-board', parent);
     const head = el('div', 'pvp-board-head', this.board);
     el('span', 'ui-kicker', head, 'SCORE');
@@ -40,6 +46,7 @@ export class PvpBoard {
     this.feed.hidden = true;
     this.timer.hidden = true;
     this.board.hidden = true;
+    this.lastTeam = '';
     this.feed.replaceChildren();
     this.feedKey = '';
     this.boardKey = '';
@@ -54,13 +61,20 @@ export class PvpBoard {
     players: ReadonlyMap<number, PlayerInfo>,
     localId: number,
     boardOpen: boolean,
+    /** チーム戦の合計（5-4。「A 3 − 2 B」。個人戦は空） */
+    teamScore = '',
   ): void {
     this.updateFeed(items, players);
     const c = remainingSeconds === null ? '' : clock(remainingSeconds);
     if (c !== this.lastClock) {
       this.lastClock = c;
-      this.timer.textContent = c;
+      this.clockText.data = c;
       this.boardTime.textContent = c === '' ? '' : `残り ${c}`;
+    }
+    if (teamScore !== this.lastTeam) {
+      this.lastTeam = teamScore;
+      this.teamScore.textContent = teamScore;
+      this.teamScore.hidden = teamScore === '';
     }
     this.timer.hidden = c === '';
     this.board.hidden = !boardOpen;

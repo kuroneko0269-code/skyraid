@@ -268,6 +268,10 @@ export const UI_SOUND = {
   tap: { freq: 1900, duration: 0.035 },
   confirm: { freqs: [880, 1320], step: 0.06, duration: 0.12 },
   purchase: { freqs: [523.25, 659.25, 783.99, 1046.5], step: 0.04, duration: 0.45 },
+  /** PvP（5-4）: 開始前のカウントダウンの 3・2・1 と GO、残り時間の警告（30 秒・10 秒。上がる 2 音の矩形波） */
+  countdown: { freq: 660, duration: 0.14 },
+  go: { freqs: [990, 1320], step: 0.05, duration: 0.3 },
+  alert: { freqs: [1480, 1975], step: 0.12, duration: 0.32 },
 } as const;
 
 /** 3D 配置（敵機・爆発・対空砲）: PannerNode。自機の音は定位なし */

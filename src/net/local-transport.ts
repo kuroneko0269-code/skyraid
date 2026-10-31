@@ -121,6 +121,12 @@ class LocalTransport implements Transport {
     return this.leaves.add(fn);
   }
 
+  disconnect(peerId: string): void {
+    if (!this.peers.delete(peerId)) return;
+    this.post({ kind: 'bye', from: this.localId, to: peerId });
+    this.leaves.emit(peerId);
+  }
+
   close(): void {
     if (this.closed) return;
     for (const peerId of this.peers) this.post({ kind: 'bye', from: this.localId, to: peerId });

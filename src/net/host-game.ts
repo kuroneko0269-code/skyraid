@@ -2,16 +2,23 @@
 // 参加者の機体は届いた入力（InputBuffer）で、参加者が選んだ機体・強化の数値で計算する。
 // 機銃・ミサイル・フレア・撃墜・復帰は PvpArena が決め、結果を event で全員へ送る（自分にも同じものを渡す）。
 // 4 ステップに 1 回（15Hz）全機とミサイルの状態を、撃墜のたびと 1 秒ごとに成績を配る。勝敗は PvpMatch。
-// Three.js 非依存
+// 5-4: 開始前のカウントダウン（全機を止め操作を無視）、チーム戦、初心者保護、強化の無効、切断した人の機体を止めて
+// 待ち（away）、戻ったら入力が届き直してから出現位置へ戻す（クライアントはその seq から計算し直す）。Three.js 非依存
 import { NET_CONFIG } from '../data/net';
 import { PVP_CONFIG } from '../data/pvp';
 import { FLIGHT_CONFIG } from '../data/flight';
 import { Aircraft, type AircraftControls, type GroundHeightFn } from '../entities/aircraft';
 import { PvpArena, type ArenaEvent } from '../combat/pvp-arena';
 import type { PvpFighter } from '../combat/pvp-fighter';
-import { collectMissiles, fighterSpec, stateOf } from './host-state';
-import { copyQuat, copyVec3 } from '../flight/math';
-import { PvpMatch } from '../combat/pvp-rules';
+import {
+  collectMissiles,
+  fighterSpec,
+  holdAircraft,
+  hostStats,
+  interpolateSample,
+  stateOf,
+} from './host-state';
+import { Countdown, PvpMatch } from '../combat/pvp-rules';
 import type { Rng } from '../combat/gun';
 import { InputBuffer } from './input-buffer';
 import { netLoadout } from './loadout';
@@ -22,6 +29,7 @@ import {
   type EventMsg,
   type MissileStateMsg,
   type ScoreMsg,
+  type UpgradeLevelsMsg,
 } from './protocol';
 import type { HostRoom } from './room';
 import {
@@ -37,13 +45,14 @@ import {
   type NetStats,
   type RemoteSample,
 } from './net-game';
-import { slerp } from './sync';
 
 interface HostRemote {
   readonly id: number;
   readonly fighter: PvpFighter;
   readonly input: InputBuffer;
   readonly sample: RemoteSample;
+  /** 再接続した: 入力が届き直したら出現位置へ戻す */
+  pendingResume: boolean;
 }
 
 export interface HostGameDeps {
@@ -51,6 +60,8 @@ export interface HostGameDeps {
   readonly own: Aircraft;
   readonly groundHeight?: GroundHeightFn;
   readonly rng?: Rng;
+  /** 開始前のカウントダウンの秒数（省略は PVP_CONFIG.countdownSeconds。テストで 0 にする） */
+  readonly countdownSeconds?: number;
 }
 
 const TICK_HZ = NET_CONFIG.rates.tickHz;
@@ -61,6 +72,8 @@ export class HostGame extends NetGameEvents implements NetGame {
   readonly arena: PvpArena;
   readonly match: PvpMatch;
   readonly own: PvpFighter;
+  /** 開始前のカウントダウン（5-4） */
+  readonly countdown: Countdown;
   missiles: MissileStateMsg[] = [];
   missileVersion = 0;
   private readonly remotes = new Map<number, HostRemote>();
@@ -80,25 +93,46 @@ export class HostGame extends NetGameEvents implements NetGame {
     private readonly now: () => number = () => performance.now(),
   ) {
     super();
+    this.countdown = new Countdown(deps.countdownSeconds ?? PVP_CONFIG.countdownSeconds, TICK_HZ);
+    const settings = room.settings;
     this.arena = new PvpArena(this.handleArena, deps.groundHeight ?? null, deps.rng);
-    this.match = new PvpMatch(room.settings);
+    const teams =
+      settings.mode === 'team' ? new Map(room.players.map((p) => [p.id, p.team])) : null;
+    this.arena.setTeams(teams);
+    this.arena.rookieGuard = settings.rookieGuard;
+    this.match = new PvpMatch(settings, teams ? (id) => teams.get(id) : null);
     const p = room.hostProfile;
     deps.own.respawn(spawnPosition(0, { x: 0, y: 0, z: 0 }), SPAWN_ORIENTATION);
-    this.own = this.arena.add(0, deps.own, fighterSpec(netLoadout(p.aircraftId, p.upgrades)));
+    this.own = this.arena.add(0, deps.own, fighterSpec(this.loadout(p.aircraftId, p.upgrades)));
     for (const pl of room.players) if (pl.id !== 0) this.addRemote(pl.id, pl.aircraftId);
     room.onPlayerLeave((id) => {
       this.remotes.delete(id);
       this.arena.remove(id);
       this.scoreDirty = true;
     });
+    room.onPlayerAway((id, away) => {
+      const r = this.remotes.get(id);
+      if (!r) return;
+      if (away) this.arena.setAway(id, true);
+      else {
+        // 古い seq の入力を捨てて溜め直す。届き直したら出現位置へ（step）
+        r.input.reset();
+        r.pendingResume = true;
+      }
+    });
     room.onMessage((id, msg) => {
       if (msg.type === 'input') this.remotes.get(id)?.input.receive(msg);
     });
   }
 
+  /** 機体の数値（強化の無効なら Lv 0。5-4） */
+  private loadout(aircraftId: string, upgrades: UpgradeLevelsMsg | undefined) {
+    return netLoadout(aircraftId, this.room.settings.noUpgrades ? undefined : upgrades);
+  }
+
   private addRemote(id: number, aircraftId: string): void {
     const join = this.room.joinProfiles.get(id);
-    const loadout = netLoadout(join?.aircraftId ?? aircraftId, join?.upgrades);
+    const loadout = this.loadout(join?.aircraftId ?? aircraftId, join?.upgrades);
     const aircraft = new Aircraft(loadout.flight, {}, FLIGHT_CONFIG, this.deps.groundHeight);
     aircraft.respawn(spawnPosition(id, { x: 0, y: 0, z: 0 }), SPAWN_ORIENTATION);
     this.remotes.set(id, {
@@ -106,6 +140,7 @@ export class HostGame extends NetGameEvents implements NetGame {
       fighter: this.arena.add(id, aircraft, fighterSpec(loadout)),
       input: new InputBuffer(),
       sample: createRemoteSample(id, aircraftId),
+      pendingResume: false,
     });
   }
 
@@ -113,11 +148,26 @@ export class HostGame extends NetGameEvents implements NetGame {
     return this.own.hp;
   }
 
+  get countdownRemaining(): number {
+    return this.countdown.remainingSeconds;
+  }
+
+  get inputBlocked(): boolean {
+    return this.countdown.active;
+  }
+
   step(controls: Readonly<AircraftControls>, combat: Readonly<LocalCombat>, dt: number): void {
     if (this.over) return;
     this.tick++;
     const arena = this.arena;
     arena.tick = this.tick;
+    if (this.countdown.step()) {
+      // カウントダウン中: 全機を開始位置で止め、操作は使わない（状態と残り時間だけ配る）
+      for (const f of arena.all) holdAircraft(f.aircraft);
+      if (this.tick % this.stateEvery === 0) this.broadcastState();
+      if (this.scoreDirty || this.tick % this.scoreEvery === 0) this.sendScore(false);
+      return;
+    }
     const c = applyCombat(
       toNetControls(this.ownControls, controls, this.deps.own.flight.options),
       combat,
@@ -126,10 +176,12 @@ export class HostGame extends NetGameEvents implements NetGame {
     for (const r of this.remotes.values()) {
       const inputs = r.input.pull();
       const a = r.fighter.aircraft;
-      // 入力が届いていなければ止める（前の位置のまま。補間の線が伸びないよう prev も合わせる）
-      if (inputs.length === 0) {
-        copyVec3(a.prevPosition, a.state.position);
-        copyQuat(a.prevOrientation, a.state.orientation);
+      // 入力が届いていなければ止める
+      if (inputs.length === 0) holdAircraft(a);
+      else if (r.pendingResume) {
+        // 再接続した人の入力が届き直した: この tick の終わりに出現位置へ（復帰の event の seq から計算し直してもらう）
+        r.pendingResume = false;
+        arena.setAway(r.id, false);
       }
       // 各ステップでクライアントが見ていた tick（遅延補償）= seq + 届いた最新のメッセージのずれ
       const offset = r.input.viewOffset;
@@ -168,6 +220,7 @@ export class HostGame extends NetGameEvents implements NetGame {
         deaths: f.deaths,
         shots: f.shots,
         hits: f.hits,
+        bestStreak: f.bestStreak,
       })),
     };
   }
@@ -211,27 +264,7 @@ export class HostGame extends NetGameEvents implements NetGame {
   samples(alpha: number): readonly RemoteSample[] {
     const list = this.list;
     list.length = 0;
-    for (const r of this.remotes.values()) {
-      const f = r.fighter;
-      const a = f.aircraft;
-      const p = a.state.position;
-      const q = a.prevPosition;
-      const out = r.sample;
-      out.position.x = q.x + (p.x - q.x) * alpha;
-      out.position.y = q.y + (p.y - q.y) * alpha;
-      out.position.z = q.z + (p.z - q.z) * alpha;
-      slerp(out.orientation, a.prevOrientation, a.state.orientation, alpha);
-      out.alive = f.alive;
-      out.afterburner = a.state.afterburnerActive;
-      out.throttle = a.throttle;
-      out.velocity.x = f.velocity.x;
-      out.velocity.y = f.velocity.y;
-      out.velocity.z = f.velocity.z;
-      out.speed = a.state.speed;
-      out.hp = f.hp;
-      out.invulnerable = f.invulnerable;
-      list.push(out);
-    }
+    for (const r of this.remotes.values()) list.push(interpolateSample(r.fighter, r.sample, alpha));
     return list;
   }
 
@@ -246,39 +279,11 @@ export class HostGame extends NetGameEvents implements NetGame {
   }
 
   stats(nowMs: number): NetStats {
-    let rtt = 0;
-    let n = 0;
-    let backlog = 0;
-    let guessed = 0;
-    let starved = 0;
-    let resyncs = 0;
-    let rewind = 0;
-    for (const r of this.remotes.values()) {
-      const v = this.room.rtt(r.id);
-      if (v !== null) {
-        rtt += v;
-        n++;
-      }
-      backlog = Math.max(backlog, r.input.backlog);
-      guessed += r.input.guessed;
-      starved += r.input.starved;
-      resyncs += r.input.resyncs;
-      const off = r.input.viewOffset;
-      if (off !== null) rewind = Math.max(rewind, this.tick - (r.input.lastApplied + off));
-    }
-    return {
-      role: 'host',
-      rttMs: n > 0 ? rtt / n : null,
-      stateRate: this.sent.rate(nowMs),
-      interpDelayMs: 0,
-      bufferMarginMs: 0,
-      extrapolating: 0,
-      corrections: 0,
-      inputBacklog: backlog,
-      inputGuessed: guessed,
-      inputStarved: starved,
-      inputResyncs: resyncs,
-      rewindMs: (rewind * 1000) / TICK_HZ,
-    };
+    return hostStats(
+      this.remotes.values(),
+      (id) => this.room.rtt(id),
+      this.tick,
+      this.sent.rate(nowMs),
+    );
   }
 }

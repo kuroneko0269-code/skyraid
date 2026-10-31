@@ -152,9 +152,10 @@
   padding: var(--ui-space-4);
 }
 
-/* お知らせ（ホストが切断しました など） */
+/* お知らせ（ホストが切断しました など）。5-4: ロビー・モード選択の画面（z-index 50）とダイアログ（60）の上に出す */
 .pvp-toast {
   position: fixed;
+  z-index: 65;
   left: 50%;
   top: calc(var(--ui-space-5) + var(--ui-safe-top));
   transform: translateX(-50%);
@@ -179,4 +180,320 @@
 
 .pvp-debug[hidden] {
   display: none;
+}
+
+/* ---- 5-4: 部屋の画面（横に広い画面は 2 列: 左に部屋コード・共有・ルール、右に参加者・定型文） ---- */
+.lobby-panel.is-wide {
+  width: min(880px, 100%);
+}
+
+.lobby-room {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ui-space-3);
+}
+
+.lobby-room[hidden] {
+  display: none;
+}
+
+.lobby-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
+  min-width: 0;
+}
+
+.lobby-wait,
+.lobby-buttons {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 640px) {
+  .lobby-room {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.lobby-buttons {
+  flex-wrap: wrap;
+}
+
+.lobby-buttons .ui-button {
+  min-height: 48px;
+}
+
+/* 共有・コピー・QR */
+.lobby-share {
+  display: flex;
+  gap: var(--ui-space-2);
+}
+
+.lobby-share-button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+}
+
+.lobby-share-status {
+  min-height: 1.3em;
+  font-size: 12px;
+  color: var(--ui-accent);
+}
+
+.lobby-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+  width: 100%;
+}
+
+.lobby-toggle {
+  flex: 1 1 140px;
+  min-height: 44px;
+  padding: 0 var(--ui-space-3);
+  color: var(--ui-text-dim);
+}
+
+.lobby-toggle::before {
+  content: '□ ';
+}
+
+.lobby-toggle[aria-pressed='true']::before {
+  content: '■ ';
+}
+
+/* 参加者の行: 色・名前と機体・印・吹き出し・チーム・準備 */
+.lobby-player {
+  flex-wrap: wrap;
+  min-height: 44px;
+  padding: var(--ui-space-1) var(--ui-space-2);
+}
+
+.lobby-player.is-away {
+  opacity: 0.55;
+}
+
+.lobby-who {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lobby-craft {
+  font-size: 11px;
+  color: var(--ui-text-dim);
+}
+
+.lobby-status {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--ui-text-faint);
+}
+
+.lobby-status.is-ready {
+  color: var(--ui-accent);
+}
+
+.lobby-team {
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 var(--ui-space-2);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+}
+
+.lobby-bubble {
+  --cut: var(--ui-cut-sm);
+  padding: 2px var(--ui-space-2);
+  font-size: 12px;
+  color: var(--ui-text);
+  background: var(--ui-accent-fill-hover);
+  clip-path: polygon(
+    var(--cut) 0,
+    100% 0,
+    100% calc(100% - var(--cut)),
+    calc(100% - var(--cut)) 100%,
+    0 100%,
+    0 var(--cut)
+  );
+  animation: lobby-pop 0.18s ease-out;
+}
+
+@keyframes lobby-pop {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* 定型文（3 × 2） */
+.lobby-chat {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ui-space-1);
+}
+
+.lobby-chat-button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 var(--ui-space-1);
+  font-size: 13px;
+}
+
+/* ハンガー・QR のダイアログ（画面全体に重ねる） */
+.lobby-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--ui-space-3) + var(--ui-safe-top))
+    calc(var(--ui-space-3) + var(--ui-safe-right)) calc(var(--ui-space-3) + var(--ui-safe-bottom))
+    calc(var(--ui-space-3) + var(--ui-safe-left));
+  background: var(--ui-scrim);
+}
+
+.lobby-overlay[hidden] {
+  display: none;
+}
+
+.lobby-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
+  width: min(440px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--ui-space-4);
+}
+
+.lobby-qr-frame {
+  align-self: center;
+  line-height: 0;
+  background: #fff;
+}
+
+.lobby-qr-canvas {
+  width: 220px;
+  height: 220px;
+  image-rendering: pixelated;
+}
+
+.lobby-qr-url {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ui-text-dim);
+  word-break: break-all;
+}
+
+.lobby-hangar-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
+}
+
+.lobby-hangar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 56px;
+  text-align: left;
+}
+
+.lobby-hangar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-2);
+  width: 100%;
+}
+
+.lobby-hangar-name {
+  font-weight: 600;
+}
+
+.lobby-hangar-stats {
+  font-size: 11px;
+  color: var(--ui-text-dim);
+}
+
+/* リザルト（5-4）: チームの合計・ベストプレイヤー・「もう一度」の印 */
+.pvp-result-teams {
+  font: 600 20px/1.3 var(--ui-font-display);
+  letter-spacing: 0.08em;
+}
+
+.pvp-result-best {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ui-space-2);
+}
+
+.pvp-result-best-name {
+  font: 600 22px/1.2 var(--ui-font-display);
+  text-shadow: var(--ui-shadow-text);
+}
+
+.pvp-result-best-kills {
+  color: var(--ui-text-dim);
+}
+
+.lobby-again {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-1);
+}
+
+.pvp-again {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-1);
+}
+
+.pvp-again-chip {
+  display: inline-flex;
+  gap: var(--ui-space-1);
+  align-items: center;
+  min-height: 32px;
+  padding: 0 var(--ui-space-2);
+  font-size: 12px;
+  color: var(--ui-text-faint);
+  background: var(--ui-bg-sunken);
+}
+
+.pvp-again-chip.is-done {
+  color: var(--ui-text);
+}
+
+.campaign-fact[hidden] {
+  display: none;
+}
+
+/* 横画面のスマホ: 退出・ハンガー・準備 / 開始は枠の下端に貼り付け、スクロールしても押せるように */
+@media (max-height: 480px) {
+  .lobby-buttons {
+    position: sticky;
+    /* 枠の余白（campaign.css の横画面: 10px 16px）の分だけはみ出して端まで塗る */
+    bottom: -10px;
+    z-index: 1;
+    margin: 0 -16px -10px;
+    padding: var(--ui-space-2) 16px 10px;
+    background: var(--ui-bg-strong);
+  }
+
+  .lobby-buttons .ui-button {
+    min-height: 44px;
+  }
+
+  .lobby-room {
+    gap: var(--ui-space-2);
+  }
 }

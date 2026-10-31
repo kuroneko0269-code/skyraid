@@ -71,11 +71,16 @@ async function simulate(
   const games: (ClientGame | null)[] = clients.map(() => null);
   clients.forEach((c, i) => {
     c.onStart(() => {
-      games[i] = new ClientGame(c, { own: owns[i] ?? kestrel() }, () => lobby.net.now);
+      games[i] = new ClientGame(
+        c,
+        { own: owns[i] ?? kestrel(), countdownSeconds: 0 },
+        () => lobby.net.now,
+      );
     });
   });
   host.start();
-  const hostGame = new HostGame(host, { own: hostOwn }, () => lobby.net.now);
+  // カウントダウン（5-4）は別のテスト（pvp-lobby.test.ts）。ここでは同期だけを見る
+  const hostGame = new HostGame(host, { own: hostOwn, countdownSeconds: 0 }, () => lobby.net.now);
   // ホストの正: tick ごとの全機の位置、参加者の機体に使った入力の seq ごとの位置
   const truth: Vec3[][] = [[], [], [], []];
   const hostBySeq = [0, 1, 2, 3].map(() => new Map<number, Vec3>());

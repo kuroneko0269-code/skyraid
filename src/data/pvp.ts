@@ -63,4 +63,42 @@ export const PVP_CONFIG = {
   },
   /** スコアボードを出す Tab の長押しの秒数 */
   scoreboardHoldSeconds: 0.25,
+  /** 開始前のカウントダウンの秒数（5-4。その間は全機を止め、操作を無視する） */
+  countdownSeconds: 3,
+  /** 残り時間の警告（秒。この時刻を過ぎたとき警告音と表示。5-4） */
+  timeWarnings: [30, 10],
+  /** 残り時間の警告の表示秒数 */
+  timeWarningShowSeconds: 2,
+  /** 初心者保護（5-4。ホスト設定）: 撃墜数が最下位の人の復帰時に HP をこの倍率、ミサイルを extraMissiles 発増やす */
+  rookie: {
+    hpScale: 1.5,
+    extraMissiles: 2,
+  },
+  /** ロビーの定型文（5-4）: 全員のロビーに出す秒数と、1 人が続けて送れる間隔（ホストが間引く） */
+  chat: {
+    showSeconds: 3,
+    minIntervalSeconds: 1,
+  },
+} as const;
+
+/** ロビーの定型文（5-4。番号で送る） */
+export const PVP_QUICK_PHRASES = [
+  '準備OK',
+  'ちょっと待って',
+  'もう一戦',
+  'よろしく',
+  'ナイス！',
+  'ありがとう',
+] as const;
+
+/** 対戦のモード（5-4）: 個人戦 / チーム戦（2 対 2） */
+export const PVP_MODES = ['ffa', 'team'] as const;
+export type PvpMode = (typeof PVP_MODES)[number];
+
+/** チーム戦のチーム（0 = A、1 = B）の色と、飛行中の敵味方の色（名札・レーダー） */
+export const PVP_TEAM = {
+  names: ['A', 'B'],
+  colors: [0xe0402a, 0x2a8fe0],
+  allyColor: 0x6ef0ff,
+  enemyColor: 0xff483c,
 } as const;

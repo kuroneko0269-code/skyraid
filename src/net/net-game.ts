@@ -144,6 +144,10 @@ export interface NetGame extends NetGameEvents {
   readonly missileVersion: number;
   /** 自機の HP（ホストの判定） */
   readonly ownHp: number;
+  /** 開始前のカウントダウンの残り秒数（0 は始まっている。5-4） */
+  readonly countdownRemaining: number;
+  /** 自機の戦闘の操作を使わない（カウントダウン中・再接続中。5-4） */
+  readonly inputBlocked: boolean;
 }
 
 /** 自機の操作と飛行の設定 → 通信の操作 */

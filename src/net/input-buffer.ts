@@ -67,6 +67,15 @@ export class InputBuffer {
     }
   }
 
+  /** 溜め直す（5-4。再接続した人の古い seq を忘れ、次に届くメッセージから使い始める） */
+  reset(): void {
+    this.next = 0;
+    this.newest = 0;
+    this.late = 0;
+    this.buffering = true;
+    this.viewOffset = null;
+  }
+
   /** 溜まっているステップ数 */
   get backlog(): number {
     return this.next === 0 ? 0 : this.newest - this.next + 1;

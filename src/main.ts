@@ -154,6 +154,11 @@ const pvp = new PvpEntry(screens, search, {
   session,
   playerView,
   pilotName: () => save.pilotName,
+  needsPilotName: () => save.needsPilotName,
+  // 5-4: カウントダウン・GO・残り時間の警告の音
+  sound: (kind) => {
+    audio.playUi(kind);
+  },
   groundHeight: getGroundHeight,
   // 5-3: スコアボードは Tab（ターゲット切替のキー）の長押し、他プレイヤーの機銃は敵機と同じ位置付きの音
   scoreKeyDown: () => input.isDown('targetNext'),

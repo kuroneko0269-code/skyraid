@@ -1,15 +1,43 @@
 // PvP（5-1）の入口。main.ts が静的に読むのはこのファイルだけで、通信（src/net/・peerjs）とロビーは
 // PvP を選んだとき・?room のときに import() で別のチャンクとして読む（シングルプレイの読み込みと性能に影響しない）
 import type { AircraftDetail } from '../data/aircraft-model';
+import type { Loadout } from '../progression/loadout';
 import type { CombatInput } from '../combat/combat-input';
 import type { AircraftControls } from '../entities/aircraft';
 import type { PvpDeps, PvpLink } from './pvp-link';
 import type { Screens } from './screens';
+import type { GameState } from '../core/game-state';
 
 /** ?room=XXXXXX（部屋コードは pvp-link 側で検査する）。なければ null */
 export function parseRoomParam(search: string): string | null {
   const v = new URLSearchParams(search).get('room');
   return v ? v : null;
+}
+
+/**
+ * 参加用 URL（5-4。共有・QR）: 今のページの URL から ?room=コード を作る。?net=local（確認用）だけは残し、ほかの
+ * クエリ（?netdebug など）は落とす
+ */
+export function buildJoinUrl(href: string, code: string): string {
+  const url = new URL(href);
+  const local = url.searchParams.get('net') === 'local';
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('room', code);
+  if (local) url.searchParams.set('net', 'local');
+  return url.toString();
+}
+
+/** URL から ?room を消す（5-4。読み込み直しや「ホーム画面に追加」で同じ部屋に入り直さない） */
+export function withoutRoomParam(href: string): string {
+  const url = new URL(href);
+  // URLSearchParams で書き直すと ?netdebug が ?netdebug= になるので、文字列のまま room だけ抜く
+  const rest = url.search
+    .slice(1)
+    .split('&')
+    .filter((kv) => kv !== '' && kv.split('=')[0] !== 'room');
+  url.search = rest.length > 0 ? `?${rest.join('&')}` : '';
+  return url.toString();
 }
 
 /** ?net=local: PeerJS の代わりに同じブラウザのタブどうしで通信する（1 台の PC で確かめる用） */
@@ -30,10 +58,14 @@ export class PvpEntry {
   private readonly room: string | null;
 
   constructor(
-    screens: Screens,
+    private readonly screens: Screens,
     /** URL のクエリ文字列（?room・?netdebug） */
     search: string,
-    deps: Omit<PvpDeps, 'aircraftDetail' | 'parent' | 'hangar' | 'debug' | 'transport'>,
+    deps: Omit<PvpDeps, 'aircraftDetail' | 'parent' | 'hangar' | 'debug' | 'transport'> & {
+      readonly game: GameState;
+      /** パイロット名がまだない（初回起動） */
+      readonly needsPilotName: () => boolean;
+    },
   ) {
     this.deps = {
       ...deps,
@@ -43,6 +75,14 @@ export class PvpEntry {
       transport: parseNetTransport(search),
     };
     this.room = parseRoomParam(search);
+    this.needsPilotName = deps.needsPilotName;
+    if (this.room) {
+      try {
+        window.history.replaceState(null, '', withoutRoomParam(window.location.href));
+      } catch {
+        // 消せなくても参加はできる
+      }
+    }
     screens.setPvpHandlers({
       onSelect: () => {
         void this.load().then((l) => {
@@ -63,13 +103,31 @@ export class PvpEntry {
     return this.loading;
   }
 
-  /** ?room=XXXXXX で直接参加する（起動してタイトルを出した後に呼ぶ。なければ何もしない） */
+  private readonly needsPilotName: () => boolean;
+
+  /**
+   * ?room=XXXXXX で直接参加する（起動してタイトルを出した後に呼ぶ。なければ何もしない）。
+   * パイロット名が決まっていればロビーへ直行、まだなら名前の入力を挟んでからロビーへ（5-4）
+   */
   joinFromUrl(): void {
     const code = this.room;
     if (!code) return;
-    void this.load().then((l) => {
-      l.openLobby(code);
-    });
+    const open = (): void => {
+      void this.load().then((l) => {
+        l.openLobby(code);
+      });
+    };
+    if (!this.needsPilotName()) {
+      open();
+      return;
+    }
+    this.screens.setAfterPilotName(open);
+    this.deps.game.transition('pilot_name');
+  }
+
+  /** PvP の飛行の装備（強化の無効を反映。5-4）。PvP を読んでいなければ null */
+  loadout(): Loadout | null {
+    return this.link?.loadout() ?? null;
   }
 
   /** PvP の飛行中か（固定ステップと Esc を PvP に回す） */

@@ -152,7 +152,8 @@ export function fillRadar(r: HudRadarFrame, ff: FlightSession, assist = false): 
     if (!e.active || !c || n >= max) continue;
     c.x = e.position.x;
     c.z = e.position.z;
-    c.kind = 'enemy';
+    // PvP のチーム戦の味方は味方の色（5-4。シングルの敵機は TEAM_ENEMY）
+    c.kind = e.team === TEAM_PLAYER ? 'ally' : 'enemy';
     const dy = e.position.y - p.y;
     c.altitude = dy > hc.altitudeThreshold ? 'above' : dy < -hc.altitudeThreshold ? 'below' : '';
     c.behind = false;

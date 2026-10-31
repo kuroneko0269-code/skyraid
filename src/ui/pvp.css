@@ -149,3 +149,135 @@
   min-width: 6em;
   padding-block: 4px;
 }
+
+/* ---- 5-4: カウントダウン・残り時間の警告・撃墜の画面・無敵・再接続中（押せない。タッチ操作の邪魔をしない） ---- */
+.pvp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 17;
+  pointer-events: none;
+}
+
+.pvp-overlay[hidden],
+.pvp-overlay [hidden] {
+  display: none;
+}
+
+.pvp-count {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  font: 600 96px/1 var(--ui-font-display);
+  color: var(--ui-accent);
+  text-shadow: var(--ui-glow), var(--ui-shadow-text);
+}
+
+.pvp-count.is-go {
+  color: var(--ui-gold);
+  text-shadow: var(--ui-gold-glow), var(--ui-shadow-text);
+}
+
+.pvp-warning {
+  position: absolute;
+  left: 50%;
+  top: calc(64px + var(--ui-safe-top));
+  transform: translateX(-50%);
+  padding: var(--ui-space-1) var(--ui-space-4);
+  font: 600 22px/1.3 var(--ui-font-display);
+  letter-spacing: 0.1em;
+  color: var(--ui-warn-text);
+  background: var(--ui-warn-fill);
+  text-shadow: var(--ui-shadow-text);
+  white-space: nowrap;
+  animation: hud-blink 0.5s steps(1, end) 4;
+}
+
+.pvp-downed {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ui-space-1);
+  min-width: min(320px, calc(100% - 32px));
+  padding: var(--ui-space-4) var(--ui-space-5);
+  --fill: var(--ui-warn-fill);
+  --edge: var(--ui-warn-line);
+}
+
+.pvp-downed-title {
+  font: 600 24px/1.2 var(--ui-font-display);
+  letter-spacing: 0.1em;
+  color: var(--ui-warn-text);
+}
+
+.pvp-downed-by {
+  font: 600 15px/1.4 var(--ui-font-body);
+  color: var(--ui-text-dim);
+}
+
+.pvp-downed-killer {
+  font-weight: 700;
+}
+
+.pvp-downed-count {
+  font: 600 56px/1 var(--ui-font-display);
+  color: var(--ui-text);
+}
+
+.pvp-downed-label {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: var(--ui-text-dim);
+}
+
+.pvp-status {
+  position: absolute;
+  left: 50%;
+  top: calc(44px + var(--ui-safe-top));
+  transform: translateX(-50%);
+  font: 600 13px/1.4 var(--ui-font-body);
+  color: var(--ui-gold);
+  text-shadow: var(--ui-shadow-text);
+  white-space: nowrap;
+}
+
+.pvp-status.is-invulnerable {
+  color: var(--ui-accent);
+}
+
+.pvp-reconnect {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translateX(-50%);
+  padding: var(--ui-space-2) var(--ui-space-4);
+  font: 600 14px/1.4 var(--ui-font-body);
+  --fill: var(--ui-warn-fill);
+  --edge: var(--ui-warn-line);
+}
+
+/* チーム戦の名札（敵味方の色。5-4） */
+.pvp-tag.is-ally .pvp-tag-name::before {
+  content: '▲ ';
+}
+
+@media (max-height: 480px) {
+  .pvp-count {
+    font-size: 64px;
+  }
+
+  .pvp-downed-count {
+    font-size: 40px;
+  }
+}
+
+/* チーム戦の合計（残り時間の下。5-4） */
+.pvp-team-score {
+  font-size: 13px;
+  text-align: center;
+  color: var(--ui-text);
+}

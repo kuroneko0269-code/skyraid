@@ -8,7 +8,7 @@ import {
   type NetMessage,
   type PlayerInfo,
 } from './protocol';
-import type { RoomEndReason } from './room';
+import type { RoomEndReason } from './room-code';
 import type { Channel, Transport } from './transport';
 
 const C = NET_CONFIG.room;
@@ -33,6 +33,7 @@ export abstract class RoomBase {
   private readonly startFns: (() => void)[] = [];
   private readonly endFns: ((reason: RoomEndReason) => void)[] = [];
   private readonly messageFns: ((playerId: number, msg: NetMessage) => void)[] = [];
+  private readonly chatFns: ((from: number, phrase: number) => void)[] = [];
   private nextPing = 0;
   private nonce = 0;
 
@@ -53,6 +54,11 @@ export abstract class RoomBase {
   }
 
   abstract readonly isHost: boolean;
+
+  /** 自分の通信口の ID（PeerJS の ID） */
+  get transportId(): string {
+    return this.transport.localId;
+  }
   protected abstract handle(peerId: string, peer: PeerState, msg: NetMessage): void;
   protected abstract silent(peerId: string, peer: PeerState): void;
 
@@ -66,6 +72,11 @@ export abstract class RoomBase {
 
   onEnd(fn: (reason: RoomEndReason) => void): void {
     this.endFns.push(fn);
+  }
+
+  /** 定型文（5-4。送った人と番号。自分の送ったものもホストを通って届く） */
+  onChat(fn: (from: number, phrase: number) => void): void {
+    this.chatFns.push(fn);
   }
 
   /** ゲームのメッセージ（input / state / start・end 以外の event）。開始前のものも届く */
@@ -107,6 +118,10 @@ export abstract class RoomBase {
     if (this.started) return;
     this.started = true;
     for (const fn of this.startFns) fn();
+  }
+
+  protected emitChat(from: number, phrase: number): void {
+    for (const fn of this.chatFns) fn(from, phrase);
   }
 
   protected emitMessage(playerId: number, msg: NetMessage): void {

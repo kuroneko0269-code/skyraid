@@ -1,7 +1,9 @@
 // PvP（5-1）の配線。main.ts が PvP を選んだとき・?room のときだけ import() で読む（シングルプレイでは読み込まない）。
 // ロビー（部屋を作る / コードで参加 → 名簿 → 開始）→ 飛行（自機は FlightSession の機体、他機は RemoteView）→
 // 終了（自分で退出・ホストの切断）。飛行中の Esc / ⏸ はゲームを止めずにメニューを出す。
-// 5-3: 撃ち合い（1 回の対戦は pvp-flight.ts）、ロビーのルール設定、対戦の終わり → ロビーのリザルト →「もう一度」
+// 5-3: 撃ち合い（1 回の対戦は pvp-flight.ts）、ロビーのルール設定、対戦の終わり → ロビーのリザルト →「もう一度」。
+// 5-4: 準備・ハンガー・共有・定型文・チーム（ロビーの操作は pvp-lobby-actions.ts）、全員の「もう一度」でロビーへ、
+// 切断と再接続のお知らせ、強化の無効を反映した装備
 import type { PerspectiveCamera, Scene } from 'three';
 import type { GameState } from '../core/game-state';
 import type { AircraftDetail } from '../data/aircraft-model';
@@ -10,18 +12,26 @@ import type { CombatInput } from '../combat/combat-input';
 import type { AircraftControls, GroundHeightFn } from '../entities/aircraft';
 import type { FlightSession } from '../missions/flight-session';
 import { ClientRoom } from '../net/client-room';
+import { allAgain } from '../net/lobby-rules';
+import { netLoadout } from '../net/loadout';
 import { openLocalTransport } from '../net/local-transport';
 import { openPeerTransport } from '../net/peerjs-transport';
-import { HostRoom, JoinFailure, normalizeRoomCode, type JoinError } from '../net/room';
-import type { RoomEndReason } from '../net/room';
+import { HostRoom, JoinFailure, normalizeRoomCode } from '../net/room';
+import type { PlayerProfile, RoomEndReason } from '../net/room';
 import type { TransportOpener } from '../net/transport';
 import type { Hangar } from '../progression/hangar';
+import type { Loadout } from '../progression/loadout';
 import type { PlayerView } from '../render/player-view';
 import { RemoteView, playerShape } from '../render/remote-view';
+import { findAircraftModel } from '../data/aircraft';
 import { LobbyScreen } from './lobby';
+import { JOIN_ERRORS, lobbyActions, rosterNotices, type RosterSnapshot } from './pvp-lobby-actions';
 import { PvpBoard, onRadarTap } from './pvp-board';
-import { PvpFlight } from './pvp-flight';
+import { PvpFlight, type PvpSound } from './pvp-flight';
 import { PvpHud } from './pvp-hud';
+import { PvpOverlay } from './pvp-overlay';
+import { buildJoinUrl } from './pvp-entry';
+import { PVP_QUICK_PHRASES } from '../data/pvp';
 
 export interface PvpDeps {
   readonly parent: HTMLElement;
@@ -42,24 +52,17 @@ export interface PvpDeps {
   readonly scoreKeyDown: () => boolean;
   /** 他プレイヤーの機銃の発射音（5-3。位置付き） */
   readonly otherGun: (x: number, y: number, z: number) => void;
+  /** カウントダウン・GO・残り時間の警告の音（5-4） */
+  readonly sound: (kind: PvpSound) => void;
 }
 
-const JOIN_ERRORS: Record<JoinError, string> = {
-  'not-found': 'その部屋は見つかりません（コードを確かめてください）',
-  full: '満員です（最大 4 人）',
-  started: 'すでに始まっています',
-  version: 'ホストとバージョンが違います（両方とも再読み込みしてください）',
-  timeout: '応答がありません（時間切れ）',
-  network: '接続できませんでした',
-  unsupported: 'このブラウザは P2P 通信（WebRTC）に対応していません',
-};
-
-/** 部屋の tick（ping・無通信の検知）の間隔（ms） */
+/** 部屋の tick（ping・無通信の検知・再接続）の間隔（ms） */
 const ROOM_TICK_MS = 250;
 
 export class PvpLink {
   private readonly lobby: LobbyScreen;
   private readonly hud: PvpHud;
+  private readonly overlay: PvpOverlay;
   private readonly remotes: RemoteView;
   private readonly open: TransportOpener;
   private readonly board: PvpBoard;
@@ -68,15 +71,14 @@ export class PvpLink {
   private timer = 0;
   /** 接続中に取り消したら、つながっても抜ける */
   private attempt = 0;
+  /** 直前の名簿（切断・再接続・離脱のお知らせ） */
+  private roster: RosterSnapshot = new Map();
 
   constructor(private readonly deps: PvpDeps) {
     this.open = deps.transport === 'local' ? openLocalTransport : openPeerTransport;
     this.lobby = new LobbyScreen(deps.parent, {
       onCreate: () => void this.create(),
       onJoin: (code) => void this.join(code),
-      onStart: () => {
-        if (this.room instanceof HostRoom) this.room.start();
-      },
       onLeave: () => {
         this.leave();
       },
@@ -84,14 +86,12 @@ export class PvpLink {
         this.leave();
         deps.game.transition('mode_select');
       },
-      onSettings: (scoreLimit, timeLimitSeconds) => {
-        const room = this.room;
-        if (room instanceof HostRoom)
-          room.setSettings({ ...room.settings, scoreLimit, timeLimitSeconds });
-      },
-      onAgain: () => {
-        this.refreshRoster(true);
-      },
+      ...lobbyActions({
+        room: () => this.room,
+        hangar: deps.hangar,
+        lobby: () => this.lobby,
+        profile: (aircraftId) => this.profile(aircraftId),
+      }),
     });
     this.hud = new PvpHud(
       deps.parent,
@@ -106,6 +106,7 @@ export class PvpLink {
       deps.debug,
     );
     this.board = new PvpBoard(deps.parent);
+    this.overlay = new PvpOverlay(deps.parent);
     this.remotes = new RemoteView(deps.scene, deps.aircraftDetail);
     // タッチ: レーダーをタップするとスコアボードを開閉する
     onRadarTap(() => {
@@ -134,8 +135,9 @@ export class PvpLink {
     } else if (!this.room) this.lobby.showMenu();
   }
 
-  /** Esc（ロビー）: 接続中・部屋の中なら抜けて最初の選択へ、最初の選択ならモード選択へ */
+  /** Esc（ロビー）: ダイアログを閉じる → 接続中・部屋の中なら抜けて最初の選択へ、最初の選択ならモード選択へ */
   back(): void {
+    if (this.lobby.closeDialog()) return;
     if (this.lobby.currentView !== 'menu') this.leave();
     else this.deps.game.transition('mode_select');
   }
@@ -145,13 +147,28 @@ export class PvpLink {
     this.hud.setMenuOpen(!this.hud.menuOpen);
   }
 
-  private profile() {
+  /** 自分のプロフィール（パイロット名・機体・シングルの強化 Lv。強化の無効はホストが決める） */
+  private profile(aircraftId = this.deps.hangar.selectedId): PlayerProfile {
     const h = this.deps.hangar;
     return {
       name: this.deps.pilotName() ?? SAVE_CONFIG.defaultPilotName,
-      aircraftId: h.selectedId,
-      upgrades: { ...h.levels(h.selectedId) },
+      aircraftId,
+      upgrades: { ...h.levels(aircraftId) },
     };
+  }
+
+  /** 名簿の自分の機体（ホストが知っている機体で飛ぶ。ロビーで変えた直後の行き違いを防ぐ） */
+  private ownAircraftId(): string {
+    const room = this.room;
+    const me = room?.players.find((p) => p.id === room.localPlayerId);
+    return me?.aircraftId ?? this.deps.hangar.selectedId;
+  }
+
+  /** PvP の飛行の装備（ホストが強化を無効にしていれば Lv 0。5-4） */
+  loadout(): Loadout {
+    const id = this.ownAircraftId();
+    const off = this.room?.settings.noUpgrades ?? true;
+    return netLoadout(id, off ? undefined : this.deps.hangar.levels(id));
   }
 
   private async create(): Promise<void> {
@@ -193,6 +210,7 @@ export class PvpLink {
 
   private attach(room: HostRoom | ClientRoom): void {
     this.room = room;
+    this.roster = new Map();
     room.onRoster(() => {
       this.refreshRoster();
     });
@@ -202,26 +220,47 @@ export class PvpLink {
     room.onEnd((reason) => {
       this.finish(reason);
     });
+    room.onChat((from, phrase) => {
+      if (this.lobby.currentView === 'room') this.lobby.showChat(from, phrase);
+      else if (this.deps.game.state === 'lobby') {
+        const name = room.players.find((p) => p.id === from)?.name ?? '';
+        this.hud.notify(`${name}: ${PVP_QUICK_PHRASES[phrase] ?? ''}`, 3);
+      }
+    });
+    if (room instanceof ClientRoom) {
+      room.onReconnect((reconnecting) => {
+        if (reconnecting && this.deps.game.state === 'lobby')
+          this.lobby.showConnecting('接続が途切れました。再接続しています…');
+      });
+    }
     this.timer = window.setInterval(() => {
       room.tick();
     }, ROOM_TICK_MS);
     this.refreshRoster();
   }
 
-  /** 名簿が変わった。ロビーなら出し直す（リザルトの表示中はそのまま。force は「もう一度」） */
-  private refreshRoster(force = false): void {
+  /** 名簿が変わった: お知らせ、ロビーの描き直し（リザルトは全員が「もう一度」を押すまでそのまま） */
+  private refreshRoster(): void {
     const room = this.room;
     if (!room) return;
     this.flight?.syncRoster();
-    if (this.deps.game.state === 'lobby' && (force || this.lobby.currentView !== 'result'))
-      this.lobby.showRoom({
-        code: room.code,
-        isHost: room.isHost,
-        localId: room.localPlayerId,
-        players: room.players,
-        mapName: room.settings.mapId === 'island' ? '海岸と島' : room.settings.mapId,
-        settings: room.settings,
-      });
+    const notices = rosterNotices(this.roster, room.players, room.localPlayerId);
+    this.roster = new Map(room.players.map((p) => [p.id, { name: p.name, away: p.away }]));
+    if (notices.length > 0) this.hud.notify(notices.join(' / '));
+    if (this.deps.game.state !== 'lobby') return;
+    if (this.lobby.currentView === 'result') {
+      this.lobby.updateAgain(room.players, room.localPlayerId);
+      if (!allAgain(room.players)) return;
+    }
+    this.lobby.showRoom({
+      code: room.code,
+      joinUrl: buildJoinUrl(window.location.href, room.code),
+      isHost: room.isHost,
+      localId: room.localPlayerId,
+      players: room.players,
+      mapName: room.settings.mapId === 'island' ? '海岸と島' : room.settings.mapId,
+      settings: room.settings,
+    });
   }
 
   /**
@@ -240,11 +279,13 @@ export class PvpLink {
       remotes: this.remotes,
       hud: this.hud,
       board: this.board,
+      overlay: this.overlay,
       scoreKeyDown: d.scoreKeyDown,
       otherGun: d.otherGun,
+      sound: d.sound,
     });
-    const model = d.hangar.selectedModel;
-    const missiles = d.hangar.loadout().missiles;
+    const model = findAircraftModel(this.ownAircraftId()) ?? d.hangar.selectedModel;
+    const missiles = this.loadout().missiles;
     d.playerView.setModel({ ...model, shape: playerShape(model, room.localPlayerId) }, missiles);
     d.playerView.respawn(d.session.aircraft);
   }
@@ -258,7 +299,8 @@ export class PvpLink {
     this.endFlight();
     const game = this.deps.game;
     if (game.state === 'flight') game.transition('lobby');
-    this.lobby.showResult(f.result());
+    const room = this.room;
+    if (room) this.lobby.showResult(f.result(), room.players);
   }
 
   /** 描画フレームごと（pipeline.render の前）。他機・名札・成績・?netdebug */
@@ -288,8 +330,12 @@ export class PvpLink {
     this.room = null;
     this.endFlight();
     const game = this.deps.game;
-    if (reason === 'host-left') {
-      this.hud.notify('ホストが切断しました');
+    if (reason !== 'left') {
+      this.hud.notify(
+        reason === 'host-left'
+          ? 'ホストが切断しました'
+          : '接続が切れました（再接続できませんでした）',
+      );
       if (game.state === 'flight' || game.state === 'lobby') game.transition('mode_select');
       this.lobby.showMenu();
       return;
