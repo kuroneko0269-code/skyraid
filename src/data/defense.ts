@@ -90,7 +90,7 @@ export const DEFENSE_CONFIG = {
   /** 協力の人数スケール: 数 × (base + perPlayer × 人数)。1 人で 1 */
   coopScale: { base: 0.6, perPlayer: 0.4 },
   /** 波の前の準備時間（最初の波の前も）。スキップできる */
-  intermissionSeconds: 20,
+  intermissionSeconds: 12,
   /** 敵が出る距離（基地の中心から、来る方向へ）と、横に並べる間隔 */
   spawnDistance: 8000,
   spawnSpacing: 180,

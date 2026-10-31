@@ -26,13 +26,12 @@ export const DEFENSE_WAVES: readonly DefenseWaveDef[] = [
   { groups: [{ kind: 'fighter', count: 2, difficulty: 'easy' }] },
   {
     groups: [
-      { kind: 'fighter', count: 2, difficulty: 'easy' },
+      { kind: 'fighter', count: 1, difficulty: 'easy' },
       { kind: 'cruise', count: 1, difficulty: 'easy', delay: 8 },
     ],
   },
   {
     groups: [
-      { kind: 'fighter', count: 1, difficulty: 'easy' },
       { kind: 'bomber', count: 1, difficulty: 'easy', escort: 1, delay: 4 },
       { kind: 'cruise', count: 1, difficulty: 'easy', delay: 14 },
     ],
