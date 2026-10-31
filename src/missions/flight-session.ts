@@ -11,6 +11,7 @@ import { FREE_FLIGHT_ENEMIES, type Difficulty, type EnemyForceConfig } from '../
 import { FLIGHT_CONFIG } from '../data/flight';
 import { ISLAND_MAP } from '../data/maps';
 import { WORLD_CONFIG } from '../data/terrain';
+import { SeededRandom } from '../core/random';
 import { Aircraft, type AircraftControls, type GroundHeightFn } from '../entities/aircraft';
 import { headingDegOf, headingQuat, type EnemyAircraft } from '../entities/enemy-aircraft';
 import { PlayerVitals } from '../entities/player-vitals';
@@ -41,6 +42,13 @@ export interface FlightSessionOptions {
 
 export type SessionMode = 'free' | 'mission';
 
+/** フリーフライトの敵の設定（7-B） */
+export interface FreeEnemySettings {
+  enabled: boolean;
+  difficulty: Difficulty;
+  count: number;
+}
+
 const NO_INPUT = createCombatInput();
 /** スタン中の操作（6-2。すべて離した状態） */
 const STUNNED: AircraftControls = { pitch: 0, roll: 0, yaw: 0, throttle: 0, afterburner: false };
@@ -67,6 +75,8 @@ export class FlightSession implements MissionWorld {
   /** 今の開始位置・向き（リスポーンもここ） */
   private readonly startPosition: Vec3 = vec3();
   private readonly startOrientation: Quat = quatIdentity();
+  /** 判定の乱数（7-B。モードの始めに reseed する。キーフレームに状態が入る） */
+  readonly random = new SeededRandom(1);
   /** 撃墜・破壊の数。startFree / startMission で 0 に戻す */
   private readonly destroyed: DestroyTally;
   /** 撃墜を知らせた回数（player.downCount と比べる） */
@@ -83,7 +93,8 @@ export class FlightSession implements MissionWorld {
     const ground = options.groundHeight;
     this.ground = ground ?? (() => FLIGHT_CONFIG.groundAltitude);
     this.buildings = options.buildings ?? (() => null);
-    const rng = options.rng ?? Math.random;
+    // 7-B: 乱数は掛け直せるシード付き（random。飛行の始めに reseed）。テストは rng を直接渡せる
+    const rng = options.rng ?? this.random.next;
     this.freeStart = options.start ?? WORLD_CONFIG.start;
     copyVec3(this.startPosition, this.freeStart);
     this.aircraft = new Aircraft(undefined, options.flightOptions ?? {}, undefined, ground);
@@ -136,6 +147,20 @@ export class FlightSession implements MissionWorld {
   configureEnemies(enabled: boolean, difficulty: Difficulty, count?: number): void {
     if (this.mode === 'free') this.squadron.configure(enabled, difficulty, count);
     else this.pendingEnemies = { enabled, difficulty, count };
+  }
+
+  /** フリーフライトの敵の設定（7-B: 初期状態へ戻すときに残す・リプレイのヘッダ）。ミッション中に変えた分も含む */
+  get freeEnemies(): FreeEnemySettings {
+    const p = this.pendingEnemies;
+    const q = this.squadron;
+    if (p) return { enabled: p.enabled, difficulty: p.difficulty, count: p.count ?? q.count };
+    return { enabled: q.enabled, difficulty: q.difficulty, count: q.count };
+  }
+
+  /** フリーフライトの敵の設定を入れる（出し直さない。次の startFree で使う） */
+  setFreeEnemies(e: Readonly<FreeEnemySettings>): void {
+    this.pendingEnemies = null;
+    this.squadron.setConfig(e.enabled, e.difficulty, e.count);
   }
 
   /**

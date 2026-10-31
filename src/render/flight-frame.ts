@@ -59,9 +59,18 @@ export interface PhotoFrameHook {
   update(): void;
 }
 
+/** 追従カメラの代わりのカメラ（7-B: リプレイの自由・敵視点・シネマ）。置いたら true */
+export interface CameraOverride {
+  update(frameSeconds: number): boolean;
+}
+
 export class FlightFrame {
   /** フォトモードのカメラ（main.ts が入れる） */
   photo: PhotoFrameHook | null = null;
+  /** リプレイのカメラ（7-B。main.ts が入れる） */
+  cameraOverride: CameraOverride | null = null;
+  /** 演出・カメラの時間の倍率（7-B: リプレイの速さ。飛行中だけ） */
+  timeScale = 1;
   /** 島の周りを回る時間。海の波もこれで動かし、ポーズ中は止める */
   private worldTime = 0;
   private lastFrameMs: number | null = null;
@@ -79,10 +88,10 @@ export class FlightFrame {
     if (!isSimulating(state)) menuTick();
     if (!isFrozenFlight(state)) this.worldTime += frameSeconds;
     // 演出（弾・爆発・煙）を進める時間: 飛行中は実時間、フォトモードはコマ送りの 1 ステップだけ
-    let fxSeconds = state === 'flight' ? frameSeconds : 0;
+    let fxSeconds = state === 'flight' ? frameSeconds * this.timeScale : 0;
     if (usesDemoCamera(state)) p.demoCamera.update(frameSeconds);
     else if (state === 'hangar') p.hangarStage.update(frameSeconds);
-    else if (state === 'flight') this.updateFlightView(alpha, frameSeconds);
+    else if (state === 'flight') this.updateFlightView(alpha, frameSeconds * this.timeScale);
     else if (state === 'photo' && this.photo) {
       fxSeconds = this.photo.takeStepSeconds();
       if (fxSeconds > 0) this.updateAircraft(alpha, fxSeconds);
@@ -148,6 +157,7 @@ export class FlightFrame {
     const { session, camera } = p;
     const aircraft = session.aircraft;
     this.updateAircraft(alpha, frameSeconds);
+    if (this.cameraOverride?.update(frameSeconds)) return;
     // カメラが地面にめり込まないよう、前フレームのカメラ位置の地表の高さを渡す
     const groundUnderCamera = p.groundHeight(camera.position.x, camera.position.z);
     const focus = p.assistFlags.camera

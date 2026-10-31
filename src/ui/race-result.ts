@@ -10,6 +10,8 @@ import { formatCredits } from './mission-text';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 export class RaceResultScreen {
+  /** ボタンの上の追加の欄（7-B: リプレイを保存） */
+  readonly extras: HTMLDivElement;
   readonly root: HTMLDivElement;
   private readonly course: HTMLDivElement;
   private readonly outcome: HTMLHeadingElement;
@@ -29,6 +31,7 @@ export class RaceResultScreen {
     this.badges = el('div', 'race-result-badges', panel);
     this.rank = el('div', 'result-rank', panel);
     this.facts = el('div', 'campaign-facts', panel);
+    this.extras = el('div', 'result-extras', panel);
     const buttons = el('div', 'campaign-buttons', panel);
     createButton(buttons, 'ui-button is-ghost campaign-back', 'コース一覧へ', handlers.onList);
     this.retry = createButton(

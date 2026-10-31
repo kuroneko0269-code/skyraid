@@ -23,6 +23,21 @@ export class BuildingField {
   readonly timers: Float32Array;
   /** 崩れた・瓦礫になった・…の変化の回数（描画が見て作り直す） */
   version = 0;
+  /**
+   * リプレイ（7-B）の状態の走査で見ないプロパティ: 描画の作り直しの合図（version）と、作ってから変わらない配置・索引
+   * （layout・grid・tall・cols・rows・config）、問い合わせの重複除け（seen・stamp。stamp は増えるだけなので戻さなくて良い）
+   */
+  static readonly transientKeys: readonly string[] = [
+    'version',
+    'layout',
+    'config',
+    'grid',
+    'tall',
+    'cols',
+    'rows',
+    'seen',
+    'stamp',
+  ];
   private readonly cols: number;
   private readonly rows: number;
   private readonly grid: number[][];

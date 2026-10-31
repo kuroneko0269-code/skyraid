@@ -68,11 +68,18 @@ export class HudLink {
   }
 
   /** element をタップ（クリック）すると、近くに表示している対象を選ぶ（enabled が true の間だけ） */
-  bindTap(element: HTMLElement, enabled: () => boolean): void {
+  bindTap(
+    element: HTMLElement,
+    enabled: () => boolean,
+    /** 選び方（7-B: 記録中はリプレイの記録を通す） */
+    select: (target: CombatTarget) => void = (t) => {
+      this.ff.combat.targeting.select(t);
+    },
+  ): void {
     element.addEventListener('pointerdown', (e) => {
       if (!enabled()) return;
       const target = this.pick(e.clientX, e.clientY);
-      if (target) this.ff.combat.targeting.select(target);
+      if (target) select(target);
     });
   }
 

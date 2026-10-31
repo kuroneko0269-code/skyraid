@@ -54,7 +54,7 @@ export function raceRecord(save: SaveStore, courseId: string): Readonly<RaceReco
 }
 
 /**
- * 結果を記録して保存し、報酬を残高に足す。ghostData はこの走行のゴースト（base64）。
+ * 結果を記録して保存し、報酬を残高に足す。ghostData はこの走行のゴースト（入力の記録の base64。7-B）。
  * 時間切れは何も記録しない（報酬 0）
  */
 export function recordRace(
@@ -98,7 +98,6 @@ export function recordRace(
       const ghost: RaceGhost = {
         time: result.time,
         aircraftId: machine.aircraftId,
-        hz: RACE_CONFIG.ghostHz,
         data: ghostData,
         ringTimes: [...result.ringTimes],
       };

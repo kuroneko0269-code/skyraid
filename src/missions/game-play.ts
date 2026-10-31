@@ -10,6 +10,7 @@ import type { FlightSession } from './flight-session';
 import { RaceRunner, type RaceReference, type RaceWorld } from './race/runner';
 import type { CourseDef } from './race/types';
 import { MissionRunner } from './runner';
+import { SeededRandom } from '../core/random';
 import { DefenseRunner } from './defense/runner';
 import { DEFENSE_CONFIG, type DefenseDifficulty, type DefenseMapDef } from '../data/defense';
 import type { MissionDef, Pose } from './types';
@@ -24,6 +25,8 @@ export class GamePlay {
   race: RaceRunner | null = null;
   /** 進行中（または終わったばかり）の防衛戦（7-2）。防衛戦でなければ null */
   defense: DefenseRunner | null = null;
+  /** 防衛戦の乱数（7-B。来る方向・目標の施設。reseed で掛け直す） */
+  readonly defenseRandom = new SeededRandom(2);
   private readonly defenseListeners: ((d: DefenseRunner | null) => void)[] = [];
   private readonly defender = { id: 0, position: vec3(), speed: 0, active: false };
   private readonly runnerListeners: ((runner: MissionRunner | null) => void)[] = [];
@@ -139,7 +142,13 @@ export class GamePlay {
         enemies: s.enemies,
         groundHeight: s.groundAt,
       },
-      { map, difficulty, players: 1, rng: seed, maxFighters: DEFENSE_CONFIG.soloFighterPool },
+      {
+        map,
+        difficulty,
+        players: 1,
+        rng: seed ?? this.defenseRandom.next,
+        maxFighters: DEFENSE_CONFIG.soloFighterPool,
+      },
     );
     d.bus.on('defense:supply', ({ fraction }) => {
       s.combat.resupplyPart(fraction);
@@ -147,6 +156,12 @@ export class GamePlay {
     this.setDefense(d);
     d.start();
     return d;
+  }
+
+  /** 判定の乱数を掛け直す（7-B: 記録する飛行の始め。再生も同じシードで始める） */
+  reseed(seed: number): void {
+    this.session.random.reseed(seed);
+    this.defenseRandom.reseed((seed ^ 0x9e3779b9) >>> 0);
   }
 
   /** 固定ステップ 1 回分（世界 → ミッションの順。ランナーはこのステップの結果を読む） */

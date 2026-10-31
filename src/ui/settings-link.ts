@@ -4,6 +4,7 @@ import type { AssistFlags } from '../core/assist-settings';
 import type { Input } from '../core/input';
 import type { StorageLike } from '../core/settings';
 import type { FlightSession } from '../missions/flight-session';
+import type { Difficulty } from '../data/ai';
 import type { SaveStore } from '../progression/save-store';
 import { createAssistSettings } from './assist-settings';
 import { createEnemySettings } from './enemy-settings';
@@ -50,10 +51,17 @@ export function createDisplaySettings(p: PauseSettingsParts): {
  * 敵・操作補助・セーブデータの設定を置く（飛行のセッションを作った後に呼ぶ）。
  * 返す操作補助（4-12）の flags は変更のたびに書き換わる（毎フレーム読む）
  */
-export function createGameSettings(p: PauseSettingsParts, session: FlightSession): AssistFlags {
+export function createGameSettings(
+  p: PauseSettingsParts,
+  session: FlightSession,
+  /** 敵の設定を変える（7-B: 記録中はリプレイの記録を通す。省略はその場で変える） */
+  configure: (enabled: boolean, difficulty: Difficulty) => void = (e, d) => {
+    session.configureEnemies(e, d);
+  },
+): AssistFlags {
   // 敵の有無・難易度（ポーズメニューの設定。セーブに保存）
   createEnemySettings(p.panel, p.storage, (enabled, difficulty) => {
-    session.configureEnemies(enabled, difficulty);
+    configure(enabled, difficulty);
     p.modeSelect.setEnemiesEnabled(enabled);
   });
   // 操作補助（4-12）: エイムアシスト（タッチ・パッドだけ）・ターゲットカメラ・HUD 補助。ポーズメニューの設定で OFF にできる

@@ -40,6 +40,8 @@ export class GameLoop {
   private frameId: number | null = null;
   private scheduler: FrameScheduler | null = null;
   private pausedFlag = false;
+  /** 時間の倍率（7-B: リプレイの速さ。0 で止める）。固定更新の dt は変えず、回数が変わる */
+  timeScale = 1;
 
   constructor(options: LoopOptions = {}) {
     const hz = options.updateHz ?? LOOP_CONFIG.updateHz;
@@ -83,7 +85,7 @@ export class GameLoop {
     const dt = Number.isFinite(frameSeconds)
       ? Math.min(Math.max(frameSeconds, 0), this.maxFrameSeconds)
       : 0;
-    if (!this.pausedFlag) this.accumulator += dt;
+    if (!this.pausedFlag) this.accumulator += dt * this.timeScale;
 
     // 浮動小数の誤差で 1/60 ちょうどが 0 回になるのを防ぐ許容値
     const epsilon = this.stepSeconds * 1e-6;

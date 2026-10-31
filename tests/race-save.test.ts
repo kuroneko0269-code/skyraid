@@ -53,12 +53,12 @@ function freshStore(): { store: SaveStore; storage: FakeStorage } {
 
 describe('セーブ v5 → v6', () => {
   it('v5 のデータにレースの記録（空）を足す。ほかはそのまま', () => {
-    expect(SAVE_CONFIG.version).toBe(6);
+    expect(SAVE_CONFIG.version).toBe(7);
     const v6 = createInitialSave();
     const v5: Record<string, unknown> = { ...v6, version: 5, credits: 1234, pilotName: 'ACE' };
     delete v5.races;
     const save = migrateSave(v5);
-    expect(save?.version).toBe(6);
+    expect(save?.version).toBe(7);
     expect(save?.races).toEqual({});
     expect(save?.credits).toBe(1234);
     expect(save?.pilotName).toBe('ACE');
@@ -129,7 +129,6 @@ describe('レースの結果の記録', () => {
     expect(rec.ghost).toEqual({
       time: 60,
       aircraftId: 'kestrel',
-      hz: 15,
       data: 'GHOST',
       ringTimes: [30, 60],
     });

@@ -25,6 +25,8 @@ export interface ResultExtras {
  * 「もう一度」「ミッション一覧へ」
  */
 export class ResultScreen {
+  /** ボタンの上の追加の欄（7-B: リプレイを保存） */
+  readonly extras: HTMLDivElement;
   readonly root: HTMLDivElement;
   private readonly pilot: HTMLDivElement;
   private readonly outcome: HTMLHeadingElement;
@@ -48,6 +50,7 @@ export class ResultScreen {
     this.facts = el('div', 'campaign-facts', panel);
     this.gear = el('div', 'result-gear', panel, 'ハンガーで新しい装備が買えます');
     this.gear.hidden = true;
+    this.extras = el('div', 'result-extras', panel);
     const buttons = el('div', 'campaign-buttons', panel);
     this.back = createButton(
       buttons,

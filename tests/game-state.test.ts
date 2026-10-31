@@ -113,7 +113,7 @@ describe('GameState の遷移', () => {
     ]);
   });
 
-  it('固定更新を進めるのは飛行中だけ。デモカメラはメニュー（boot / title / pilot_name / mode_select / mission_select / briefing / lobby / race_select）', () => {
+  it('固定更新を進めるのは飛行中だけ。デモカメラはメニュー（boot / title / pilot_name / mode_select / mission_select / briefing / lobby / race_select / replay_select）', () => {
     expect(SCREEN_STATES.filter(isSimulating)).toEqual(['flight']);
     expect(SCREEN_STATES.filter(usesDemoCamera)).toEqual([
       'boot',
@@ -124,9 +124,9 @@ describe('GameState の遷移', () => {
       'briefing',
       'lobby',
       'race_select',
+      'replay_select',
     ]);
   });
-
   it('PvP（5-1）: モード選択 ⇄ ロビー → 飛行 → モード選択（退出・ホストの切断）。PvP の飛行にポーズの状態はない', () => {
     const game = gameAt('title', 'mode_select', 'lobby');
     expect(game.transition('mode_select')).toBe(true);
@@ -266,30 +266,17 @@ describe('起動シーケンスと ?skipTitle', () => {
 });
 
 describe('画面状態ごとの HUD の表示（7-5b）', () => {
-  const SHOWN: Record<ScreenState, boolean> = {
-    boot: false,
-    title: false,
-    pilot_name: false,
-    mode_select: false,
-    mission_select: false,
-    briefing: false,
-    flight: true,
-    pause: true,
-    photo: false,
-    result: false,
-    hangar: false,
-    lobby: false,
-    race_select: false,
-  };
+  // HUD を出すのは飛行・ポーズだけ（ほかの画面は全部出さない。7-B のリプレイの一覧も）
+  const SHOWN: readonly ScreenState[] = ['flight', 'pause'];
 
   it('飛行・ポーズだけ出し、タイトル・名前入力・メニュー・ロビー・ハンガー・リザルトでは出さない', () => {
-    for (const s of SCREEN_STATES) expect(hudVisibleOn(s, false), s).toBe(SHOWN[s]);
+    for (const s of SCREEN_STATES) expect(hudVisibleOn(s, false), s).toBe(SHOWN.includes(s));
   });
 
   it('フォトモードは「表示」で HUD を ON にしたときだけ。ほかの画面は photoHud に左右されない', () => {
     expect(hudVisibleOn('photo', true)).toBe(true);
     for (const s of SCREEN_STATES) {
-      if (s !== 'photo') expect(hudVisibleOn(s, true), s).toBe(SHOWN[s]);
+      if (s !== 'photo') expect(hudVisibleOn(s, true), s).toBe(SHOWN.includes(s));
     }
   });
 
@@ -314,7 +301,7 @@ describe('画面状態ごとの HUD の表示（7-5b）', () => {
       'result',
     ];
     for (const s of path) expect(game.transition(s)).toBe(true);
-    expect(seen).toEqual(path.map((s) => [s, SHOWN[s]]));
+    expect(seen).toEqual(path.map((s) => [s, SHOWN.includes(s)]));
     // フォトモードから戻ると飛行（表示）に戻る
     expect(seen[10]).toEqual(['flight', true]);
   });

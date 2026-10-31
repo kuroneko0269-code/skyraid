@@ -55,6 +55,7 @@ export class GameAudio {
     stall: false,
   };
   private lastEnemyGun = -1;
+  private effectsMuted = false;
   /** 天候（7-5。main.ts が入れる）。null は晴れの昼と同じ */
   weather: (() => Readonly<WeatherSoundInput>) | null = null;
   private readonly weatherState: WeatherSoundParams = { rainGain: 0, windScale: 1 };
@@ -156,12 +157,18 @@ export class GameAudio {
     this.shots.shutter();
   }
 
+  /** 効果音を止める（7-B: リプレイのシークで先まで計算する間。演出のきっかけが一度に来るので鳴らさない） */
+  muteEffects(on: boolean): void {
+    this.effectsMuted = on;
+    this.shots.muted = on;
+  }
+
   /** 描画フレームごとに呼ぶ */
   frame(state: ScreenState, pose: Readonly<ListenerPose>): void {
     const engine = this.engine;
     // ポーズ・フォトモード（7-A）はマスター 30%（環境音は小さく続く）。フォトモードは効果音をシャッターだけに
     engine.setPaused(isFrozenFlight(state));
-    this.shots.muted = state === 'photo';
+    this.shots.muted = state === 'photo' || this.effectsMuted;
     this.bgm.play(bgmTrackFor(state));
     if (!engine.ready) return;
     const l = this.listener;

@@ -1,7 +1,7 @@
 // ゲームループ（固定ステップの更新）と、画面の遷移で飛行を始める・止める配線（main.ts から分けた。7-A の事前修正。挙動は変えていない）
 import type { AircraftControls } from '../entities/aircraft';
-import type { CombatInput } from '../combat/combat-system';
 import { applyKaijuToCity } from '../combat/city-damage';
+import type { CombatInput } from '../combat/combat-system';
 import type { CommonKeys } from '../core/common-keys';
 import type { GamepadInput } from '../core/gamepad';
 import { readFlightControls } from '../core/flight-input';
@@ -26,6 +26,17 @@ import type { PvpEntry } from './pvp-entry';
 import type { Screens } from './screens';
 import type { TouchLink } from './touch-link';
 import type { TutorialLink } from './tutorial-link';
+import type { ReplayHub } from '../replay/hub';
+import { stepWorld } from '../replay/sim';
+
+/** 再生（7-B。ui/replay-link.ts）: 再生中は固定ステップを記録の入力で進める */
+export interface FlightLoopReplay {
+  readonly hub: ReplayHub;
+  /** 再生中の固定ステップ 1 回分（キー・速さ・終わりも見る） */
+  update(): void;
+  /** 再生を 1 ステップだけ進める（フォトモードのコマ送り） */
+  stepOnce(): void;
+}
 
 export interface FlightLoopParts {
   readonly game: GameState;
@@ -49,6 +60,9 @@ export interface FlightLoopParts {
   readonly hangarStage: HangarStage;
   readonly aircraftMesh: { visible: boolean };
   readonly startFlight: (def: MissionDef | null, net: boolean) => void;
+  readonly replay: FlightLoopReplay;
+  /** 本番の固定ステップ 1 回ごと（レースのゴースト。7-B） */
+  readonly afterStep: () => void;
 }
 
 /**
@@ -71,19 +85,34 @@ function createFlightUpdate(p: FlightLoopParts): {
   update: (dt: number) => void;
   simulate: (dt: number) => void;
 } {
-  const { input, game, pvp, play, session } = p;
+  const { input, game, pvp, play } = p;
   const simulate = (dt: number): void => {
-    if (pvp.flying) pvp.step(p.controls, p.combatInput, dt);
-    else play.step(p.controls, p.combatInput, dt);
-    // 6-4: 街の建物が崩れる時間と、怪獣（歩行・薙ぎ払い・熱線）が壊す建物
-    const buildings = p.activeMap.buildings;
-    if (buildings) {
-      buildings.step(dt);
-      // 協力（6-6）はホストの RaidHost だけが壊して番号を配り、クライアントは受け取って壊す（ここでは判定しない）
-      if (!p.coopKaiju()) applyKaijuToCity(buildings, session.props.kaiju, session.props.kaijuAi);
+    if (pvp.flying) {
+      pvp.step(p.controls, p.combatInput, dt);
+      const buildings = p.activeMap.buildings;
+      if (buildings) {
+        buildings.step(dt);
+        if (!p.coopKaiju())
+          applyKaijuToCity(buildings, play.session.props.kaiju, play.session.props.kaijuAi);
+      }
+      return;
     }
+    // 7-B: 再生中は記録の入力で（フォトモードのコマ送りもここを通る）
+    if (p.replay.hub.playing) {
+      p.replay.stepOnce();
+      return;
+    }
+    // 記録する飛行は、量子化した入力を記録してからその値で進める（記録と同じ値で判定する）
+    p.replay.hub.capture(p.controls, p.combatInput);
+    // 6-4: 街の建物が崩れる時間と、怪獣（歩行・薙ぎ払い・熱線）が壊す建物（協力はホストの RaidHost が配る）
+    stepWorld(play, p.activeMap.buildings, p.controls, p.combatInput, dt, p.coopKaiju());
+    p.afterStep();
   };
   const update = (dt: number): void => {
+    if (p.replay.hub.playing) {
+      p.replay.update();
+      return;
+    }
     p.gamepad.poll();
     // PvP の飛行中はゲームを止めず、Esc で PvP のメニュー
     if (input.wasPressed('pause') && !pvp.togglePause()) {
@@ -125,7 +154,7 @@ function linkScreenChanges(p: FlightLoopParts): void {
     p.aircraftMesh.visible = !usesDemoCamera(to) && to !== 'hangar' && p.session.player.active;
     p.hangarStage.setShown(to === 'hangar');
     p.touch.refresh();
-    if (to === 'flight' && !isResume(from))
+    if (to === 'flight' && !isResume(from) && !p.replay.hub.playing)
       p.tutorial.onFlightStart(screens.inTutorial ? 'tutorial' : play.runner ? 'mission' : 'free');
   });
 }

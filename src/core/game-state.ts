@@ -7,7 +7,8 @@ import { EventBus } from './event-bus';
  * ハンガー（3-3）はモード選択とブリーフィング（機体変更）から開き、開いた画面へ戻る。
  * PvP（5-1）はモード選択 → ロビー → 飛行。飛行からはモード選択へ（退出・ホストの切断）、対戦が終わるとロビーへ（5-3）。
  * PvP の飛行にポーズはない。フォトモード（7-A）は飛行（P キー）・ポーズ（メニュー）から入り、出ると飛行へ戻る（時間は止まる）。
- * リングレース（7-1）はモード選択 → コース一覧（機体の選択も）→ 飛行 → リザルト → コース一覧
+ * リングレース（7-1）はモード選択 → コース一覧（機体の選択も）→ 飛行 → リザルト → コース一覧。
+ * リプレイ（7-B）はモード選択 → リプレイ一覧 → 飛行（再生。Esc・「一覧へ」で一覧へ戻る）
  */
 export const SCREEN_STATES = [
   'boot',
@@ -23,6 +24,7 @@ export const SCREEN_STATES = [
   'hangar',
   'lobby',
   'race_select',
+  'replay_select',
 ] as const;
 export type ScreenState = (typeof SCREEN_STATES)[number];
 
@@ -33,15 +35,24 @@ export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenStat
   // 初回起動はパイロット名の入力を挟む（3-1）。入力から Esc でタイトルへ戻れる
   title: ['mode_select', 'pilot_name'],
   pilot_name: ['mode_select', 'title'],
-  mode_select: ['title', 'flight', 'mission_select', 'hangar', 'lobby', 'race_select'],
+  mode_select: [
+    'title',
+    'flight',
+    'mission_select',
+    'hangar',
+    'lobby',
+    'race_select',
+    'replay_select',
+  ],
   race_select: ['mode_select', 'flight'],
+  replay_select: ['mode_select', 'flight'],
   lobby: ['mode_select', 'flight'],
   mission_select: ['mode_select', 'briefing'],
   briefing: ['mission_select', 'flight', 'hangar'],
   hangar: ['mode_select', 'briefing'],
   // ミッションが終わるとリザルトへ。チュートリアル（4-11）は指示の「中断」でモード選択へ
   // PvP の対戦が終わるとロビー（のリザルト）へ（5-3）
-  flight: ['pause', 'photo', 'result', 'mode_select', 'lobby'],
+  flight: ['pause', 'photo', 'result', 'mode_select', 'lobby', 'replay_select'],
   // ミッション中はポーズから「ミッションを中断」でミッション一覧へ（チュートリアルはモード選択へ、レースはコース一覧へ）
   pause: ['flight', 'photo', 'title', 'mission_select', 'mode_select', 'race_select'],
   // フォトモード（7-A）を出るとゲームに戻る
@@ -101,7 +112,8 @@ export function usesDemoCamera(state: ScreenState): boolean {
     state === 'mission_select' ||
     state === 'briefing' ||
     state === 'lobby' ||
-    state === 'race_select'
+    state === 'race_select' ||
+    state === 'replay_select'
   );
 }
 
