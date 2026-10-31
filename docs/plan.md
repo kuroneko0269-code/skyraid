@@ -73,7 +73,7 @@
 
 - [x] 7-5 天候・時間帯（プリセット 8 種・3 秒の補間・フリーフライトの時間の進行・月と星・夜の固定露出・雨の粒と海の波紋・風・HUD のマーカーの視認性と夜の減光・環境音、PvP / 協力はロビーのホスト設定） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/f6bc87d
 - [x] 7-1 リングレース（コース 4 本（海岸周回・渓谷スラローム・港湾ハイスピード・夕空アクロバット）と保証条件のテスト、リングの種類 4 種・未通過 +5 秒、カウントダウン → 走行 → ゴール → リザルト、ゴースト 15Hz、HUD、ランクと報酬、ベスト 5 と装備のハッシュ（セーブ v6）、コース一覧と機体選択、音、ボットで 4 コース完走・ゴールドタイムの決定。ソロのみ） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/184940c
-- [ ] 7-2 防衛戦
+- [x] 7-2 防衛戦（ソロ / 協力 2〜4 人、島と港湾都市、基地（司令部・レーダー・燃料タンク・味方の対空砲 2 基）、全 10 波（データ駆動）・戦闘機 / 爆撃機 / 巡航ミサイル、人数と難易度のスケール、予告、補給、HUD・音・リザルト・報酬、協力の同期（state に基地と戦闘機、爆撃機・巡航ミサイルは event から再現）・プロトコルの版 7、ボットで数値を決定） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/c358968cf28d3bab2a708ec26f6697a695e84b6b（事前修正: 渓谷スラロームを 24 リングに https://github.com/kuroneko0269-code/skyraid/commit/3fb912f5363deb2a6df4ed7202bcd5d300fe9613・レース中は武器の HUD を隠す https://github.com/kuroneko0269-code/skyraid/commit/e9c7420335f0f5915f2ef9d7ad673143d81082ba）
 - [ ] 7-3 スキン・デカール
 - [ ] 7-4 Supabase ランキング（匿名ログイン）
 - [ ] 7-6 実績・デイリーミッション
