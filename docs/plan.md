@@ -57,7 +57,7 @@
 
 - [x] 5-1 `net/` 基盤：PeerJS 接続、部屋コード、ホスト/クライアント役割（指示により 5-2 の状態同期と補間・5-4 の最小限のロビーと 4 人対応も含む。「同じ空を飛ぶ」まで） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/1ddd92f
 - [x] 5-2 状態同期と補間。2人で同じ空を飛べる — 5-1 と同じコミットで実装済み（実機 2 台で確認済み）: https://github.com/kuroneko0269-code/skyraid/commit/1ddd92f
-- [ ] 5-3 ホスト側ヒット判定、撃墜、リスポーン
+- [x] 5-3 ホスト側ヒット判定、撃墜、リスポーン（指示により 5-4 の勝敗判定・ロビーのルール設定・リザルトも含む） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/2fb5eb9（事前修正: 飛行中メニューの「退出する」 https://github.com/kuroneko0269-code/skyraid/commit/f51bb00・墜落後のカメラ https://github.com/kuroneko0269-code/skyraid/commit/9c7a9fa）
 - [ ] 5-4 ロビーUI、4人対応、勝敗判定
 
 ## フェーズ6: レイド
