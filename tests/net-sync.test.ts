@@ -18,6 +18,7 @@ function circle(t: number): AircraftStateMsg {
     alive: true,
     afterburner: false,
     invulnerable: false,
+    lockPart: 7,
     lastInputSeq: 0,
     position: { x: R * Math.sin(a), y: 800, z: -R * (1 - Math.cos(a)) * -1 },
     orientation: { x: 0, y: Math.sin(-a / 2), z: 0, w: Math.cos(-a / 2) },

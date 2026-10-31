@@ -1,6 +1,7 @@
-// レイドの協力のクライアントの怪獣（6-2。最小限）: ホストの state の怪獣の状態を写し、描画・HUD・音（KaijuBodyView /
+// レイドの協力のクライアントの怪獣（6-2）: ホストの state の怪獣の状態を写し、描画・HUD・音（KaijuBodyView /
 // KaijuEffectsView）と、ロックの対象（部位。当たりはホストが決めるのでダメージは受けない）にする。
-// 位置は届いた値へ毎ステップ寄せ、攻撃の経過・歩数は届くまで進めておく。本格的な補間は 6-6。Three.js 非依存
+// 位置は届いた値へ毎ステップ寄せ、攻撃の経過・歩数は届くまで進めておく。
+// 6-6: 歩数は 2 で割った余りで届くので続きの値に直す。岩は event（rock）で投げた位置と速度を受け、同じ放物線を進める。Three.js 非依存
 import { TEAM_ENEMY, type CombatTarget } from '../combat/target';
 import {
   KAIJU_ATTACK_CONFIG,
@@ -22,7 +23,7 @@ import {
   type AttackStep,
 } from '../entities/kaiju-pose';
 import { approachFactor, copyVec3, vec3, type Vec3 } from '../flight/math';
-import { NO_ATTACK, type KaijuStateMsg } from './protocol';
+import { NO_ATTACK, unpackRockVelocity, type EventMsg, type KaijuStateMsg } from './protocol';
 
 /** 写しの部位（ロックの対象・HUD） */
 export class MirrorPart implements CombatTarget {
@@ -94,7 +95,13 @@ export class KaijuMirror implements KaijuBodyView, KaijuEffectsView {
   readonly pose = createPose();
   readonly parts: readonly MirrorPart[];
   readonly beam = { on: false, origin: vec3(), direction: vec3(0, 0, -1), length: 0 };
-  readonly rocks = [0, 1, 2].map(() => ({ position: vec3(), prevPosition: vec3(), active: false }));
+  readonly rocks = [0, 1, 2].map(() => ({
+    position: vec3(),
+    prevPosition: vec3(),
+    velocity: vec3(),
+    active: false,
+    age: 0,
+  }));
   private readonly target: Vec3 = vec3();
   private targetHeading = 0;
   private walkRate = 0;
@@ -130,9 +137,12 @@ export class KaijuMirror implements KaijuBodyView, KaijuEffectsView {
     this.attackTime = m.attackTime;
     this.attackDuration = m.attackDuration;
     this.downTimer = m.downTimer;
-    this.walkRate = sinceLast > 0 ? Math.max(0, m.walkPhase - this.lastWalk) / sinceLast : 0;
-    this.lastWalk = m.walkPhase;
-    this.walkPhase = m.walkPhase;
+    // 歩数は 2 で割った余り（6-6）: 前の値からの進み（0〜2）を足して続きの値にする
+    const step = (((m.walkPhase - this.lastWalk) % 2) + 2) % 2;
+    const walk = this.lastWalk + step;
+    this.walkRate = sinceLast > 0 ? step / sinceLast : 0;
+    this.lastWalk = walk;
+    this.walkPhase = walk;
     if (this.lastHp >= 0 && m.hp < this.lastHp) this.flashTimer = KAIJU_CONFIG.hitFlashSeconds;
     this.lastHp = m.hp;
     this.hp = m.hp;
@@ -147,13 +157,32 @@ export class KaijuMirror implements KaijuBodyView, KaijuEffectsView {
     });
     this.beam.on = m.beam !== null;
     if (m.beam) copyVec3(this.beam.direction, m.beam);
-    this.rocks.forEach((r, i) => {
-      const p = m.rocks[i];
-      r.active = p !== undefined;
-      if (!p) return;
-      copyVec3(r.prevPosition, r.position);
-      copyVec3(r.position, p);
-    });
+  }
+
+  /** 岩の event（6-6）: 投げた（位置と速度）/ 落ちた（いちばん近い岩を消す） */
+  handleRock(e: Readonly<EventMsg>): void {
+    if (e.b === 0) {
+      const r = this.rocks[e.a];
+      if (!r) return;
+      r.position.x = r.prevPosition.x = e.x;
+      r.position.y = r.prevPosition.y = e.y;
+      r.position.z = r.prevPosition.z = e.z;
+      unpackRockVelocity(e.n, r.velocity);
+      r.age = 0;
+      r.active = true;
+      return;
+    }
+    let best: (typeof this.rocks)[number] | null = null;
+    let bestD = Infinity;
+    for (const r of this.rocks) {
+      if (!r.active) continue;
+      const d = Math.hypot(r.position.x - e.x, r.position.y - e.y, r.position.z - e.z);
+      if (d < bestD) {
+        bestD = d;
+        best = r;
+      }
+    }
+    if (best) best.active = false;
   }
 
   /** 固定ステップ 1 回分: 位置を寄せ、経過を進め、部位の位置を出す */
@@ -161,6 +190,7 @@ export class KaijuMirror implements KaijuBodyView, KaijuEffectsView {
     copyVec3(this.prevFeet, this.feet);
     this.prevHeading = this.heading;
     for (const p of this.parts) copyVec3(p.prevPosition, p.position);
+    this.stepRocks(dt);
     if (!this.received) return;
     const k = approachFactor(FOLLOW, dt);
     const f = this.feet;
@@ -180,5 +210,21 @@ export class KaijuMirror implements KaijuBodyView, KaijuEffectsView {
     for (const p of this.parts) partCenter(p.position, p.id, f, this.heading, this.pose);
     mouthPosition(this.beam.origin, f, this.heading, this.pose);
     this.beam.length = KAIJU_ATTACK_CONFIG.beam.range;
+  }
+
+  /** 岩をホストと同じ放物線で進める（落ちた知らせが来なくても飛ぶ時間の上限で消す） */
+  private stepRocks(dt: number): void {
+    const g = KAIJU_ATTACK_CONFIG.throw.gravity;
+    for (const r of this.rocks) {
+      if (!r.active) continue;
+      copyVec3(r.prevPosition, r.position);
+      r.velocity.y -= g * dt;
+      r.position.x += r.velocity.x * dt;
+      r.position.y += r.velocity.y * dt;
+      r.position.z += r.velocity.z * dt;
+      r.age += dt;
+      if (r.age > KAIJU_ATTACK_CONFIG.throw.maxFlightSeconds + 4 || r.position.y < -50)
+        r.active = false;
+    }
   }
 }

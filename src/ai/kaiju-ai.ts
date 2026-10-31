@@ -18,6 +18,7 @@ import {
   distanceToRay,
   stepRock,
   trackDirection,
+  windupSeconds,
   type Rock,
   type RockTarget,
 } from './kaiju-attacks';
@@ -189,9 +190,12 @@ export class KaijuAi {
     if (this.history.length > 8) this.history.shift();
     this.beamRepeats = attack === 'beam' && k.phase >= 3 ? 1 : 0;
     this.hitThisAttack.clear();
-    this.setStep(attack, 'windup', A[attack].windup);
+    this.setStep(attack, 'windup', this.windup(A[attack].windup));
     this.emit({ kind: 'windup', attack });
   }
+
+  /** 予兆の秒数（高難度は短くする。6-6） */
+  windup = (base: number): number => windupSeconds(base, this.kaiju.hard);
 
   private setStep(
     attack: KaijuAttack,
@@ -227,7 +231,7 @@ export class KaijuAi {
         this.beam.on = false;
         if (attack === 'beam' && this.beamRepeats > 0) {
           this.beamRepeats--;
-          this.setStep('beam', 'windup', A.beam.repeatWindup);
+          this.setStep('beam', 'windup', this.windup(A.beam.repeatWindup));
           this.emit({ kind: 'windup', attack: 'beam' });
         } else this.setStep(attack, 'recover', A[attack].recover);
       }

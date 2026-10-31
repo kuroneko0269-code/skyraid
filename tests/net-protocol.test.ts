@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { ByteReader, ByteWriter, readQuat, writeQuat } from '../src/net/codec';
 import {
   NO_TARGET,
   createNetControls,
@@ -12,33 +11,16 @@ import {
   type NetMessage,
   type StateMsg,
 } from '../src/net/protocol';
-import { normalizeQuat, type Quat } from '../src/flight/math';
 
-/** 決定的な乱数（mulberry32） */
-function rng(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function randomQuat(r: () => number): Quat {
-  return normalizeQuat({ x: r() * 2 - 1, y: r() * 2 - 1, z: r() * 2 - 1, w: r() * 2 - 1 });
-}
-
-/** 2 つの回転の角度差（度）。q と -q は同じ回転 */
-function angleDeg(a: Quat, b: Quat): number {
-  const dot = Math.abs(a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w);
-  return (2 * Math.acos(Math.min(1, dot)) * 180) / Math.PI;
-}
+import { angleDeg, randomQuat, rng } from './quat-helpers';
 
 function roundTrip(msg: NetMessage): NetMessage | null {
   return decodeMessage(encodeMessage(msg));
 }
+
+/** 成績のレイドの欄（6-6）: 部位別の与ダメージとブレイク */
+const RAID_SCORE = { partDamage: [1200, 0, 345, 65535, 7], breaks: 4 };
+const NO_RAID = { partDamage: [], breaks: 0 };
 
 describe('protocol: 直列化の往復', () => {
   it('join / welcome / event / ping はそのまま戻る', () => {
@@ -74,6 +56,7 @@ describe('protocol: 直列化の往復', () => {
           mode: 'team',
           noUpgrades: true,
           rookieGuard: false,
+          hard: true,
         },
         players: [
           {
@@ -111,6 +94,7 @@ describe('protocol: 直列化の往復', () => {
           mode: 'ffa',
           noUpgrades: false,
           rookieGuard: true,
+          hard: false,
         },
         players: [],
       },
@@ -132,8 +116,8 @@ describe('protocol: 直列化の往復', () => {
         remainingSeconds: 123.4,
         over: true,
         players: [
-          { id: 0, kills: 10, deaths: 3, shots: 4000, hits: 321, bestStreak: 6 },
-          { id: 3, kills: 0, deaths: 12, shots: 0, hits: 0, bestStreak: 0 },
+          { id: 0, kills: 10, deaths: 3, shots: 4000, hits: 321, bestStreak: 6, ...RAID_SCORE },
+          { id: 3, kills: 0, deaths: 12, shots: 0, hits: 0, bestStreak: 0, ...NO_RAID },
         ],
       },
       { type: 'ping', pong: true, nonce: 42, time: 12345.678 },
@@ -185,6 +169,7 @@ describe('protocol: 直列化の往復', () => {
         alive: i !== 2,
         afterburner: i === 1,
         invulnerable: i === 3,
+        lockPart: i === 0 ? 7 : i,
         lastInputSeq: 1000 + i,
         position: { x: r() * 20000 - 10000, y: r() * 9000, z: r() * 20000 - 10000 },
         orientation: randomQuat(r),
@@ -230,6 +215,7 @@ describe('protocol: 直列化の往復', () => {
         alive: true,
         afterburner: false,
         invulnerable: false,
+        lockPart: 7,
         lastInputSeq: 100000,
         position: { x: 1, y: 2, z: 3 },
         orientation: randomQuat(r),
@@ -275,40 +261,5 @@ describe('protocol: 直列化の往復', () => {
     const longer = new Uint8Array(ok.byteLength + 1);
     longer.set(new Uint8Array(ok));
     expect(decodeMessage(longer.buffer)).toBeNull();
-  });
-});
-
-describe('codec: smallest-three の圧縮誤差', () => {
-  it('ランダムな 10000 個の姿勢で最大誤差 0.01° 未満、単位長さを保つ', () => {
-    const r = rng(1);
-    let worst = 0;
-    for (let i = 0; i < 10000; i++) {
-      const q = randomQuat(r);
-      const w = new ByteWriter();
-      writeQuat(w, q);
-      const buf = w.finish();
-      expect(buf.byteLength).toBe(6);
-      const back = readQuat(new ByteReader(buf), { x: 0, y: 0, z: 0, w: 1 });
-      worst = Math.max(worst, angleDeg(q, back));
-      expect(Math.hypot(back.x, back.y, back.z, back.w)).toBeCloseTo(1, 6);
-    }
-    expect(worst).toBeLessThan(0.01);
-  });
-
-  it('軸に沿った姿勢・符号が負の最大成分も戻る', () => {
-    const cases: Quat[] = [
-      { x: 0, y: 0, z: 0, w: 1 },
-      { x: 0, y: 0, z: 0, w: -1 },
-      { x: 1, y: 0, z: 0, w: 0 },
-      { x: 0, y: -1, z: 0, w: 0 },
-      normalizeQuat({ x: 0.5, y: 0.5, z: 0.5, w: 0.5 }),
-      normalizeQuat({ x: -0.7, y: 0.1, z: 0.7, w: 0.1 }),
-    ];
-    for (const q of cases) {
-      const w = new ByteWriter();
-      writeQuat(w, q);
-      const back = readQuat(new ByteReader(w.finish()), { x: 0, y: 0, z: 0, w: 1 });
-      expect(angleDeg(q, back)).toBeLessThan(0.01);
-    }
   });
 });

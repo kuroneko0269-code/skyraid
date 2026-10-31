@@ -1,18 +1,39 @@
-// 怪獣の状態の直列化（6-2。message-codec.ts から分けた）。state の末尾に 1 バイトの有無 + 怪獣（部位 5 つ・岩 3 つまで）。
-// 位置は float32、向きは 1/10000 ラジアンの int16、時間は 1/100 秒の uint16、HP は uint32。Three.js 非依存
+// 怪獣の状態の直列化（6-2。message-codec.ts から分けた）。6-6 で 1 パケット 40 バイト以下に詰めた:
+//   [1] 有無・段階（3 ビット）・フェーズ（2 ビット）・熱線の有無 / [1] 攻撃（3）・段階（2）・攻撃の対象（3）
+//   [6] 足元 x・z は 0.25m、y は 0.1m の int16 / [2] 向き 1/10000 ラジアンの int16
+//   [2] 攻撃の経過と長さ 1/20 秒の u8 / [1] ダウンの残り 1/10 秒 / [1] 歩数の 2 で割った余り 1/128
+//   [4] 全体 HP と最大 HP の u16 / [2] 最終フェーズの残り 1/10 秒（0xffff はなし）
+//   [10] 部位 HP の割合 u16 × 5 / [5] ブレイクの残り 1/20 秒 u8 × 5 / [4] 熱線の向き（方位・仰角の int16。撃っているときだけ）
+// 合計 35（熱線ありで 39）バイト。怪獣なしは 1 バイト。岩は event（rock）で送る。Three.js 非依存
 import { KAIJU_PARTS } from '../data/kaiju';
 import type { ByteReader, ByteWriter } from './codec';
-import type { KaijuStateMsg } from './protocol';
+import { NO_TARGET } from './net-controls';
+import { NO_ATTACK, type KaijuStateMsg } from './protocol';
 
+const PRESENT = 0x80;
+const BEAM_ON = 0x40;
 const NO_FINAL = 0xffff;
-const ROCK_MAX = 3;
+const NONE3 = 7;
+const POS_XZ = 0.25;
+const POS_Y = 0.1;
 
-function centi(v: number): number {
-  return Math.round(Math.min(655.34, Math.max(0, v)) * 100);
+/** 怪獣の状態の最大バイト数（有無の 1 バイトを含む） */
+export const KAIJU_STATE_MAX_BYTES = 39;
+
+function u8(v: number, scale: number): number {
+  return Math.round(Math.min(255, Math.max(0, v * scale)));
 }
 
-function unitI16(v: number): number {
-  return Math.round(Math.min(1, Math.max(-1, v)) * 32767);
+function i16(v: number, step: number): number {
+  return Math.round(Math.min(32767, Math.max(-32767, v / step)));
+}
+
+function u16(v: number): number {
+  return Math.round(Math.min(65535, Math.max(0, v)));
+}
+
+function wrap(a: number): number {
+  return Math.atan2(Math.sin(a), Math.cos(a));
 }
 
 export function writeKaiju(w: ByteWriter, k: Readonly<KaijuStateMsg> | null): void {
@@ -20,63 +41,67 @@ export function writeKaiju(w: ByteWriter, k: Readonly<KaijuStateMsg> | null): vo
     w.u8(0);
     return;
   }
-  w.u8(1).u8(k.stage);
-  w.f32(k.feet.x).f32(k.feet.y).f32(k.feet.z);
-  w.i16(Math.round(Math.atan2(Math.sin(k.heading), Math.cos(k.heading)) * 10000));
-  w.u8(k.attack).u8(k.attackStep).u16(centi(k.attackTime)).u16(centi(k.attackDuration));
-  w.u16(centi(k.downTimer)).f32(k.walkPhase);
-  w.u32(Math.max(0, Math.round(k.hp)))
-    .u32(Math.round(k.maxHp))
-    .u8(k.phase);
-  w.u16(k.finalRemaining === null ? NO_FINAL : centi(k.finalRemaining));
-  for (let i = 0; i < KAIJU_PARTS.length; i++) {
-    const p = k.parts[i];
-    w.u16(Math.round(Math.min(1, Math.max(0, p?.hpRatio ?? 0)) * 65535)).u16(
-      centi(p?.breakTimer ?? 0),
-    );
+  w.u8(PRESENT | (k.stage & 7) | ((k.phase & 3) << 3) | (k.beam ? BEAM_ON : 0));
+  const attack = k.attack === NO_ATTACK ? NONE3 : k.attack & 3;
+  const target = k.targetId === NO_TARGET ? NONE3 : k.targetId & 3;
+  w.u8(attack | ((k.attackStep & 3) << 3) | (target << 5));
+  w.i16(i16(k.feet.x, POS_XZ)).i16(i16(k.feet.y, POS_Y)).i16(i16(k.feet.z, POS_XZ));
+  w.i16(Math.round(wrap(k.heading) * 10000));
+  w.u8(u8(k.attackTime, 20)).u8(u8(k.attackDuration, 20));
+  w.u8(u8(k.downTimer, 10));
+  const walk = ((k.walkPhase % 2) + 2) % 2;
+  w.u8(Math.floor(walk * 128) & 255);
+  w.u16(u16(k.hp)).u16(u16(k.maxHp));
+  w.u16(k.finalRemaining === null ? NO_FINAL : Math.min(NO_FINAL - 1, u16(k.finalRemaining * 10)));
+  for (let i = 0; i < KAIJU_PARTS.length; i++)
+    w.u16(u16(Math.min(1, Math.max(0, k.parts[i]?.hpRatio ?? 0)) * 65535));
+  for (let i = 0; i < KAIJU_PARTS.length; i++) w.u8(u8(k.parts[i]?.breakTimer ?? 0, 20));
+  if (k.beam) {
+    const b = k.beam;
+    w.i16(Math.round(Math.atan2(b.x, b.z) * 10000));
+    w.i16(Math.round(Math.asin(Math.min(1, Math.max(-1, b.y))) * 10000));
   }
-  if (k.beam) w.u8(1).i16(unitI16(k.beam.x)).i16(unitI16(k.beam.y)).i16(unitI16(k.beam.z));
-  else w.u8(0);
-  const rocks = k.rocks.slice(0, ROCK_MAX);
-  w.u8(rocks.length);
-  for (const r of rocks) w.f32(r.x).f32(r.y).f32(r.z);
 }
 
 export function readKaiju(r: ByteReader): KaijuStateMsg | null {
-  if (r.u8() === 0) return null;
-  const stage = r.u8();
-  const feet = { x: r.f32(), y: r.f32(), z: r.f32() };
+  const head = r.u8();
+  if ((head & PRESENT) === 0) return null;
+  const packed = r.u8();
+  const attack3 = packed & 7;
+  const target3 = (packed >> 5) & 7;
+  const feet = { x: r.i16() * POS_XZ, y: r.i16() * POS_Y, z: r.i16() * POS_XZ };
   const heading = r.i16() / 10000;
-  const attack = r.u8();
-  const attackStep = r.u8();
-  const attackTime = r.u16() / 100;
-  const attackDuration = r.u16() / 100;
-  const downTimer = r.u16() / 100;
-  const walkPhase = r.f32();
-  const hp = r.u32();
-  const maxHp = r.u32();
-  const phase = r.u8();
+  const attackTime = r.u8() / 20;
+  const attackDuration = r.u8() / 20;
+  const downTimer = r.u8() / 10;
+  const walkPhase = r.u8() / 128;
+  const hp = r.u16();
+  const maxHp = r.u16();
   const fin = r.u16();
-  const parts = KAIJU_PARTS.map(() => ({ hpRatio: r.u16() / 65535, breakTimer: r.u16() / 100 }));
-  const beam = r.u8() === 1 ? { x: r.i16() / 32767, y: r.i16() / 32767, z: r.i16() / 32767 } : null;
-  const n = Math.min(ROCK_MAX, r.u8());
-  const rocks = Array.from({ length: n }, () => ({ x: r.f32(), y: r.f32(), z: r.f32() }));
+  const ratios = KAIJU_PARTS.map(() => r.u16() / 65535);
+  const parts = ratios.map((hpRatio) => ({ hpRatio, breakTimer: r.u8() / 20 }));
+  let beam: KaijuStateMsg['beam'] = null;
+  if (head & BEAM_ON) {
+    const az = r.i16() / 10000;
+    const el = r.i16() / 10000;
+    beam = { x: Math.cos(el) * Math.sin(az), y: Math.sin(el), z: Math.cos(el) * Math.cos(az) };
+  }
   return {
-    stage,
+    stage: head & 7,
     feet,
     heading,
-    attack,
-    attackStep,
+    attack: attack3 === NONE3 ? NO_ATTACK : attack3,
+    attackStep: (packed >> 3) & 3,
     attackTime,
     attackDuration,
     downTimer,
     walkPhase,
     hp,
     maxHp,
-    phase,
-    finalRemaining: fin === NO_FINAL ? null : fin / 100,
+    phase: (head >> 3) & 3,
+    finalRemaining: fin === NO_FINAL ? null : fin / 10,
     parts,
     beam,
-    rocks,
+    targetId: target3 === NONE3 ? NO_TARGET : target3,
   };
 }

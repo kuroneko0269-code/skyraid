@@ -7,13 +7,11 @@
 import type { PerspectiveCamera, Scene } from 'three';
 import type { GameState } from '../core/game-state';
 import type { AircraftDetail } from '../data/aircraft-model';
-import { SAVE_CONFIG } from '../data/save';
 import type { CombatInput } from '../combat/combat-input';
 import type { AircraftControls, GroundHeightFn } from '../entities/aircraft';
 import type { FlightSession } from '../missions/flight-session';
 import { ClientRoom } from '../net/client-room';
 import { allAgain, initialSettings, mapName } from '../net/lobby-rules';
-import { netLoadout } from '../net/loadout';
 import { openLocalTransport } from '../net/local-transport';
 import { openPeerTransport } from '../net/peerjs-transport';
 import { HostRoom, JoinFailure, normalizeRoomCode } from '../net/room';
@@ -30,8 +28,10 @@ import { PvpBoard, onRadarTap } from './pvp-board';
 import { PvpFlight, type KaijuSource, type PvpFlightDeps, type PvpSound } from './pvp-flight';
 import { PvpHud } from './pvp-hud';
 import { PvpOverlay } from './pvp-overlay';
+import { RaidBriefing } from './raid-briefing';
+import { pilotProfile, roomLoadout, rosterAircraftId } from './pvp-profile';
 import { buildJoinUrl } from './pvp-entry';
-import { PVP_QUICK_PHRASES } from '../data/pvp';
+import { QUICK_PHRASES } from '../data/pvp';
 
 export interface PvpDeps {
   readonly parent: HTMLElement;
@@ -59,6 +59,13 @@ export interface PvpDeps {
   readonly sound: (kind: PvpSound) => void;
   /** レイドの怪獣の表示元（6-2） */
   readonly kaijuSource: (src: KaijuSource | null) => void;
+  /** 街の建物（6-6。協力レイドはホストだけが壊して配る） */
+  readonly buildings: PvpFlightDeps['buildings'];
+  /** 報酬をセーブに足す（6-6） */
+  readonly addCredits: (credits: number) => void;
+  /** 協力レイドのブリーフィングを前に見たか・見た印を付ける（6-6） */
+  readonly briefingSeen: () => boolean;
+  readonly markBriefingSeen: () => void;
 }
 
 /** 部屋の tick（ping・無通信の検知・再接続）の間隔（ms） */
@@ -71,6 +78,7 @@ export class PvpLink {
   private readonly remotes: RemoteView;
   private readonly open: TransportOpener;
   private readonly board: PvpBoard;
+  private readonly briefing: RaidBriefing;
   private room: HostRoom | ClientRoom | null = null;
   private flight: PvpFlight | null = null;
   private timer = 0;
@@ -109,9 +117,11 @@ export class PvpLink {
         onLeave: () => {
           this.leave();
         },
+        onChat: (phrase) => this.room?.chat(phrase),
       },
       deps.debug,
     );
+    this.briefing = new RaidBriefing(deps.parent, () => this.flight?.net.skipBriefing());
     this.board = new PvpBoard(deps.parent);
     this.overlay = new PvpOverlay(deps.parent);
     this.remotes = new RemoteView(deps.scene, deps.aircraftDetail);
@@ -157,19 +167,7 @@ export class PvpLink {
 
   /** 自分のプロフィール（パイロット名・機体・シングルの強化 Lv。強化の無効はホストが決める） */
   private profile(aircraftId = this.deps.hangar.selectedId): PlayerProfile {
-    const h = this.deps.hangar;
-    return {
-      name: this.deps.pilotName() ?? SAVE_CONFIG.defaultPilotName,
-      aircraftId,
-      upgrades: { ...h.levels(aircraftId) },
-    };
-  }
-
-  /** 名簿の自分の機体（ホストが知っている機体で飛ぶ。ロビーで変えた直後の行き違いを防ぐ） */
-  private ownAircraftId(): string {
-    const room = this.room;
-    const me = room?.players.find((p) => p.id === room.localPlayerId);
-    return me?.aircraftId ?? this.deps.hangar.selectedId;
+    return pilotProfile(this.deps.hangar, this.deps.pilotName, aircraftId);
   }
 
   /** PvP の飛行の装備（ホストが強化を無効にしていれば Lv 0。5-4） */
@@ -179,9 +177,7 @@ export class PvpLink {
   }
 
   loadout(): Loadout {
-    const id = this.ownAircraftId();
-    const off = this.room?.settings.noUpgrades ?? true;
-    return netLoadout(id, off ? undefined : this.deps.hangar.levels(id));
+    return roomLoadout(this.room, this.deps.hangar);
   }
 
   private async create(): Promise<void> {
@@ -236,9 +232,10 @@ export class PvpLink {
     });
     room.onChat((from, phrase) => {
       if (this.lobby.currentView === 'room') this.lobby.showChat(from, phrase);
-      else if (this.deps.game.state === 'lobby') {
+      else if (this.deps.game.state === 'lobby' || this.deps.game.state === 'flight') {
+        // リザルトの画面と、飛行中（6-6: レイドの定型文）は上のお知らせに出す
         const name = room.players.find((p) => p.id === from)?.name ?? '';
-        this.hud.notify(`${name}: ${PVP_QUICK_PHRASES[phrase] ?? ''}`, 3);
+        this.hud.notify(`${name}: ${QUICK_PHRASES[phrase] ?? ''}`, 3);
       }
     });
     if (room instanceof ClientRoom) {
@@ -291,8 +288,9 @@ export class PvpLink {
       hud: this.hud,
       board: this.board,
       overlay: this.overlay,
+      briefing: this.briefing,
     });
-    const model = findAircraftModel(this.ownAircraftId()) ?? d.hangar.selectedModel;
+    const model = findAircraftModel(rosterAircraftId(room, d.hangar)) ?? d.hangar.selectedModel;
     const missiles = this.loadout().missiles;
     d.playerView.setModel({ ...model, shape: playerShape(model, room.localPlayerId) }, missiles);
     d.playerView.respawn(d.session.aircraft);
@@ -308,7 +306,10 @@ export class PvpLink {
     const game = this.deps.game;
     if (game.state === 'flight') game.transition('lobby');
     const room = this.room;
-    if (room) this.lobby.showResult(f.result(), room.players);
+    const result = f.result();
+    // 6-6: レイドの報酬（全員同じ額）をセーブに足す
+    if (result.raid) this.deps.addCredits(result.raid.credits);
+    if (room) this.lobby.showResult(result, room.players);
   }
 
   /** 描画フレームごと（pipeline.render の前）。他機・名札・成績・?netdebug */

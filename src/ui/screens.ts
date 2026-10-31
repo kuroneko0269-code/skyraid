@@ -17,7 +17,7 @@ import { ResultScreen } from './result';
 import { FadeCurtain, LoadingScreen, applyScreenFade } from './screen';
 import { TitleScreen } from './title';
 import { TUTORIAL_MISSION } from '../data/tutorial';
-import { RAID_MISSION } from '../data/missions-special';
+import { RAID_MISSION, raidMission } from '../data/missions-special';
 import { tutorialStrings, type TutorialStrings } from './tutorial-text';
 
 /**
@@ -113,12 +113,12 @@ export class Screens {
         else if (mode === 'pvp') this.pvp?.onSelect(false);
         else this.modeSelect.showRaidPrompt();
       },
-      onRaid: (kind) => {
+      onRaid: (kind, difficulty) => {
         if (kind === 'coop') {
           this.pvp?.onSelect(true);
           return;
         }
-        this.nextMission = RAID_MISSION;
+        this.nextMission = raidMission(difficulty);
         game.transition('flight');
       },
       onBack: () => game.transition('title'),

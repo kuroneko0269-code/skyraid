@@ -9,7 +9,14 @@ import type { Loadout } from '../progression/loadout';
 import type { InputBuffer } from './input-buffer';
 import type { NetStats, RemoteSample } from './net-game';
 import { slerp } from './sync';
-import { NO_TARGET, type AircraftStateMsg, type MissileStateMsg } from './protocol';
+import {
+  NO_PART,
+  NO_TARGET,
+  type AircraftStateMsg,
+  type KaijuStateMsg,
+  type MissileStateMsg,
+  type StateMsg,
+} from './protocol';
 
 export function fighterSpec(l: Readonly<Loadout>): FighterSpec {
   const h = l.flight.hull;
@@ -65,6 +72,7 @@ export function stateOf(f: PvpFighter, seq: number): AircraftStateMsg {
     alive: f.alive,
     afterburner: s.afterburnerActive,
     invulnerable: f.invulnerable,
+    lockPart: f.lockPart < 0 ? NO_PART : f.lockPart,
     lastInputSeq: seq,
     position: s.position,
     orientation: s.orientation,
@@ -73,6 +81,20 @@ export function stateOf(f: PvpFighter, seq: number): AircraftStateMsg {
     throttle: a.throttle,
     hp: f.hp,
   };
+}
+
+/** 状態のメッセージ（全機・ミサイル・怪獣。機体の入れ物は msgs を使い回す。ホスト自身の seq は 0） */
+export function stateMsg(
+  tick: number,
+  fighters: readonly PvpFighter[],
+  seqOf: (id: number) => number,
+  missiles: MissileStateMsg[],
+  kaiju: KaijuStateMsg | null,
+  msgs: AircraftStateMsg[],
+): StateMsg {
+  msgs.length = 0;
+  for (const f of fighters) msgs.push(stateOf(f, f.id === 0 ? 0 : seqOf(f.id)));
+  return { type: 'state', tick, aircraft: msgs, missiles, kaiju };
 }
 
 /** ホストの機体を固定ステップの間で補間して描画用の値に入れる */

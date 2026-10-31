@@ -2,7 +2,14 @@
 // 状態機械は kaiju-ai.ts
 import { segmentSphere } from '../combat/collision';
 import { KAIJU_ATTACK_CONFIG as A, type KaijuAttack } from '../data/kaiju';
+import { RAID_RULES } from '../data/raid';
 import { vec3, type Vec3 } from '../flight/math';
+
+/** 予兆の秒数（6-6: 高難度は windupCut 短く、最短 minWindup） */
+export function windupSeconds(base: number, hard: boolean): number {
+  const h = RAID_RULES.hard;
+  return hard ? Math.max(h.minWindup, base - h.windupCut) : base;
+}
 
 /**
  * 最も近い機体の距離（水平、m）と高さ（怪獣の足元から、m）で攻撃を選ぶ。

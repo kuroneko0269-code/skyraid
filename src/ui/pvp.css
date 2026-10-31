@@ -281,3 +281,62 @@
   text-align: center;
   color: var(--ui-text);
 }
+
+/* 協力レイド（6-6）: 怪獣の攻撃の対象の名札、飛行中のメニューの定型文、ブリーフィング、リザルトの表 */
+.pvp-tag-target {
+  display: block;
+  margin: 1px auto 0;
+  width: max-content;
+  padding: 0 4px;
+  color: #ff4a3a;
+  border: 1px solid #ff4a3a;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.pvp-tag-target[hidden] {
+  display: none;
+}
+
+.pvp-menu-chat[hidden] {
+  display: none;
+}
+
+.raid-briefing {
+  position: fixed;
+  left: 50%;
+  top: calc(16% + env(safe-area-inset-top, 0px));
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(520px, calc(100vw - 32px));
+  pointer-events: auto;
+}
+
+.raid-briefing[hidden] {
+  display: none;
+}
+
+.raid-briefing-lines {
+  margin: 8px 0;
+  padding-left: 1.2em;
+}
+
+.raid-briefing-lines li {
+  margin: 4px 0;
+}
+
+.raid-result-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.raid-result-table td,
+.raid-result-table th {
+  white-space: nowrap;
+}
+
+.raid-result-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}

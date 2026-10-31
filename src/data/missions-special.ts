@@ -1,5 +1,6 @@
 // 護衛・破壊・怪獣の目標を使うミッション（2-5 の M3〜M5。データだけ、ロジックなし）。一覧（MISSIONS）は src/data/missions.ts。
 // タイトル・ブリーフィング文は src/data/i18n/*.json の missions[id]。距離は m、時間は秒、北は -Z、向きは -Z から右回り
+import { RAID_RULES, type RaidDifficulty } from './raid';
 import type { MissionDef } from '../missions/types';
 import { RAID_CONFIG } from './kaiju';
 
@@ -210,35 +211,42 @@ export const ENCOUNTER_MISSION: MissionDef = {
 
 /**
  * レイド（6-2。ソロ）: 怪獣ヴォルガスが港湾都市（6-4）の湾の沖から上陸し、街の中心（タワー群）へ歩く。倒せば成功、
- * タワー群に着くか最終フェーズの 4.5 分が切れたら失敗。撃墜されても開始位置へ戻って続けられる（失敗にしない）。ミッション一覧には出さない
+ * タワー群に着くか最終フェーズの 4.5 分（高難度は 3.5 分）が切れたら失敗。撃墜されても開始位置へ戻って続けられる（失敗にしない）。
+ * ミッション一覧には出さない。6-6: 開始前に難易度を選ぶ。報酬は 2000 CR × 時間ボーナス（× 高難度 1.8）、失敗は 300 CR
  */
-export const RAID_MISSION: MissionDef = {
-  id: 'raid',
-  mapId: RAID_CONFIG.mapId,
-  start: RAID_CONFIG.start,
-  parTimeSeconds: RAID_CONFIG.parTimeSeconds,
-  spawns: [
-    {
-      kind: 'kaiju',
-      trigger: { type: 'start' },
-      position: RAID_CONFIG.kaijuFrom,
-      walkTo: RAID_CONFIG.cityCenter,
-      stopRadius: RAID_CONFIG.reachRadius,
-      arrivalFails: true,
-      retreatDamageRatio: 1,
-    },
-  ],
-  objectives: [
-    {
-      id: 'kaiju',
-      type: 'kaiju',
-      required: true,
-      start: 'withPrevious',
-      damageRatio: 1,
-      label: 'ヴォルガス撃破',
-    },
-  ],
-  success: 'allRequiredObjectives',
-  failConditions: ['kaijuReachedCity', 'outOfBounds'],
-  reward: { baseCredits: RAID_CONFIG.reward },
-};
+export function raidMission(difficulty: RaidDifficulty = 'normal'): MissionDef {
+  return {
+    id: 'raid',
+    mapId: RAID_CONFIG.mapId,
+    start: RAID_CONFIG.start,
+    parTimeSeconds: RAID_CONFIG.parTimeSeconds,
+    spawns: [
+      {
+        kind: 'kaiju',
+        trigger: { type: 'start' },
+        position: RAID_CONFIG.kaijuFrom,
+        walkTo: RAID_CONFIG.cityCenter,
+        stopRadius: RAID_CONFIG.reachRadius,
+        arrivalFails: true,
+        retreatDamageRatio: 1,
+        hard: difficulty === 'hard',
+      },
+    ],
+    objectives: [
+      {
+        id: 'kaiju',
+        type: 'kaiju',
+        required: true,
+        start: 'withPrevious',
+        damageRatio: 1,
+        label: 'ヴォルガス撃破',
+      },
+    ],
+    success: 'allRequiredObjectives',
+    failConditions: ['kaijuReachedCity', 'outOfBounds'],
+    reward: { baseCredits: RAID_RULES.reward.soloBase, raid: { difficulty } },
+  };
+}
+
+/** ソロのレイド（通常） */
+export const RAID_MISSION: MissionDef = raidMission('normal');

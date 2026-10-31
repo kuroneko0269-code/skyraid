@@ -6,9 +6,13 @@
 // - 人数スケール: 全体 HP = 基礎 × (0.55 + 0.45 × 人数)
 // 動き（歩く・向きを変える）と攻撃の段階は AI（src/ai/kaiju-ai.ts）が決めて、ここに書き込む
 import { KAIJU_CONFIG, KAIJU_PARTS, type KaijuAttack, type KaijuPartId } from '../data/kaiju';
+import { RAID_RULES } from '../data/raid';
 import { clamp, copyVec3, vec3, type Vec3 } from '../flight/math';
 import type { GroundHeightFn } from './aircraft';
 import { KaijuPart, type KaijuPartOwner } from './kaiju-part';
+import { KaijuStats, kaijuMaxHp } from './kaiju-stats';
+
+export { kaijuMaxHp } from './kaiju-stats';
 import {
   createPose,
   derivePose,
@@ -26,20 +30,13 @@ export type KaijuStage = (typeof KAIJU_STAGES)[number];
 /** 本体のできごと（HUD・音・演出が購読する） */
 export type KaijuEvent =
   | { readonly kind: 'partBroken'; readonly part: KaijuPartId }
-  | { readonly kind: 'break'; readonly part: KaijuPartId }
+  | { readonly kind: 'break'; readonly part: KaijuPartId; readonly by: readonly number[] }
   | { readonly kind: 'down' }
   | { readonly kind: 'phase'; readonly phase: number }
   | { readonly kind: 'step' }
   | { readonly kind: 'killed' }
   | { readonly kind: 'retreat' }
   | { readonly kind: 'cityReached' };
-
-/** 全体 HP の人数スケール（1 人は solo の倍率。6-1b） */
-export function kaijuMaxHp(players: number, base: number = KAIJU_CONFIG.baseHp): number {
-  const s = KAIJU_CONFIG.hpScale;
-  const n = clamp(Math.round(players), 1, 4);
-  return Math.round(base * (n === 1 ? s.solo : s.constant + s.perPlayer * n));
-}
 
 export interface KaijuEmergeOptions {
   /** 遊ぶ人数（1〜4）。HP とブレイクの成立（1 人は不成立・部位ダメージ増し）に使う */
@@ -48,6 +45,8 @@ export interface KaijuEmergeOptions {
   readonly retreatRatio?: number;
   /** 最終フェーズの制限時間を使う（レイド。M5 は撤退が先なので使わない） */
   readonly finalTimer?: boolean;
+  /** 高難度（6-6）: HP ×1.4・予兆 −0.5 秒（AI が読む）・最終フェーズ 3.5 分 */
+  readonly hard?: boolean;
 }
 
 const config = KAIJU_CONFIG;
@@ -80,6 +79,10 @@ export class Kaiju implements KaijuPartOwner, KaijuPoseInput {
   /** 経過秒数（ブレイクの判定） */
   time = 0;
   players = 1;
+  /** 高難度（6-6） */
+  hard = false;
+  /** 与ダメージとブレイクの記録（6-6） */
+  readonly stats = new KaijuStats();
   private hpValue = 1;
   private maxHpValue = 1;
   private retreatRatio = 1;
@@ -148,7 +151,9 @@ export class Kaiju implements KaijuPartOwner, KaijuPoseInput {
   /** 海の (x, z) から上陸を始める（向きは facingX, facingZ の方へ） */
   emerge(x: number, z: number, facingX: number, facingZ: number, o: KaijuEmergeOptions = {}): void {
     this.players = clamp(Math.round(o.players ?? 1), 1, 4);
-    this.maxHpValue = kaijuMaxHp(this.players);
+    this.hard = o.hard ?? false;
+    this.stats.reset();
+    this.maxHpValue = kaijuMaxHp(this.players, undefined, this.hard);
     this.hpValue = this.maxHpValue;
     this.retreatRatio = o.retreatRatio ?? 1;
     this.useFinalTimer = o.finalTimer ?? true;
@@ -202,7 +207,9 @@ export class Kaiju implements KaijuPartOwner, KaijuPoseInput {
       if (part.partHp <= 0) this.breakPart(part);
     }
     const floor = this.retreatRatio < 1 ? 1 : 0;
+    const before = this.hpValue;
     this.hpValue = Math.max(floor, this.hpValue - dmg);
+    this.stats.addDamage(attacker, part.index, before - this.hpValue);
     this.updatePhase();
     if (this.retreatRatio < 1 && this.damageRatio >= this.retreatRatio - 1e-9) {
       this.retreat();
@@ -218,17 +225,12 @@ export class Kaiju implements KaijuPartOwner, KaijuPoseInput {
     return false;
   }
 
-  /** ブレイクの判定: 3 秒以内に当てた別の人が minAttackers 人以上（1 人のときは成立しない） */
+  /** ブレイクの判定（3 秒以内に当てた別の人が minAttackers 人以上。1 人のときは成立しない） */
   private registerHit(part: KaijuPart, attacker: number): void {
-    const b = config.break;
-    part.lastHitBy.set(attacker, this.time);
-    if (this.players < b.minAttackers || part.breakTimer > 0 || part.breakCooldown > 0) return;
-    let n = 0;
-    for (const t of part.lastHitBy.values()) if (this.time - t <= b.windowSeconds + 1e-9) n++;
-    if (n < b.minAttackers) return;
-    part.breakTimer = b.seconds;
-    part.breakCooldown = b.seconds + b.cooldownSeconds;
-    this.emit({ kind: 'break', part: part.id });
+    const by = part.registerHit(attacker, this.time, this.players);
+    if (!by) return;
+    this.stats.addBreak(part.index, by);
+    this.emit({ kind: 'break', part: part.id, by });
   }
 
   private breakPart(part: KaijuPart): void {
@@ -247,7 +249,8 @@ export class Kaiju implements KaijuPartOwner, KaijuPoseInput {
     const next = ratio <= p.phase3Ratio + 1e-9 ? 3 : ratio <= p.phase2Ratio + 1e-9 ? 2 : 1;
     while (this.phase < next) {
       this.phase++;
-      if (this.phase === 3 && this.useFinalTimer) this.finalRemaining = p.finalSeconds;
+      if (this.phase === 3 && this.useFinalTimer)
+        this.finalRemaining = this.hard ? RAID_RULES.hard.finalSeconds : p.finalSeconds;
       this.emit({ kind: 'phase', phase: this.phase });
     }
   }

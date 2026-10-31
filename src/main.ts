@@ -31,6 +31,7 @@ import { QualityLink } from './render/quality-link';
 import { createWorldScene } from './render/scene';
 import { ActiveMap } from './missions/active-map';
 import { applyKaijuToCity } from './combat/city-damage';
+import { raidLinkDeps } from './ui/raid-briefing';
 import type { KaijuBodyView, KaijuEffectsView } from './entities/kaiju-display';
 import { DamageOverlay } from './ui/damage-overlay';
 import { AssistControl } from './core/assist-control';
@@ -186,6 +187,8 @@ const pvp = new PvpEntry(screens, search, {
   groundHeight: getGroundHeight,
   obstacles: (a, b) => activeMap.buildings?.collides(a, b) ?? false,
   protectedBuildings: () => session.protectedBuildings,
+  // 6-6: 協力レイドの建物（ホストだけが壊して配る）・報酬・ブリーフィングを見たか
+  ...raidLinkDeps(save, () => activeMap.buildings),
   // 5-3: スコアボードは Tab（ターゲット切替のキー）の長押し、他プレイヤーの機銃は敵機と同じ位置付きの音
   scoreKeyDown: () => input.isDown('targetNext'),
   otherGun: (x, y, z) => {
@@ -320,8 +323,8 @@ loop.onUpdate((dt) => {
   const buildings = activeMap.buildings;
   if (buildings) {
     buildings.step(dt);
-    const k = coopKaiju ?? { body: session.props.kaiju, fx: session.props.kaijuAi };
-    applyKaijuToCity(buildings, k.body, k.fx);
+    // 協力（6-6）はホストの RaidHost だけが壊して番号を配り、クライアントは受け取って壊す（ここでは判定しない）
+    if (!coopKaiju) applyKaijuToCity(buildings, session.props.kaiju, session.props.kaijuAi);
   }
   if (input.wasPressed('cameraToggle')) chaseCamera.toggleMode();
   keys.handle();

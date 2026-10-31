@@ -38,14 +38,27 @@ export type UpgradeLevels = Record<UpgradeKind, number>;
 
 /**
  * 一度だけの案内の記録（4-11。v5 から）。tutorialOffered: 初回の「チュートリアルを始めますか？」を出した /
- * tutorialDone: チュートリアルを完了した（報酬は初回だけ）/ hintsFree・hintsMission: タッチ操作のヒントを出した
+ * tutorialDone: チュートリアルを完了した（報酬は初回だけ）/ hintsFree・hintsMission: タッチ操作のヒントを出した /
+ * raidBriefing: 協力レイドのブリーフィングを一度見た（6-6。2 回目からスキップできる。版は上げない: 無い旗は false）
  */
-export const SAVE_FLAGS = ['tutorialOffered', 'tutorialDone', 'hintsFree', 'hintsMission'] as const;
+export const SAVE_FLAGS = [
+  'tutorialOffered',
+  'tutorialDone',
+  'hintsFree',
+  'hintsMission',
+  'raidBriefing',
+] as const;
 export type SaveFlag = (typeof SAVE_FLAGS)[number];
 export type SaveFlags = Record<SaveFlag, boolean>;
 
 export function defaultFlags(): SaveFlags {
-  return { tutorialOffered: false, tutorialDone: false, hintsFree: false, hintsMission: false };
+  return {
+    tutorialOffered: false,
+    tutorialDone: false,
+    hintsFree: false,
+    hintsMission: false,
+    raidBriefing: false,
+  };
 }
 
 export interface SaveData {

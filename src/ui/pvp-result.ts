@@ -2,6 +2,8 @@
 // 5-4: ベストプレイヤー（最多撃墜）、最長連続撃墜、チーム戦の合計と勝ったチーム、「もう一度」を押した人の印
 import { PVP_TEAM } from '../data/pvp';
 import type { PlayerInfo } from '../net/protocol';
+import type { RaidSummary } from '../net/raid-result';
+import { renderRaidResult } from './raid-result';
 import { el } from './hud-dom';
 import { playerColorCss, teamColorCss } from './lobby-colors';
 
@@ -30,13 +32,15 @@ export interface ResultView {
   teamTotals: readonly [number, number] | null;
   /** 守れた建物の割合（%。街のあるマップのレイドだけ。6-4） */
   protectedBuildings?: number | null;
+  /** 協力レイドの結果（6-6。PvP は省略） */
+  raid?: RaidSummary | null;
 }
 
 const REASON_TEXT: Readonly<Record<ResultView['reason'], string>> = {
   score: '撃墜数に到達',
   time: '時間切れ',
   raidClear: '全員で怪獣を倒した（報酬は全員同じ）',
-  raidFail: '怪獣が街に到達した',
+  raidFail: '怪獣が街に到達した（全員に 300 CR）',
 };
 
 function title(r: Readonly<ResultView>): string {
@@ -60,6 +64,11 @@ export function renderResult(parent: HTMLElement, r: Readonly<ResultView>): void
   el('div', 'ui-kicker campaign-kicker', parent, 'RESULT');
   el('h2', 'ui-title campaign-title', parent, title(r));
   el('p', 'briefing-text', parent, REASON_TEXT[r.reason]);
+  if (r.raid) {
+    const names = new Map(r.rows.map((x) => [x.id, x.name]));
+    renderRaidResult(parent, r.raid, (id) => names.get(id) ?? `P${id + 1}`, r.localId);
+    return;
+  }
   if (r.protectedBuildings != null) {
     el('p', 'briefing-text', parent, `守れた建物 ${r.protectedBuildings}%`);
   }

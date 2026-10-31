@@ -6,6 +6,7 @@ import { KAIJU_ATTACK_CONFIG, KAIJU_CONFIG } from '../data/kaiju';
 import type { KaijuBodyView, KaijuPartView } from '../entities/kaiju-display';
 import { el } from './hud-dom';
 import { formatClock } from './mission-text';
+import { KaijuCoopHud, type KaijuCoopFrame } from './kaiju-coop-hud';
 
 /** 1 フレーム分の表示の値 */
 export interface KaijuHudFrame {
@@ -15,6 +16,8 @@ export interface KaijuHudFrame {
   readonly locked: KaijuPartView | null;
   /** 自機のスタンの残り秒数 */
   readonly stun: number;
+  /** 協力レイドの役割分担（6-6。ソロは省略） */
+  readonly coop?: KaijuCoopFrame | null;
 }
 
 export class KaijuHud {
@@ -28,6 +31,7 @@ export class KaijuHud {
   private readonly breakText: HTMLDivElement;
   private readonly down: HTMLDivElement;
   private readonly noise: HTMLDivElement;
+  private readonly coop: KaijuCoopHud;
   private shown = true;
   private last = {
     hp: NaN,
@@ -59,6 +63,7 @@ export class KaijuHud {
     this.partName = el('span', 'kaiju-part-name', this.partRow);
     const pbar = el('div', 'kaiju-part-bar', this.partRow);
     this.partFill = el('div', 'kaiju-part-fill', pbar);
+    this.coop = new KaijuCoopHud(top, root);
     this.warning = el('div', 'kaiju-warning', root);
     this.breakText = el('div', 'kaiju-break', root, 'BREAK!');
     this.down = el('div', 'kaiju-down', root);
@@ -99,6 +104,7 @@ export class KaijuHud {
       this.phase.classList.toggle('is-final', b.finalRemaining !== null);
     }
     this.setPart(f.locked);
+    this.coop.update(b.parts, f.coop ?? null);
     // 予兆: 攻撃名と残り秒
     const warn =
       b.attack && b.attackStep === 'windup'
@@ -112,9 +118,12 @@ export class KaijuHud {
     let brk = '';
     for (const p of b.parts)
       if (p.breakTimer > 0) brk = `BREAK!  ${p.label} ×${KAIJU_CONFIG.break.damageScale}`;
-    if (brk !== this.last.brk) {
-      this.last.brk = brk;
+    // 6-6: 協力はブレイクの貢献者の名前を下に
+    const by = brk !== '' ? (f.coop?.breakBy ?? '') : '';
+    if (brk + by !== this.last.brk) {
+      this.last.brk = brk + by;
       this.breakText.textContent = brk;
+      if (by !== '') el('span', 'kaiju-break-by', this.breakText, by);
       this.breakText.hidden = brk === '';
     }
     const down =
@@ -151,6 +160,7 @@ export class KaijuHud {
   }
 
   hide(): void {
+    this.coop.hide();
     this.root.hidden = true;
     this.last.visible = false;
     this.setStun(false);

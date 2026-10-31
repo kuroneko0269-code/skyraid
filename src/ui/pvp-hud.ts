@@ -2,6 +2,8 @@
 // （ゲームは止まらない）、お知らせ、?netdebug の通信の値。撃墜のフィード・スコアボード・残り時間は pvp-board.ts
 import { Vector3, type PerspectiveCamera } from 'three';
 import { NET_CONFIG } from '../data/net';
+import { RAID_PHRASE_BASE } from '../data/pvp';
+import { RAID_QUICK_PHRASES } from '../data/raid';
 import type { NetStats, RemoteSample } from '../net/net-game';
 import type { PlayerInfo } from '../net/protocol';
 import { el } from './hud-dom';
@@ -15,7 +17,9 @@ interface Tag {
   readonly name: HTMLSpanElement;
   readonly dist: HTMLSpanElement;
   readonly hp: HTMLDivElement;
+  readonly target: HTMLSpanElement;
   lastName: string;
+  lastTarget: boolean;
   lastDist: number;
   lastHp: number;
   lastInvulnerable: boolean;
@@ -28,12 +32,14 @@ export class PvpHud {
   private readonly menu: HTMLDivElement;
   private readonly toast: HTMLDivElement;
   private readonly debug: HTMLPreElement;
+  private readonly raidChat: HTMLDivElement;
+  private readonly menuText: HTMLParagraphElement;
   private toastTimer = 0;
   private debugTimer = 0;
 
   constructor(
     parent: HTMLElement,
-    handlers: { onContinue: () => void; onLeave: () => void },
+    handlers: { onContinue: () => void; onLeave: () => void; onChat: (phrase: number) => void },
     private readonly debugShown: boolean,
   ) {
     this.tagLayer = el('div', 'pvp-tags', parent);
@@ -42,7 +48,21 @@ export class PvpHud {
     this.menu.hidden = true;
     const box = el('div', 'ui-dialog pvp-menu-box', this.menu);
     el('h3', 'ui-heading', box, 'PvP');
-    el('p', 'briefing-text', box, '対戦中は一時停止できません（機体は飛び続けます）');
+    this.menuText = el(
+      'p',
+      'briefing-text',
+      box,
+      '対戦中は一時停止できません（機体は飛び続けます）',
+    );
+    // 6-6: レイドの定型文（飛行中のメニューから送る。レイドのときだけ出す）
+    this.raidChat = el('div', 'lobby-chat pvp-menu-chat', box);
+    RAID_QUICK_PHRASES.forEach((text, i) => {
+      createButton(this.raidChat, 'ui-button lobby-chat-button', text, () => {
+        handlers.onChat(RAID_PHRASE_BASE + i);
+        this.setMenuOpen(false);
+      });
+    });
+    this.raidChat.hidden = true;
     const buttons = el('div', 'campaign-buttons', box);
     // 押せないように見えないよう、灰色の is-ghost ではなく赤（確認なしで 1 回で抜ける。再接続はロビーから）
     createButton(buttons, 'ui-button is-danger campaign-back', '退出する', handlers.onLeave);
@@ -60,6 +80,14 @@ export class PvpHud {
 
   setMenuOpen(open: boolean): void {
     this.menu.hidden = !open;
+  }
+
+  /** レイドの飛行か（6-6: メニューに定型文を出す） */
+  setRaid(raid: boolean): void {
+    this.raidChat.hidden = !raid;
+    this.menuText.textContent = raid
+      ? '飛行中は一時停止できません。定型文を全員に送れます'
+      : '対戦中は一時停止できません（機体は飛び続けます）';
   }
 
   /** 数秒だけお知らせを出す */
@@ -89,6 +117,8 @@ export class PvpHud {
     height: number,
     /** チーム戦の敵味方（5-4。null は個人戦: プレイヤーの色） */
     allyOf: ((id: number) => boolean) | null = null,
+    /** 怪獣の攻撃の対象（6-6。名札に TARGET） */
+    targetId: number | null = null,
   ): void {
     this.tagLayer.hidden = false;
     for (const t of this.tags.values()) t.root.hidden = true;
@@ -124,6 +154,11 @@ export class PvpHud {
       if (name !== tag.lastName) {
         tag.lastName = name;
         tag.name.textContent = name;
+      }
+      const targeted = targetId === s.id;
+      if (targeted !== tag.lastTarget) {
+        tag.lastTarget = targeted;
+        tag.target.hidden = !targeted;
       }
       const d = Math.round(dist / 10) * 10;
       if (d !== tag.lastDist) {
@@ -166,6 +201,8 @@ export class PvpHud {
       const label = el('div', 'pvp-tag-label', root);
       const name = el('span', 'pvp-tag-name', label);
       const dist = el('span', 'pvp-tag-dist', label);
+      const target = el('span', 'pvp-tag-target', root, 'TARGET');
+      target.hidden = true;
       const bar = el('div', 'pvp-tag-hp', root);
       const hp = el('div', 'pvp-tag-hp-fill', bar);
       t = {
@@ -173,7 +210,9 @@ export class PvpHud {
         name,
         dist,
         hp,
+        target,
         lastName: '',
+        lastTarget: false,
         lastDist: -1,
         lastHp: -1,
         lastInvulnerable: false,

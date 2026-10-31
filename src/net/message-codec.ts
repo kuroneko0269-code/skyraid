@@ -3,6 +3,7 @@
 import { PVP_CONFIG } from '../data/pvp';
 import { ByteReader, ByteWriter, readQuat, writeQuat } from './codec';
 import { readKaiju, writeKaiju } from './codec-kaiju';
+import { readScore, writeScore } from './codec-score';
 import {
   PL_AGAIN,
   PL_READY,
@@ -26,7 +27,6 @@ import {
   type MissileStateMsg,
   type NetMessage,
   type PlayerInfo,
-  type ScoreEntry,
 } from './protocol';
 
 const TYPE_IDS = {
@@ -39,12 +39,17 @@ const TYPE_IDS = {
   score: 7,
   lobby: 8,
   chat: 9,
+  ruin: 10,
 } as const;
 /** 速度ベクトルの単位（1/16 m/s。int16 で ±2047 m/s） */
 const VELOCITY_SCALE = 16;
 const FLAG_ALIVE = 1;
 const FLAG_AB_STATE = 2;
 const FLAG_INVULNERABLE = 4;
+/** 6-6: ロックしている部位（3 ビット。7 はなし） */
+const LOCK_SHIFT = 3;
+/** 1 回の ruin に入れる建物の最大数 */
+const RUIN_MAX = 1024;
 const MISSILE_STEP = PVP_CONFIG.missilePositionStep;
 function packVelocity(v: number): number {
   return Math.round(Math.min(32767, Math.max(-32767, v * VELOCITY_SCALE)));
@@ -91,7 +96,8 @@ export function encodeMessage(msg: NetMessage): ArrayBuffer {
         w.u8(a.id).u8(
           (a.alive ? FLAG_ALIVE : 0) |
             (a.afterburner ? FLAG_AB_STATE : 0) |
-            (a.invulnerable ? FLAG_INVULNERABLE : 0),
+            (a.invulnerable ? FLAG_INVULNERABLE : 0) |
+            ((a.lockPart & 7) << LOCK_SHIFT),
         );
         w.u32(a.lastInputSeq);
         w.f32(a.position.x).f32(a.position.y).f32(a.position.z);
@@ -122,14 +128,14 @@ export function encodeMessage(msg: NetMessage): ArrayBuffer {
       w.f32(msg.x).f32(msg.y).f32(msg.z);
       break;
     case 'score':
-      w.u16(clamp16(msg.remainingSeconds * 10))
-        .u8(msg.over ? 1 : 0)
-        .u8(msg.players.length);
-      for (const p of msg.players) {
-        w.u8(p.id).u8(Math.min(255, p.kills)).u8(Math.min(255, p.deaths));
-        w.u16(clamp16(p.shots)).u16(clamp16(p.hits)).u8(Math.min(255, p.bestStreak));
-      }
+      writeScore(w, msg);
       break;
+    case 'ruin': {
+      const ids = msg.ids.slice(0, RUIN_MAX);
+      w.u16(ids.length);
+      for (const id of ids) w.u16(clamp16(id));
+      break;
+    }
     case 'ping':
       w.u8(msg.pong ? 1 : 0)
         .u32(msg.nonce)
@@ -215,21 +221,13 @@ function decodeBody(r: ByteReader): NetMessage | null {
       const n = r.u32();
       return { type: 'event', kind, a, b, tick, n, x: r.f32(), y: r.f32(), z: r.f32() };
     }
-    case TYPE_IDS.score: {
-      const remainingSeconds = r.u16() / 10;
-      const over = r.u8() === 1;
-      const n = r.u8();
-      const players: ScoreEntry[] = [];
-      for (let i = 0; i < n; i++)
-        players.push({
-          id: r.u8(),
-          kills: r.u8(),
-          deaths: r.u8(),
-          shots: r.u16(),
-          hits: r.u16(),
-          bestStreak: r.u8(),
-        });
-      return { type: 'score', remainingSeconds, over, players };
+    case TYPE_IDS.score:
+      return readScore(r);
+    case TYPE_IDS.ruin: {
+      const n = Math.min(RUIN_MAX, r.u16());
+      const ids: number[] = [];
+      for (let i = 0; i < n; i++) ids.push(r.u16());
+      return { type: 'ruin', ids };
     }
     case TYPE_IDS.ping:
       return { type: 'ping', pong: r.u8() === 1, nonce: r.u32(), time: r.f64() };
@@ -280,6 +278,7 @@ function readAircraft(r: ByteReader): AircraftStateMsg {
     alive: (flags & FLAG_ALIVE) !== 0,
     afterburner: (flags & FLAG_AB_STATE) !== 0,
     invulnerable: (flags & FLAG_INVULNERABLE) !== 0,
+    lockPart: (flags >> LOCK_SHIFT) & 7,
     lastInputSeq,
     position,
     orientation,

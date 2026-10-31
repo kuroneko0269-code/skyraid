@@ -8,7 +8,7 @@
 // 6-2: レイドの怪獣の部位を機銃・ミサイルの対象に入れ（攻撃した人の ID 付きでダメージ）、怪獣の攻撃の当たり・スタンを受ける。Three.js 非依存
 import { PVP_CONFIG, PVP_SPAWN_POINTS } from '../data/pvp';
 import { FLARE_CONFIG, MISSILE_CONFIG } from '../data/weapons';
-import type { Aircraft, AircraftControls } from '../entities/aircraft';
+import type { Aircraft } from '../entities/aircraft';
 import { headingQuat } from '../entities/enemy-aircraft';
 import { LOCAL_FORWARD } from '../flight/flight-model';
 import { copyQuat, copyVec3, quatIdentity, rotateVec3, vec3, type Vec3 } from '../flight/math';
@@ -17,41 +17,16 @@ import type { GroundHeightFn, GunHit, Rng } from './gun';
 import { MissileSystem, splashDamage, type Detonation } from './missile';
 import { KaijuPart } from '../entities/kaiju-part';
 import { PvpFighter, RewoundTarget, type ArenaGunTarget, type FighterSpec } from './pvp-fighter';
-import { NEUTRAL, lockablePart, splashKaijuParts, type ArenaFuseTarget } from './arena-raid';
+import * as R from './arena-raid';
+import type { ArenaFuseTarget } from './arena-raid';
+import * as T from './arena-types';
+import { KAIJU_ID_BASE, NOBODY, RESPAWN_BOOST } from './arena-types';
 import { isRookie } from './pvp-rules';
 import { farthestSpawn } from './pvp-spawn';
 import { inCone } from './targeting';
 
-/** 1 ステップ分の操作（NetControls と同じ形。飛行 + 戦闘） */
-export interface PvpControls extends AircraftControls {
-  readonly autoLevel: boolean;
-  readonly invertPitch: boolean;
-  readonly fire: boolean;
-  readonly missile: boolean;
-  readonly flare: boolean;
-  readonly locked: boolean;
-  /** 選んでいる対象の ID（なしは 0〜3 以外） */
-  readonly targetId: number;
-}
-
-/** 判定の結果（ホストが event で全員に送る）。a・b・n の意味は protocol.ts の EventMsg と同じ */
-export interface ArenaEvent {
-  kind: 'fire' | 'hit' | 'explode' | 'kill' | 'flare' | 'respawn' | 'stun';
-  a: number;
-  b: number;
-  n: number;
-  x: number;
-  y: number;
-  z: number;
-}
-
-/** 撃墜した人・当たった人が「いない」（墜落・地面での起爆） */
-export const NOBODY = 255;
-/** 怪獣の部位を表す ID（hit の b・入力の targetId。6-2）: KAIJU_ID_BASE + 部位の番号 */
-export const KAIJU_ID_BASE = 16;
-
-/** respawn の b（出現位置の番号）に足す印: 初心者保護つき（protocol.ts の RESPAWN_ROOKIE と同じ） */
-export const RESPAWN_BOOST = 0x80;
+export { KAIJU_ID_BASE, NOBODY, RESPAWN_BOOST } from './arena-types';
+export type { ArenaEvent, PvpControls } from './arena-types';
 
 export class PvpArena {
   /** 今の tick（ホストが step の初めに進める） */
@@ -73,13 +48,18 @@ export class PvpArena {
   private readonly wreck = vec3();
   private readonly wreckOrientation = quatIdentity();
   private readonly spawnOrientation = quatIdentity();
-  private readonly event: ArenaEvent = { kind: 'fire', a: 0, b: 0, n: 0, x: 0, y: 0, z: 0 };
+  private readonly event: T.ArenaEvent = { kind: 'fire', a: 0, b: 0, n: 0, x: 0, y: 0, z: 0 };
+
+  /** 撃墜から復帰までの秒数（6-6: レイドは 5 秒） */
+  respawnSeconds: number = PVP_CONFIG.respawnSeconds;
+  /** 復帰の位置（6-6: レイドは ID ごとの開始位置。null は PvP の輪の中で他機から最も遠い所） */
+  respawnPoint: ((id: number) => Readonly<Vec3 & { headingDeg: number }>) | null = null;
 
   /** 高層の建物（6-4。移動の線分が当たれば墜落）。null は建物なし */
   obstacles: ((a: Readonly<Vec3>, b: Readonly<Vec3>) => boolean) | null = null;
 
   constructor(
-    private readonly emit: (e: Readonly<ArenaEvent>) => void,
+    private readonly emit: (e: Readonly<T.ArenaEvent>) => void,
     private readonly groundHeight: GroundHeightFn | null = null,
     private readonly rng: Rng = Math.random,
   ) {
@@ -170,7 +150,7 @@ export class PvpArena {
    * 1 機の 1 ステップ分の操作（参加者の入力はホストに届いた分だけ、1 tick に 0〜2 回呼ぶ）。
    * viewTick は撃った人が他機を見ていた tick（null は今。ホスト自身）
    */
-  stepFighter(id: number, c: Readonly<PvpControls>, dt: number, viewTick: number | null): void {
+  stepFighter(id: number, c: Readonly<T.PvpControls>, dt: number, viewTick: number | null): void {
     const f = this.fighters.get(id);
     if (!f) return;
     const a = f.aircraft;
@@ -186,10 +166,11 @@ export class PvpArena {
     opts.autoLevel = c.autoLevel;
     opts.invertPitch = c.invertPitch;
     const stunned = f.stunTimer > 0;
+    f.lockPart = R.lockedPartIndex(this.kaijuParts, c.locked, c.targetId - KAIJU_ID_BASE);
     copyVec3(this.wreck, a.state.position);
     copyQuat(this.wreckOrientation, a.state.orientation);
     const crashes = a.crashCount;
-    a.step(stunned ? NEUTRAL : c, dt);
+    a.step(stunned ? R.NEUTRAL : c, dt);
     if (a.crashCount !== crashes || (this.obstacles?.(this.wreck, a.state.position) ?? false)) {
       // Aircraft は墜落すると上空へ戻すので、残骸の位置に置き直す
       a.respawn(this.wreck, this.wreckOrientation);
@@ -242,6 +223,17 @@ export class PvpArena {
   }
 
   private respawn(f: PvpFighter): void {
+    if (this.respawnPoint) {
+      // レイド（6-6）: 開始位置へ（b = 0。クライアントも同じ式で位置を出す）
+      this.send(
+        'respawn',
+        f.id,
+        0,
+        0,
+        R.raidRespawn(f, this.respawnPoint(f.id), this.spawnOrientation),
+      );
+      return;
+    }
     const i = this.farthestSpawn(f.id);
     const s = PVP_SPAWN_POINTS[i] ?? PVP_SPAWN_POINTS[0];
     if (!s) return;
@@ -254,7 +246,8 @@ export class PvpArena {
   /** 撃墜: 撃墜した人の撃墜数・された人の被撃墜数を数え、復帰のタイマーを始める */
   private down(victim: PvpFighter, killer: PvpFighter | null): void {
     victim.deaths++;
-    victim.respawnTimer = PVP_CONFIG.respawnSeconds;
+    victim.respawnTimer = this.respawnSeconds;
+    victim.lockPart = -1;
     victim.velocity.x = victim.velocity.y = victim.velocity.z = 0;
     victim.streak = 0;
     if (killer && killer !== victim) {
@@ -280,14 +273,14 @@ export class PvpArena {
   }
 
   /** ミサイルの目標: クライアントのロックを信頼せず、巻き戻した位置で円錐（+ 余裕）の中か見直す。外れなら無誘導 */
-  private lockTarget(f: PvpFighter, c: Readonly<PvpControls>): ArenaFuseTarget | null {
+  private lockTarget(f: PvpFighter, c: Readonly<T.PvpControls>): ArenaFuseTarget | null {
     if (!c.locked) return null;
     const s = f.spec.targeting;
     const fwd = rotateVec3(this.forward, f.aircraft.state.orientation, LOCAL_FORWARD);
     const cone = s.lockConeDeg + PVP_CONFIG.lockConeToleranceDeg;
     // 怪獣の部位（6-2）は巻き戻さない
     const part = this.kaijuParts[c.targetId - KAIJU_ID_BASE];
-    if (part) return lockablePart(part, f.position, fwd, s.lockRange, cone);
+    if (part) return R.lockablePart(part, f.position, fwd, s.lockRange, cone);
     const o = f.others.find((r) => r.fighter.id === c.targetId);
     if (!o?.fighter.alive) return null;
     return inCone(f.position, fwd, o.position, s.lockRange, cone) ? o.fighter : null;
@@ -312,7 +305,7 @@ export class PvpArena {
   }
 
   private send(
-    kind: ArenaEvent['kind'],
+    kind: T.ArenaEvent['kind'],
     a: number,
     b: number,
     n: number,
@@ -357,7 +350,7 @@ export class PvpArena {
     const t = d.target;
     const hitId = t instanceof PvpFighter ? t.id : t ? KAIJU_ID_BASE + t.index : NOBODY;
     this.send('explode', d.owner, hitId, d.serial & 0xff, d);
-    splashKaijuParts(this.kaijuParts, d, this.missiles.spec);
+    R.splashKaijuParts(this.kaijuParts, d, this.missiles.spec);
     for (const f of this.list) {
       if (!f.active || this.sameSide(f.id, d.owner)) continue;
       const p = f.position;

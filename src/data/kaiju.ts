@@ -170,7 +170,6 @@ export const RAID_CONFIG = {
   reachRadius: CITY_CONFIG.reachRadius,
   /** 開始位置（街の北、高度 800m、機首を湾側へ）。協力も同じ位置に横一列（間隔 150m） */
   start: HARBOR_MAP.raidStart,
-  /** 報酬（全員同じ。貢献度で差をつけない） */
-  reward: 5000,
+  /** 評価の基準時間（報酬は 6-6 から src/data/raid.ts の RAID_RULES.reward の式。それまではソロ 5000） */
   parTimeSeconds: 420,
 } as const;

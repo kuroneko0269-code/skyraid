@@ -8,6 +8,7 @@ import { netLoadout } from '../src/net/loadout';
 import { createLocalCombat, type LocalCombat, type NetGame } from '../src/net/net-game';
 import type { EventMsg, GameSettings, ScoreMsg } from '../src/net/protocol';
 import type { MemoryNetworkOptions } from '../src/net/transport';
+import type { BuildingField } from '../src/combat/buildings';
 import { createLobby, seeded, settle, type Lobby } from './net-helpers';
 
 export const DT = 1 / 60;
@@ -38,6 +39,12 @@ function kestrel(groundHeight?: (x: number, z: number) => number): Aircraft {
   return new Aircraft(netLoadout('kestrel', undefined).flight, {}, FLIGHT_CONFIG, groundHeight);
 }
 
+/** 6-6: 街の建物（プレイヤー ID ごと。省略は街なし）とブリーフィングの秒数（省略は countdownSeconds と同じ） */
+export interface MatchExtras {
+  readonly buildings?: (id: number) => BuildingField | null;
+  readonly briefingSeconds?: number;
+}
+
 export async function startMatch(
   n: number,
   options: MemoryNetworkOptions,
@@ -45,7 +52,9 @@ export async function startMatch(
   countdownSeconds = 0,
   groundHeight?: (x: number, z: number) => number,
   seed = 11,
+  extras: MatchExtras = {},
 ): Promise<Match> {
+  const briefingSeconds = extras.briefingSeconds ?? countdownSeconds;
   const lobby = await createLobby(n, options, seed);
   const room = lobby.host;
   room.setSettings({ ...room.settings, ...settings });
@@ -60,7 +69,12 @@ export async function startMatch(
       clients.push(
         new ClientGame(
           c,
-          { own: owns[c.localPlayerId] ?? kestrel(), countdownSeconds },
+          {
+            own: owns[c.localPlayerId] ?? kestrel(),
+            countdownSeconds,
+            briefingSeconds,
+            buildings: extras.buildings?.(c.localPlayerId) ?? null,
+          },
           () => lobby.net.now,
         ),
       );
@@ -69,7 +83,14 @@ export async function startMatch(
   room.start();
   const host = new HostGame(
     room,
-    { own: owns[0] ?? kestrel(), rng: seeded(seed + 7), countdownSeconds, groundHeight },
+    {
+      own: owns[0] ?? kestrel(),
+      rng: seeded(seed + 7),
+      countdownSeconds,
+      briefingSeconds,
+      groundHeight,
+      buildings: extras.buildings?.(0) ?? null,
+    },
     () => lobby.net.now,
   );
   for (let i = 0; i < 30 && clients.length < n; i++) {

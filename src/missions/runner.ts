@@ -5,6 +5,7 @@ import { EventBus } from '../core/event-bus';
 import { MAPS, ISLAND_MAP, type MapDef } from '../data/maps';
 import { MISSION_FLOW } from '../data/missions';
 import { computeRank, rewardCredits } from '../data/ranking';
+import { raidReward } from '../progression/raid-reward';
 import { BoundaryWatch } from './boundary';
 import { createObjective, RingPassObjective, type Objective } from './objectives';
 import type { MissionEvents, MissionOutcome, MissionResult, ObjectiveResult } from './events';
@@ -269,9 +270,13 @@ export class MissionRunner {
     const rank = success
       ? computeRank(this.elapsed, this.def.parTimeSeconds, damageTaken, w.playerMaxHp, tally)
       : null;
-    const credits = rank
-      ? rewardCredits(this.def.reward.baseCredits, rank, this.def.reward.rankMultipliers)
-      : 0;
+    const raid = this.def.reward.raid;
+    // 6-6: レイドは基礎額 × 時間ボーナス（× 高難度）、失敗でも 300
+    const credits = raid
+      ? raidReward({ coop: false, cleared: success, seconds: this.elapsed, ...raid })
+      : rank
+        ? rewardCredits(this.def.reward.baseCredits, rank, this.def.reward.rankMultipliers)
+        : 0;
     return {
       missionId: this.def.id,
       outcome,

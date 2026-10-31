@@ -55,6 +55,8 @@ export class PvpFighter implements FuseTarget, PlayerScore {
   /** 怪獣の咆哮のスタンの残り秒数（6-2。操作を使わない）と、最後にフレアを撒いてからの秒数（咆哮を防ぐ） */
   stunTimer = 0;
   flareAge = Infinity;
+  /** ロックしている怪獣の部位の番号（6-6。-1 はなし。他の人の HUD に出す） */
+  lockPart = -1;
   /** 撃墜されてから復帰までの残り秒数（生きている間は 0） */
   respawnTimer = 0;
   /** 復帰後の無敵の残り秒数 */

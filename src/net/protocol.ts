@@ -18,6 +18,8 @@ export interface GameSettings {
   noUpgrades: boolean;
   /** 初心者保護（撃墜数が最下位の人の復帰時に HP +50%・ミサイル +2） */
   rookieGuard: boolean;
+  /** レイドの高難度（6-6。HP ×1.4・予兆 −0.5 秒・最終フェーズ 3.5 分・報酬 ×1.8） */
+  hard: boolean;
 }
 
 /** チームなし（個人戦） */
@@ -110,6 +112,8 @@ export interface AircraftStateMsg {
   afterburner: boolean;
   /** 復帰後の無敵中（5-3。半透明で表示） */
   invulnerable: boolean;
+  /** ロックしている怪獣の部位の番号（6-6。NO_PART はなし） */
+  lockPart: number;
   /** ホストがこの機体に使った最後の入力の seq（ホスト自身の機体は 0） */
   lastInputSeq: number;
   position: Vec3;
@@ -137,7 +141,7 @@ export interface MissileStateMsg {
 
 /** 怪獣の部位 1 つ（6-2。レイド） */
 export interface KaijuPartStateMsg {
-  /** 部位 HP の割合（0〜1） */
+  /** 部位 HP の割合（0〜1。u16） */
   hpRatio: number;
   /** ブレイクの残り秒数 */
   breakTimer: number;
@@ -145,7 +149,7 @@ export interface KaijuPartStateMsg {
 
 /**
  * 怪獣の状態（6-2。レイドのときだけ state に入る。ホストが動かし、クライアントは表示と HUD に使う）。
- * 判定（当たり・ダメージ）はホストだけ。本格的な同期（補間・演出）は 6-6
+ * 判定（当たり・ダメージ）はホストだけ。6-6 で 40 バイト以下に詰めた（codec-kaiju.ts）。岩は event（rock）で送る
  */
 export interface KaijuStateMsg {
   /** KAIJU_STAGES の番号 */
@@ -158,6 +162,7 @@ export interface KaijuStateMsg {
   attackTime: number;
   attackDuration: number;
   downTimer: number;
+  /** 歩いた歩数（送るのは 2 で割った余り。写しが続きの値に直す） */
   walkPhase: number;
   hp: number;
   maxHp: number;
@@ -167,8 +172,8 @@ export interface KaijuStateMsg {
   parts: KaijuPartStateMsg[];
   /** 熱線の向き（null は撃っていない） */
   beam: Vec3 | null;
-  /** 飛んでいる岩の位置 */
-  rocks: Vec3[];
+  /** 攻撃の対象のプレイヤー ID（6-6。攻撃中だけ。NO_TARGET はなし） */
+  targetId: number;
 }
 
 /** KaijuStateMsg.attack: 攻撃していない */
@@ -195,6 +200,10 @@ export const EVENT_KINDS = [
   'over',
   'bye',
   'stun',
+  'rock',
+  'break',
+  'skip',
+  'brief',
 ] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
@@ -209,7 +218,11 @@ export const KILLER_NONE = 255;
  * kill: 撃墜（a = 撃墜した人 or KILLER_NONE、b = された人、xyz = 位置）/ flare: フレア（a = 撒いた人）/
  * respawn: 復帰（a = 人、b = 出現位置の番号（+ RESPAWN_BOOST は初心者保護つき。pvp-arena.ts）、n = その機体に最後に使った入力の seq）/
  * bye: クライアントが自分から抜ける（5-4。ホストは再接続を待たずに消す）/
- * stun: 怪獣の咆哮でスタン（6-2。a = 人、n = 秒 × 100）
+ * stun: 怪獣の咆哮でスタン（6-2。a = 人、n = 秒 × 100）/
+ * 6-6: rock: 怪獣の岩（a = 岩の番号、b = 0 投げた（xyz = 位置、n = 速度を packRockVelocity で詰めたもの）/ 1 落ちた（xyz = 位置））/
+ * break: ブレイク（a = 部位の番号、b = 貢献者のビット（1 << ID））/ skip: ブリーフィングのスキップ（クライアント → ホスト）/
+ * brief: ブリーフィングの終わり（ホスト → 全員。この後カウントダウン。n = カウントダウンの残り tick）/
+ * over の n: クリア時間（カウントダウンの後からの tick）
  */
 export interface EventMsg {
   type: 'event';
@@ -235,6 +248,9 @@ export interface ScoreEntry {
   hits: number;
   /** 最長連続撃墜（撃墜されずに続けた撃墜数の最大。5-4） */
   bestStreak: number;
+  /** レイド（6-6）: 部位別の与ダメージ（KAIJU_PARTS の順。PvP は空）とブレイクに貢献した回数 */
+  partDamage: number[];
+  breaks: number;
 }
 
 /** 成績と残り時間（ホスト → 全員。撃墜のたびと 1 秒ごと、終了時は over） */
@@ -254,8 +270,39 @@ export interface PingMsg {
   time: number;
 }
 
+/** 壊れた建物（6-6。ホスト → 全員、確実な経路）。ids は街の生成順の番号（BuildingField の添字） */
+export interface RuinMsg {
+  type: 'ruin';
+  ids: number[];
+}
+
 export type NetMessage =
-  JoinMsg | WelcomeMsg | InputMsg | StateMsg | EventMsg | PingMsg | ScoreMsg | LobbyMsg | ChatMsg;
+  | JoinMsg
+  | WelcomeMsg
+  | InputMsg
+  | StateMsg
+  | EventMsg
+  | PingMsg
+  | ScoreMsg
+  | LobbyMsg
+  | ChatMsg
+  | RuinMsg;
+
+/** AircraftStateMsg.lockPart: ロックしていない */
+export const NO_PART = 7;
+
+/** 岩の速度（m/s、各軸 ±511）を event の n（u32）に詰める（1 m/s 単位） */
+export function packRockVelocity(v: Readonly<Vec3>): number {
+  const q = (x: number): number => (Math.round(Math.min(511, Math.max(-511, x))) + 512) & 1023;
+  return (q(v.x) | (q(v.y) << 10) | (q(v.z) << 20)) >>> 0;
+}
+
+export function unpackRockVelocity(n: number, out: Vec3): Vec3 {
+  out.x = (n & 1023) - 512;
+  out.y = ((n >>> 10) & 1023) - 512;
+  out.z = ((n >>> 20) & 1023) - 512;
+  return out;
+}
 
 export { decodeMessage, encodeMessage } from './message-codec';
 

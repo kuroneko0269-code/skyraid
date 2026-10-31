@@ -4,6 +4,7 @@
 import type { Difficulty, PatrolPoint } from '../data/ai';
 import type { GroundTargetType } from '../data/ground-targets';
 import type { KaijuAttack } from '../data/kaiju';
+import type { RaidDifficulty } from '../data/raid';
 import type { Rank } from '../data/ranking';
 
 /** 位置と向き（機首の向きは -Z から右回り、度。真上から見て時計回り） */
@@ -112,6 +113,8 @@ export interface KaijuSpawn {
   readonly attacks?: readonly KaijuAttack[];
   /** 最終フェーズの制限時間を使う（省略は true。時間切れは失敗条件 kaijuReachedCity） */
   readonly finalTimer?: boolean;
+  /** 高難度（6-6。ソロのレイド） */
+  readonly hard?: boolean;
 }
 
 export type SpawnDef =
@@ -225,6 +228,11 @@ export interface RewardDef {
   readonly baseCredits: number;
   /** ランク別の倍率。省略で src/data/ranking.ts の既定 */
   readonly rankMultipliers?: Readonly<Record<Rank, number>>;
+  /**
+   * レイドの報酬の式（6-6。src/progression/raid-reward.ts）: ランクの倍率ではなく、基礎額 × 時間ボーナス（× 高難度）、
+   * 失敗でも 300。省略は通常のミッション
+   */
+  readonly raid?: { readonly difficulty: RaidDifficulty };
 }
 
 export interface MissionDef {

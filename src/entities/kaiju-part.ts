@@ -86,6 +86,22 @@ export class KaijuPart implements CombatTarget {
     return this.owner.damagePart(this, amount, attacker);
   }
 
+  /**
+   * 当てた人と時刻を記録し、ブレイクが成立したら貢献者（3 秒以内に当てた人。ID 順）を返す（6-6。kaiju.ts から移した）。
+   * 1 人のとき・ブレイク中・次に成立できるまでは null
+   */
+  registerHit(attacker: number, time: number, players: number): number[] | null {
+    const b = KAIJU_CONFIG.break;
+    this.lastHitBy.set(attacker, time);
+    if (players < b.minAttackers || this.breakTimer > 0 || this.breakCooldown > 0) return null;
+    const by: number[] = [];
+    for (const [id, t] of this.lastHitBy) if (time - t <= b.windowSeconds + 1e-9) by.push(id);
+    if (by.length < b.minAttackers) return null;
+    this.breakTimer = b.seconds;
+    this.breakCooldown = b.seconds + b.cooldownSeconds;
+    return by.sort((x, y) => x - y);
+  }
+
   reset(maxHp: number): void {
     this.partMaxHp = Math.max(1, Math.round(maxHp));
     this.partHp = this.partMaxHp;

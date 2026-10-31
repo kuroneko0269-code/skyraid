@@ -155,6 +155,11 @@ export class Countdown {
     return this.remainingTicks / this.tickHz;
   }
 
+  /** 残りを ticks にする（6-6: ブリーフィングのスキップ） */
+  setRemainingTicks(ticks: number): void {
+    this.remainingTicks = Math.max(0, Math.round(ticks));
+  }
+
   /** 1 ステップ進める。このステップの間カウント中だったら true（そのステップは操作を無視する） */
   step(): boolean {
     if (this.remainingTicks <= 0) return false;

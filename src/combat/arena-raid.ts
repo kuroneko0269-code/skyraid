@@ -1,10 +1,13 @@
 // 協力のレイドの PvpArena の部品（6-2。pvp-arena.ts から分けた）: スタン中の操作、怪獣の部位のロックの見直しと
-// ミサイルの範囲ダメージ。Three.js 非依存
+// ミサイルの範囲ダメージ。6-6: ロック中の部位の番号・レイドの復帰。Three.js 非依存
 import type { MissileSpec } from '../data/weapons';
 import type { KaijuPart } from '../entities/kaiju-part';
 import { splashDamage, type Detonation } from './missile';
 import { nearestPerGroup } from './target';
 import type { PvpFighter } from './pvp-fighter';
+import { PVP_CONFIG } from '../data/pvp';
+import { headingQuat } from '../entities/enemy-aircraft';
+import type { Quat } from '../flight/math';
 import { inCone } from './targeting';
 import type { Vec3 } from '../flight/math';
 
@@ -45,4 +48,24 @@ export function splashKaijuParts(
   for (const p of nearestPerGroup(list, dist, [])) {
     p.damageBy(splashDamage(spec, dist[list.indexOf(p)] ?? 0), d.owner);
   }
+}
+
+/** ロックしている部位の番号（6-6。ロックしていない・部位でなければ -1） */
+export function lockedPartIndex(
+  parts: readonly KaijuPart[],
+  locked: boolean,
+  index: number,
+): number {
+  return locked && parts[index] ? index : -1;
+}
+
+/** レイドの復帰（6-6）: 開始位置へ置いて 3 秒無敵（初心者保護はなし）。置いた位置を返す */
+export function raidRespawn<P extends Readonly<Vec3 & { headingDeg: number }>>(
+  f: PvpFighter,
+  p: P,
+  orientation: Quat,
+): P {
+  f.aircraft.respawn(p, headingQuat(orientation, p.headingDeg));
+  f.revive(PVP_CONFIG.invulnerableSeconds, false);
+  return p;
 }

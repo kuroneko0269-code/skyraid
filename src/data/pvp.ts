@@ -1,5 +1,6 @@
 // PvP の戦闘（5-3）の数値。仕組みは src/combat/pvp-arena.ts（ホストの判定）と src/net/pvp-mirror.ts（表示）。
 // 決定は docs/decisions.md
+import { RAID_QUICK_PHRASES } from './raid';
 import { WORLD_CONFIG } from './terrain';
 
 /** 撃墜数の上限の選択肢（ロビーでホストが選ぶ） */
@@ -90,6 +91,12 @@ export const PVP_QUICK_PHRASES = [
   'ナイス！',
   'ありがとう',
 ] as const;
+
+/** 定型文の全体（6-6: 番号 6〜9 はレイドだけの定型文。レイドのときだけ出す） */
+export const QUICK_PHRASES: readonly string[] = [...PVP_QUICK_PHRASES, ...RAID_QUICK_PHRASES];
+
+/** レイドの定型文の番号（QUICK_PHRASES の中） */
+export const RAID_PHRASE_BASE = PVP_QUICK_PHRASES.length;
 
 /** 対戦のモード（5-4）: 個人戦 / チーム戦（2 対 2）/ レイド（6-2。全員が同じチームで怪獣と戦う） */
 export const PVP_MODES = ['ffa', 'team', 'raid'] as const;

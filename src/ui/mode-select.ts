@@ -1,3 +1,4 @@
+import type { RaidDifficulty } from '../data/raid';
 import './mode-select.css';
 import { el } from './hud-dom';
 import { createButton, createScreen, setScreenShown } from './screen';
@@ -47,7 +48,8 @@ export class ModeSelectScreen {
       onSelect: (mode: GameMode) => void;
       onBack: () => void;
       /** レイドの人数を選んだ（6-2）: solo はすぐ出撃、coop は PvP のロビーへ */
-      onRaid: (kind: 'solo' | 'coop') => void;
+      /** difficulty はソロの難易度（6-6。協力はロビーでホストが選ぶ） */
+      onRaid: (kind: 'solo' | 'coop', difficulty: RaidDifficulty) => void;
     },
   ) {
     const root = createScreen(parent, 'mode-select-screen');
@@ -106,7 +108,7 @@ export class ModeSelectScreen {
       'p',
       'mode-prompt-text',
       raidBox,
-      '1 人ならすぐ出撃。2〜4 人は部屋を作るか、部屋コードで参加します（全員が同じチーム）。',
+      '1 人は難易度を選んですぐ出撃（高難度は HP ×1.4・予兆が短い・最終フェーズ 3.5 分・報酬 ×1.8）。2〜4 人は部屋を作るか、部屋コードで参加します（全員が同じチーム。難易度はホストが選ぶ）。',
     );
     const raidButtons = el('div', 'campaign-buttons', raidBox);
     createButton(raidButtons, 'ui-button is-ghost campaign-back', '戻る', () => {
@@ -115,15 +117,20 @@ export class ModeSelectScreen {
     });
     createButton(raidButtons, 'ui-button campaign-go', '協力（2〜4 人）', () => {
       this.closeDialog();
-      handlers.onRaid('coop');
+      handlers.onRaid('coop', 'normal');
+    });
+    // 6-6: ソロは開始前に難易度を選ぶ（高難度: HP ×1.4・予兆 −0.5 秒・最終フェーズ 3.5 分・報酬 ×1.8）
+    createButton(raidButtons, 'ui-button campaign-go', 'ソロ・高難度', () => {
+      this.closeDialog();
+      handlers.onRaid('solo', 'hard');
     });
     this.raidSolo = createButton(
       raidButtons,
       'ui-button is-primary campaign-go',
-      'ソロで出撃',
+      'ソロ・通常',
       () => {
         this.closeDialog();
-        handlers.onRaid('solo');
+        handlers.onRaid('solo', 'normal');
       },
     );
     // フリーフライトのマップの選択（6-4）

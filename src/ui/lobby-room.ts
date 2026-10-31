@@ -5,19 +5,22 @@ import { findAircraftModel } from '../data/aircraft';
 import {
   PVP_CONFIG,
   PVP_QUICK_PHRASES,
+  QUICK_PHRASES,
+  RAID_PHRASE_BASE,
   PVP_MODES,
   PVP_SCORE_LIMITS,
-  type PvpMode,
   PVP_TEAM,
   PVP_TIME_LIMITS,
 } from '../data/pvp';
 import { isReady, normalizeSettings, startBlock, type StartBlock } from '../net/lobby-rules';
 import { findMap, SELECTABLE_MAPS } from '../data/maps';
+import { RAID_DIFFICULTIES, RAID_DIFFICULTY_LABELS, RAID_QUICK_PHRASES } from '../data/raid';
 import type { GameSettings, PlayerInfo } from '../net/protocol';
 import { el } from './hud-dom';
 import { LobbyShare } from './lobby-share';
 import { playerColorCss, teamColorCss } from './lobby-colors';
 import { createButton } from './screen';
+import { MODE_LABELS, numberSelect, parseMode, toggle } from './lobby-controls';
 
 export interface LobbyRoomView {
   code: string;
@@ -50,31 +53,6 @@ const BLOCK_TEXT: Record<Exclude<StartBlock, null>, string> = {
   teams: '両方のチームに 1 人以上入れてください',
 };
 
-/** 選択肢の select（値は数、表示は label）。変えたら onChange */
-function numberSelect(
-  parent: HTMLElement,
-  label: string,
-  values: readonly (number | string)[],
-  text: (v: number | string) => string,
-  onChange: () => void,
-): HTMLSelectElement {
-  const wrap = el('label', 'campaign-fact lobby-rule', parent);
-  el('span', 'campaign-fact-label', wrap, label);
-  const select = el('select', 'ui-field lobby-rule-select', wrap);
-  for (const v of values) {
-    const o = el('option', '', select, text(v));
-    o.value = String(v);
-  }
-  select.addEventListener('change', onChange);
-  return select;
-}
-
-function toggle(parent: HTMLElement, label: string, onClick: () => void): HTMLButtonElement {
-  const b = createButton(parent, 'ui-toggle lobby-toggle', label, onClick);
-  b.setAttribute('aria-pressed', 'false');
-  return b;
-}
-
 export class LobbyRoom {
   readonly root: HTMLDivElement;
   private readonly share: LobbyShare;
@@ -94,6 +72,8 @@ export class LobbyRoom {
   private readonly waitText: HTMLParagraphElement;
   private readonly startButton: HTMLButtonElement;
   private readonly readyButton: HTMLButtonElement;
+  private readonly difficultySelect: HTMLSelectElement;
+  private readonly raidChat: HTMLButtonElement[];
   /** 定型文の吹き出し（プレイヤー ID → 文と消す時刻 ms） */
   private readonly bubbles = new Map<number, { text: string; until: number }>();
   private bubbleTimer = 0;
@@ -131,6 +111,7 @@ export class LobbyRoom {
           scoreLimit: Number(this.scoreSelect.value),
           timeLimitSeconds: Number(this.timeSelect.value),
           mode: parseMode(this.modeSelect.value),
+          hard: this.difficultySelect.value === 'hard',
         }),
       );
     };
@@ -163,6 +144,14 @@ export class LobbyRoom {
       (v) => MODE_LABELS[parseMode(String(v))],
       changed,
     );
+    // 6-6: レイドの難易度（レイドのときだけ出す）
+    this.difficultySelect = numberSelect(
+      this.rules,
+      '難易度',
+      RAID_DIFFICULTIES,
+      (v) => (v === 'hard' ? RAID_DIFFICULTY_LABELS.hard : RAID_DIFFICULTY_LABELS.normal),
+      changed,
+    );
     const toggles = el('div', 'lobby-toggles', this.rules);
     const flip = (key: 'noUpgrades' | 'rookieGuard') => () => {
       const v = this.view;
@@ -185,6 +174,12 @@ export class LobbyRoom {
         h.onChat(i);
       });
     });
+    // 6-6: レイドだけの定型文（レイドのときだけ出す）
+    this.raidChat = RAID_QUICK_PHRASES.map((text, i) =>
+      createButton(chat, 'ui-button lobby-chat-button', text, () => {
+        h.onChat(RAID_PHRASE_BASE + i);
+      }),
+    );
     this.waitText = el('p', 'briefing-text lobby-wait', this.root);
     const buttons = el('div', 'campaign-buttons lobby-buttons', this.root);
     createButton(buttons, 'ui-button is-ghost campaign-back', '退出', h.onLeave);
@@ -207,13 +202,17 @@ export class LobbyRoom {
     // レイド（6-2）は撃墜数・制限時間を使わない（怪獣を倒すか、最終フェーズの時間切れで終わる）
     this.rulesText.textContent =
       st.mode === 'raid'
-        ? 'レイド（協力）・ヴォルガス撃破'
+        ? `レイド（協力）・ヴォルガス撃破・${RAID_DIFFICULTY_LABELS[st.hard ? 'hard' : 'normal']}`
         : `${st.mode === 'team' ? 'チーム戦' : '個人戦'}・撃墜 ${st.scoreLimit} 機・${minutes(st.timeLimitSeconds)}`;
     const raid = st.mode === 'raid';
     for (const s of [this.scoreSelect, this.timeSelect, this.mapSelect]) {
       const row = s.parentElement;
       if (row) row.hidden = raid;
     }
+    const diffRow = this.difficultySelect.parentElement;
+    if (diffRow) diffRow.hidden = !raid;
+    this.difficultySelect.value = st.hard ? 'hard' : 'normal';
+    for (const b of this.raidChat) b.hidden = !raid;
     this.optionsText.textContent = `強化 ${st.noUpgrades ? '無効' : '有効'}・初心者保護 ${st.rookieGuard ? 'ON' : 'OFF'}`;
     this.rules.hidden = !v.isHost;
     // ホストは選ぶ欄に同じことが出ているので、文字のルールは出さない（横画面のスマホで縦に詰める）
@@ -247,7 +246,7 @@ export class LobbyRoom {
 
   /** 定型文を出す（その人の行に 3 秒） */
   showChat(from: number, phrase: number): void {
-    const text = PVP_QUICK_PHRASES[phrase];
+    const text = QUICK_PHRASES[phrase];
     if (!text) return;
     this.bubbles.set(from, { text, until: performance.now() + PVP_CONFIG.chat.showSeconds * 1000 });
     if (this.view) this.renderPlayers(this.view);
@@ -305,15 +304,4 @@ export class LobbyRoom {
       : el('span', 'lobby-team', li, label);
     chip.style.color = teamColorCss(p.team);
   }
-}
-
-/** ロビーのモードの表示名（6-2 でレイドを足した） */
-const MODE_LABELS: Readonly<Record<PvpMode, string>> = {
-  ffa: '個人戦',
-  team: 'チーム戦（2 対 2）',
-  raid: 'レイド（協力・怪獣）',
-};
-
-function parseMode(v: string): PvpMode {
-  return v === 'team' || v === 'raid' ? v : 'ffa';
 }

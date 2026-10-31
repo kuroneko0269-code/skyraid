@@ -3,9 +3,11 @@
 export const NET_CONFIG = {
   /**
    * プロトコルの版。join に入れ、ホストと違えば参加を断る（5-3 で 2: 戦闘の入力・ミサイル・成績。
-   * 5-4 で 3: ロビーの準備・機体変更・定型文・チーム・再接続・最長連続撃墜。6-2 で 4: レイドのモード・怪獣の状態・スタン）
+   * 5-4 で 3: ロビーの準備・機体変更・定型文・チーム・再接続・最長連続撃墜。6-2 で 4: レイドのモード・怪獣の状態・スタン。
+   * 6-6 で 5: 怪獣の状態を 40 バイト以下に・岩 / ブレイク / ブリーフィングの event・壊れた建物（ruin）・ロック中の部位・
+   * 成績の部位別の与ダメージ・高難度）
    */
-  protocolVersion: 4,
+  protocolVersion: 5,
   /** 部屋の最大人数（ホストを含む） */
   maxPlayers: 4,
   room: {
@@ -110,6 +112,7 @@ export const NET_CONFIG = {
     mode: 'ffa',
     noUpgrades: true,
     rookieGuard: false,
+    hard: false,
   },
   /** ?netdebug の表示を書き換える間隔（秒） */
   debugRefreshSeconds: 0.25,

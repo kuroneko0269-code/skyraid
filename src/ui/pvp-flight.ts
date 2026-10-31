@@ -1,17 +1,14 @@
 // PvP の 1 回の対戦（5-3。pvp-link.ts から分けた）: 通信のゲーム（ホスト / クライアント）と表示（PvpMirror）を
 // 固定ステップ・描画フレームで進め、他機・名札・フィード・スコアボード・残り時間・?netdebug を出す。
 // 5-4: カウントダウン・残り時間の警告（音つき）・撃墜の画面・無敵・再接続中（pvp-overlay.ts）、チーム戦の敵味方の色と
-// チームの合計、リザルトのベストプレイヤー・最長連続撃墜。対戦の終わり（over）で over が立つ
+// チームの合計、リザルトのベストプレイヤー・最長連続撃墜。対戦の終わり（over）で over が立つ。
+// 6-6: レイドの部分（怪獣・役割分担の HUD・ブリーフィング・リザルト）は raid-flight.ts。名札の TARGET・復帰 5 秒の表示
 import type { Vec3 } from '../flight/math';
 import type { PerspectiveCamera } from 'three';
 import { createCombatInput, type CombatInput } from '../combat/combat-input';
 import { accuracy, bestPlayer, standings, teamTotals } from '../combat/pvp-rules';
 import { PVP_CONFIG, PVP_TEAM } from '../data/pvp';
 import { createControls, type AircraftControls, type GroundHeightFn } from '../entities/aircraft';
-import type { KaijuBodyView, KaijuEffectsView, KaijuPartView } from '../entities/kaiju-display';
-import { KaijuMirror } from '../net/kaiju-mirror';
-import { RAID_OUTCOME } from '../net/raid-host';
-import type { KaijuHudFrame } from './kaiju-hud';
 import type { FlightSession } from '../missions/flight-session';
 import { ClientGame } from '../net/client-game';
 import { ClientRoom } from '../net/client-room';
@@ -27,6 +24,12 @@ import type { PvpBoard } from './pvp-board';
 import type { PvpHud } from './pvp-hud';
 import type { PvpOverlay } from './pvp-overlay';
 import type { ResultView } from './pvp-result';
+import type { BuildingField } from '../combat/buildings';
+import { RAID_RULES } from '../data/raid';
+import type { RaidBriefing } from './raid-briefing';
+import { RaidFlight, type KaijuSource } from './raid-flight';
+
+export type { KaijuSource } from './raid-flight';
 
 export type PvpSound = 'countdown' | 'go' | 'alert';
 
@@ -51,13 +54,12 @@ export interface PvpFlightDeps {
   readonly sound: (kind: PvpSound) => void;
   /** レイドの怪獣の表示元を差し替える（6-2。描画・HUD・音。null で戻す） */
   readonly kaijuSource: (src: KaijuSource | null) => void;
-}
-
-/** レイドの怪獣の表示元（6-2） */
-export interface KaijuSource {
-  readonly body: KaijuBodyView;
-  readonly fx: KaijuEffectsView;
-  readonly hud: () => KaijuHudFrame;
+  /** 街の建物（6-6。協力レイドはホストだけが壊して配る） */
+  readonly buildings: () => BuildingField | null;
+  /** 協力レイドのブリーフィング（6-6）と、前に見たか・見た印 */
+  readonly briefing: RaidBriefing;
+  readonly briefingSeen: () => boolean;
+  readonly markBriefingSeen: () => void;
 }
 
 /** 「GO!」を出しておく秒数 */
@@ -83,12 +85,8 @@ export class PvpFlight {
   private lastRemaining: number | null = null;
   private warning = '';
   private warningUntil = 0;
-  /** レイド（6-2）: クライアントの怪獣の写しと、終わり方 */
-  private readonly raid: boolean;
-  private kaijuMirror: KaijuMirror | null = null;
-  private kaijuVersion = -1;
-  private kaijuAt = 0;
-  private raidOutcome = 0;
+  /** レイド（6-2。6-6 で raid-flight.ts に分けた。PvP は null） */
+  private readonly raid: RaidFlight | null;
   private readonly stunned = createControls();
 
   constructor(
@@ -97,20 +95,27 @@ export class PvpFlight {
   ) {
     const own = deps.session.aircraft;
     this.team = room.settings.mode === 'team';
+    const buildings = deps.buildings();
     this.net =
       room instanceof HostRoom
-        ? new HostGame(room, { own, groundHeight: deps.groundHeight, obstacles: deps.obstacles })
-        : new ClientGame(room, { own, obstacles: deps.obstacles });
+        ? new HostGame(room, {
+            own,
+            groundHeight: deps.groundHeight,
+            obstacles: deps.obstacles,
+            buildings,
+          })
+        : new ClientGame(room, { own, obstacles: deps.obstacles, buildings });
     this.mirror = new PvpMirror(deps.session, room.localPlayerId, deps.otherGun);
-    this.raid = room.settings.mode === 'raid';
-    if (this.raid) this.attachKaiju();
+    this.raid =
+      room.settings.mode === 'raid'
+        ? new RaidFlight(this.net, this.mirror, () => this.players.keys(), this.nameOf, deps)
+        : null;
+    deps.hud.setRaid(this.raid !== null);
     this.syncRoster();
     this.net.onEvent((e) => {
       this.mirror.handleEvent(e);
-      if (e.kind === 'over') {
-        this.over = true;
-        this.raidOutcome = e.b;
-      }
+      this.raid?.handleEvent(e);
+      if (e.kind === 'over') this.over = true;
     });
     this.net.onScore((s) => {
       this.score = s;
@@ -125,37 +130,6 @@ export class PvpFlight {
     this.mirror.syncRoster(this.room.players, this.localTeam);
   }
 
-  /**
-   * レイド（6-2）: 怪獣の表示元を、ホストは本体、クライアントは写しにし、部位をロックの対象にする
-   */
-  private attachKaiju(): void {
-    const host = this.net instanceof HostGame ? this.net.raid : null;
-    const mirror = host ? null : new KaijuMirror();
-    this.kaijuMirror = mirror;
-    const body = host ? host.kaiju : mirror;
-    const fx = host ? host.ai : mirror;
-    if (!body || !fx) return;
-    this.mirror.setKaijuTargets(body.parts);
-    const s = this.deps.session;
-    const frame = {
-      body: body as KaijuBodyView | null,
-      locked: null as KaijuPartView | null,
-      stun: 0,
-    };
-    this.deps.kaijuSource({
-      body,
-      fx,
-      hud: () => {
-        const sel = s.combat.targeting.selected;
-        frame.body = body.visible ? body : null;
-        frame.locked =
-          sel && 'kaijuIndex' in sel ? (body.parts[Number(sel.kaijuIndex)] ?? null) : null;
-        frame.stun = this.mirror.ownStun;
-        return frame;
-      },
-    });
-  }
-
   /** 固定ステップ 1 回分。カウントダウン・再接続中・スタン中（6-2）は戦闘の操作を使わない */
   step(controls: Readonly<AircraftControls>, combat: Readonly<CombatInput>, dt: number): void {
     if (this.over) return;
@@ -164,22 +138,8 @@ export class PvpFlight {
     const local = this.mirror.stepLocal(blocked ? this.noInput : combat, dt);
     this.net.step(stun ? this.stunned : controls, local, dt);
     this.mirror.stepWorld(this.net, dt);
-    this.stepKaiju(dt);
+    this.raid?.step(dt);
     this.holdSeconds = this.deps.scoreKeyDown() ? this.holdSeconds + dt : 0;
-  }
-
-  /** クライアントの怪獣の写しを進める（新しい state が来たら写す） */
-  private stepKaiju(dt: number): void {
-    const m = this.kaijuMirror;
-    if (!m) return;
-    this.kaijuAt += dt;
-    const k = this.net.kaiju;
-    if (k && this.net.kaijuVersion !== this.kaijuVersion) {
-      this.kaijuVersion = this.net.kaijuVersion;
-      m.receive(k, this.kaijuAt);
-      this.kaijuAt = 0;
-    }
-    m.step(dt);
   }
 
   /** 描画フレームごと（pipeline.render の前） */
@@ -197,7 +157,8 @@ export class PvpFlight {
       this.mirror.ownInvulnerable > 0 ? PVP_CONFIG.invulnerableOpacity : 1,
     );
     const allyOf = this.team ? (id: number) => this.players.get(id)?.team === this.localTeam : null;
-    d.hud.updateTags(samples, this.players, d.camera, width, height, allyOf);
+    d.hud.updateTags(samples, this.players, d.camera, width, height, allyOf, net.kaijuTarget);
+    this.raid?.render();
     const open = this.boardToggled || this.holdSeconds >= PVP_CONFIG.scoreboardHoldSeconds;
     // レイド（6-2）の残り時間は怪獣の HUD（最終フェーズ）に出す
     const remaining = this.raid ? null : this.remainingSeconds(now);
@@ -217,7 +178,8 @@ export class PvpFlight {
   /** カウントダウン（3・2・1・GO と音）、残り時間の警告、撃墜の画面、無敵・初心者保護、再接続中 */
   private updateOverlay(now: number, remaining: number | null): void {
     const d = this.deps;
-    const cd = this.net.countdownRemaining;
+    // ブリーフィング中（6-6）はカウントダウンを出さない
+    const cd = this.net.briefingRemaining > 0 ? 0 : this.net.countdownRemaining;
     if (cd > 0) {
       const n = Math.ceil(cd - 1e-6);
       if (n !== this.lastCount) {
@@ -246,7 +208,10 @@ export class PvpFlight {
         ? {
             killer: m.downedBy === null ? null : this.nameOf(m.downedBy),
             color: m.downedBy === null ? '' : playerColorCss(m.downedBy),
-            remaining: m.downedAt + PVP_CONFIG.respawnSeconds - m.time,
+            remaining:
+              m.downedAt +
+              (this.raid ? RAID_RULES.respawnSeconds : PVP_CONFIG.respawnSeconds) -
+              m.time,
           }
         : null;
     const room = this.room;
@@ -261,9 +226,7 @@ export class PvpFlight {
     });
   }
 
-  private nameOf(id: number): string {
-    return this.players.get(id)?.name ?? `P${id + 1}`;
-  }
+  private readonly nameOf = (id: number): string => this.players.get(id)?.name ?? `P${id + 1}`;
 
   /** チーム戦の合計（「A 3 − 2 B」。個人戦は空） */
   private teamScoreText(): string {
@@ -296,7 +259,7 @@ export class PvpFlight {
       team: this.team ? (teamOf(s.score.id) ?? 0) : null,
     }));
     const reason = this.raid
-      ? this.raidOutcome === RAID_OUTCOME.clear
+      ? this.raid.cleared
         ? 'raidClear'
         : 'raidFail'
       : (this.score?.remainingSeconds ?? 0) > 0.05
@@ -311,12 +274,13 @@ export class PvpFlight {
       best: best ? { id: best.id, name: this.nameOf(best.id), kills: best.kills } : null,
       teamTotals: totals ? [totals.get(0) ?? 0, totals.get(1) ?? 0] : null,
       protectedBuildings: this.raid ? this.deps.protectedBuildings() : null,
+      raid: this.raid?.summary(players, this.room.settings.hard) ?? null,
     };
   }
 
   /** 終わり: シングルプレイの判定・表示に PvP のものを残さない */
   dispose(): void {
-    if (this.raid) this.deps.kaijuSource(null);
+    this.raid?.dispose();
     this.mirror.detach();
     this.deps.remotes.clear();
     this.deps.playerView.model.setOpacity(1);

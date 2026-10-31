@@ -159,8 +159,16 @@ export interface NetGame extends NetGameEvents {
   readonly missileVersion: number;
   /** 自機の HP（ホストの判定） */
   readonly ownHp: number;
-  /** 開始前のカウントダウンの残り秒数（0 は始まっている。5-4） */
+  /** 開始前のカウントダウンの残り秒数（0 は始まっている。5-4。ブリーフィング中はカウントダウンの長さ） */
   readonly countdownRemaining: number;
+  /** 協力レイドのブリーフィングの残り秒数（6-6。0 は終わった・なし） */
+  readonly briefingRemaining: number;
+  /** ブリーフィングのスキップを押す（6-6） */
+  skipBriefing(): void;
+  /** 怪獣の攻撃の対象のプレイヤー ID（6-6。攻撃中だけ。なしは null） */
+  readonly kaijuTarget: number | null;
+  /** その人がロックしている怪獣の部位の番号（6-6。-1 はなし） */
+  lockPartOf(id: number): number;
   /** 自機の戦闘の操作を使わない（カウントダウン中・再接続中。5-4） */
   readonly inputBlocked: boolean;
   /** レイドの怪獣の状態（6-2。ホストの最新。kaijuVersion が変わったら新しい。PvP は null） */

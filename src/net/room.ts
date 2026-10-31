@@ -5,7 +5,7 @@
 // クライアントの一時的な切断（10 秒は枠と機体を残し、同じ ID と合言葉で戻れば続ける。自分から抜けたら bye ですぐ消す）。
 // 時刻は tick(nowMs) で外から進める（ブラウザは setInterval、テストはインメモリのネットワークの時刻）。Three.js・DOM 非依存
 import { NET_CONFIG } from '../data/net';
-import { PVP_CONFIG, PVP_QUICK_PHRASES } from '../data/pvp';
+import { PVP_CONFIG, QUICK_PHRASES } from '../data/pvp';
 import { truncateChars } from '../progression/save';
 import { ChatGate, autoTeams, newPlayer, sameUpgrades, teamForNewcomer } from './lobby-rules';
 import { netLoadout } from './loadout';
@@ -139,9 +139,10 @@ export class HostRoom extends RoomBase {
 
   /** 対戦の終わり（5-3）: 全員に知らせ、ロビーに戻す。準備と「もう一度」は全員やり直し（5-4） */
   /** outcome はレイドの結果（6-2。raid-host.ts の RAID_OUTCOME。PvP は 0） */
-  endMatch(tick: number, outcome = 0): void {
+  /** n はレイドのクリア時間（6-6。カウントダウンの後からの tick） */
+  endMatch(tick: number, outcome = 0, n = 0): void {
     if (!this.started || this.ended) return;
-    this.broadcast(eventMsg('over', 0, outcome, tick), 'reliable');
+    this.broadcast(eventMsg('over', 0, outcome, tick, n), 'reliable');
     this.started = false;
     for (const p of this.players) {
       p.ready = p.id === 0;
@@ -296,7 +297,7 @@ export class HostRoom extends RoomBase {
 
   /** 定型文を全員へ（同じ人は minIntervalSeconds に 1 回まで） */
   private relayChat(from: number, phrase: number): void {
-    if (!Number.isInteger(phrase) || phrase < 0 || phrase >= PVP_QUICK_PHRASES.length) return;
+    if (!Number.isInteger(phrase) || phrase < 0 || phrase >= QUICK_PHRASES.length) return;
     if (!this.chatGate.allow(from, this.now())) return;
     this.broadcast({ type: 'chat', from, phrase }, 'reliable');
     this.emitChat(from, phrase);

@@ -7,13 +7,19 @@
 import { NET_CONFIG } from '../data/net';
 import { PVP_CONFIG } from '../data/pvp';
 import { PVP_SPAWN_POINTS } from '../data/pvp';
+import { RAID_CONFIG } from '../data/kaiju';
+import { RAID_RULES } from '../data/raid';
 import { RESPAWN_BOOST } from '../combat/pvp-arena';
-import { Countdown } from '../combat/pvp-rules';
+import type { BuildingField } from '../combat/buildings';
+import { PreStart } from './briefing';
 import type { Aircraft, AircraftControls } from '../entities/aircraft';
 import { headingQuat } from '../entities/enemy-aircraft';
 import { copyQuat, copyVec3, quatIdentity, type Vec3 } from '../flight/math';
 import {
+  NO_PART,
+  NO_TARGET,
   createNetControls,
+  eventMsg,
   quantizeControls,
   type EventMsg,
   type KaijuStateMsg,
@@ -45,6 +51,10 @@ export interface ClientGameDeps {
   readonly countdownSeconds?: number;
   /** 高層の建物（6-4。ホストと同じ判定で先行計算の墜落を出す） */
   readonly obstacles?: (a: Readonly<Vec3>, b: Readonly<Vec3>) => boolean;
+  /** 協力レイドのブリーフィングの秒数（6-6。省略は RAID_RULES.briefingSeconds。PvP は 0） */
+  readonly briefingSeconds?: number;
+  /** 街の建物（6-6。自分では壊さず、ホストの ruin で壊す） */
+  readonly buildings?: BuildingField | null;
 }
 
 const TICK_HZ = NET_CONFIG.rates.tickHz;
@@ -61,8 +71,8 @@ export class ClientGame extends NetGameEvents implements NetGame {
   down = false;
   /** つなぎ直した後、ホストの位置合わせの復帰を待っている（5-4） */
   awaitingResync = false;
-  /** 開始前のカウントダウン（5-4） */
-  readonly countdown: Countdown;
+  /** 開始前のブリーフィング（6-6）とカウントダウン（5-4） */
+  readonly countdown: PreStart;
   missiles: MissileStateMsg[] = [];
   missileVersion = 0;
   /** レイドの怪獣（6-2） */
@@ -84,6 +94,9 @@ export class ClientGame extends NetGameEvents implements NetGame {
   private lastStateTick = -1;
   /** 自機が最後に復帰した tick（それより前の状態の HP は使わない。復帰の event より遅れて届くことがある） */
   private respawnTick = -1;
+  private readonly raid: boolean;
+  /** プレイヤー ID → ロックしている怪獣の部位（6-6。最新の state） */
+  private readonly locks = new Map<number, number>();
 
   constructor(
     private readonly room: ClientRoom,
@@ -91,10 +104,15 @@ export class ClientGame extends NetGameEvents implements NetGame {
     private readonly now: () => number = () => performance.now(),
   ) {
     super();
-    this.countdown = new Countdown(deps.countdownSeconds ?? PVP_CONFIG.countdownSeconds, TICK_HZ);
     this.localId = room.localPlayerId;
     const own = deps.own;
     const raid = room.settings.mode === 'raid';
+    this.raid = raid;
+    this.countdown = new PreStart(
+      raid ? (deps.briefingSeconds ?? RAID_RULES.briefingSeconds) : 0,
+      deps.countdownSeconds ?? PVP_CONFIG.countdownSeconds,
+      TICK_HZ,
+    );
     own.respawn(spawnPosition(this.localId, { x: 0, y: 0, z: 0 }, raid), spawnOrientation(raid));
     this.maxHp = room.players.find((p) => p.id === this.localId)?.maxHp ?? 0;
     this.hp = this.maxHp;
@@ -123,6 +141,11 @@ export class ClientGame extends NetGameEvents implements NetGame {
       if (msg.type === 'state') this.onState(msg);
       else if (msg.type === 'event') this.handleEvent(msg);
       else if (msg.type === 'score') this.emitScore(msg);
+      else if (msg.type === 'ruin') {
+        // 6-6: 建物はホストの知らせだけで壊す（自分では判定しない）
+        const field = this.deps.buildings;
+        if (field) for (const i of msg.ids) field.destroy(i, 'kaiju');
+      }
     });
   }
 
@@ -131,7 +154,28 @@ export class ClientGame extends NetGameEvents implements NetGame {
   }
 
   get countdownRemaining(): number {
-    return this.countdown.remainingSeconds;
+    return this.countdown.countdownRemaining;
+  }
+
+  get briefingRemaining(): number {
+    return this.countdown.briefingRemaining;
+  }
+
+  /** ブリーフィングのスキップをホストへ（6-6。全員がそろうとホストが終わらせる） */
+  skipBriefing(): void {
+    if (this.countdown.briefingRemaining <= 0) return;
+    this.room.send(eventMsg('skip', this.localId, 0, 0), 'reliable');
+  }
+
+  /** 攻撃の対象のプレイヤー（6-6。最新の state。攻撃中だけ） */
+  get kaijuTarget(): number | null {
+    const t = this.kaiju?.targetId ?? NO_TARGET;
+    return t === NO_TARGET ? null : t;
+  }
+
+  /** その人がロックしている怪獣の部位（6-6。-1 はなし） */
+  lockPartOf(id: number): number {
+    return this.locks.get(id) ?? -1;
   }
 
   get inputBlocked(): boolean {
@@ -211,12 +255,19 @@ export class ClientGame extends NetGameEvents implements NetGame {
       this.hp = Math.round(this.maxHp * (boost ? PVP_CONFIG.rookie.hpScale : 1));
       this.respawn(e.b & ~RESPAWN_BOOST, e.n);
     } else if (e.kind === 'respawn') this.view.bufferOf(e.a)?.clear();
+    else if (e.kind === 'brief') this.countdown.endBriefing(e.n);
     this.emitEvent(e);
   }
 
   /** 復帰: 出現位置に置き、ホストがそこから使った seq（afterSeq の次から今まで）の操作で計算し直す */
   private respawn(spawn: number, afterSeq: number): void {
-    const s = PVP_SPAWN_POINTS[spawn] ?? PVP_SPAWN_POINTS[0];
+    // レイド（6-6）は自分の開始位置（ホストと同じ式）
+    const s = this.raid
+      ? {
+          ...spawnPosition(this.localId, { x: 0, y: 0, z: 0 }, true),
+          headingDeg: RAID_CONFIG.start.headingDeg,
+        }
+      : (PVP_SPAWN_POINTS[spawn] ?? PVP_SPAWN_POINTS[0]);
     if (!s) return;
     const own = this.deps.own;
     own.respawn(s, headingQuat(this.spawnOrientation, s.headingDeg));
@@ -247,6 +298,7 @@ export class ClientGame extends NetGameEvents implements NetGame {
       this.kaijuVersion++;
     }
     for (const a of msg.aircraft) {
+      if (newer) this.locks.set(a.id, a.lockPart === NO_PART ? -1 : a.lockPart);
       if (a.id === this.localId) {
         if (!newer) continue;
         if (a.alive && msg.tick >= this.respawnTick) this.hp = a.hp;

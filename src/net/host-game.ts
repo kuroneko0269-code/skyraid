@@ -18,12 +18,22 @@ import {
   holdAircraft,
   hostStats,
   interpolateSample,
-  stateOf,
+  stateMsg,
 } from './host-state';
-import { Countdown, PvpMatch } from '../combat/pvp-rules';
+import { PvpMatch } from '../combat/pvp-rules';
+import type { BuildingField } from '../combat/buildings';
+import type { PreStart } from './briefing';
+import {
+  allSkipped,
+  createRaidHost,
+  preStart,
+  resendRuins,
+  scoreMsg,
+  takeRuins,
+} from './host-raid';
 import type { Rng } from '../combat/gun';
 import { InputBuffer } from './input-buffer';
-import { RAID_OUTCOME, RaidHost } from './raid-host';
+import { RAID_OUTCOME, type RaidHost } from './raid-host';
 import { netLoadout } from './loadout';
 import {
   createNetControls,
@@ -68,6 +78,10 @@ export interface HostGameDeps {
   readonly rng?: Rng;
   /** 開始前のカウントダウンの秒数（省略は PVP_CONFIG.countdownSeconds。テストで 0 にする） */
   readonly countdownSeconds?: number;
+  /** 協力レイドのブリーフィングの秒数（6-6。省略は RAID_RULES.briefingSeconds。PvP は 0） */
+  readonly briefingSeconds?: number;
+  /** 街の建物（6-6。レイドはホストだけが壊し、壊れた番号を配る） */
+  readonly buildings?: BuildingField | null;
 }
 
 const TICK_HZ = NET_CONFIG.rates.tickHz;
@@ -78,8 +92,10 @@ export class HostGame extends NetGameEvents implements NetGame {
   readonly arena: PvpArena;
   readonly match: PvpMatch;
   readonly own: PvpFighter;
-  /** 開始前のカウントダウン（5-4） */
-  readonly countdown: Countdown;
+  /** 開始前のブリーフィング（6-6）とカウントダウン（5-4） */
+  readonly countdown: PreStart;
+  /** カウントダウンの後のステップ数（6-6。レイドのクリア時間） */
+  playTicks = 0;
   missiles: MissileStateMsg[] = [];
   /** レイドの怪獣（6-2。PvP は null） */
   readonly raid: RaidHost | null;
@@ -101,8 +117,9 @@ export class HostGame extends NetGameEvents implements NetGame {
     private readonly now: () => number = () => performance.now(),
   ) {
     super();
-    this.countdown = new Countdown(deps.countdownSeconds ?? PVP_CONFIG.countdownSeconds, TICK_HZ);
     const settings = room.settings;
+    const raid = settings.mode === 'raid';
+    this.countdown = preStart(raid, deps.briefingSeconds, deps.countdownSeconds);
     this.arena = new PvpArena(this.handleArena, deps.groundHeight ?? null, deps.rng);
     this.arena.obstacles = deps.obstacles ?? null;
     // レイド（6-2）は全員を同じチームにする（味方の弾は当たらない）
@@ -123,10 +140,7 @@ export class HostGame extends NetGameEvents implements NetGame {
     );
     this.own = this.arena.add(0, deps.own, fighterSpec(this.loadout(p.aircraftId, p.upgrades)));
     for (const pl of room.players) if (pl.id !== 0) this.addRemote(pl.id, pl.aircraftId);
-    this.raid =
-      settings.mode === 'raid'
-        ? new RaidHost(this.arena, room.players.length, deps.groundHeight)
-        : null;
+    this.raid = raid ? createRaidHost(this.arena, room, deps, this.sendEvent) : null;
     room.onPlayerLeave((id) => {
       this.remotes.delete(id);
       this.arena.remove(id);
@@ -140,10 +154,13 @@ export class HostGame extends NetGameEvents implements NetGame {
         // 古い seq の入力を捨てて溜め直す。届き直したら出現位置へ（step）
         r.input.reset();
         r.pendingResume = true;
+        // 6-6: 途切れている間に壊れた建物を含め、壊れている建物をすべて送り直す
+        resendRuins(room, id, this.raid ? deps.buildings : null);
       }
     });
     room.onMessage((id, msg) => {
       if (msg.type === 'input') this.remotes.get(id)?.input.receive(msg);
+      else if (msg.type === 'event' && msg.kind === 'skip') this.skip(id);
     });
   }
 
@@ -172,7 +189,40 @@ export class HostGame extends NetGameEvents implements NetGame {
   }
 
   get countdownRemaining(): number {
-    return this.countdown.remainingSeconds;
+    return this.countdown.countdownRemaining;
+  }
+
+  get briefingRemaining(): number {
+    return this.countdown.briefingRemaining;
+  }
+
+  /** ブリーフィングのスキップ（ホスト自身。6-6） */
+  skipBriefing(): void {
+    this.skip(0);
+  }
+
+  /** 全員（名簿の今の人）がスキップを押したらブリーフィングを終わらせ、全員に brief を送る */
+  private skip(id: number): void {
+    const c = this.countdown;
+    if (allSkipped(c, this.room.players, id))
+      this.sendEvent(eventMsg('brief', 0, 0, 0, c.remainingTicks));
+  }
+
+  /** できごとを全員へ送り、自分にも渡す（tick は今） */
+  private readonly sendEvent = (e: EventMsg): void => {
+    e.tick = this.tick;
+    this.room.broadcast(e, 'reliable');
+    this.emitEvent(e);
+  };
+
+  /** 攻撃の対象のプレイヤー（6-6。攻撃中だけ） */
+  get kaijuTarget(): number | null {
+    return this.raid?.targetId ?? null;
+  }
+
+  /** その人がロックしている怪獣の部位（6-6。-1 はなし） */
+  lockPartOf(id: number): number {
+    return this.arena.fighters.get(id)?.lockPart ?? -1;
   }
 
   get inputBlocked(): boolean {
@@ -213,6 +263,7 @@ export class HostGame extends NetGameEvents implements NetGame {
         arena.stepFighter(r.id, input, dt, offset === null ? null : first + i + offset);
       });
     }
+    this.playTicks++;
     arena.endTick(dt);
     this.raid?.step(dt);
     this.collectMissiles();
@@ -225,8 +276,10 @@ export class HostGame extends NetGameEvents implements NetGame {
     if (ended || this.scoreDirty || this.tick % this.scoreEvery === 0) this.sendScore(ended);
     if (ended) {
       this.over = true;
-      this.room.endMatch(this.tick, outcome);
-      this.emitEvent(eventMsg('over', 0, outcome, this.tick));
+      // 壊れた建物を配り切ってから終わりを知らせる（確実な経路は順番どおり。守れた建物 % が全員で一致する）
+      this.sendRuins();
+      this.room.endMatch(this.tick, outcome, this.playTicks);
+      this.emitEvent(eventMsg('over', 0, outcome, this.tick, this.playTicks));
     }
   }
 
@@ -246,21 +299,7 @@ export class HostGame extends NetGameEvents implements NetGame {
 
   /** 成績（全員） */
   score(over: boolean): ScoreMsg {
-    return {
-      type: 'score',
-      remainingSeconds: this.raid
-        ? (this.raid.kaiju.finalRemaining ?? 0)
-        : this.match.remainingSeconds,
-      over,
-      players: this.arena.all.map((f) => ({
-        id: f.id,
-        kills: f.kills,
-        deaths: f.deaths,
-        shots: f.shots,
-        hits: f.hits,
-        bestStreak: f.bestStreak,
-      })),
-    };
+    return scoreMsg(this.arena.all, this.raid, this.match.remainingSeconds, over);
   }
 
   private sendScore(over: boolean): void {
@@ -273,10 +312,8 @@ export class HostGame extends NetGameEvents implements NetGame {
   private readonly handleArena = (e: Readonly<ArenaEvent>): void => {
     // 復帰: その機体に最後に使った入力の seq（クライアントがそこから自機を計算し直す）
     const n = e.kind === 'respawn' ? (this.remotes.get(e.a)?.input.lastApplied ?? 0) : e.n;
-    const msg: EventMsg = eventMsg(e.kind, e.a, e.b, this.tick, n, e.x, e.y, e.z);
     if (e.kind === 'kill') this.scoreDirty = true;
-    this.room.broadcast(msg, 'reliable');
-    this.emitEvent(msg);
+    this.sendEvent(eventMsg(e.kind, e.a, e.b, this.tick, n, e.x, e.y, e.z));
   };
 
   private collectMissiles(): void {
@@ -284,23 +321,17 @@ export class HostGame extends NetGameEvents implements NetGame {
     this.missileVersion++;
   }
 
+  private sendRuins(): void {
+    const ruins = takeRuins(this.raid);
+    if (ruins) this.room.broadcast(ruins, 'reliable');
+  }
+
   private broadcastState(): void {
-    const msgs = this.msgs;
-    msgs.length = 0;
-    for (const f of this.arena.all) {
-      const seq = f.id === 0 ? 0 : (this.remotes.get(f.id)?.input.lastApplied ?? 0);
-      msgs.push(stateOf(f, seq));
-    }
-    this.room.broadcast(
-      {
-        type: 'state',
-        tick: this.tick,
-        aircraft: msgs,
-        missiles: this.missiles,
-        kaiju: this.raid?.state() ?? null,
-      },
-      'unordered',
-    );
+    this.sendRuins();
+    const seqOf = (id: number): number => this.remotes.get(id)?.input.lastApplied ?? 0;
+    const kaiju = this.raid?.state() ?? null;
+    const msg = stateMsg(this.tick, this.arena.all, seqOf, this.missiles, kaiju, this.msgs);
+    this.room.broadcast(msg, 'unordered');
     this.sent.hit(this.now());
   }
 

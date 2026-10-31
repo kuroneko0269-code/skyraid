@@ -109,11 +109,12 @@ describe('state の怪獣', () => {
     expect(b.hp).toBe(Math.round(k.hp));
     expect(b.maxHp).toBe(k.maxHp);
     expect(b.parts[4]?.hpRatio).toBeCloseTo(k.parts[4]?.hpRatio ?? 0, 4);
-    expect(b.walkPhase).toBeCloseTo(k.walkPhase, 3);
+    // 6-6: 歩数は 2 で割った余りを 1/128 で送る
+    expect(Math.abs(b.walkPhase - (k.walkPhase % 2))).toBeLessThan(1 / 128 + 1e-9);
     const size = encodeMessage(msg).byteLength;
-    expect(size).toBeLessThan(100);
     const none = encodeMessage({ ...msg, kaiju: null }).byteLength;
-    expect(size - none).toBeGreaterThan(40);
+    // 6-6: 怪獣の分は 40 バイト以下（有無の 1 バイトを含む）
+    expect(size - none + 1).toBeLessThanOrEqual(40);
   });
 
   it('クライアントの写しは届いた位置へ寄り、部位の位置・HP を出す（ダメージは受けない）', () => {
