@@ -1,9 +1,9 @@
 // 大気散乱の GLSL。atmosphere-model.ts と同じ式。定数は src/data/sky.ts から埋め込む
 import { Color, ShaderChunk, ShaderLib, UniformsLib, type IUniform } from 'three';
 import { OCEAN_CONFIG } from '../data/ocean';
-import { SKY_CONFIG } from '../data/sky';
+import { LOW_SUN_CONFIG, SKY_CONFIG } from '../data/sky';
 import { NIGHT_CONFIG, OVERCAST_CONFIG } from '../data/weather';
-import { extraterrestrialSun } from './atmosphere-model';
+import { extraterrestrialSun, OZONE_DEPTH } from './atmosphere-model';
 import { normalizedTint } from './atmosphere-weather';
 
 /** vec4 の uniform の値。Vector4 にしないのは、UniformsUtils.clone で複製されず全マテリアルで共有するため */
@@ -20,16 +20,16 @@ export interface SharedVec4 {
  * - uAtmoWeather: x = 空気遠近の倍率 − 1、y = 霧の消散係数（1/m、海面）、z = 曇天の割合、w = 未使用
  * - uAtmoMoon: xyz = 月の向き、w = 月の明るさ（0 で月なし）
  * - uAtmoGrey: xyz = 曇天の空の天頂の明るさ、w = 未使用
- * - uAtmoSunTint: xyz = 低い太陽の色味 − 1（朝焼け・夕焼け。0 で 4-1 のまま）、w = 未使用
+ * - uAtmoLowSun: x = 低い太陽の重み（朝焼け・夕焼けの散乱の項。0 で 4-1 のまま。7-5b）、yzw = 未使用
  */
 export const ATMO_WEATHER_UNIFORMS: Record<
-  'uAtmoWeather' | 'uAtmoMoon' | 'uAtmoGrey' | 'uAtmoSunTint',
+  'uAtmoWeather' | 'uAtmoMoon' | 'uAtmoGrey' | 'uAtmoLowSun',
   { value: SharedVec4 }
 > = {
   uAtmoWeather: { value: { x: 0, y: 0, z: 0, w: 0 } },
   uAtmoMoon: { value: { x: 0, y: 1, z: 0, w: 0 } },
   uAtmoGrey: { value: { x: 0, y: 0, z: 0, w: 0 } },
-  uAtmoSunTint: { value: { x: 0, y: 0, z: 0, w: 0 } },
+  uAtmoLowSun: { value: { x: 0, y: 0, z: 0, w: 0 } },
 };
 
 const f = (x: number): string => {
@@ -45,13 +45,20 @@ function commonGlsl(): string {
   const color = extraterrestrialSun(sun.temperature, 1, sun.whiteBalance);
   const sea = new Color(OCEAN_CONFIG.deepColor);
   const oc = OVERCAST_CONFIG;
+  const ls = LOW_SUN_CONFIG;
   return /* glsl */ `
 #ifndef ATMO_COMMON
 #define ATMO_COMMON
 uniform vec4 uAtmoWeather;
 uniform vec4 uAtmoMoon;
 uniform vec4 uAtmoGrey;
-uniform vec4 uAtmoSunTint;
+uniform vec4 uAtmoLowSun;
+// 低い太陽（7-5b。LOW_SUN_CONFIG）: Rayleigh の倍率、オゾンの天頂の光学的厚さ、散乱する高さ・傾き、多重散乱の染め、Mie の倍率
+const float ATMO_LOW_RAYLEIGH = ${f(ls.rayleighBoost)};
+const vec3 ATMO_LOW_OZONE = ${v3(OZONE_DEPTH)};
+const vec2 ATMO_LOW_SCATTER = vec2(${f(ls.scatterHeight)}, ${f(ls.scatterSlope)});
+const float ATMO_LOW_MS = ${f(ls.multiScatterTint)};
+const float ATMO_LOW_MIE = ${f(ls.mieBoost)};
 const vec3 ATMO_MOON_TINT = ${v3(normalizedTint(NIGHT_CONFIG.moonTint))};
 const float ATMO_FOG_H = ${f(oc.fogHeight)};
 const float ATMO_DIRECT_BLOCK = ${f(oc.directBlock)};
@@ -79,10 +86,12 @@ float atmoAirMass(float c) {
   return 1.0 / (c + 0.15 * pow(93.885 - z, -1.253));
 }
 
-// 高さ h で太陽から届く光の透過率
+// 高さ h で太陽から届く光の透過率。低い太陽（7-5b）は Rayleigh を強め、オゾンの吸収を足す
 vec3 atmoSunTransmittance(vec3 sun, float h) {
   float y = max(h, 0.0);
-  vec3 depth = ATMO_BETA_R * ATMO_H_R * exp(-y / ATMO_H_R) + ATMO_BETA_M_EXT * ATMO_H_M * exp(-y / ATMO_H_M);
+  float low = uAtmoLowSun.x;
+  vec3 depth = ATMO_BETA_R * ATMO_H_R * exp(-y / ATMO_H_R) * (1.0 + low * ATMO_LOW_RAYLEIGH)
+    + ATMO_BETA_M_EXT * ATMO_H_M * exp(-y / ATMO_H_M) + low * ATMO_LOW_OZONE;
   return exp(-depth * atmoAirMass(sun.y));
 }
 
@@ -95,12 +104,17 @@ vec3 atmoSkyFrom(vec3 dir, vec3 sun, float sunE, float h) {
   float sM = ATMO_BETA_M * nM;
   vec3 ext = sR + ATMO_BETA_M_EXT * nM;
   vec3 tau = ext * atmoAirMass(dir.y);
-  vec3 ts = atmoSunTransmittance(sun, h);
+  float low = uAtmoLowSun.x;
+  // 7-5b: 上を見るほど高い空気で散乱する（太陽からの光路が短い）。地平線は h のまま
+  vec3 ts = atmoSunTransmittance(sun, h + low * ATMO_LOW_SCATTER.x * clamp(dir.y * ATMO_LOW_SCATTER.y, 0.0, 1.0));
   float c = dot(dir, sun);
   float pr = 0.05968310 * (1.0 + c * c);
   float g2 = ATMO_G * ATMO_G;
-  float pm = 0.07957747 * (1.0 - g2) / pow(1.0 + g2 - 2.0 * ATMO_G * c, 1.5);
-  vec3 scatter = ts * (sR * pr + sM * pm) + (sR + sM) * ATMO_MS;
+  float pm = 0.07957747 * (1.0 - g2) / pow(1.0 + g2 - 2.0 * ATMO_G * c, 1.5) * (1.0 + low * ATMO_LOW_MIE);
+  // 多重散乱も透過率の色に染める（輝度は保つ）
+  float tsLum = max(dot(ts, vec3(0.2126, 0.7152, 0.0722)), 1e-6);
+  vec3 msColor = 1.0 + (ts / tsLum - 1.0) * (low * ATMO_LOW_MS);
+  vec3 scatter = ts * (sR * pr + sM * pm) + (sR + sM) * ATMO_MS * msColor;
   return ATMO_SUN_COLOR * sunE * scatter * (1.0 - exp(-tau)) / ext;
 }
 
@@ -112,7 +126,7 @@ float atmoOvercastAt(float h) {
 // 天候込みの空（7-5）: 太陽の空 + 月の空（青白い）を、曇天の灰色の空（CIE の曇天の明るさの分布）へ混ぜる。
 // 晴れの昼（共有 uniform が 0）は 4-1 の atmoSky と同じ
 vec3 atmoSky(vec3 dir, vec3 sun, float sunE, float h) {
-  vec3 c = sunE > 1e-5 ? atmoSkyFrom(dir, sun, sunE, h) * (1.0 + uAtmoSunTint.rgb) : vec3(0.0);
+  vec3 c = sunE > 1e-5 ? atmoSkyFrom(dir, sun, sunE, h) : vec3(0.0);
   if (uAtmoMoon.w > 0.0) c += atmoSkyFrom(dir, uAtmoMoon.xyz, uAtmoMoon.w, h) * ATMO_MOON_TINT;
   float o = atmoOvercastAt(h);
   if (o > 0.0) c = mix(c, uAtmoGrey.rgb * (1.0 + 2.0 * max(dir.y, 0.0)) / 3.0, o);
@@ -148,7 +162,7 @@ vec3 atmoBackgroundSky(vec3 dir, vec3 sky, vec3 sun, float sunE, float h) {
   // 海面: 水の中から出てくる光（太陽 + 空。空の放射照度は仰角 25° の空の明るさ × π で近似）+ 空の反射
   vec2 side = normalize(vec2(-sun.z, sun.x) + vec2(1e-5, 0.0));
   vec3 skyIrr = 3.14159265 * atmoSky(vec3(side.x * 0.9063, 0.4226, side.y * 0.9063), sun, sunE, 0.0);
-  vec3 sunIrr = ATMO_SUN_COLOR * (1.0 + uAtmoSunTint.rgb) * sunE * atmoSunTransmittance(sun, 0.0) * max(sun.y, 0.0);
+  vec3 sunIrr = ATMO_SUN_COLOR * sunE * atmoSunTransmittance(sun, 0.0) * max(sun.y, 0.0);
   // 7-5: 月の直射光、曇天は直射光を遮る
   if (uAtmoMoon.w > 0.0)
     sunIrr += ATMO_SUN_COLOR * ATMO_MOON_TINT * uAtmoMoon.w * atmoSunTransmittance(uAtmoMoon.xyz, 0.0) * max(uAtmoMoon.y, 0.0);

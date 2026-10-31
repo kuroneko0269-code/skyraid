@@ -8,7 +8,8 @@ import {
   nightWeight,
   sunAzimuthAt,
   sunElevationAt,
-  sunTintAt,
+  lowSunAt,
+  lowSunExposureAt,
   WeatherDirector,
   type WeatherParams,
 } from '../../core/weather-state';
@@ -49,7 +50,6 @@ export class WeatherView {
   /** 描画フレームごとに天候を更新する前に呼ぶ（画面・HUD の配線。ui/weather-link.ts） */
   onFrame: (() => void) | null = null;
   private readonly applied: WeatherParams = createWeatherParams();
-  private readonly tint: [number, number, number] = [1, 1, 1];
   private sinceBake = 0;
   private bakePending = false;
   private time = 0;
@@ -124,8 +124,8 @@ export class WeatherView {
       overcast: w.overcast,
       fog: w.fog,
       haze: w.haze,
-      exposureBias: w.exposureBias,
-      sunTint: sunTintAt(w.hour, this.tint),
+      exposureBias: w.exposureBias + lowSunExposureAt(w.hour),
+      lowSun: lowSunAt(w.hour),
     });
     p.cloudField.uniforms.uCloudCoverage.value = w.coverage;
     p.clouds.setDarkness(w.cloudDark);

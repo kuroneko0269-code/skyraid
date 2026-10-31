@@ -1,28 +1,14 @@
 // 物理ベースの空（4-1）: 大気散乱（Rayleigh + Mie）のスカイドーム、太陽の円盤と光芒、空気遠近の霧。
 // 計算は atmosphere-model.ts（CPU）と atmosphere-glsl.ts（GPU）で同じ式
-import {
-  BackSide,
-  Color,
-  Fog,
-  Mesh,
-  SRGBColorSpace,
-  ShaderMaterial,
-  SphereGeometry,
-  Vector3,
-  Vector4,
-} from 'three';
-import { SKY_CONFIG } from '../data/sky';
+import { BackSide, Color, Mesh, ShaderMaterial, SphereGeometry, Vector3, Vector4 } from 'three';
+import { LOW_SUN_CONFIG, SKY_CONFIG } from '../data/sky';
 import { NIGHT_CONFIG, OVERCAST_CONFIG } from '../data/weather';
 import { nightWeight, sunWeight } from '../core/weather-state';
 import type { Vec3 } from '../flight/math';
+import { AtmosphereFog } from './atmosphere-fog';
 import { ATMOSPHERE_GLSL, ATMO_WEATHER_UNIFORMS, installAtmosphereChunks } from './atmosphere-glsl';
 import { extraterrestrialSun, sunDirection, sunTransmittance, type Rgb } from './atmosphere-model';
-import {
-  computeWeatherLighting,
-  moonLight,
-  normalizedTint,
-  type WeatherLighting,
-} from './atmosphere-weather';
+import { computeWeatherLighting, moonLight, type WeatherLighting } from './atmosphere-weather';
 
 export { sunDirection };
 
@@ -58,7 +44,7 @@ const fragmentShader = /* glsl */ `
     // 曇天・霧では太陽・月の円盤が隠れる（7-5）
     float visible = (1.0 - 0.97 * atmoOvercastAt(h)) * exp(-uAtmoWeather.y * 2500.0) * step(0.0, dir.y);
     // 太陽の円盤とまぶしさ（光芒）。地上に届く太陽の色で、地平線より下には描かない
-    vec3 sunColor = ATMO_SUN_COLOR * (1.0 + uAtmoSunTint.rgb) * uSunE * atmoSunTransmittance(uSun, h);
+    vec3 sunColor = ATMO_SUN_COLOR * uSunE * atmoSunTransmittance(uSun, h);
     float c = max(dot(dir, uSun), 0.0);
     float disc = smoothstep(uDiscEdgeCos, uDiscCos, c);
     color += visible * sunColor * (disc * uDiscRadiance + uGlow.x * pow(c, uGlow.y) + uGlow.z * pow(c, uGlow.w));
@@ -85,39 +71,7 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
-/**
- * 霧の uniform を大気散乱に読み替える Fog。color = 太陽の向き × 放射照度、near / far = 描画距離の果てで
- * 空の色に溶かしきる範囲（atmosphere-glsl.ts の installAtmosphereChunks）
- */
-export class AtmosphereFog extends Fog {
-  private readonly packed = new Vector3();
-  private toScreen = false;
-
-  constructor() {
-    super(0x000000, 1, 2);
-  }
-
-  setSun(sun: Readonly<Vec3>, irradiance: number): void {
-    this.packed.set(sun.x * irradiance, sun.y * irradiance, sun.z * irradiance);
-    this.writeColor();
-  }
-
-  /**
-   * 画面に直接描くか（ポストエフェクトなし = 画質「低」）。Three.js は画面に直接描くとき fogColor を
-   * sRGB に変換して渡すので、その逆変換をしておく（どちらの変換も負の値を含めて正確に戻る）
-   */
-  setOutputToScreen(toScreen: boolean): void {
-    if (toScreen === this.toScreen) return;
-    this.toScreen = toScreen;
-    this.writeColor();
-  }
-
-  private writeColor(): void {
-    const p = this.packed;
-    if (this.toScreen) this.color.setRGB(p.x, p.y, p.z, SRGBColorSpace);
-    else this.color.setRGB(p.x, p.y, p.z);
-  }
-}
+export { AtmosphereFog };
 
 export type AtmosphereListener = (atmosphere: Atmosphere) => void;
 
@@ -131,8 +85,8 @@ export interface AtmosphereWeather {
   /** 空気遠近の倍率（1 = 4-1 のまま） */
   haze: number;
   exposureBias: number;
-  /** 低い太陽の色味（正規化前。省略で白） */
-  sunTint?: readonly [number, number, number];
+  /** 低い太陽の重み（0〜1。7-5b。省略で 0） */
+  lowSun?: number;
 }
 
 /**
@@ -161,8 +115,8 @@ export class Atmosphere {
     haze: 1,
     exposureBias: 0,
   };
-  /** 低い太陽の色味（輝度 1 に正規化したもの） */
-  private sunTint: Rgb = [1, 1, 1];
+  /** 低い太陽の重み（0〜1。7-5b） */
+  lowSun = 0;
   private readonly moon: Vec3;
   private readonly listeners: AtmosphereListener[] = [];
 
@@ -234,7 +188,7 @@ export class Atmosphere {
     this.skySunE = SKY_CONFIG.sun.irradiance * sunWeight(w.sunElevation);
     this.night = nightWeight(w.sunElevation);
     const moonE = NIGHT_CONFIG.moonIrradiance * this.night;
-    this.sunTint = normalizedTint(w.sunTint ?? [1, 1, 1]);
+    this.lowSun = w.lowSun ?? 0;
     const l = computeWeatherLighting(
       {
         sun: d,
@@ -244,7 +198,7 @@ export class Atmosphere {
         overcast: w.overcast,
         night: this.night,
         exposureBias: w.exposureBias,
-        sunTint: this.sunTint,
+        lowSun: this.lowSun,
       },
       NIGHT_CONFIG.moonTint,
       OVERCAST_CONFIG,
@@ -260,10 +214,7 @@ export class Atmosphere {
     mv.y = this.moon.y;
     mv.z = this.moon.z;
     mv.w = moonE;
-    const tv = sw.uAtmoSunTint.value;
-    tv.x = this.sunTint[0] - 1;
-    tv.y = this.sunTint[1] - 1;
-    tv.z = this.sunTint[2] - 1;
+    sw.uAtmoLowSun.value.x = this.lowSun;
     const g = sw.uAtmoGrey.value;
     g.x = l.overcastZenith[0];
     g.y = l.overcastZenith[1];
@@ -303,13 +254,19 @@ export class Atmosphere {
     const light = this.current.moonKey
       ? moonLight(NIGHT_CONFIG.moonIrradiance * this.night, NIGHT_CONFIG.moonTint)
       : extraterrestrialSun(SKY_CONFIG.sun.temperature, this.skySunE);
-    const c = this.current.moonKey ? [1, 1, 1] : this.sunTint;
-    const t = sunTransmittance(this.sun, h);
-    return [
-      light[0] * t[0] * (c[0] ?? 1),
-      light[1] * t[1] * (c[1] ?? 1),
-      light[2] * t[2] * (c[2] ?? 1),
-    ];
+    const t = sunTransmittance(this.sun, h, undefined, this.current.moonKey ? 0 : this.lowSun);
+    return [light[0] * t[0], light[1] * t[1], light[2] * t[2]];
+  }
+
+  /**
+   * 雲の下面を下から照らす光（7-5b）: 低い太陽の光が地表近くを通って雲の底に当たる。
+   * 地表の高さの直射光（曇天は遮られた後）× 低い太陽の重み × LOW_SUN_CONFIG.cloudUnder。昼・夜は 0
+   */
+  cloudUnderLight(): Rgb {
+    if (this.current.moonKey) return [0, 0, 0];
+    const k = this.lowSun * LOW_SUN_CONFIG.cloudUnder;
+    const c = this.current.sun;
+    return [c[0] * k, c[1] * k, c[2] * k];
   }
 
   /** ライトの色・強さと露出 */

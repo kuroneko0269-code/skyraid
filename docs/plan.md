@@ -79,4 +79,5 @@
 - [ ] 7-6 実績・デイリーミッション
 - [x] 7-7 フォトモード（→ 7-A で実施）
 - [x] 7-A フォトモード（ポーズメニュー / P、機体中心の自由カメラ・プリセット 6 種・画角 / ロール / フォーカス、画面の調整、表示の切替とコマ送り、天候・時刻の上書き、PNG 保存（画面 / 2 倍 / 4K・透かし・共有）、事前修正: 霧のスケールハイト 600m・main.ts の分割） — main マージ: https://github.com/kuroneko0269-code/skyraid/commit/3df498e（事前修正: 霧 https://github.com/kuroneko0269-code/skyraid/commit/77fe9d4・main.ts の分割 https://github.com/kuroneko0269-code/skyraid/commit/29c866b）
+- [x] 7-5b 実機の修正: タイトル等に HUD が出る不具合（夜の減光のインライン opacity が隠す CSS に勝っていた → data-hud と CSS 変数）、夕焼けの強化（夕方 12 → 5°・早朝 8 → 6°、低い太陽の大気散乱（Rayleigh・オゾン・散乱の高さ・Mie の光芒）、雲の下面の照り返し、夕方 −0.3EV） — main squash マージ: COMMIT_LINK
 - [ ] 7-8 リプレイ

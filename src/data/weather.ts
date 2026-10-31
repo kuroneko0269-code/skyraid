@@ -27,26 +27,16 @@ export const SUN_PATH = {
 export const TIME_OF_DAY_CONFIG: Readonly<
   Record<TimeOfDay, { elevation: number; side: 'morning' | 'afternoon'; label: string }>
 > = {
-  /** 橙〜桃（低い太陽の透過率が赤く、空の多重散乱が青いので、地平線の霞が桃色に寄る） */
-  dawn: { elevation: 8, side: 'morning', label: '早朝' },
+  /** 橙〜桃（低い太陽の透過率が赤く、空の多重散乱が青いので、地平線の霞が桃色に寄る）。7-5b で 8 → 6° */
+  dawn: { elevation: 6, side: 'morning', label: '早朝' },
   day: { elevation: SKY_CONFIG.sun.elevation, side: 'afternoon', label: '昼' },
-  /** 赤橙 */
-  evening: { elevation: 12, side: 'afternoon', label: '夕方' },
+  /** 赤橙。7-5b で 12 → 5°（地平線の赤橙・天頂の紫青・長い影） */
+  evening: { elevation: 5, side: 'afternoon', label: '夕方' },
   /** 月光と星（太陽は地平線の下） */
   night: { elevation: -10, side: 'afternoon', label: '夜' },
 };
 
-/**
- * 低い太陽の色（写真の「太陽光」のホワイトバランスで撮った朝焼け・夕焼けの暖色）。大気の透過率の赤みに足す。
- * 仰角 full 度以下で最大、fade 度で 0（昼 32° は 4-1 のまま）。地平線の下（夜へ）は 0 → −6° で消す。
- * 朝は橙〜桃、夕方は赤橙。色は輝度 1 に正規化して使う（4 → 6°・0.8 / 0.7 → 下の値は 1 回目のスクリーンショットで弱かったため）
- */
-export const SUN_TINT = {
-  dawn: [1, 0.72, 0.7] as const,
-  dusk: [1, 0.6, 0.34] as const,
-  full: 6,
-  fade: 26,
-} as const;
+// 低い太陽の色（旧 SUN_TINT）は 7-5b で大気散乱の計算（src/data/sky.ts の LOW_SUN_CONFIG）に置き換えた
 
 /**
  * 天候ごとの値（すべて補間する）。

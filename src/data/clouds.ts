@@ -35,8 +35,17 @@ export const CLOUD_CONFIG = {
   /**
    * 光: 太陽（前方散乱 g = forwardG と後方 backG の Henyey-Greenstein の混合。太陽の方を見ると縁が光る）
    * + 空の光（上ほど明るく、底は ambientBottom 倍）。albedo は白い面に対する明るさの倍率
+   * + 低い太陽の下からの光（夕焼けの雲の下面。7-5b）
    */
-  light: { forwardG: 0.6, backG: -0.15, forwardWeight: 0.6, ambientBottom: 0.45, albedo: 1 },
+  light: {
+    forwardG: 0.6,
+    backG: -0.15,
+    forwardWeight: 0.6,
+    ambientBottom: 0.45,
+    albedo: 1,
+    /** 低い太陽の下からの光（7-5b）が消える高さ（層の中の割合）。強さは LOW_SUN_CONFIG.cloudUnder */
+    underFade: 0.5,
+  },
   /**
    * 画質「低」のビルボード雲（InstancedMesh の板 1 枚ずつ）。カメラのまわり radius m の中に置き、
    * 外へ出たら反対側へ回り込む。大きさ m（横の幅。縦は heightRatio 倍）

@@ -1,6 +1,6 @@
 // 大気散乱の計算（Three.js 非依存）。シェーダー（atmosphere.ts の GLSL）と同じ式を CPU でも計算し、
 // 半球ライト・太陽光の色・露出・テストに使う。色はすべてリニア RGB（シーンの単位）
-import { EXPOSURE_CONFIG, SKY_CONFIG } from '../data/sky';
+import { EXPOSURE_CONFIG, LOW_SUN_CONFIG, SKY_CONFIG } from '../data/sky';
 import type { Vec3 } from '../flight/math';
 
 export type Rgb = [number, number, number];
@@ -84,14 +84,38 @@ function opticalDepth(p: AtmosphereParams, h: number, cosZenith: number, out: Rg
   return out;
 }
 
-/** 高さ h で太陽（向き sun）から届く光の透過率。太陽が低いほど赤くなる */
+/** オゾンの天頂の光学的厚さ（低い太陽の重み 1 のとき。7-5b） */
+export const OZONE_DEPTH: readonly [number, number, number] = [0, 1, 2].map(
+  (i) => (LOW_SUN_CONFIG.ozone[i] ?? 0) * LOW_SUN_CONFIG.ozoneColumn * LOW_SUN_CONFIG.ozoneScale,
+) as [number, number, number];
+
+/**
+ * 高さ h で太陽（向き sun）から届く光の透過率。太陽が低いほど赤くなる。
+ * low は低い太陽の重み（7-5b）: Rayleigh の光学的厚さを (1 + low × rayleighBoost) 倍、オゾンの吸収を足す
+ */
 export function sunTransmittance(
   sun: Readonly<Vec3>,
   h: number,
   p: AtmosphereParams = SKY_CONFIG.atmosphere,
+  low = 0,
 ): Rgb {
-  const tau = opticalDepth(p, h, sun.y, [0, 0, 0]);
-  return [Math.exp(-tau[0]), Math.exp(-tau[1]), Math.exp(-tau[2])];
+  const m = airMass(sun.y);
+  const y = Math.max(h, 0);
+  const nR =
+    p.rayleighHeight * Math.exp(-y / p.rayleighHeight) * (1 + low * LOW_SUN_CONFIG.rayleighBoost);
+  const mieExt = (p.mie / p.mieAlbedo) * p.mieHeight * Math.exp(-y / p.mieHeight);
+  const out: Rgb = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    const tau = (p.rayleigh[i] ?? 0) * nR + mieExt + low * (OZONE_DEPTH[i] ?? 0);
+    out[i] = Math.exp(-tau * m);
+  }
+  return out;
+}
+
+/** 低い太陽で散乱する高さ（7-5b）: 上を見るほど高い空気で散乱する（地平線は h のまま） */
+export function scatterHeight(h: number, dirY: number, low: number): number {
+  const c = LOW_SUN_CONFIG;
+  return h + low * c.scatterHeight * Math.min(1, Math.max(0, dirY * c.scatterSlope));
 }
 
 /**
@@ -105,23 +129,28 @@ export function skyRadiance(
   sunLight: Readonly<Rgb>,
   h: number,
   p: AtmosphereParams = SKY_CONFIG.atmosphere,
+  low = 0,
 ): Rgb {
   const tau = opticalDepth(p, h, dir.y, [0, 0, 0]);
-  const ts = sunTransmittance(sun, h, p);
+  const ts = sunTransmittance(sun, scatterHeight(h, dir.y, low), p, low);
   const y = Math.max(h, 0);
   const nR = p.rayleighHeight * Math.exp(-y / p.rayleighHeight);
   const nM = p.mieHeight * Math.exp(-y / p.mieHeight);
   const cosTheta = dir.x * sun.x + dir.y * sun.y + dir.z * sun.z;
   const pr = rayleighPhase(cosTheta);
-  const pm = miePhase(cosTheta, p.mieG);
+  const pm = miePhase(cosTheta, p.mieG) * (1 + low * LOW_SUN_CONFIG.mieBoost);
   const ms = p.multiScatter * ONE_OVER_4PI;
+  // 7-5b: 多重散乱も透過率の色に染める（輝度は保つ）
+  const tsLum = Math.max(luminance(ts), 1e-6);
+  const msTint = low * LOW_SUN_CONFIG.multiScatterTint;
   const out: Rgb = [0, 0, 0];
   for (let i = 0; i < 3; i++) {
     const sR = (p.rayleigh[i] ?? 0) * nR;
     const sM = p.mie * nM;
     const ext = sR + (p.mie / p.mieAlbedo) * nM;
+    const msColor = 1 + ((ts[i] ?? 0) / tsLum - 1) * msTint;
     // 単一散乱は地上に届く太陽光（透過率を掛ける）、多重散乱は空全体から来るので透過率を掛けない
-    const scatter = (ts[i] ?? 0) * (sR * pr + sM * pm) + (sR + sM) * ms;
+    const scatter = (ts[i] ?? 0) * (sR * pr + sM * pm) + (sR + sM) * ms * msColor;
     const t = tau[i] ?? 0;
     out[i] = ((sunLight[i] ?? 0) * scatter * (1 - Math.exp(-t))) / ext;
   }

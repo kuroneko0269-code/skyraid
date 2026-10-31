@@ -65,10 +65,10 @@ describe('天候: プリセットの値', () => {
     expect(new Set(WEATHER_PRESETS.map((p) => p.wind)).size).toBe(2);
   });
 
-  it('時間帯の仰角: 早朝 8°・昼 32°（4-1 と同じ）・夕方 12°・夜 −10°。昼の方位は 4-1 の 40°', () => {
-    expect(TIME_OF_DAY_CONFIG.dawn.elevation).toBe(8);
+  it('時間帯の仰角: 早朝 6°・昼 32°（4-1 と同じ）・夕方 5°・夜 −10°（7-5b）。昼の方位は 4-1 の 40°', () => {
+    expect(TIME_OF_DAY_CONFIG.dawn.elevation).toBe(6);
     expect(TIME_OF_DAY_CONFIG.day.elevation).toBe(SKY_CONFIG.sun.elevation);
-    expect(TIME_OF_DAY_CONFIG.evening.elevation).toBe(12);
+    expect(TIME_OF_DAY_CONFIG.evening.elevation).toBe(5);
     expect(TIME_OF_DAY_CONFIG.night.elevation).toBe(-10);
     for (const t of ['dawn', 'day', 'evening', 'night'] as const)
       expect(sunElevationAt(timeOfDayHour(t))).toBeCloseTo(TIME_OF_DAY_CONFIG[t].elevation, 6);

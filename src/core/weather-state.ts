@@ -6,12 +6,12 @@ import {
   NIGHT_CONFIG,
   SKY_KIND_CONFIG,
   SUN_PATH,
-  SUN_TINT,
   TIME_OF_DAY_CONFIG,
   WEATHER_TIME,
   WIND_LEVEL_CONFIG,
   type TimeOfDay,
 } from '../data/weather';
+import { LOW_SUN_CONFIG } from '../data/sky';
 import type { WeatherSnapshot } from './photo-weather';
 
 /** 補間できる天候の数値（プリセットはこの値の組） */
@@ -278,17 +278,20 @@ export class WeatherDirector {
 }
 
 /**
- * 低い太陽の色味（輝度で正規化する前の RGB）。時刻が 12 時より前なら朝焼け、後なら夕焼けの色へ、
- * 仰角が低いほど寄せる（昼の高い太陽と夜は 1）
+ * 低い太陽の重み（0〜1。7-5b）: 仰角 LOW_SUN_CONFIG.full 度以下で 1、fade 度で 0、地平線の下は 0 → −6° で 0。
+ * 大気散乱の夕焼けの項（atmosphere-model.ts）に掛ける。昼の高い太陽と夜は 0
  */
-export function sunTintAt(
-  hour: number,
-  out: [number, number, number] = [1, 1, 1],
-): [number, number, number] {
-  const el = sunElevationAt(hour);
-  const t = SUN_TINT;
-  const k = (1 - smoothstep(t.full, t.fade, el)) * smoothstep(-6, 0, el);
-  const c = wrapHour(hour) < 12 ? t.dawn : t.dusk;
-  for (let i = 0; i < 3; i++) out[i] = 1 + ((c[i] ?? 1) - 1) * k;
-  return out;
+export function lowSunWeight(elevation: number): number {
+  const c = LOW_SUN_CONFIG;
+  return (1 - smoothstep(c.full, c.fade, elevation)) * smoothstep(-6, 0, elevation);
+}
+
+/** 時刻の低い太陽の重み */
+export function lowSunAt(hour: number): number {
+  return lowSunWeight(sunElevationAt(hour));
+}
+
+/** 時刻の露出の補正（EV）: 午後（夕方）は低い太陽の重みの分だけ暗く（朝は 0） */
+export function lowSunExposureAt(hour: number): number {
+  return wrapHour(hour) >= 12 ? LOW_SUN_CONFIG.duskExposureEv * lowSunAt(hour) : 0;
 }

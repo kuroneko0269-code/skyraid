@@ -13,7 +13,6 @@ import {
   type SkyLighting,
 } from './atmosphere-model';
 
-
 /** 天候の光源: 太陽（夜は明るさ 0）と月、曇天の割合 */
 export interface WeatherLightInput {
   /** 太陽の向きと明るさ（大気の外の放射照度。SKY_CONFIG.sun.irradiance × 太陽の重み） */
@@ -27,8 +26,8 @@ export interface WeatherLightInput {
   readonly night: number;
   /** 露出の補正（EV） */
   readonly exposureBias: number;
-  /** 低い太陽の色味（輝度 1 に正規化したもの。省略で白） */
-  readonly sunTint?: Readonly<Rgb>;
+  /** 低い太陽の重み（0〜1。7-5b。省略で 0 = 4-1 の式のまま） */
+  readonly lowSun?: number;
 }
 
 /** 天候込みの光。SkyLighting に直射光の向きと曇天の空を足したもの */
@@ -101,11 +100,10 @@ export function computeWeatherLighting(
   p: AtmosphereParams = SKY_CONFIG.atmosphere,
 ): WeatherLighting {
   const sunLight = extraterrestrialSun(SKY_CONFIG.sun.temperature, input.sunE);
-  const st = input.sunTint;
-  if (st) for (let k = 0; k < 3; k++) sunLight[k] = (sunLight[k] ?? 0) * (st[k] ?? 1);
+  const low = input.lowSun ?? 0;
   const mLight = moonLight(input.moonE, moonTint);
   const hasMoon = input.moonE > 0;
-  const ts = sunTransmittance(input.sun, 0, p);
+  const ts = sunTransmittance(input.sun, 0, p, low);
   const tm = sunTransmittance(input.moon, 0, p);
   const sunGround: Rgb = [sunLight[0] * ts[0], sunLight[1] * ts[1], sunLight[2] * ts[2]];
   const moonGround: Rgb = [mLight[0] * tm[0], mLight[1] * tm[1], mLight[2] * tm[2]];
@@ -126,7 +124,7 @@ export function computeWeatherLighting(
       const az = (j + 0.5) * dAz;
       const dir = { x: Math.sin(az) * cosEl, y: sinEl, z: -Math.cos(az) * cosEl };
       const w = sinEl * cosEl * dEl * dAz;
-      const l = skyRadiance(dir, input.sun, sunLight, 0, p);
+      const l = skyRadiance(dir, input.sun, sunLight, 0, p, low);
       const m = hasMoon ? skyRadiance(dir, input.moon, mLight, 0, p) : null;
       for (let k = 0; k < 3; k++) clear[k] = (clear[k] ?? 0) + ((l[k] ?? 0) + (m?.[k] ?? 0)) * w;
     }
@@ -169,7 +167,7 @@ export function computeWeatherLighting(
   const away = { x: -keyDir.x, y: 0, z: -keyDir.z };
   const len = Math.hypot(away.x, away.z) || 1;
   const hd = { x: away.x / len, y: 0, z: away.z / len };
-  const hs = skyRadiance(hd, input.sun, sunLight, 0, p);
+  const hs = skyRadiance(hd, input.sun, sunLight, 0, p, low);
   const hm = hasMoon ? skyRadiance(hd, input.moon, mLight, 0, p) : [0, 0, 0];
   const horizon: Rgb = [0, 0, 0];
   for (let k = 0; k < 3; k++) {

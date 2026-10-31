@@ -96,6 +96,35 @@ export const SKY_CONFIG = {
 } as const;
 
 /**
+ * 低い太陽（朝焼け・夕焼け。7-5b）。仰角 full 度以下で最大、fade 度で 0（重み。昼 32° は 0 で 4-1 のまま）、
+ * 地平線の下は 0 → −6° で消す。重みを掛けて、上の単一の高さの近似で足りない分を物理の式で足す:
+ * - rayleighBoost: 太陽からの光路の Rayleigh の光学的厚さの倍率 − 1（夕方の空気は地表付近が厚い）
+ * - ozone: オゾンの吸収係数（1/m、Bruneton / Hillaire の値）× 層の厚さ ozoneColumn（m）× ozoneScale。
+ *   長い光路で橙・緑を吸い、天頂を紫がかった青にする（Chappuis 帯）
+ * - scatterHeight / scatterSlope: 散乱する高さ。上を見るほど高い空気（太陽からの光路が短く赤くない）で
+ *   散乱するので、視線の仰角 × slope（0〜1）× scatterHeight m の高さの透過率を使う（地平線は地表）
+ * - multiScatterTint: 多重散乱も太陽の透過率の色に染める割合（1 = 輝度を保って透過率の色）
+ * - mieBoost: Mie の前方散乱の倍率 − 1（太陽のまわりの大きな光芒）
+ * - duskExposureEv: 午後（夕方）の露出の補正（EV。空の色を飽和させない）
+ * - cloudUnder: 雲の下面を下から照らす光（地表の高さの太陽の色 × この倍率）
+ * 4-1 / 7-5 の「低い太陽の色（SUN_TINT）」を空全体に掛ける補正はこれで置き換えた
+ */
+export const LOW_SUN_CONFIG = {
+  full: 6,
+  fade: 26,
+  rayleighBoost: 0.3,
+  ozone: [0.65e-6, 1.881e-6, 0.085e-6],
+  ozoneColumn: 15000,
+  ozoneScale: 2,
+  scatterHeight: 8000,
+  scatterSlope: 2,
+  multiScatterTint: 1,
+  mieBoost: 1.5,
+  duskExposureEv: -0.3,
+  cloudUnder: 0.6,
+} as const;
+
+/**
  * 露出（トーンマッピング前の倍率）の決め方。シーンの代表的な明るさ（空と地面の対数平均）が
  * key（中間グレー）になるようにし、地面が minGround より暗くならないよう下限をかける
  */

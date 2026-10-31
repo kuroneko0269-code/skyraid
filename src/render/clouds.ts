@@ -66,6 +66,7 @@ export class Clouds {
   private lastTime: number | null = null;
   private readonly sunColor = new Color();
   private readonly ambient = new Color();
+  private readonly under = new Color();
   /** 雨雲の暗さ（7-5。1 = 4-2 のまま） */
   private readonly shade = { value: 1 };
 
@@ -77,6 +78,7 @@ export class Clouds {
       uAmbient: { value: this.ambient },
       uSunColor: { value: this.sunColor },
       uCloudShade: this.shade,
+      uCloudUnder: { value: this.under },
     };
     this.volume = new Mesh(
       createLayerGeometry(),
@@ -175,6 +177,8 @@ export class Clouds {
     const key = atmosphere.keyLightAt(CLOUD_CONFIG.base);
     this.sunColor.setRGB(key[0], key[1], key[2]);
     this.ambient.setRGB(l.skyIrradiance[0], l.skyIrradiance[1], l.skyIrradiance[2]);
+    const under = atmosphere.cloudUnderLight();
+    this.under.setRGB(under[0], under[1], under[2]);
     // 雲の中の霧の色: 雲の中で四方から散乱してくる光（白に近い灰色）
     const sin = Math.max(atmosphere.sun.y, 0);
     const k = 0.85 / Math.PI;
