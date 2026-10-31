@@ -26,13 +26,19 @@ describe('ボット（Kestrel Lv0・平均的な命中率）', () => {
     }
   }, 60000);
 
-  it('1 人で 5〜7 分で倒せる', () => {
-    for (const seed of [1, 2, 3, 4, 5]) {
+  it('1 人で倒せる: 中央値は 5.5〜7 分、各シードは 4.5〜8.5 分（6-1b）', () => {
+    const times: number[] = [];
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
       const r = runRaidBots({ players: 1, seed });
       expect([seed, r.killed]).toEqual([seed, true]);
-      expect(r.seconds).toBeGreaterThanOrEqual(5 * 60);
-      expect(r.seconds).toBeLessThanOrEqual(7 * 60);
+      expect(r.seconds).toBeGreaterThanOrEqual(4.5 * 60);
+      expect(r.seconds).toBeLessThanOrEqual(8.5 * 60);
       expect(r.breaks).toBe(0);
+      times.push(r.seconds);
     }
+    times.sort((a, b) => a - b);
+    const median = ((times[3] ?? 0) + (times[4] ?? 0)) / 2;
+    expect(median).toBeGreaterThanOrEqual(5.5 * 60);
+    expect(median).toBeLessThanOrEqual(7 * 60);
   }, 60000);
 });

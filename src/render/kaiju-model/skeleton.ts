@@ -104,11 +104,12 @@ export function animate(s: KaijuSkeleton, a: KaijuAnimInput): void {
   pelvis.position.y = (rest?.[3] ?? 0) - drop + Math.abs(Math.cos(ph)) * 1.8 * a.walking;
   pelvis.rotation.set(0.04 * kneel, 0, Math.sin(ph) * 0.03 * a.walking);
   const breathe = Math.sin(a.time * 1.3) * 0.015;
-  get('chest').rotation.set(0.12 * kneel + breathe - 0.18 * p.headLift, 0, 0);
+  // 6-1b: 頭を上げる向きの符号を直した（それまでは咆哮・熱線で頭が下がっていた。前方 -Z を +X 軸回りに回すと上がる）
+  get('chest').rotation.set(0.12 * kneel + breathe + 0.18 * p.headLift, 0, 0);
   const shake = a.roaring ? Math.sin(a.time * 47) * 0.03 : 0;
-  get('neck').rotation.set(-0.55 * p.headLift + 0.1 * kneel + shake, 0, 0);
-  get('head').rotation.set(-0.35 * p.headLift, shake, 0);
-  get('jaw').rotation.set(0.5 * p.headLift + 0.08 * p.armLift, 0, 0);
+  get('neck').rotation.set(0.55 * p.headLift + 0.1 * kneel + shake, 0, 0);
+  get('head').rotation.set(0.35 * p.headLift, shake, 0);
+  get('jaw').rotation.set(-0.5 * p.headLift - 0.08 * p.armLift, 0, 0);
   get('thighL').rotation.set(swing - 1.0 * kneel, 0, 0);
   get('thighR').rotation.set(-swing - 1.0 * kneel, 0, 0);
   get('shinL').rotation.set(-0.5 * liftL + 1.7 * kneel, 0, 0);

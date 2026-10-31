@@ -1,8 +1,19 @@
-// 怪獣の部位のジオメトリ（6-1）: 胴・頭・腕・脚・尾・背中の結晶の棘。どれも静止姿勢（足元が原点・前方 -Z）で作り、
-// 骨（skeleton.ts）に貼り付ける。前傾姿勢で頭が低く、目は 4 つ（左右 2 つずつ）、背中に結晶の棘、長い尾
+// 怪獣の部位のジオメトリ（6-1）: 胴・頭・腕・脚・尾・結晶。どれも静止姿勢（足元が原点・前方 -Z）で作り、
+// 骨（skeleton.ts）に貼り付ける。前傾姿勢で頭が低く、目は 4 つ（左右 2 つずつ）、長い尾。
+// 6-1b: 背中の一列の棘をやめ、結晶は肩・首の付け根・前腕の外側の不規則な塊（crystal-shape.ts）。
+// 胴と脚の断面に筋肉の起伏（Bulge）、目を大きく、前腕を長く
 import { Vector3 } from 'three';
 import { KAIJU_MODEL_CONFIG, type KaijuDetailSpec } from '../../data/kaiju-model';
-import { KaijuMeshBuilder, rgb, type BoneBind, type Rgb, type TubeRing } from './builder';
+import { createRandom } from '../../core/random';
+import {
+  KaijuMeshBuilder,
+  rgb,
+  type BoneBind,
+  type Bulge,
+  type Rgb,
+  type TubeRing,
+} from './builder';
+import { addCrystal } from './crystal-shape';
 import { BONE, bonePosition } from './skeleton';
 
 const C = KAIJU_MODEL_CONFIG.colors;
@@ -13,6 +24,17 @@ const EYE = rgb(C.eye);
 const CRYSTAL = rgb(C.crystal);
 
 const v = (x: number, y: number, z: number): Vector3 => new Vector3(x, y, z);
+const MUSCLE = KAIJU_MODEL_CONFIG.muscle;
+
+/** 筋肉の起伏（6-1b）: 位置 t で山の数・位相を少しずつ変え、隣どうしの起伏がつながって筋に見えるように */
+function muscles(t: number, seed: number, scale = 1): Bulge[] {
+  const a = MUSCLE * scale;
+  return [
+    { k: 3, amp: a * (0.7 + 0.3 * Math.sin(t * 9 + seed)), phase: seed + t * 1.3 },
+    { k: 5, amp: a * 0.55 * (0.6 + 0.4 * Math.sin(t * 13 + seed * 2)), phase: seed * 1.7 - t * 2 },
+    { k: 8, amp: a * 0.25, phase: seed * 0.3 + t * 4 },
+  ];
+}
 
 /** 長さ方向の分割数（最低 3） */
 function count(base: number, d: KaijuDetailSpec): number {
@@ -60,6 +82,7 @@ export function buildTorso(d: KaijuDetailSpec): KaijuMeshBuilder {
       color: BACK,
       under: BELLY,
       bone,
+      bulge: muscles(t, 0.4, 1 - (0.6 * Math.max(0, t - 0.7)) / 0.3),
     });
   }
   m.tube(rings, d.radial, true, false);
@@ -78,11 +101,13 @@ export function buildHead(d: KaijuDetailSpec): KaijuMeshBuilder {
   m.ellipsoid(v(0, 97, -70), 8, 6, 11, rows, cols, BACK, head);
   // 下あご
   m.ellipsoid(v(0, 91, -64), 8.5, 3.5, 14, Math.max(4, rows - 2), cols, BELLY, jaw);
-  // 目は左右 2 つずつ（上下に並ぶ）。発光
+  // 目は左右 2 つずつ（上下に並ぶ）。発光。6-1b: 頭骨の表面から出るよう外へ寄せて大きく（半径 1.6 → 2.7m）
   const eyeRows = Math.max(3, Math.round(rows / 2));
   for (const sx of [-1, 1]) {
-    m.ellipsoid(v(sx * 8.6, 101.5, -63), 1.6, 1.1, 2.0, eyeRows, eyeRows * 2, EYE, head, 1);
-    m.ellipsoid(v(sx * 9.4, 98.6, -61), 1.3, 0.9, 1.6, eyeRows, eyeRows * 2, EYE, head, 1);
+    // 目の上の張り出し（影で目が光って見える）
+    m.ellipsoid(v(sx * 9.6, 104.2, -61), 4.2, 1.6, 5.2, eyeRows, eyeRows * 2, BACK, head);
+    m.ellipsoid(v(sx * 10.4, 101.4, -63), 2.7, 1.9, 3.1, eyeRows, eyeRows * 2, EYE, head, 1);
+    m.ellipsoid(v(sx * 11.0, 97.6, -60.5), 2.2, 1.5, 2.6, eyeRows, eyeRows * 2, EYE, head, 1);
     // 眉の角（後ろ上へ）
     m.spike(v(sx * 7, 104, -58), v(sx * 11, 110, -44), 2.4, 4, CLAW, head);
     m.spike(v(sx * 5, 106, -52), v(sx * 7, 113, -38), 2.0, 4, CLAW, head);
@@ -101,7 +126,7 @@ export function buildHead(d: KaijuDetailSpec): KaijuMeshBuilder {
   return m;
 }
 
-/** 腕（左右）: 上腕・前腕と 3 本の爪。歩くための腕ではないので短め */
+/** 腕（左右）: 上腕・前腕と 3 本の爪。歩くための腕ではないので短め（6-1b で前腕を約 1.4 倍） */
 export function buildArms(d: KaijuDetailSpec): KaijuMeshBuilder {
   const m = new KaijuMeshBuilder();
   const radial = Math.max(8, Math.round(d.radial * 0.6));
@@ -111,26 +136,33 @@ export function buildArms(d: KaijuDetailSpec): KaijuMeshBuilder {
   ] as const) {
     const sh = bonePosition(sx < 0 ? 'armLUpper' : 'armRUpper');
     const el = bonePosition(sx < 0 ? 'armLFore' : 'armRFore');
-    const hand = el.clone().add(v(sx * 2, -14, -12));
+    const hand = el.clone().add(v(sx * 3, -20, -17));
     const n = count(8, d);
     const rings: TubeRing[] = [];
     for (let i = 0; i <= n; i++) {
       const t = i / n;
       const c = t < 0.5 ? sh.clone().lerp(el, t * 2) : el.clone().lerp(hand, (t - 0.5) * 2);
-      const r = 5.5 - 2.5 * t;
+      const r = 6 - 2.4 * t;
       const bone = blend(up, fore, (t - 0.42) / 0.16);
-      rings.push({ center: c, rx: r, ry: r * 1.1, color: BACK, under: BELLY, bone });
+      rings.push({
+        center: c,
+        rx: r,
+        ry: r * 1.1,
+        color: BACK,
+        under: BELLY,
+        bone,
+        bulge: muscles(t, sx, 0.8),
+      });
     }
     m.tube(rings, radial);
+    // 爪 3 本（太い 2 節。手の甲から前下へ曲がる）
     for (let k = -1; k <= 1; k++) {
-      m.spike(
-        hand.clone().add(v(k * 2.5, 0, 0)),
-        hand.clone().add(v(k * 3.5, -7, -5)),
-        1.4,
-        4,
-        CLAW,
-        { a: fore },
-      );
+      const root = hand.clone().add(v(k * 2.6, -1, -1));
+      const mid = root.clone().add(v(k * 1.6, -4.5, -4));
+      m.spike(root, mid, 1.9, 5, CLAW, { a: fore });
+      m.spike(mid.clone().add(v(0, 0.6, 0.6)), mid.clone().add(v(k * 0.6, -6, -2)), 1.3, 5, CLAW, {
+        a: fore,
+      });
     }
   }
   return m;
@@ -157,7 +189,15 @@ export function buildLegs(d: KaijuDetailSpec): KaijuMeshBuilder {
       const r = t < 0.5 ? 15 - 6 * t : 11.5 - 5 * (t - 0.5);
       const bone =
         t < 0.5 ? blend(thigh, shin, (t - 0.42) / 0.16) : blend(shin, foot, (t - 0.9) / 0.1);
-      rings.push({ center: c, rx: r, ry: r, color: BACK, under: BELLY, bone });
+      rings.push({
+        center: c,
+        rx: r,
+        ry: r,
+        color: BACK,
+        under: BELLY,
+        bone,
+        bulge: muscles(t, left ? 1.1 : 2.3, t < 0.5 ? 1.2 : 0.8),
+      });
     }
     m.tube(rings, d.radial, true, false);
     // 足: 平たい楕円体と爪
@@ -202,43 +242,100 @@ export function buildTail(d: KaijuDetailSpec): KaijuMeshBuilder {
   return m;
 }
 
-/** 背中の結晶の棘: 首の付け根から尾の中ほどまで、背骨に沿って 2 列（中央が最も高い） */
+/** 結晶の塊 1 つ: 中心・伸びる向き・大きさ・本数（「高」）・骨 */
+interface CrystalCluster {
+  readonly at: readonly [number, number, number];
+  readonly dir: readonly [number, number, number];
+  readonly size: number;
+  readonly count: number;
+  readonly bone: BoneBind;
+}
+
+/**
+ * 結晶の塊の配置（6-1b）。左右で数・大きさ・向きを変えて不規則にする。背骨に沿った列は作らない。
+ * 首の付け根の塊の先が全高（約 145m）
+ */
+const CLUSTERS: readonly CrystalCluster[] = [
+  {
+    at: [-21, 90, -30],
+    dir: [-0.55, 0.8, 0.2],
+    size: 1,
+    count: 9,
+    bone: blend(BONE.chest, BONE.armLUpper, 0.35),
+  },
+  {
+    at: [22, 88, -27],
+    dir: [0.62, 0.72, 0.28],
+    size: 0.82,
+    count: 7,
+    bone: blend(BONE.chest, BONE.armRUpper, 0.35),
+  },
+  {
+    at: [-4, 101, -35],
+    dir: [-0.18, 0.95, 0.28],
+    size: 1.15,
+    count: 8,
+    bone: blend(BONE.chest, BONE.neck, 0.3),
+  },
+  {
+    at: [8, 99, -28],
+    dir: [0.4, 0.88, 0.3],
+    size: 0.66,
+    count: 5,
+    bone: blend(BONE.chest, BONE.neck, 0.15),
+  },
+  { at: [-29, 53, -44], dir: [-0.92, 0.22, 0.3], size: 0.52, count: 5, bone: { a: BONE.armLFore } },
+  { at: [-30, 45, -50], dir: [-0.85, 0.1, 0.5], size: 0.36, count: 3, bone: { a: BONE.armLFore } },
+  { at: [30, 50, -46], dir: [0.9, 0.32, 0.22], size: 0.6, count: 6, bone: { a: BONE.armRFore } },
+];
+
+/** 結晶: 肩・首の付け根・前腕の外側の塊（6-1b） */
 export function buildCrystals(d: KaijuDetailSpec): KaijuMeshBuilder {
   const m = new KaijuMeshBuilder();
-  const spine = [
-    v(0, 104, -38),
-    v(0, 112, -20),
-    v(0, 104, 4),
-    v(0, 82, 26),
-    v(0, 66, 56),
-    v(0, 54, 84),
-  ];
-  const n = d.spikes;
-  for (let i = 0; i < n; i++) {
-    const t = (i + 0.5) / n;
-    const base = along(spine, t);
-    // 高さ: 胸の上で最大（先が全高 150m に届く）、前後へ小さく
-    const h = 8 + 44 * Math.sin(Math.PI * Math.min(1, t * 1.6)) ** 1.5 * (1 - t * 0.55);
-    const row = i % 2 === 0 ? -1 : 1;
-    // 先は少し外側・後ろへ傾ける
-    const b = base.clone().add(v(row * 4.5, -2, 0));
-    const tip = b.clone().add(v(row * h * 0.18, h, h * (0.15 + 0.3 * t)));
-    const bone = boneAlongSpine(t);
-    m.spike(b, tip, 2.4 + h * 0.11, d.spikeSides, tintCrystal(t), bone, 0);
-  }
+  const axis = new Vector3();
+  const s1 = new Vector3();
+  const s2 = new Vector3();
+  CLUSTERS.forEach((c, ci) => {
+    const rnd = createRandom(9100 + ci * 77);
+    axis.set(c.dir[0], c.dir[1], c.dir[2]).normalize();
+    // 向きに垂直な 2 軸（根元を散らす）
+    s1.set(0, 1, 0);
+    if (Math.abs(axis.y) > 0.9) s1.set(1, 0, 0);
+    s1.cross(axis).normalize();
+    s2.crossVectors(axis, s1).normalize();
+    const n = Math.max(2, Math.round(c.count * d.crystals));
+    for (let i = 0; i < n; i++) {
+      // 1 本目が最も大きく、残りは 0.35〜0.8 倍
+      const k = i === 0 ? 1 : 0.35 + 0.45 * rnd();
+      const len = c.size * 36 * k;
+      const ang = rnd() * Math.PI * 2;
+      const spread = i === 0 ? 0 : c.size * (2 + 5 * rnd());
+      const base = v(c.at[0], c.at[1], c.at[2])
+        .addScaledVector(s1, Math.cos(ang) * spread)
+        .addScaledVector(s2, Math.sin(ang) * spread)
+        .addScaledVector(axis, -2.5 * c.size);
+      // 先は塊の向きから外へ開く（根元が中心から遠いほど大きく傾く）
+      const tilt = 0.25 + 0.35 * rnd();
+      const dirv = axis
+        .clone()
+        .addScaledVector(s1, Math.cos(ang) * tilt)
+        .addScaledVector(s2, Math.sin(ang) * tilt)
+        .normalize();
+      const tip = base.clone().addScaledVector(dirv, len);
+      const tint = 0.8 + 0.3 * rnd();
+      const color: Rgb = [CRYSTAL[0] * tint, CRYSTAL[1] * tint, CRYSTAL[2] * tint];
+      addCrystal(
+        m,
+        base,
+        tip,
+        len * (0.15 + 0.05 * rnd()),
+        d.crystalSides,
+        color,
+        c.bone,
+        1,
+        rnd(),
+      );
+    }
+  });
   return m;
-}
-
-/** 背骨に沿った位置 t の骨 */
-function boneAlongSpine(t: number): BoneBind {
-  if (t < 0.25) return blend(BONE.chest, BONE.neck, 0.2);
-  if (t < 0.5) return blend(BONE.pelvis, BONE.chest, 1 - (t - 0.25) * 4);
-  if (t < 0.75) return blend(BONE.tail0, BONE.pelvis, 1 - (t - 0.5) * 4);
-  return blend(BONE.tail1, BONE.tail0, 1 - (t - 0.75) * 4);
-}
-
-/** 棘の色: 根元ほどわずかに濃い */
-function tintCrystal(t: number): Rgb {
-  const k = 0.85 + 0.15 * (1 - t);
-  return [CRYSTAL[0] * k, CRYSTAL[1] * k, CRYSTAL[2] * k];
 }

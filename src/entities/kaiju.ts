@@ -1,7 +1,7 @@
 // 怪獣「ヴォルガス」の本体（6-1。2-5 の kaiju-placeholder.ts を置き換え。Three.js 非依存）。
 // - 部位 HP（頭・背中の結晶・左脚・右脚・尾）と全体 HP。全体 HP は部位に与えたダメージの合計で減る（壊れた部位にも入る）
 // - 部位破壊: 結晶 → 熱線封じ / 脚 → 15 秒ダウン（全部位ダメージ 2 倍）/ 尾 → 薙ぎ払い封じ / 頭 → 咆哮封じ。部位 HP は復活しない
-// - ブレイク（6-3 の前倒し）: 同じ部位に 3 秒以内に 2 人以上 → その部位のダメージ ×3 を 5 秒。人数ごとの部位ダメージ倍率 partyDamageScale（1 人 ×5.3）
+// - ブレイク（6-3 の前倒し）: 同じ部位に 3 秒以内に 2 人以上 → その部位のダメージ ×3 を 5 秒。人数ごとの部位ダメージ倍率 partyDamageScale（1 人 ×3.8。6-1b で ×5.3 から）
 // - フェーズ: HP 70% で 2（歩行が速く・攻撃間隔 −20%。AI が読む）、40% で 3（熱線 2 連射・制限時間 3 分。時間切れで街に到達）
 // - 人数スケール: 全体 HP = 基礎 × (0.55 + 0.45 × 人数)
 // 動き（歩く・向きを変える）と攻撃の段階は AI（src/ai/kaiju-ai.ts）が決めて、ここに書き込む
@@ -34,11 +34,11 @@ export type KaijuEvent =
   | { readonly kind: 'retreat' }
   | { readonly kind: 'cityReached' };
 
-/** 全体 HP の人数スケール */
+/** 全体 HP の人数スケール（1 人は solo の倍率。6-1b） */
 export function kaijuMaxHp(players: number, base: number = KAIJU_CONFIG.baseHp): number {
   const s = KAIJU_CONFIG.hpScale;
   const n = clamp(Math.round(players), 1, 4);
-  return Math.round(base * (s.constant + s.perPlayer * n));
+  return Math.round(base * (n === 1 ? s.solo : s.constant + s.perPlayer * n));
 }
 
 export interface KaijuEmergeOptions {

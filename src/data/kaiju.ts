@@ -22,24 +22,30 @@ export interface KaijuPartSpec {
 
 export const KAIJU_CONFIG = {
   name: 'ヴォルガス',
-  /** 全高（背中の結晶の先まで） */
+  /** 全高（首の付け根の結晶の先まで。6-1b で背中の棘をやめ、見た目の最も高い所は約 145m） */
   height: 150,
   /**
    * 全体 HP の基礎値（人数スケールの 1 人分）。全体 HP = base × (0.55 + 0.45 × 人数)。
    * 「4 人・Kestrel Lv0・平均的な命中率で 8 分前後」になるよう tests/kaiju-raid-bots.ts のボットで決めた（docs/decisions.md の 6-1）
    */
   baseHp: 13000,
-  hpScale: { constant: 0.55, perPlayer: 0.45 },
+  /**
+   * 2〜4 人は base × (constant + perPlayer × 人数)。1 人は base × solo（6-1b。それまでは式のまま 1.0）。
+   * 部位ダメージ倍率を ×5.3 → ×3.8 に下げた分、1 人の HP だけを下げてソロの所要時間を保つ（2〜4 人の HP は変えない）
+   */
+  hpScale: { constant: 0.55, perPlayer: 0.45, solo: 0.78 },
   /**
    * 人数ごとの部位ダメージ倍率（添字 = 人数 − 1）。1 人はブレイクが成立しない代わり（指示は ×1.3）。人数スケールの式では
    * 1 人の HP が 4 人の 1/2.35 しかなく、しかも怪獣の攻撃が全部 1 人に来るので、ボットで 5〜7 分に入るよう ×5.3 にした
-   * （ユーザー確認済み）。2・3 人は式のままだと 4 人より遅く（2 人は 12 分超で最終フェーズに間に合わない）、
+   * （ユーザー確認済み）。6-1b の指示で ×3.8 に下げ、1 人の HP を hpScale.solo（0.78 = 10,140）で下げて所要時間を保った
+   * （ボット 20 シードの中央値 約 6.4 分。docs/decisions.md の 6-1b）。2・3 人は式のままだと 4 人より遅く（2 人は 12 分超で最終フェーズに間に合わない）、
    * 1 人より大幅に遅くなるので、ボットで 4 人と同じくらいになるよう足した（docs/decisions.md の 6-1）
    */
-  partyDamageScale: [5.3, 1.75, 1.25, 1],
+  partyDamageScale: [3.8, 1.75, 1.25, 1],
   parts: {
     head: { label: '頭', hpShare: 0.1, center: { x: 0, y: 100, z: -62 }, radius: 20 },
-    crystal: { label: '背中の結晶', hpShare: 0.14, center: { x: 0, y: 108, z: -4 }, radius: 38 },
+    // 6-1b: 結晶を肩・首の付け根へ移したので、判定の球も (0, 108, −4) → (0, 100, −30) へ（半径は同じ）
+    crystal: { label: '結晶', hpShare: 0.14, center: { x: 0, y: 100, z: -30 }, radius: 38 },
     leftLeg: { label: '左脚', hpShare: 0.1, center: { x: -18, y: 32, z: 4 }, radius: 19 },
     rightLeg: { label: '右脚', hpShare: 0.1, center: { x: 18, y: 32, z: 4 }, radius: 19 },
     tail: { label: '尾', hpShare: 0.1, center: { x: 0, y: 26, z: 82 }, radius: 26 },

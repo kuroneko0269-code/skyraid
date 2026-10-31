@@ -33,6 +33,25 @@ export interface TubeRing {
   readonly bone: BoneBind;
   /** 断面の下側の色（腹） */
   readonly under?: Rgb;
+  /**
+   * 筋肉の起伏（6-1b）: 断面の周に沿って半径を 1 + Σ amp·max(0, sin(k·θ + phase))^1.5 倍にする。
+   * 法線は起伏を含めた面から差分で求めるので、光で起伏が見える
+   */
+  readonly bulge?: readonly Bulge[];
+}
+
+export interface Bulge {
+  readonly k: number;
+  readonly amp: number;
+  readonly phase: number;
+}
+
+/** 断面の角度 θ での半径の倍率 */
+function bulgeScale(bulge: readonly Bulge[] | undefined, theta: number): number {
+  if (!bulge) return 1;
+  let s = 1;
+  for (const b of bulge) s += b.amp * Math.max(0, Math.sin(b.k * theta + b.phase)) ** 1.5;
+  return s;
 }
 
 const tmpA = new Vector3();
@@ -77,6 +96,10 @@ export class KaijuMeshBuilder {
   tube(rings: readonly TubeRing[], radial: number, capStart = true, capEnd = true): void {
     const n = rings.length;
     const first = this.glows.length;
+    const stride = radial + 1;
+    // 起伏を含めた位置を先に全部求め、法線は周方向と長さ方向の差分の外積から（起伏が陰影に出る）
+    const pts = new Float32Array(n * stride * 3);
+    const ell = new Float32Array(n * stride * 3);
     for (let i = 0; i < n; i++) {
       const r = rings[i];
       if (!r) continue;
@@ -91,21 +114,52 @@ export class KaijuMeshBuilder {
         const t = (j / radial) * Math.PI * 2;
         const c = Math.cos(t);
         const s = Math.sin(t);
-        // 法線は楕円の法線（半径の逆比）
+        const k = bulgeScale(r.bulge, t);
         tmpA
           .copy(r.center)
-          .addScaledVector(side, s * r.rx)
-          .addScaledVector(upv, c * r.ry);
+          .addScaledVector(side, s * r.rx * k)
+          .addScaledVector(upv, c * r.ry * k);
+        // 楕円の法線（半径の逆比）。差分の法線の向きをそろえる基準
         tmpB
           .set(0, 0, 0)
           .addScaledVector(side, s / r.rx)
           .addScaledVector(upv, c / r.ry)
           .normalize();
-        const color = r.under && c < -0.2 ? r.under : r.color;
-        this.vertex(tmpA, tmpB, color, r.bone);
+        const o = (i * stride + j) * 3;
+        pts[o] = tmpA.x;
+        pts[o + 1] = tmpA.y;
+        pts[o + 2] = tmpA.z;
+        ell[o] = tmpB.x;
+        ell[o + 1] = tmpB.y;
+        ell[o + 2] = tmpB.z;
       }
     }
-    const stride = radial + 1;
+    const at = (i: number, j: number, out: Vector3): Vector3 => {
+      const o = (i * stride + j) * 3;
+      return out.set(pts[o] ?? 0, pts[o + 1] ?? 0, pts[o + 2] ?? 0);
+    };
+    const around = new Vector3();
+    const lengthwise = new Vector3();
+    const p = new Vector3();
+    for (let i = 0; i < n; i++) {
+      const r = rings[i];
+      if (!r) continue;
+      for (let j = 0; j <= radial; j++) {
+        const jm = j === 0 ? radial - 1 : j - 1;
+        const jp = j === radial ? 1 : j + 1;
+        around.subVectors(at(i, jp, tmpA), at(i, jm, tmpB));
+        lengthwise.subVectors(at(Math.min(n - 1, i + 1), j, tmpA), at(Math.max(0, i - 1), j, tmpB));
+        const o = (i * stride + j) * 3;
+        tmpC.set(ell[o] ?? 0, ell[o + 1] ?? 0, ell[o + 2] ?? 0);
+        const nrm = new Vector3().crossVectors(around, lengthwise);
+        if (nrm.lengthSq() < 1e-10) nrm.copy(tmpC);
+        nrm.normalize();
+        if (nrm.dot(tmpC) < 0) nrm.negate();
+        const c = Math.cos((j / radial) * Math.PI * 2);
+        const color = r.under && c < -0.2 ? r.under : r.color;
+        this.vertex(at(i, j, p), nrm, color, r.bone);
+      }
+    }
     for (let i = 0; i < n - 1; i++) {
       for (let j = 0; j < radial; j++) {
         const a = first + i * stride + j;

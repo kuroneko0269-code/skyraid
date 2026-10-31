@@ -233,7 +233,7 @@ describe('ブレイク', () => {
 
 describe('人数スケール', () => {
   it('全体 HP = 基礎 × (0.55 + 0.45 × 人数)', () => {
-    expect(kaijuMaxHp(1)).toBe(K.baseHp);
+    expect(kaijuMaxHp(1)).toBe(Math.round(K.baseHp * K.hpScale.solo));
     expect(kaijuMaxHp(2)).toBe(Math.round(K.baseHp * 1.45));
     expect(kaijuMaxHp(4)).toBe(Math.round(K.baseHp * 2.35));
     const k = new Kaiju(flat);
