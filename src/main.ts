@@ -192,7 +192,16 @@ hudLink.bindTap(renderer.domElement, () => game.state === 'flight');
 linkWeather(world.weather, { game, screens, pvp, hud, hudLink, audio, save });
 // リングレース（7-1）: コース一覧・HUD・リザルト・音・ゴースト（天候の配線の後: レースの天候で上書きする）
 const ghost = new GhostView(scene);
-const race = createRaceLink({ game, screens, play, save, audio, weather: world.weather, ghost });
+const race = createRaceLink({
+  game,
+  screens,
+  play,
+  save,
+  audio,
+  weather: world.weather,
+  ghost,
+  hud,
+});
 const startFlight = createFlightStarter({
   activeMap,
   screens,
