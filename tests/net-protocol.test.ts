@@ -57,6 +57,7 @@ describe('protocol: 直列化の往復', () => {
           noUpgrades: true,
           rookieGuard: false,
           hard: true,
+          weather: 'night-rain',
         },
         players: [
           {
@@ -95,6 +96,7 @@ describe('protocol: 直列化の往復', () => {
           noUpgrades: false,
           rookieGuard: true,
           hard: false,
+          weather: 'day-clear',
         },
         players: [],
       },

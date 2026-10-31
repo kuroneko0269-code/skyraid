@@ -50,6 +50,20 @@ export const WIND_SOUND = {
   stall: { cutoffScale: 0.45, q: 5, gainAdd: 0.05 },
 } as const;
 
+/**
+ * 天候の環境音（7-5）。雨はフィルタ付きのノイズ（機内なので小さく、こもった音）。強風は風切り音を大きくし、
+ * ゆっくりした突風の揺れを足す。夜は環境音（風切り・雨）を静かにする
+ */
+export const WEATHER_SOUND = {
+  /** 雨（強さ 1）: バンドパスの中心・Q と音量。強さに比例 */
+  rain: { cutoff: 1500, q: 0.6, gain: 0.045 },
+  /** 強風（風 1）での風切り音の倍率と、突風の揺れ（周期の速さ Hz・深さ） */
+  strongWindGain: 1.6,
+  gust: { hz: 0.13, depth: 0.3 },
+  /** 夜（夜らしさ 1）の環境音の倍率 */
+  nightScale: 0.7,
+} as const;
+
 /** 低域のパルス（機銃の発射音の重さ・命中音のドン・被弾の衝撃）。hold 秒保ってから duration までに消える */
 export interface ThumpSound {
   readonly startFreq: number;

@@ -14,6 +14,7 @@ import {
 } from '../data/pvp';
 import { isReady, normalizeSettings, startBlock, type StartBlock } from '../net/lobby-rules';
 import { findMap, SELECTABLE_MAPS } from '../data/maps';
+import { WEATHER_PRESETS, weatherLabel } from '../data/weather';
 import { RAID_DIFFICULTIES, RAID_DIFFICULTY_LABELS, RAID_QUICK_PHRASES } from '../data/raid';
 import type { GameSettings, PlayerInfo } from '../net/protocol';
 import { el } from './hud-dom';
@@ -61,6 +62,8 @@ export class LobbyRoom {
   private readonly optionsText: HTMLSpanElement;
   private readonly mapText: HTMLSpanElement;
   private readonly mapSelect: HTMLSelectElement;
+  private readonly weatherText: HTMLSpanElement;
+  private readonly weatherSelect: HTMLSelectElement;
   private readonly rules: HTMLDivElement;
   private readonly scoreSelect: HTMLSelectElement;
   private readonly timeSelect: HTMLSelectElement;
@@ -97,6 +100,7 @@ export class LobbyRoom {
       return el('span', 'campaign-fact-value', f);
     };
     this.mapText = fact('マップ');
+    this.weatherText = fact('天候');
     this.rulesText = fact('ルール');
     this.optionsText = fact('補正');
     // ホストの設定（5-3: 撃墜数・時間、5-4: モード・強化の無効・初心者保護）
@@ -112,6 +116,7 @@ export class LobbyRoom {
           timeLimitSeconds: Number(this.timeSelect.value),
           mode: parseMode(this.modeSelect.value),
           hard: this.difficultySelect.value === 'hard',
+          weather: this.weatherSelect.value,
         }),
       );
     };
@@ -121,6 +126,14 @@ export class LobbyRoom {
       'マップ',
       SELECTABLE_MAPS.map((m) => m.id),
       (id) => findMap(String(id)).name,
+      changed,
+    );
+    // 7-5: 天候（PvP・協力レイドとも。全員が同じ天候）
+    this.weatherSelect = numberSelect(
+      this.rules,
+      '天候',
+      WEATHER_PRESETS.map((w) => w.id),
+      (id) => weatherLabel(String(id)),
       changed,
     );
     this.scoreSelect = numberSelect(
@@ -199,6 +212,7 @@ export class LobbyRoom {
     this.codeText.textContent = v.code;
     this.share.set(v.code, v.joinUrl);
     this.mapText.textContent = v.mapName;
+    this.weatherText.textContent = weatherLabel(st.weather);
     // レイド（6-2）は撃墜数・制限時間を使わない（怪獣を倒すか、最終フェーズの時間切れで終わる）
     this.rulesText.textContent =
       st.mode === 'raid'
@@ -220,7 +234,10 @@ export class LobbyRoom {
     const optionsFact = this.optionsText.parentElement;
     if (rulesFact) rulesFact.hidden = v.isHost;
     if (optionsFact) optionsFact.hidden = v.isHost;
+    const weatherFact = this.weatherText.parentElement;
+    if (weatherFact) weatherFact.hidden = v.isHost;
     this.mapSelect.value = st.mapId;
+    this.weatherSelect.value = st.weather;
     this.scoreSelect.value = String(st.scoreLimit);
     this.timeSelect.value = String(st.timeLimitSeconds);
     this.modeSelect.value = st.mode;

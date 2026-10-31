@@ -1,8 +1,36 @@
 // 大気散乱の GLSL。atmosphere-model.ts と同じ式。定数は src/data/sky.ts から埋め込む
-import { Color, ShaderChunk } from 'three';
+import { Color, ShaderChunk, ShaderLib, UniformsLib, type IUniform } from 'three';
 import { OCEAN_CONFIG } from '../data/ocean';
 import { SKY_CONFIG } from '../data/sky';
+import { NIGHT_CONFIG, OVERCAST_CONFIG } from '../data/weather';
 import { extraterrestrialSun } from './atmosphere-model';
+import { normalizedTint } from './atmosphere-weather';
+
+/** vec4 の uniform の値。Vector4 にしないのは、UniformsUtils.clone で複製されず全マテリアルで共有するため */
+export interface SharedVec4 {
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+}
+
+/**
+ * 天候（7-5）の共有 uniform。霧のシェーダーチャンクを使う全マテリアル（標準のマテリアルも）に入れ、
+ * 値のオブジェクトを共有するので書き換えると全部に効く。入っていないマテリアルでは 0（= 4-1 の晴れの昼と同じ）。
+ * - uAtmoWeather: x = 空気遠近の倍率 − 1、y = 霧の消散係数（1/m、海面）、z = 曇天の割合、w = 未使用
+ * - uAtmoMoon: xyz = 月の向き、w = 月の明るさ（0 で月なし）
+ * - uAtmoGrey: xyz = 曇天の空の天頂の明るさ、w = 未使用
+ * - uAtmoSunTint: xyz = 低い太陽の色味 − 1（朝焼け・夕焼け。0 で 4-1 のまま）、w = 未使用
+ */
+export const ATMO_WEATHER_UNIFORMS: Record<
+  'uAtmoWeather' | 'uAtmoMoon' | 'uAtmoGrey' | 'uAtmoSunTint',
+  { value: SharedVec4 }
+> = {
+  uAtmoWeather: { value: { x: 0, y: 0, z: 0, w: 0 } },
+  uAtmoMoon: { value: { x: 0, y: 1, z: 0, w: 0 } },
+  uAtmoGrey: { value: { x: 0, y: 0, z: 0, w: 0 } },
+  uAtmoSunTint: { value: { x: 0, y: 0, z: 0, w: 0 } },
+};
 
 const f = (x: number): string => {
   const s = x.toPrecision(7);
@@ -16,9 +44,18 @@ function commonGlsl(): string {
   // 放射照度 1 あたりの太陽の色（色温度 ÷ ホワイトバランス）。強さは uniform で掛ける
   const color = extraterrestrialSun(sun.temperature, 1, sun.whiteBalance);
   const sea = new Color(OCEAN_CONFIG.deepColor);
+  const oc = OVERCAST_CONFIG;
   return /* glsl */ `
 #ifndef ATMO_COMMON
 #define ATMO_COMMON
+uniform vec4 uAtmoWeather;
+uniform vec4 uAtmoMoon;
+uniform vec4 uAtmoGrey;
+uniform vec4 uAtmoSunTint;
+const vec3 ATMO_MOON_TINT = ${v3(normalizedTint(NIGHT_CONFIG.moonTint))};
+const float ATMO_FOG_H = ${f(oc.fogHeight)};
+const float ATMO_DIRECT_BLOCK = ${f(oc.directBlock)};
+const vec2 ATMO_OVC_ABOVE = vec2(${f(oc.aboveFrom)}, ${f(oc.aboveTo)});
 const vec3 ATMO_BETA_R = ${v3(a.rayleigh)};
 const float ATMO_BETA_M = ${f(a.mie)};
 const float ATMO_BETA_M_EXT = ${f(a.mie / a.mieAlbedo)};
@@ -50,7 +87,7 @@ vec3 atmoSunTransmittance(vec3 sun, float h) {
 }
 
 // 高さ h から向き dir に見た空の散乱光（太陽の円盤なし）。sunE は太陽の放射照度
-vec3 atmoSky(vec3 dir, vec3 sun, float sunE, float h) {
+vec3 atmoSkyFrom(vec3 dir, vec3 sun, float sunE, float h) {
   float y = max(h, 0.0);
   float nR = ATMO_H_R * exp(-y / ATMO_H_R);
   float nM = ATMO_H_M * exp(-y / ATMO_H_M);
@@ -67,6 +104,21 @@ vec3 atmoSky(vec3 dir, vec3 sun, float sunE, float h) {
   return ATMO_SUN_COLOR * sunE * scatter * (1.0 - exp(-tau)) / ext;
 }
 
+// 曇天の割合（雲の層より上では晴れの空に戻す。7-5）
+float atmoOvercastAt(float h) {
+  return uAtmoWeather.z * (1.0 - smoothstep(ATMO_OVC_ABOVE.x, ATMO_OVC_ABOVE.y, h));
+}
+
+// 天候込みの空（7-5）: 太陽の空 + 月の空（青白い）を、曇天の灰色の空（CIE の曇天の明るさの分布）へ混ぜる。
+// 晴れの昼（共有 uniform が 0）は 4-1 の atmoSky と同じ
+vec3 atmoSky(vec3 dir, vec3 sun, float sunE, float h) {
+  vec3 c = sunE > 1e-5 ? atmoSkyFrom(dir, sun, sunE, h) * (1.0 + uAtmoSunTint.rgb) : vec3(0.0);
+  if (uAtmoMoon.w > 0.0) c += atmoSkyFrom(dir, uAtmoMoon.xyz, uAtmoMoon.w, h) * ATMO_MOON_TINT;
+  float o = atmoOvercastAt(h);
+  if (o > 0.0) c = mix(c, uAtmoGrey.rgb * (1.0 + 2.0 * max(dir.y, 0.0)) / 3.0, o);
+  return c;
+}
+
 // 高さ h0 → h1 の線分に沿った平均密度（海面 = 1）
 float atmoAvgDensity(float h0, float h1, float H) {
   float dh = h1 - h0;
@@ -78,10 +130,12 @@ float atmoAvgDensity(float h0, float h1, float H) {
 // 高さ h0 → h1 の線分の空気遠近の消散係数（距離の倍率込み）。倍率はカメラの高さ h0 で減らす
 // （地表付近は距離 3 倍、上空では霞が薄くなる。高度 500m 以下はさらに 0.8 倍（4-7）。
 // atmosphere-model.ts の aerialDistanceScale）
+// 7-5: 天候の空気遠近の倍率（uAtmoWeather.x + 1）と、霧（視程から決めた消散係数。距離の倍率は掛けない）を足す
 vec3 atmoAerialDensity(float h0, float h1) {
   vec3 density = ATMO_BETA_R * atmoAvgDensity(h0, h1, ATMO_H_R) + ATMO_BETA_M_EXT * atmoAvgDensity(h0, h1, ATMO_H_M);
   float low = mix(ATMO_AERIAL_LOW.x, 1.0, smoothstep(ATMO_AERIAL_LOW.y, ATMO_AERIAL_LOW.z, h0));
-  return density * ATMO_DIST_SCALE * exp(-h0 / ATMO_AERIAL_H) * low;
+  vec3 aerial = density * ATMO_DIST_SCALE * exp(-h0 / ATMO_AERIAL_H) * low * (1.0 + uAtmoWeather.x);
+  return aerial + uAtmoWeather.y * atmoAvgDensity(h0, h1, ATMO_FOG_H);
 }
 
 // 地平線より下の背景（描画距離の外の海面を空気遠近ごしに見た色）。上は空そのもの。
@@ -94,7 +148,11 @@ vec3 atmoBackgroundSky(vec3 dir, vec3 sky, vec3 sun, float sunE, float h) {
   // 海面: 水の中から出てくる光（太陽 + 空。空の放射照度は仰角 25° の空の明るさ × π で近似）+ 空の反射
   vec2 side = normalize(vec2(-sun.z, sun.x) + vec2(1e-5, 0.0));
   vec3 skyIrr = 3.14159265 * atmoSky(vec3(side.x * 0.9063, 0.4226, side.y * 0.9063), sun, sunE, 0.0);
-  vec3 sunIrr = ATMO_SUN_COLOR * sunE * atmoSunTransmittance(sun, 0.0) * max(sun.y, 0.0);
+  vec3 sunIrr = ATMO_SUN_COLOR * (1.0 + uAtmoSunTint.rgb) * sunE * atmoSunTransmittance(sun, 0.0) * max(sun.y, 0.0);
+  // 7-5: 月の直射光、曇天は直射光を遮る
+  if (uAtmoMoon.w > 0.0)
+    sunIrr += ATMO_SUN_COLOR * ATMO_MOON_TINT * uAtmoMoon.w * atmoSunTransmittance(uAtmoMoon.xyz, 0.0) * max(uAtmoMoon.y, 0.0);
+  sunIrr *= 1.0 - atmoOvercastAt(0.0) * ATMO_DIRECT_BLOCK;
   float c = 1.0 - clamp(-dir.y, 0.0, 1.0);
   float F = 0.02 + 0.98 * c * c * c * c * c;
   vec3 sea = ATMO_SEA_ALBEDO * (sunIrr + skyIrr) / 3.14159265 * (1.0 - F)
@@ -141,6 +199,7 @@ let installed = false;
 export function installAtmosphereChunks(): void {
   if (installed) return;
   installed = true;
+  installWeatherUniforms();
   ShaderChunk.fog_pars_vertex = /* glsl */ `
 #ifdef USE_FOG
   uniform vec3 fogColor;
@@ -171,4 +230,19 @@ export function installAtmosphereChunks(): void {
   gl_FragColor.rgb = gl_FragColor.rgb * vAtmoExt + vAtmoIn;
 #endif
 ` + ShaderChunk.tonemapping_fragment;
+}
+
+/**
+ * 天候の共有 uniform を、霧の uniform を持つ標準のシェーダー（ShaderLib）と UniformsLib.fog（ShaderMaterial が
+ * 複製して使う）に足す（7-5）。値のオブジェクトは複製されないので、ATMO_WEATHER_UNIFORMS を書き換えると全部に効く
+ */
+function installWeatherUniforms(): void {
+  const add = (target: Record<string, IUniform>): void => {
+    for (const [k, u] of Object.entries(ATMO_WEATHER_UNIFORMS)) target[k] = u;
+  };
+  add(UniformsLib.fog as Record<string, IUniform>);
+  for (const shader of Object.values(ShaderLib)) {
+    const u = shader.uniforms as Record<string, IUniform>;
+    if ('fogColor' in u) add(u);
+  }
 }

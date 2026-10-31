@@ -80,6 +80,8 @@ export class FlightFrame {
       v.respawnTimer,
       isSimulating(state) || state === 'pause',
     );
+    // 天候（7-5）: 補間・時間の進行（ポーズ中は止まる世界の時間）
+    p.world.weather.update(p.camera, this.worldTime);
     // 影は機体のまわり（タイトル・モード選択ではカメラのまわり）
     p.world.update(
       p.camera.position,

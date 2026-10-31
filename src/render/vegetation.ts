@@ -69,7 +69,12 @@ export function treeTints(
 export class Vegetation {
   readonly object = new Group();
   private readonly time = { value: 0 };
-  private readonly nearMaterial = createNearMaterial(this.time);
+  /** 風の揺れの振れ幅の倍率（7-5 の強風） */
+  private readonly sway = { value: 1 };
+  /** 揺れの速さの倍率。速さを変えても位相が飛ばないよう、揺れの時間を dt × 倍率で進める */
+  swaySpeed = 1;
+  private lastTime: number | null = null;
+  private readonly nearMaterial = createNearMaterial(this.time, this.sway);
   private readonly billboardMaterial = createBillboardMaterial();
   private readonly treeGeometry = createTreeGeometry();
   private trees: TreePlacement | null = null;
@@ -111,10 +116,16 @@ export class Vegetation {
   setEnvironment(texture: Texture): void {
     const intensity = VEGETATION_CONFIG.environment.intensity;
     for (const material of [this.nearMaterial, this.billboardMaterial]) {
+      // 7-5: 焼き直しの付け替え（あり → あり）はシェーダーの作り直しが要らない
+      if (!material.envMap) material.needsUpdate = true;
       material.envMap = texture;
       material.envMapIntensity = intensity;
-      material.needsUpdate = true;
     }
+  }
+
+  /** 風の揺れの振れ幅の倍率（7-5） */
+  setSway(amplitude: number): void {
+    this.sway.value = amplitude;
   }
 
   /** 撒いた木の数 */
@@ -124,7 +135,9 @@ export class Vegetation {
 
   /** 描画フレームごとに呼ぶ。time は秒（風の揺れ） */
   update(camera: Readonly<Vec3>, time: number): void {
-    this.time.value = time;
+    const dt = this.lastTime === null ? time : time - this.lastTime;
+    this.lastTime = time;
+    if (dt >= 0 && dt < 1) this.time.value += dt * this.swaySpeed;
     const dx = camera.x - this.lastCenter.x;
     const dz = camera.z - this.lastCenter.z;
     if (dx * dx + dz * dz < VEGETATION_CONFIG.nearRefresh ** 2) return;

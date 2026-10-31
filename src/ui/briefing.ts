@@ -1,6 +1,7 @@
 import './campaign.css';
 import type { Locale } from '../core/locale';
 import { DEFAULT_RANK_MULTIPLIERS } from '../data/ranking';
+import { missionWeather, weatherLabel } from '../data/weather';
 import type { MissionDef } from '../missions/types';
 import { el } from './hud-dom';
 import { formatClock, formatCredits, missionStrings, objectiveSummary } from './mission-text';
@@ -64,6 +65,8 @@ export class BriefingScreen {
       return el('span', 'campaign-fact-value', row, value);
     };
     fact('制限時間', m.timeLimitSeconds === undefined ? 'なし' : formatClock(m.timeLimitSeconds));
+    // 7-5: ミッションごとに固定の天候
+    fact('天候', weatherLabel(missionWeather(m.id)));
     fact('報酬', `${formatCredits(m.reward.baseCredits)}（S ×${multipliers.S}）`);
     this.aircraftValue = fact('機体', this.aircraftName);
   }

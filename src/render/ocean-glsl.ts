@@ -4,13 +4,16 @@ import { OCEAN_CONFIG } from '../data/ocean';
 import { ATMOSPHERE_GLSL } from './atmosphere-glsl';
 import { CLOUD_GLSL } from './cloud-field';
 import { noiseChunk } from './ocean-noise-glsl';
+import { RAIN_RIPPLE_GLSL } from './weather/rain-ripple-glsl';
 
 const WAVE_COUNT = OCEAN_CONFIG.waves.length;
 
 // 水の中で散乱して出てくる光（拡散面と同じ: 放射照度 / π）と空の反射
 const lightChunk = /* glsl */ `
+  // uSunDirection は直射光（昼は太陽、夜は月。7-5）、uSkySun / uSkySunE は空の計算に使う太陽そのもの
   uniform vec3 uSunDirection;
-  uniform float uSunE;
+  uniform vec3 uSkySun;
+  uniform float uSkySunE;
   uniform vec3 uSunIrr;
   uniform vec3 uSkyIrr;
   uniform float uReflectivity;
@@ -18,7 +21,7 @@ const lightChunk = /* glsl */ `
   uniform vec3 uHorizonLift;
   ${ATMOSPHERE_GLSL}
   vec3 oceanSky(vec3 r) {
-    return atmoSky(normalize(vec3(r.x, max(abs(r.y), 0.02), r.z)), uSunDirection, uSunE, max(cameraPosition.y, 0.0));
+    return atmoSky(normalize(vec3(r.x, max(abs(r.y), 0.02), r.z)), uSkySun, uSkySunE, max(cameraPosition.y, 0.0));
   }
   // 遠くの海面ほど少し上の空を映す（3-1 の事前修正）。近く（uHorizonLift.x 未満）は oceanSky と同じ
   vec3 oceanFarSky(vec3 r, float dist) {
@@ -107,6 +110,7 @@ export const detailedFragmentShader = /* glsl */ `
   varying float vHeight;
   ${lightChunk}
   ${noiseChunk}
+  ${RAIN_RIPPLE_GLSL}
   #ifdef CLOUD_SHADOW
     ${CLOUD_GLSL}
   #endif
@@ -125,6 +129,8 @@ export const detailedFragmentShader = /* glsl */ `
     float near;
     float footprint = oceanFootprint(xz);
     vec2 slope = oceanRipples(xz, dist, footprint, uTime, uLayerCount, near);
+    // 雨の波紋（7-5）
+    slope += oceanRainRipple(xz, footprint, uTime);
     vec3 n = normalize(normalize(vNormal) + vec3(-slope.x, 0.0, -slope.y));
     #ifdef CLOUD_SHADOW
       float shade = cloudShadow(vWorldPos);

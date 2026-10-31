@@ -24,6 +24,8 @@ export interface SaveSettings {
   difficultyEased: boolean;
   /** HUD の表示（H キー / 設定の HUD ON/OFF） */
   hud: boolean;
+  /** 夜は HUD の明るさを少し落とす（7-5。設定で無効にできる。版は上げず、ない項目は既定値） */
+  nightHudDim: boolean;
   /** 音量（4-4。v3 から）: マスター / 効果音 / BGM。0〜1 */
   volume: VolumeSettings;
   /** 操作補助（4-12。v4 から）: エイムアシスト / ターゲットカメラ / HUD 補助 */
@@ -64,6 +66,7 @@ export function defaultSettings(): SaveSettings {
     // 新しいセーブは初めから easy なので直す必要がない
     difficultyEased: true,
     hud: true,
+    nightHudDim: true,
     volume: defaultVolume(),
     assist: defaultAssist(),
     controls: defaultControls(),
@@ -85,6 +88,7 @@ export function normalizeSettings(s: Json): SaveSettings {
   if (s.difficultyEased !== true && set.difficulty === 'normal') set.difficulty = 'easy';
   set.difficultyEased = true;
   if (typeof s.hud === 'boolean') set.hud = s.hud;
+  if (typeof s.nightHudDim === 'boolean') set.nightHudDim = s.nightHudDim;
   if (isObject(s.volume)) {
     const v = s.volume;
     const d = set.volume;

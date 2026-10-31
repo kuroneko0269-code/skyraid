@@ -28,7 +28,9 @@ export class TargetProjector {
   }
 
   /**
-   * w に画面座標を書く。aircraft は補間済みの機体の描画位置、fpm は進行方向マーカー（機首 1000m 先）の画面座標
+   * w に画面座標を書く。aircraft は補間済みの機体の描画位置、fpm は進行方向マーカー（機首 1000m 先）の画面座標。
+   * maxDist より遠い対象（7-5: 霧・雨・夜は索敵距離の 60%）は四角・選択の枠・予測照準点を出さない
+   * （画面外の選択対象の矢印とレーダーは出す。索敵・ロックはそのまま）
    */
   fill(
     w: HudWeaponsFrame,
@@ -38,14 +40,17 @@ export class TargetProjector {
     alpha: number,
     width: number,
     height: number,
+    maxDist = Infinity,
   ): void {
+    const far = (t: CombatTarget): boolean =>
+      maxDist < Infinity && aircraft.position.distanceTo(lead.copy(t.position)) > maxDist;
     this.camera.updateMatrixWorld();
     const targeting = combat.targeting;
     const selected = targeting.selected;
     let n = 0;
     for (const t of targeting.candidates) {
       if (n >= w.markers.length) break;
-      if (t === selected) continue;
+      if (t === selected || far(t)) continue;
       const m = w.markers[n];
       if (!m || !this.projectTarget(t, alpha, width, height, m) || !onScreen()) continue;
       this.markerTargets[n] = t;
@@ -60,6 +65,7 @@ export class TargetProjector {
     if (!selected) return;
     this.projectTarget(selected, alpha, width, height, sel);
     if (!this.behind && onScreen()) {
+      if (far(selected)) return;
       w.selected = 'screen';
       w.selX = sel.x;
       w.selY = sel.y;

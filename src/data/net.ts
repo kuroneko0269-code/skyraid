@@ -1,4 +1,5 @@
 // P2P 通信（5-1）の数値。仕組みは src/net/、決定は docs/decisions.md
+import { DEFAULT_WEATHER_ID } from './weather';
 
 export const NET_CONFIG = {
   /**
@@ -7,7 +8,7 @@ export const NET_CONFIG = {
    * 6-6 で 5: 怪獣の状態を 40 バイト以下に・岩 / ブレイク / ブリーフィングの event・壊れた建物（ruin）・ロック中の部位・
    * 成績の部位別の与ダメージ・高難度）
    */
-  protocolVersion: 5,
+  protocolVersion: 6,
   /** 部屋の最大人数（ホストを含む） */
   maxPlayers: 4,
   room: {
@@ -113,6 +114,7 @@ export const NET_CONFIG = {
     noUpgrades: true,
     rookieGuard: false,
     hard: false,
+    weather: DEFAULT_WEATHER_ID,
   },
   /** ?netdebug の表示を書き換える間隔（秒） */
   debugRefreshSeconds: 0.25,

@@ -1,5 +1,6 @@
 // PvP（5-1）の入口。main.ts が静的に読むのはこのファイルだけで、通信（src/net/・peerjs）とロビーは
 // PvP を選んだとき・?room のときに import() で別のチャンクとして読む（シングルプレイの読み込みと性能に影響しない）
+import { DEFAULT_WEATHER_ID } from '../data/weather';
 import type { AircraftDetail } from '../data/aircraft-model';
 import type { Loadout } from '../progression/loadout';
 import type { CombatInput } from '../combat/combat-input';
@@ -127,8 +128,13 @@ export class PvpEntry {
 
   /** PvP の飛行の装備（強化の無効を反映。5-4）。PvP を読んでいなければ null */
   /** 部屋のマップ（6-4） */
+  /** ロビーのホスト設定の天候（7-5。未接続なら初期値） */
+  get weatherId(): string {
+    return this.link?.settings?.weather ?? DEFAULT_WEATHER_ID;
+  }
+
   get mapId(): string {
-    return this.link?.mapId ?? 'island';
+    return this.link?.settings?.mapId ?? 'island';
   }
 
   loadout(): Loadout | null {

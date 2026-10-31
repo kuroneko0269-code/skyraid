@@ -2,12 +2,13 @@ import { PerspectiveCamera, Scene, type WebGLRenderer } from 'three';
 import { SCENE_CONFIG } from '../data/scene';
 import type { QualityPreset } from '../data/quality';
 import type { Vec3 } from '../flight/math';
-import { setAircraftEnvironment } from './aircraft-model/material';
 import { Atmosphere } from './atmosphere';
 import { CloudField } from './cloud-field';
 import { Clouds } from './clouds';
 import { SceneLights } from './lighting';
-import { createSkyEnvironment } from './sky-environment';
+import { SkyEnvironment } from './sky-environment';
+import { setAircraftEnvironment as setEnv } from './aircraft-model/material';
+import { WeatherView } from './weather/weather-view';
 import { Ocean } from './ocean';
 import { Terrain } from './terrain';
 import { defaultHeightField } from './terrain-height';
@@ -34,6 +35,8 @@ export class World {
   readonly ocean: Ocean;
   readonly clouds: Clouds;
   readonly lights: SceneLights;
+  /** 天候と時間帯（7-5） */
+  readonly weather: WeatherView;
   /** 街（6-4。港湾都市だけ） */
   city: CityView | null = null;
   private cityCount = 2000;
@@ -57,6 +60,14 @@ export class World {
     scene.fog = this.atmosphere.fog;
     scene.background = this.atmosphere.horizonColor;
     this.lights = new SceneLights(scene, this.atmosphere);
+    this.weather = new WeatherView({
+      scene,
+      atmosphere: this.atmosphere,
+      cloudField: this.cloudField,
+      clouds: this.clouds,
+      ocean: this.ocean,
+      vegetation: this.vegetation,
+    });
   }
 
   applyQuality(preset: QualityPreset): void {
@@ -75,6 +86,9 @@ export class World {
     this.lights.setShadows(preset.shadows, preset.shadowMapSize);
     // ブルームがあれば太陽のまぶしさはブルームに任せる
     this.atmosphere.setGlow(!(preset.postEffects && preset.bloom));
+    // 星の点の大きさは画素の倍率に合わせる（テストの Node では 1）
+    const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio;
+    this.weather.applyQuality(preset, Math.min(dpr, preset.maxPixelRatio));
   }
 
   /**
@@ -146,10 +160,16 @@ export function createWorldScene(renderer: WebGLRenderer, aspect: number): World
   const cfg = SCENE_CONFIG;
   const scene = new Scene();
   const world = new World(scene, cfg.camera.far);
-  // 4-9: 同じ環境マップを木にも付ける（影側が黒くつぶれないように）
-  const environment = createSkyEnvironment(renderer, world.atmosphere);
-  setAircraftEnvironment(environment);
-  world.vegetation.setEnvironment(environment);
+  // 4-9: 同じ環境マップを木にも付ける（影側が黒くつぶれないように）。7-5: 天候が変わったら焼き直す
+  const sky = new SkyEnvironment(renderer, world.atmosphere);
+  const bake = (): void => {
+    const environment = sky.bake();
+    setEnv(environment);
+    world.vegetation.setEnvironment(environment);
+    sky.release();
+  };
+  bake();
+  world.weather.onBake = bake;
 
   const camera = new PerspectiveCamera(cfg.camera.fov, aspect, cfg.camera.near, cfg.camera.far);
   camera.position.set(cfg.camera.position.x, cfg.camera.position.y, cfg.camera.position.z);

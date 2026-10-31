@@ -4,6 +4,7 @@ import { RAID_CONFIG } from '../data/kaiju';
 import { findMap, SELECTABLE_MAPS } from '../data/maps';
 import type { PvpMode } from '../data/pvp';
 import { NET_CONFIG } from '../data/net';
+import { DEFAULT_WEATHER_ID, isWeatherId, RAID_COOP_DEFAULT_WEATHER } from '../data/weather';
 import type { GameSettings, PlayerInfo, UpgradeLevelsMsg } from './protocol';
 import type { PlayerProfile } from './room-code';
 
@@ -113,15 +114,24 @@ export class ChatGate {
 /** 部屋を作るときの設定（6-2: モード選択の「レイド」の「協力」から作るならレイド。それ以外は既定） */
 export function initialSettings(raid: boolean): GameSettings | undefined {
   return raid
-    ? { ...NET_CONFIG.defaultSettings, mode: 'raid', mapId: RAID_CONFIG.mapId }
+    ? {
+        ...NET_CONFIG.defaultSettings,
+        mode: 'raid',
+        mapId: RAID_CONFIG.mapId,
+        weather: RAID_COOP_DEFAULT_WEATHER,
+      }
     : undefined;
 }
 
-/** ホストが選んだ設定をそろえる（6-4: レイドは港湾都市に固定、マップは選べるものだけ） */
+/**
+ * ホストが選んだ設定をそろえる（6-4: レイドは港湾都市に固定、マップは選べるものだけ。
+ * 7-5: 天候は知らない id なら初期値）
+ */
 export function normalizeSettings(s: GameSettings): GameSettings {
-  if (s.mode === 'raid') return { ...s, mapId: RAID_CONFIG.mapId };
+  const weather = isWeatherId(s.weather) ? s.weather : DEFAULT_WEATHER_ID;
+  if (s.mode === 'raid') return { ...s, mapId: RAID_CONFIG.mapId, weather };
   const ok = SELECTABLE_MAPS.some((m) => m.id === s.mapId);
-  return ok ? s : { ...s, mapId: NET_CONFIG.defaultSettings.mapId };
+  return ok ? { ...s, weather } : { ...s, mapId: NET_CONFIG.defaultSettings.mapId, weather };
 }
 
 /** ロビーに出すマップの名前（6-4） */

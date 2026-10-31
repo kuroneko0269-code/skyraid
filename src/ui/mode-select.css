@@ -70,3 +70,21 @@
   font: 14px/1.5 var(--ui-font-body);
   color: var(--ui-text-dim);
 }
+
+/* フリーフライトの天候（7-5）: プリセットの選択と「時間が流れる」 */
+.mode-weather {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 4px 0 12px;
+}
+
+.mode-weather-item {
+  flex: 1 1 200px;
+}
+
+.mode-weather-select {
+  flex: 1;
+  min-width: 0;
+}

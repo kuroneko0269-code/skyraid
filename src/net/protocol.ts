@@ -20,6 +20,8 @@ export interface GameSettings {
   rookieGuard: boolean;
   /** レイドの高難度（6-6。HP ×1.4・予兆 −0.5 秒・最終フェーズ 3.5 分・報酬 ×1.8） */
   hard: boolean;
+  /** 天候のプリセット（7-5。src/data/weather.ts の id。全員が同じ天候で飛ぶ） */
+  weather: string;
 }
 
 /** チームなし（個人戦） */

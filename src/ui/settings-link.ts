@@ -10,7 +10,7 @@ import { createEnemySettings } from './enemy-settings';
 import type { Hud } from './hud';
 import { createHudToggle, type HudToggle } from './hud-toggle';
 import type { MissionHud } from './mission-hud';
-import { createFullscreenButton } from './mobile';
+import { createFullscreenButton, createToggleButton } from './mobile';
 import type { ModeSelectScreen } from './mode-select';
 import { createSaveSettings } from './save-settings';
 import { createTouchLink, type TouchLink } from './touch-link';
@@ -36,6 +36,12 @@ export function createDisplaySettings(p: PauseSettingsParts): {
   const touch = createTouchLink(document.body, p.input, p.storage, p.panel, p.inFlight);
   // HUD: H キー / ポーズメニューの設定のボタンで表示切替（3-1 から保存）。ミッションの HUD（2-4）も合わせる
   const hudToggle = createHudToggle(p.panel, p.hud, p.missionHud, p.save);
+  // 7-5: 夜は HUD を少し暗くする（ui/weather-link.ts が毎フレーム読む）
+  createToggleButton(p.panel, '夜の HUD 減光', p.save.settings.nightHudDim, () => {
+    const on = !p.save.settings.nightHudDim;
+    p.save.setSetting('nightHudDim', on);
+    return on;
+  });
   createFullscreenButton(p.panel);
   return { touch, hudToggle };
 }

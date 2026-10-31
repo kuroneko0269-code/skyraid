@@ -52,6 +52,7 @@ import { FxEvents } from './render/fx/fx-events';
 import { FrameFx } from './render/frame-fx';
 import { PvpEntry } from './ui/pvp-entry';
 import { createFlightStarter } from './ui/flight-start';
+import { linkWeather } from './ui/weather-link';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app が見つかりません');
@@ -257,6 +258,8 @@ const startFlight = createFlightStarter({
   quality,
   pvp,
 });
+// 天候（7-5）: 飛行・メニュー・ブリーフィング・ロビーの天候、HUD のマーカーと夜の減光、環境音
+linkWeather(world.weather, { game, screens, pvp, hud, hudLink, audio, save });
 
 const loop = new GameLoop();
 // 固定ステップ更新は飛行中だけ（ポーズ・メニュー中は GameLoop ごと止める）

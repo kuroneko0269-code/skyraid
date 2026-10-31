@@ -4,6 +4,7 @@ import { el } from './hud-dom';
 import { createButton, createScreen, setScreenShown } from './screen';
 import type { TutorialStrings } from './tutorial-text';
 import { SELECTABLE_MAPS, ISLAND_MAP } from '../data/maps';
+import { DEFAULT_WEATHER_ID, WEATHER_PRESETS, weatherLabel } from '../data/weather';
 
 export const GAME_MODES = ['tutorial', 'free', 'campaign', 'hangar', 'pvp', 'raid'] as const;
 export type GameMode = (typeof GAME_MODES)[number];
@@ -40,6 +41,10 @@ export class ModeSelectScreen {
   private readonly mapButtons: HTMLButtonElement[] = [];
   /** フリーフライトのマップ（6-4。選ぶたびに変わる。初めは島） */
   freeMapId: string = ISLAND_MAP.id;
+  /** フリーフライトの天候（7-5。初めは昼・快晴）と「時間が流れる」 */
+  freeWeatherId: string = DEFAULT_WEATHER_ID;
+  freeTimeFlow = false;
+  private weatherSelect: HTMLSelectElement | null = null;
 
   constructor(
     parent: HTMLElement,
@@ -138,6 +143,7 @@ export class ModeSelectScreen {
     this.mapPrompt.hidden = true;
     const mapBox = el('div', 'ui-dialog mode-prompt-box', this.mapPrompt);
     el('h3', 'ui-heading mode-prompt-title', mapBox, 'フリーフライト：マップ');
+    this.createWeatherRow(mapBox);
     const mapList = el('div', 'campaign-buttons', mapBox);
     createButton(mapList, 'ui-button is-ghost campaign-back', '戻る', () => {
       this.closeDialog();
@@ -155,9 +161,36 @@ export class ModeSelectScreen {
     this.root = root;
   }
 
+  /** フリーフライトの天候（7-5）: プリセットの選択と「時間が流れる」（フリーフライトだけ） */
+  private createWeatherRow(parent: HTMLElement): void {
+    const row = el('div', 'mode-weather', parent);
+    const label = el('label', 'campaign-fact mode-weather-item', row);
+    el('span', 'campaign-fact-label', label, '天候');
+    const select = el('select', 'ui-field mode-weather-select', label);
+    for (const w of WEATHER_PRESETS) {
+      const o = el('option', '', select, weatherLabel(w.id));
+      o.value = w.id;
+    }
+    select.value = this.freeWeatherId;
+    select.addEventListener('change', () => {
+      this.freeWeatherId = select.value;
+    });
+    this.weatherSelect = select;
+    const flow = createButton(row, 'ui-toggle mode-weather-item', '', () => {
+      this.freeTimeFlow = !this.freeTimeFlow;
+      sync();
+    });
+    const sync = (): void => {
+      flow.textContent = `時間が流れる ${this.freeTimeFlow ? 'ON' : 'OFF'}`;
+      flow.setAttribute('aria-pressed', String(this.freeTimeFlow));
+    };
+    sync();
+  }
+
   /** フリーフライトのマップの選択を出す（6-4。前に選んだマップにフォーカス） */
   showMapPrompt(): void {
     this.mapPrompt.hidden = false;
+    if (this.weatherSelect) this.weatherSelect.value = this.freeWeatherId;
     const b = this.mapButtons.find((x) => x.dataset.map === this.freeMapId) ?? this.mapButtons[0];
     b?.focus({ preventScroll: true });
   }

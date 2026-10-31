@@ -4,6 +4,7 @@
 // 5-3: 撃ち合い（1 回の対戦は pvp-flight.ts）、ロビーのルール設定、対戦の終わり → ロビーのリザルト →「もう一度」。
 // 5-4: 準備・ハンガー・共有・定型文・チーム（ロビーの操作は pvp-lobby-actions.ts）、全員の「もう一度」でロビーへ、
 // 切断と再接続のお知らせ、強化の無効を反映した装備
+import type { GameSettings } from '../net/protocol';
 import type { PerspectiveCamera, Scene } from 'three';
 import type { GameState } from '../core/game-state';
 import type { AircraftDetail } from '../data/aircraft-model';
@@ -172,8 +173,9 @@ export class PvpLink {
 
   /** PvP の飛行の装備（ホストが強化を無効にしていれば Lv 0。5-4） */
   // 部屋のマップ（6-4。ロビーのホスト設定。レイドは港湾都市）
-  get mapId(): string {
-    return this.room?.settings.mapId ?? 'island';
+  /** ロビーのホスト設定（マップ・天候。7-5 で mapId から置き換え）。部屋がなければ null */
+  get settings(): Readonly<GameSettings> | null {
+    return this.room?.settings ?? null;
   }
 
   loadout(): Loadout {

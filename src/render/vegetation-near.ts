@@ -158,7 +158,10 @@ export function createTreeGeometry(): BufferGeometry {
   return geometry;
 }
 
-export function createNearMaterial(time: { value: number }): MeshStandardMaterial {
+export function createNearMaterial(
+  time: { value: number },
+  sway: { value: number } = { value: 1 },
+): MeshStandardMaterial {
   const v = VEGETATION_CONFIG;
   const wind = (WIND_CONFIG.direction * Math.PI) / 180;
   const material = new MeshStandardMaterial({
@@ -168,10 +171,11 @@ export function createNearMaterial(time: { value: number }): MeshStandardMateria
   });
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uTreeTime = time;
+    shader.uniforms.uTreeSway = sway;
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
-        '#include <common>\nuniform float uTreeTime;\nattribute float treePart;\nattribute vec3 instanceTrunkColor;',
+        '#include <common>\nuniform float uTreeTime;\nuniform float uTreeSway;\nattribute float treePart;\nattribute vec3 instanceTrunkColor;',
       )
       .replace(
         '#include <color_vertex>',
@@ -193,7 +197,7 @@ export function createNearMaterial(time: { value: number }): MeshStandardMateria
           float widthScale = max(length(instanceMatrix[0].xyz), 0.1);
           vec2 windDir = vec2(${f(Math.cos(wind))}, ${f(Math.sin(wind))});
           vec2 windLocal = vec2(dot(instanceMatrix[0].xz, windDir), dot(instanceMatrix[2].xz, windDir)) / widthScale;
-          transformed.xz += windLocal * sway * (${f(v.sway.amplitude)} / widthScale) * position.y * position.y;
+          transformed.xz += windLocal * sway * (${f(v.sway.amplitude)} * uTreeSway / widthScale) * position.y * position.y;
           // 遠景（ビルボード）の距離ではつぶす
           if (distance(instanceMatrix[3].xyz, cameraPosition) > ${f(v.nearDistance)}) transformed = vec3(0.0);
         #endif`,

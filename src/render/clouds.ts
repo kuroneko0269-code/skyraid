@@ -19,7 +19,6 @@ import {
 } from 'three';
 import { CLOUD_CONFIG } from '../data/clouds';
 import type { CloudMode, QualityPreset } from '../data/quality';
-import { SKY_CONFIG } from '../data/sky';
 import { createRandom } from '../core/random';
 import type { Vec3 } from '../flight/math';
 import type { Atmosphere } from './atmosphere';
@@ -67,6 +66,8 @@ export class Clouds {
   private lastTime: number | null = null;
   private readonly sunColor = new Color();
   private readonly ambient = new Color();
+  /** 雨雲の暗さ（7-5。1 = 4-2 のまま） */
+  private readonly shade = { value: 1 };
 
   constructor(
     atmosphere: Atmosphere,
@@ -75,6 +76,7 @@ export class Clouds {
     const lightUniforms = {
       uAmbient: { value: this.ambient },
       uSunColor: { value: this.sunColor },
+      uCloudShade: this.shade,
     };
     this.volume = new Mesh(
       createLayerGeometry(),
@@ -88,7 +90,7 @@ export class Clouds {
           uSteps: { value: 8 },
           uInside: { value: 0 },
           uSunDir: field.uniforms.uCloudSun,
-          uSunE: { value: SKY_CONFIG.sun.irradiance },
+          uCloudLight: { value: this.sunColor },
           uProjInv: { value: new Matrix4() },
           uCamWorld: { value: new Matrix4() },
         },
@@ -169,7 +171,9 @@ export class Clouds {
   private applyAtmosphere(atmosphere: Atmosphere): void {
     const l = atmosphere.lighting;
     this.field.setSun(atmosphere.sun);
-    this.sunColor.setRGB(l.sun[0], l.sun[1], l.sun[2]);
+    // 雲は遮られる前の直射光（雲の層の高さ）で照らす（7-5。曇天でも雲の上面は明るい）
+    const key = atmosphere.keyLightAt(CLOUD_CONFIG.base);
+    this.sunColor.setRGB(key[0], key[1], key[2]);
     this.ambient.setRGB(l.skyIrradiance[0], l.skyIrradiance[1], l.skyIrradiance[2]);
     // 雲の中の霧の色: 雲の中で四方から散乱してくる光（白に近い灰色）
     const sin = Math.max(atmosphere.sun.y, 0);
@@ -179,6 +183,11 @@ export class Clouds {
       (l.sun[1] * (0.4 + 0.3 * sin) + l.skyIrradiance[1]) * k,
       (l.sun[2] * (0.4 + 0.3 * sin) + l.skyIrradiance[2]) * k,
     );
+  }
+
+  /** 雨雲の暗さ（0〜1）。雲の明るさを最大 55% 落とす（7-5） */
+  setDarkness(dark: number): void {
+    this.shade.value = 1 - 0.55 * Math.min(1, Math.max(0, dark));
   }
 
   /** 画質の切り替え（方式・歩数・描画距離） */

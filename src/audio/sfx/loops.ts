@@ -1,7 +1,13 @@
 // 常時鳴る音（4-4）: エンジン・風切り・ロックオン・警告（同時発音の 16 のうち 4）。音源は作りっぱなしで、
 // 音程と音量だけを変える。CPU を食わないよう、ノイズの音源 1 つをエンジン・アフターバーナー・風切りのフィルタで分け合い、
 // パラメータは前回から変わったときだけ書く（setTargetAtTime でなめらかに）
-import { AUDIO_CONFIG, ENGINE_SOUND, LOCK_SOUND, WARNING_SOUND } from '../../data/audio';
+import {
+  AUDIO_CONFIG,
+  ENGINE_SOUND,
+  LOCK_SOUND,
+  WARNING_SOUND,
+  WEATHER_SOUND,
+} from '../../data/audio';
 import type { AudioEngine } from '../engine';
 import type { EngineParams, WindParams } from '../params';
 
@@ -36,6 +42,8 @@ export class FlightLoops {
   private readonly windCutoff: SmoothParam;
   private readonly windQ: SmoothParam;
   private readonly windGain: SmoothParam;
+  /** 雨の環境音（7-5。同じノイズをバンドパスで） */
+  private readonly rainGain: SmoothParam;
   private readonly lockFreq: SmoothParam;
   private readonly lockGain: AudioParam;
   private readonly warnFreq: SmoothParam;
@@ -74,6 +82,10 @@ export class FlightLoops {
     noise.connect(noiseLp);
     noise.connect(abHp);
     noise.connect(windBp);
+    const rainAmp = gain(bus);
+    const rainBp = filter('bandpass', WEATHER_SOUND.rain.cutoff, rainAmp);
+    rainBp.Q.value = WEATHER_SOUND.rain.q;
+    noise.connect(rainBp);
     noise.start();
 
     const saw = ctx.createOscillator();
@@ -104,6 +116,7 @@ export class FlightLoops {
     this.windCutoff = new SmoothParam(windBp.frequency);
     this.windQ = new SmoothParam(windBp.Q);
     this.windGain = new SmoothParam(windAmp.gain);
+    this.rainGain = new SmoothParam(rainAmp.gain);
     this.lockFreq = new SmoothParam(lock.frequency, 0.001);
     this.lockGain = lockAmp.gain;
     this.warnFreq = new SmoothParam(warn.frequency, 0.001);
@@ -122,6 +135,11 @@ export class FlightLoops {
     this.windCutoff.set(w.cutoff, now);
     this.windQ.set(w.q, now);
     this.windGain.set(w.gain * k, now);
+  }
+
+  /** 雨の環境音の音量（7-5。飛行中でなければ 0） */
+  updateRain(gain: number, active: boolean): void {
+    this.rainGain.set(active ? gain : 0, this.engine.now);
   }
 
   /** ロックオンと警告のビープ（null は鳴らさない） */

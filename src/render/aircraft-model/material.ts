@@ -107,10 +107,12 @@ function useEnvironment<T extends MeshStandardMaterial>(material: T, intensity: 
 
 /** 起動時に 1 回、空から作った環境マップを機体のマテリアル（作成済み・これから作るものすべて）に付ける */
 export function setAircraftEnvironment(texture: Texture): void {
+  // 7-5: 焼き直しの付け替え（環境マップあり → あり）はシェーダーの作り直しが要らない
+  const first = environment === null;
   environment = texture;
   for (const [material, intensity] of envTargets) {
     useEnvironment(material, intensity);
-    material.needsUpdate = true;
+    if (first) material.needsUpdate = true;
   }
 }
 

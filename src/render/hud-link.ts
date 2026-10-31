@@ -8,12 +8,15 @@ import type { Hud, HudFrame } from '../ui/hud';
 import { createHudFrame, fillHudFrame } from '../ui/hud-feed';
 import { projectFlightPath } from './hud-projection';
 import { TargetProjector } from './target-projection';
+import { markerRange } from '../core/weather-state';
 
 export class HudLink {
   private readonly frame: HudFrame;
   private readonly flightPath = { x: 0, y: 0 };
   private readonly projector: TargetProjector;
   private readonly impact = { x: 0, y: 0 };
+  /** 視認性の悪さ（0〜1。霧・雨・夜。7-5）。マーカーを出す距離を索敵距離の 60% まで縮める */
+  visibility: () => number = () => 0;
 
   constructor(
     private readonly hud: Hud,
@@ -27,6 +30,7 @@ export class HudLink {
     private readonly assist: () => boolean = () => false,
   ) {
     this.frame = createHudFrame(ff.aircraft);
+    // 7-5 の天候が入れる（main.ts）
     this.projector = new TargetProjector(camera);
   }
 
@@ -44,6 +48,7 @@ export class HudLink {
       alpha,
       width,
       height,
+      markerRange(this.ff.combat.targeting.spec.sensorRange, this.visibility()),
     );
     this.fillImpact(width, height);
     this.hud.update(f);

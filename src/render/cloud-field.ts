@@ -116,9 +116,20 @@ export class CloudField {
     this.uniforms.uCloudSun.value.set(sun.x, sun.y, sun.z);
   }
 
-  /** time は秒（ポーズ中は止まる時間）。風で雲を流す */
+  /** 風の速さの倍率（7-5 の強風。弱風は 1） */
+  speedScale = 1;
+  private lastTime: number | null = null;
+
+  /**
+   * time は秒（ポーズ中は止まる時間）。風で雲を流す。速さの倍率を変えても位置が飛ばないよう、
+   * 前回からの時間 × 今の速さを足していく（7-5。最初の呼び出しは time × 速さ）
+   */
   update(time: number): void {
-    this.offset.set(this.wind.x * time, this.wind.z * time);
+    const dt = this.lastTime === null ? time : time - this.lastTime;
+    this.lastTime = time;
+    if (dt < 0 || dt > 1) return;
+    const k = this.speedScale * dt;
+    this.offset.set(this.offset.x + this.wind.x * k, this.offset.y + this.wind.z * k);
   }
 
   /** ワールド座標の雲の密度（0〜1。GPU と同じ式） */

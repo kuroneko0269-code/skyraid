@@ -16,7 +16,6 @@ import {
 } from 'three';
 import { OCEAN_CONFIG } from '../data/ocean';
 import type { QualityPreset } from '../data/quality';
-import { SKY_CONFIG } from '../data/sky';
 import { TERRAIN_CONFIG } from '../data/terrain';
 import { WIND_CONFIG } from '../data/wind';
 import type { Vec3 } from '../flight/math';
@@ -57,7 +56,9 @@ export class Ocean {
   private readonly shared: Record<string, IUniform> = {
     uTime: { value: 0 },
     uSunDirection: { value: new Vector3() },
-    uSunE: { value: 0 },
+    uSkySun: { value: new Vector3() },
+    uSkySunE: { value: 0 },
+    uRain: { value: 0 },
     uSunColor: { value: new Color() },
     uSunIrr: { value: new Color() },
     uSkyIrr: { value: new Color() },
@@ -177,13 +178,21 @@ export class Ocean {
     });
   }
 
+  /** 両方のマテリアルで共有する uniform（天候の適用。7-5） */
+  get sharedUniforms(): Readonly<Record<string, IUniform>> {
+    return this.shared;
+  }
+
   /** 太陽の向き・空の光を uniform に入れる（太陽を動かしたときも） */
   private applyAtmosphere(atmosphere: Atmosphere): void {
     const d = atmosphere.sun;
     const l = atmosphere.lighting;
     const u = this.shared;
     (u.uSunDirection?.value as Vector3).set(d.x, d.y, d.z);
-    if (u.uSunE) u.uSunE.value = SKY_CONFIG.sun.irradiance;
+    // 空の計算は太陽そのもの（夜は月を共有 uniform で足す。7-5）
+    const s = atmosphere.skySun;
+    (u.uSkySun?.value as Vector3).set(s.x, s.y, s.z);
+    if (u.uSkySunE) u.uSkySunE.value = Math.max(atmosphere.skySunE, 1e-4);
     // 照り返しは地上に届く太陽光の色
     (u.uSunColor?.value as Color).setRGB(l.sun[0], l.sun[1], l.sun[2]);
     // 水平面の放射照度（太陽と空を分けて渡す。雲の影は太陽だけを暗くする）

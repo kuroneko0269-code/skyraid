@@ -10,6 +10,7 @@ import {
   SPATIAL_CONFIG,
   WARNING_KINDS,
   WARNING_SOUND,
+  WEATHER_SOUND,
   WIND_SOUND,
   type BgmTrack,
   type ExplosionSound,
@@ -213,5 +214,34 @@ export function missileSweep(
     const t = (duration * i) / points;
     out.push([t, lerpLog(start, end, i / points) * missileDoppler(t)]);
   }
+  return out;
+}
+
+/** 天候の環境音（7-5）の入力: 雨・風（0〜1）・夜らしさ（0〜1） */
+export interface WeatherSoundInput {
+  rain: number;
+  wind: number;
+  night: number;
+}
+
+export interface WeatherSoundParams {
+  /** 雨のノイズの音量 */
+  rainGain: number;
+  /** 風切り音の音量の倍率 */
+  windScale: number;
+}
+
+/** 天候から雨の音量と風切り音の倍率（time は秒。突風のゆっくりした揺れ） */
+export function weatherSoundParams(
+  w: Readonly<WeatherSoundInput>,
+  time: number,
+  out: WeatherSoundParams = { rainGain: 0, windScale: 1 },
+): WeatherSoundParams {
+  const c = WEATHER_SOUND;
+  const night = lerp(1, c.nightScale, clamp01(w.night));
+  const wind = clamp01(w.wind);
+  const gust = 1 + c.gust.depth * wind * Math.sin(time * Math.PI * 2 * c.gust.hz) ** 2;
+  out.rainGain = c.rain.gain * clamp01(w.rain) * night;
+  out.windScale = lerp(1, c.strongWindGain, wind) * gust * night;
   return out;
 }

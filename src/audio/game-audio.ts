@@ -13,8 +13,11 @@ import {
   lockTone,
   pickWarning,
   warningTone,
+  weatherSoundParams,
   windParams,
   type EngineParams,
+  type WeatherSoundInput,
+  type WeatherSoundParams,
   type WarningFlags,
   type WindParams,
 } from './params';
@@ -50,6 +53,9 @@ export class GameAudio {
     stall: false,
   };
   private lastEnemyGun = -1;
+  /** 天候（7-5。main.ts が入れる）。null は晴れの昼と同じ */
+  weather: (() => Readonly<WeatherSoundInput>) | null = null;
+  private readonly weatherState: WeatherSoundParams = { rainGain: 0, windScale: 1 };
   /** 怪獣の音（6-2）と、その表示元（null はミッションの怪獣。協力のクライアントは写しに差し替える） */
   private readonly kaijuWatch: KaijuSoundWatch;
   private kaijuSource: KaijuBodyView | null = null;
@@ -162,7 +168,14 @@ export class GameAudio {
     const a = s.aircraft;
     engineParams(a.throttle, a.state.afterburnerActive, this.engineState);
     windParams(a.state.speed, a.state.stall, this.windState);
+    // 7-5: 強風は風切り音を大きく（突風で揺らす）、雨は小さなノイズ、夜は環境音を静かに
+    const sky = this.weather?.();
+    if (sky) {
+      weatherSoundParams(sky, engine.now, this.weatherState);
+      this.windState.gain *= this.weatherState.windScale;
+    }
     loops.updateFlight(this.engineState, this.windState, alive);
+    loops.updateRain(sky ? this.weatherState.rainGain : 0, alive);
     if (state !== 'flight' || !alive) {
       loops.updateTones(null, null);
       return;

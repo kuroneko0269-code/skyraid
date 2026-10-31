@@ -28,6 +28,8 @@ export function writeSettings(w: ByteWriter, s: Readonly<GameSettings>): void {
       (s.rookieGuard ? SET_ROOKIE : 0) |
       (s.hard ? SET_HARD : 0),
   );
+  // 7-5: 天候
+  w.str(s.weather);
 }
 
 export function readSettings(r: ByteReader): GameSettings {
@@ -35,6 +37,7 @@ export function readSettings(r: ByteReader): GameSettings {
   const timeLimitSeconds = r.u16();
   const scoreLimit = r.u8();
   const f = r.u8();
+  const weather = r.str();
   return {
     mapId,
     timeLimitSeconds,
@@ -43,6 +46,7 @@ export function readSettings(r: ByteReader): GameSettings {
     noUpgrades: (f & SET_NO_UPGRADES) !== 0,
     rookieGuard: (f & SET_ROOKIE) !== 0,
     hard: (f & SET_HARD) !== 0,
+    weather,
   };
 }
 

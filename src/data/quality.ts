@@ -63,7 +63,19 @@ export interface QualityPreset {
   readonly heatHazeRefraction: boolean;
   /** 森の地面に、木の影の代わりに太陽と反対側へずらした暗いまだらを描く（4-6。シャドウマップは使わない） */
   readonly treeShade: boolean;
+  /** 夜空の星の数（7-5。Points 1 draw call） */
+  readonly starCount: number;
+  /**
+   * 雨の描き方（7-5）: streaks = 線の粒（InstancedMesh 1 draw call、rainDrops 本）、
+   * sheet = 全画面の半透明の筋 1 枚（画面の歪みなし）
+   */
+  readonly rainMode: RainMode;
+  readonly rainDrops: number;
 }
+
+export const RAIN_MODES = ['sheet', 'streaks'] as const;
+
+export type RainMode = (typeof RAIN_MODES)[number];
 
 export const CLOUD_MODES = ['billboard', 'volume'] as const;
 
@@ -92,6 +104,9 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     treeShade: false,
     aircraftDetail: 'low',
     heatHazeRefraction: false,
+    starCount: 1000,
+    rainMode: 'sheet',
+    rainDrops: 0,
   },
   medium: {
     shadows: true,
@@ -115,6 +130,9 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     treeShade: false,
     aircraftDetail: 'high',
     heatHazeRefraction: false,
+    starCount: 2500,
+    rainMode: 'streaks',
+    rainDrops: 3000,
   },
   high: {
     shadows: true,
@@ -138,6 +156,9 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
     treeShade: true,
     aircraftDetail: 'high',
     heatHazeRefraction: true,
+    starCount: 4000,
+    rainMode: 'streaks',
+    rainDrops: 6000,
   },
 };
 

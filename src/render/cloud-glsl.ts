@@ -51,7 +51,9 @@ export const volumeFragmentShader = /* glsl */ `
   uniform float uSteps;
   uniform float uInside;
   uniform vec3 uSunDir;
-  uniform float uSunE;
+  // 雲の層の高さに届く直射光（太陽か月。7-5 で CPU から渡す）と、雨雲の暗さの倍率
+  uniform vec3 uCloudLight;
+  uniform float uCloudShade;
   uniform vec3 fogColor;
   uniform float fogNear;
   uniform float fogFar;
@@ -78,8 +80,7 @@ export const volumeFragmentShader = /* glsl */ `
     // 各歩の中央で取る。層の外から入る視線は全画素が同じ高さの組で取るので、画素ごとのずらし
     // （ノイズ）なしでも縞にならない（ずらすと少ない歩数では砂のようなざらつきになる）
     float t = t0 + dt * 0.5;
-    vec3 sunColor = ATMO_SUN_COLOR * uSunE * atmoSunTransmittance(uSunDir, CLOUD_BASE);
-    vec3 sunLight = sunColor * cloudPhase(dot(rd, uSunDir));
+    vec3 sunLight = uCloudLight * cloudPhase(dot(rd, uSunDir));
     vec3 color = vec3(0.0);
     float T = 1.0;
     float tSum = 0.0;
@@ -94,7 +95,7 @@ export const volumeFragmentShader = /* glsl */ `
         float dl = cloudDensityAt(p + uSunDir * ${f(v.lightStep)}, false);
         float sunT = exp(-dl * CLOUD_EXT * ${f(v.lightStep)} * 1.5) * mix(0.45, 1.0, smoothstep(0.0, 0.8, hf));
         vec3 amb = uAmbient * mix(${f(light.ambientBottom)}, 1.0, hf);
-        vec3 L = (sunLight * sunT + amb) * (${f(light.albedo)} / PI);
+        vec3 L = (sunLight * sunT + amb) * (${f(light.albedo)} / PI) * uCloudShade;
         float a = 1.0 - exp(-d * CLOUD_EXT * dt);
         color += T * a * L;
         tSum += T * a * t;
@@ -150,6 +151,7 @@ export const billboardVertexShader = /* glsl */ `
 
 export const billboardFragmentShader = /* glsl */ `
   uniform vec3 uSunColor;
+  uniform float uCloudShade;
   varying vec2 vUv;
   varying float vSeed;
   varying float vFade;
@@ -180,7 +182,7 @@ export const billboardFragmentShader = /* glsl */ `
     // 上は太陽で明るく、底は暗い
     float hf = clamp(p.y * 0.5 + 0.5 + (n - 0.5) * 0.4, 0.0, 1.0);
     vec3 L = uSunColor * cloudPhase(0.0) * mix(0.35, 1.0, hf) + uAmbient * mix(${f(light.ambientBottom)}, 1.0, hf);
-    gl_FragColor = vec4(L * (${f(light.albedo)} / PI), alpha);
+    gl_FragColor = vec4(L * (${f(light.albedo)} / PI) * uCloudShade, alpha);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
