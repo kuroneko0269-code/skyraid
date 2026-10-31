@@ -15,6 +15,7 @@ import {
   normalizeSettings,
   type SaveSettings,
 } from './save-settings';
+import { normalizeRaces, type RaceRecord } from './save-races';
 
 export {
   defaultAssist,
@@ -74,6 +75,8 @@ export interface SaveData {
   };
   settings: SaveSettings;
   flags: SaveFlags;
+  /** リングレースの記録（7-1。v6 から）: コース id → 最高ランク・ベスト 5・ゴースト */
+  races: Record<string, RaceRecord>;
 }
 
 export function initialUpgrades(): UpgradeLevels {
@@ -94,11 +97,11 @@ export function createInitialSave(): SaveData {
     },
     settings: defaultSettings(),
     flags: defaultFlags(),
+    races: {},
   };
 }
 
 type Json = Record<string, unknown>;
-
 /** v1 までの初期機の id（v2 で kestrel に改名） */
 const V1_STARTER_ID = 'starter';
 
@@ -109,6 +112,7 @@ const V1_STARTER_ID = 'starter';
  * - v2 → v3（4-4）: 設定に音量（settings.volume）を足す（初期値）
  * - v3 → v4（4-12）: 設定に操作補助（settings.assist）を足す（初期値）
  * - v4 → v5（4-11）: 設定に操作（settings.controls）、案内の記録（flags）を足す（初期値。どれもまだ出していない扱い）
+ * - v5 → v6（7-1）: リングレースの記録（races）を空で足す
  * 難易度の一度だけの normal → easy（4-11 の事前修正）は版によらず normalizeSettings で（印 settings.difficultyEased）
  */
 export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
@@ -165,6 +169,7 @@ export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
       flags: defaultFlags(),
     };
   },
+  5: (d) => ({ ...d, version: 6, races: {} }),
 };
 
 /**
@@ -228,6 +233,7 @@ export function normalizeSave(d: Json): SaveData | null {
   if (isObject(d.flags)) {
     for (const k of SAVE_FLAGS) if (d.flags[k] === true) save.flags[k] = true;
   }
+  save.races = normalizeRaces(d.races);
   return save;
 }
 

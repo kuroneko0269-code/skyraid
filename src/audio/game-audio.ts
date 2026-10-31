@@ -2,6 +2,7 @@
 // 単発の効果音を鳴らす。画面に合わせて BGM を切り替え、ポーズ中は音量を 30% に。UI のボタンでタップ音・決定音、購入で和音
 import { isFrozenFlight, type ScreenState } from '../core/game-state';
 import { GUN_SOUND, UI_SOUND_EVENTS } from '../data/audio';
+import type { RaceSoundKind } from '../data/race';
 import { HUD_CONFIG } from '../data/hud';
 import type { FlightSession } from '../missions/flight-session';
 import type { FxEvents } from '../render/fx/fx-events';
@@ -137,6 +138,11 @@ export class GameAudio {
 
   playUi(kind: UiSoundKind): void {
     this.shots.ui(kind);
+  }
+
+  /** リングレース（7-1）の音 */
+  playRace(kind: RaceSoundKind): void {
+    this.shots.race(kind);
   }
 
   /** フォトモード（7-A）のシャッター音 */

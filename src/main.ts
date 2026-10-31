@@ -45,6 +45,8 @@ import { createPvpWiring } from './ui/pvp-wiring';
 import { linkMissionEvents } from './ui/mission-wiring';
 import { createAppControls } from './ui/app-controls';
 import { createPhotoMode } from './ui/photo/photo-link';
+import { createRaceLink } from './ui/race-link';
+import { GhostView } from './render/ghost-view';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app が見つかりません');
@@ -186,6 +188,11 @@ const hudLink = new HudLink(
 // HUD の対象をタップ（クリック）すると選ぶ。スティック・ボタンの上は canvas に届かない
 hudLink.bindTap(renderer.domElement, () => game.state === 'flight');
 
+// 天候（7-5）: 飛行・メニュー・ブリーフィング・ロビーの天候、HUD のマーカーと夜の減光、環境音
+linkWeather(world.weather, { game, screens, pvp, hud, hudLink, audio, save });
+// リングレース（7-1）: コース一覧・HUD・リザルト・音・ゴースト（天候の配線の後: レースの天候で上書きする）
+const ghost = new GhostView(scene);
+const race = createRaceLink({ game, screens, play, save, audio, weather: world.weather, ghost });
 const startFlight = createFlightStarter({
   activeMap,
   screens,
@@ -196,9 +203,8 @@ const startFlight = createFlightStarter({
   chaseCamera,
   quality,
   pvp,
+  race,
 });
-// 天候（7-5）: 飛行・メニュー・ブリーフィング・ロビーの天候、HUD のマーカーと夜の減光、環境音
-linkWeather(world.weather, { game, screens, pvp, hud, hudLink, audio, save });
 
 const loop = new GameLoop();
 const { simulate } = linkFlightLoop(loop, {
@@ -273,6 +279,7 @@ frame.photo = photo;
 
 loop.onRender((alpha) => {
   pvp.render(alpha);
+  race.render(alpha);
   frame.render(game.state, alpha, keys.menuTick);
   if (game.state === 'flight') kaijuHud.update();
   tutorial.update(game.state === 'flight');

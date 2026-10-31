@@ -3,6 +3,7 @@
 // どれも VoicePool のボイス（フィルタ → 音量 →（パンナー →）効果音のバス）に、ノイズ（共有バッファ）とオシレーターをつないで鳴らす。
 // pos を渡した音は 3D 配置（敵機・爆発・対空砲）、渡さない音は自機・UI（定位なし）
 import { AAA_SOUND, GUN_SOUND, UI_SOUND } from '../../data/audio';
+import { RACE_SOUND, type RaceSoundKind } from '../../data/race';
 import { PHOTO_SHUTTER } from '../../data/photo';
 import type { ExplosionScale } from '../../data/fx';
 import type { AudioEngine } from '../engine';
@@ -94,6 +95,13 @@ export class OneShots {
     } else {
       this.notes(c.purchase.freqs, c.purchase.step, c.purchase.duration, c.gain, 'triangle');
     }
+  }
+
+  /** リングレース（7-1）: リング通過（種類で音程を変える）・未通過・ゴール */
+  race(kind: RaceSoundKind): void {
+    const c = RACE_SOUND;
+    const s = kind === 'miss' ? c.miss : kind === 'goal' ? c.goal : c.ring[kind];
+    this.notes(s.freqs, s.step, s.duration, c.gain, s.wave);
   }
 
   /** フォトモード（7-A）の効果音だけにする（シャッターは鳴る） */

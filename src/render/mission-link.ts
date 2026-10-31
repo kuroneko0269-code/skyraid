@@ -1,4 +1,4 @@
-// ミッションの HUD に渡す値（2-4）: 残り時間・戦域の境界・次のリング（護衛中は輸送機。2-5）の画面座標（カメラで投影）。
+// ミッションの HUD に渡す値（2-4）: 残り時間・戦域の境界・次のリング（護衛中は輸送機。2-5。リングレース（7-1）も）の画面座標（カメラで投影）。
 // 目標の進み具合は MissionHud がランナーのイベントを購読する
 import { Vector3, type Object3D, type PerspectiveCamera } from 'three';
 import { HUD_CONFIG } from '../data/hud';
@@ -28,7 +28,9 @@ export class MissionLink {
 
     const w = this.waypoint;
     // 次のリング。なければ護衛中の輸送機（守る相手の位置を示す）
-    const ring = runner?.running ? (runner.activeRings?.next ?? null) : null;
+    // 7-1: レース中は次のリング（カウントダウン中も）
+    const race = this.play.race;
+    const ring = race ? race.nextRing : runner?.running ? (runner.activeRings?.next ?? null) : null;
     const escort = runner?.running && !ring ? this.escortPosition() : null;
     const mark = ring?.position ?? escort;
     w.shown = mark !== null;

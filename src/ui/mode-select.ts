@@ -6,7 +6,15 @@ import type { TutorialStrings } from './tutorial-text';
 import { SELECTABLE_MAPS, ISLAND_MAP } from '../data/maps';
 import { DEFAULT_WEATHER_ID, WEATHER_PRESETS, weatherLabel } from '../data/weather';
 
-export const GAME_MODES = ['tutorial', 'free', 'campaign', 'hangar', 'pvp', 'raid'] as const;
+export const GAME_MODES = [
+  'tutorial',
+  'free',
+  'campaign',
+  'race',
+  'hangar',
+  'pvp',
+  'raid',
+] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
 /** フリーフライトの説明（ポーズメニューの「敵」設定に合わせて書き換える） */
@@ -18,6 +26,8 @@ const MODE_ENTRIES: readonly { mode: GameMode; label: string; note: string; enab
   { mode: 'tutorial', label: '', note: '', enabled: true },
   { mode: 'free', label: 'フリーフライト', note: FREE_FLIGHT_NOTES.on, enabled: true },
   { mode: 'campaign', label: 'キャンペーン', note: 'ミッションを順にクリア', enabled: true },
+  // リングレース（7-1）: ソロのタイムアタック（マルチは後日）
+  { mode: 'race', label: 'リングレース', note: 'リングを抜けるタイムアタック', enabled: true },
   { mode: 'hangar', label: 'ハンガー', note: '機体の購入・強化', enabled: true },
   // PvP（5-1）: 今は同じ空を飛ぶまで（撃ち合いは 5-3）
   { mode: 'pvp', label: 'PvP', note: '2〜4 人で同じ空を飛ぶ', enabled: true },
@@ -26,7 +36,7 @@ const MODE_ENTRIES: readonly { mode: GameMode; label: string; note: string; enab
 ];
 
 /**
- * モード選択画面。チュートリアル（4-11）・フリーフライトとキャンペーン（2-4）・ハンガー（3-3）・PvP（5-1）・レイド（6-2）を選べる。
+ * モード選択画面。チュートリアル（4-11）・フリーフライトとキャンペーン（2-4）・リングレース（7-1）・ハンガー（3-3）・PvP（5-1）・レイド（6-2）を選べる。
  * 初回起動（パイロット名の入力の後）に 1 度だけ「チュートリアルを始めますか？」を重ねて出す
  */
 export class ModeSelectScreen {

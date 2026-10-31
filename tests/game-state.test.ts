@@ -113,7 +113,7 @@ describe('GameState の遷移', () => {
     ]);
   });
 
-  it('固定更新を進めるのは飛行中だけ。デモカメラはメニュー（boot / title / pilot_name / mode_select / mission_select / briefing / lobby）', () => {
+  it('固定更新を進めるのは飛行中だけ。デモカメラはメニュー（boot / title / pilot_name / mode_select / mission_select / briefing / lobby / race_select）', () => {
     expect(SCREEN_STATES.filter(isSimulating)).toEqual(['flight']);
     expect(SCREEN_STATES.filter(usesDemoCamera)).toEqual([
       'boot',
@@ -123,6 +123,7 @@ describe('GameState の遷移', () => {
       'mission_select',
       'briefing',
       'lobby',
+      'race_select',
     ]);
   });
 
@@ -278,6 +279,7 @@ describe('画面状態ごとの HUD の表示（7-5b）', () => {
     result: false,
     hangar: false,
     lobby: false,
+    race_select: false,
   };
 
   it('飛行・ポーズだけ出し、タイトル・名前入力・メニュー・ロビー・ハンガー・リザルトでは出さない', () => {
