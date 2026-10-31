@@ -105,6 +105,8 @@ describe('4 人協力をインメモリで通す', () => {
             const c = session.props.bombers[i];
             if (!b.active || !c?.active) return;
             const lag = ((m.host.tick - client.viewTick) / 60) * b.spec.speed;
+            // 出た直後（表示の遅れの分だけまだ進んでいない）は、写しは出現位置（0）に留まるので比べない（7-B の事前修正で波の時刻が変わって当たった）
+            if (b.traveled < lag) return;
             const err = Math.abs(b.traveled - c.traveled - lag);
             worst = Math.max(worst, err);
             compared++;
