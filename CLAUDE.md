@@ -83,6 +83,7 @@ tests/               vitest
 9. コミットは Conventional Commits（`feat:` `fix:` `refactor:` `docs:` `chore:`）。squash マージのコミットも同様
 10. ブランチ名: `feat/<topic>` `fix/<topic>`。クラウドセッションが自動で付ける `claude/<auto>` も可
 11. 不明点は推測で進めず、選択肢を挙げて質問する
+12. main に squash マージして push した後、作業ブランチを main に揃える force push は行わない（権限で拒否される。作業ブランチは squash 前のままで良い）
 
 ## やってはいけないこと
 
