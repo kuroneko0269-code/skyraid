@@ -1,7 +1,11 @@
 // 防衛戦（7-2）の波: 定義（src/data/defense-waves.ts）に人数・難易度の倍率を掛けて、出す敵の列と予告の数にする。Three.js 非依存
 import type { Difficulty } from '../../data/ai';
 import { DEFENSE_CONFIG, type DefenseDifficulty } from '../../data/defense';
-import { DEFENSE_WAVES, type DefenseEnemyKind, type DefenseWaveDef } from '../../data/defense-waves';
+import {
+  DEFENSE_WAVES,
+  type DefenseEnemyKind,
+  type DefenseWaveDef,
+} from '../../data/defense-waves';
 
 /** 出す敵 1 機分（爆撃機の護衛は kind 'fighter' で escortOf に爆撃機の組の番号） */
 export interface WaveSpawn {
@@ -42,7 +46,11 @@ export function waveDef(wave: number): DefenseWaveDef | null {
 }
 
 /** wave 番目（1 から）の出す敵の列（delay の順） */
-export function buildWave(wave: number, players: number, difficulty: DefenseDifficulty): WaveSpawn[] {
+export function buildWave(
+  wave: number,
+  players: number,
+  difficulty: DefenseDifficulty,
+): WaveSpawn[] {
   const def = waveDef(wave);
   if (!def) return [];
   const scale = enemyScale(players, difficulty);

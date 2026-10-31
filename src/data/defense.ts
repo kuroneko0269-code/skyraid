@@ -26,7 +26,12 @@ export interface DefenseMapDef {
   /** 敵の来る 3 方向（波ごとにランダムに 1 つ） */
   readonly approaches: readonly DefenseApproach[];
   /** 自機の開始位置（協力は ID 順に横一列）。機首は敵の来る側 */
-  readonly start: { readonly x: number; readonly y: number; readonly z: number; readonly headingDeg: number };
+  readonly start: {
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+    readonly headingDeg: number;
+  };
 }
 
 /** 島: 基地は東岸（地表 10〜40m の低い所）。敵は東の海（北東・東・南東）から */
@@ -154,3 +159,23 @@ export const CRUISE_CONFIG = {
   hitFlashSeconds: 0.08,
   maxCount: 16,
 } as const;
+
+/** 描画の色（src/render/defense-view.ts）。爆撃機は輸送機の形に暗い色を掛ける */
+export const DEFENSE_VIEW = {
+  bomberTint: 0x4a525c,
+  cruiseColor: 0xd8d8d0,
+  bombColor: 0x2c3128,
+  /** 味方の対空砲の曳光弾（敵の対空砲の黄色と分ける水色） */
+  friendlyTracer: 0x7fe0ff,
+} as const;
+
+/** 防衛戦の音（7-2）: 波の始まりのホーン・巡航ミサイルの警報・司令部の被弾 */
+export const DEFENSE_SOUND = {
+  gain: 0.26,
+  horn: { freqs: [146.83, 185, 220], step: 0, duration: 1.6, wave: 'sawtooth' },
+  cruise: { freqs: [1250, 880, 1250, 880], step: 0.14, duration: 0.12, wave: 'square' },
+  hqHit: { freqs: [196, 130.81], step: 0.08, duration: 0.35, wave: 'square' },
+  clear: { freqs: [659.25, 783.99, 987.77], step: 0.08, duration: 0.5, wave: 'triangle' },
+} as const;
+
+export type DefenseSoundKind = 'horn' | 'cruise' | 'hqHit' | 'clear';

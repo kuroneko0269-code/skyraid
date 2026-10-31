@@ -237,7 +237,7 @@ export class DefenseRunner {
 
   /** 出す時刻になった敵を出す（戦闘機の空きがなければ待つ。巡航ミサイルは組ごとに間隔を空ける） */
   private spawnDue(): void {
-    for (let i = 0; i < this.queue.length; ) {
+    for (let i = 0; i < this.queue.length;) {
       const s = this.queue[i];
       if (!s || s.delay > this.waveTime) break;
       const index = this.spawner.spawn(s, this.approach, this.wave, this.waveTime);
@@ -336,7 +336,10 @@ export class DefenseRunner {
       const agl = p.y - Math.max(0, this.world.groundHeight(p.x, p.z));
       if (!canResupply(p, agl, d.speed, this.options.map.center)) continue;
       this.supplied.add(d.id);
-      this.bus.emit('defense:supply', { id: d.id, fraction: supplyFraction(this.base.alive('fuel')) });
+      this.bus.emit('defense:supply', {
+        id: d.id,
+        fraction: supplyFraction(this.base.alive('fuel')),
+      });
     }
   }
 

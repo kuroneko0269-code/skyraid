@@ -122,7 +122,11 @@ export class GamePlay {
    * 防衛戦（7-2。ソロ）を始める: 基地の近くの開始位置から、敵・的なしの世界で（敵は波ごとにランナーが出す）。
    * 補給の判定は自機。撃墜されたら開始位置へ戻る（ミッションと同じ）
    */
-  startDefense(map: DefenseMapDef, difficulty: DefenseDifficulty, seed?: () => number): DefenseRunner {
+  startDefense(
+    map: DefenseMapDef,
+    difficulty: DefenseDifficulty,
+    seed?: () => number,
+  ): DefenseRunner {
     this.setRace(null);
     this.session.startMission(map.start, false);
     this.setRunner(null);

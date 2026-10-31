@@ -122,5 +122,4 @@ export class DefenseSpawner {
     if (alive.length === 0) return 0;
     return alive[Math.floor(this.rng() * alive.length) % alive.length] ?? 0;
   }
-
 }

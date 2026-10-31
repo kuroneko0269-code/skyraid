@@ -1,4 +1,5 @@
 import type { RaidDifficulty } from '../data/raid';
+import { DEFENSE_MAPS, type DefenseDifficulty } from '../data/defense';
 import './mode-select.css';
 import { el } from './hud-dom';
 import { createButton, createScreen, setScreenShown } from './screen';
@@ -11,6 +12,7 @@ export const GAME_MODES = [
   'free',
   'campaign',
   'race',
+  'defense',
   'hangar',
   'pvp',
   'raid',
@@ -28,6 +30,8 @@ const MODE_ENTRIES: readonly { mode: GameMode; label: string; note: string; enab
   { mode: 'campaign', label: 'キャンペーン', note: 'ミッションを順にクリア', enabled: true },
   // リングレース（7-1）: ソロのタイムアタック（マルチは後日）
   { mode: 'race', label: 'リングレース', note: 'リングを抜けるタイムアタック', enabled: true },
+  // 防衛戦（7-2）: ソロはすぐ出撃、協力は PvP のロビーを使う
+  { mode: 'defense', label: '防衛戦', note: '基地を 10 波の敵から守る（1〜4 人）', enabled: true },
   { mode: 'hangar', label: 'ハンガー', note: '機体の購入・強化', enabled: true },
   // PvP（5-1）: 今は同じ空を飛ぶまで（撃ち合いは 5-3）
   { mode: 'pvp', label: 'PvP', note: '2〜4 人で同じ空を飛ぶ', enabled: true },
@@ -48,6 +52,11 @@ export class ModeSelectScreen {
   private readonly raidPrompt: HTMLDivElement;
   private readonly raidSolo: HTMLButtonElement;
   private readonly mapPrompt: HTMLDivElement;
+  private readonly defensePrompt: HTMLDivElement;
+  private readonly defenseSolo: HTMLButtonElement;
+  /** 防衛戦（7-2）のマップと難易度（選ぶたびに変わる） */
+  defenseMapId: string = DEFENSE_MAPS[0]?.mapId ?? 'island';
+  defenseDifficulty: DefenseDifficulty = 'normal';
   private readonly mapButtons: HTMLButtonElement[] = [];
   /** フリーフライトのマップ（6-4。選ぶたびに変わる。初めは島） */
   freeMapId: string = ISLAND_MAP.id;
@@ -65,6 +74,8 @@ export class ModeSelectScreen {
       /** レイドの人数を選んだ（6-2）: solo はすぐ出撃、coop は PvP のロビーへ */
       /** difficulty はソロの難易度（6-6。協力はロビーでホストが選ぶ） */
       onRaid: (kind: 'solo' | 'coop', difficulty: RaidDifficulty) => void;
+      /** 防衛戦（7-2）: solo はすぐ出撃、coop は PvP のロビーへ（マップと難易度はホストの初期設定） */
+      onDefense: (kind: 'solo' | 'coop', mapId: string, difficulty: DefenseDifficulty) => void;
     },
   ) {
     const root = createScreen(parent, 'mode-select-screen');
@@ -148,6 +159,57 @@ export class ModeSelectScreen {
         handlers.onRaid('solo', 'normal');
       },
     );
+    // 防衛戦の人数・マップ・難易度の選択（7-2）
+    this.defensePrompt = el('div', 'mode-prompt', root);
+    this.defensePrompt.hidden = true;
+    const defBox = el('div', 'ui-dialog mode-prompt-box', this.defensePrompt);
+    el('h3', 'ui-heading mode-prompt-title', defBox, '防衛戦');
+    el(
+      'p',
+      'mode-prompt-text',
+      defBox,
+      '基地の司令部を全 10 波の敵から守ります。波の間に基地の上を低く遅く（高度 300m 以下・速度 150 以下）通ると補給。高難度は敵 ×1.3・司令部 HP 1500。2〜4 人は部屋を作るか、部屋コードで参加します（全員が同じチーム）。',
+    );
+    const defRow = el('div', 'mode-weather', defBox);
+    const mapButtons: HTMLButtonElement[] = [];
+    for (const m of DEFENSE_MAPS) {
+      const b = createButton(defRow, 'ui-toggle mode-weather-item', m.name, () => {
+        this.defenseMapId = m.mapId;
+        syncDefense();
+      });
+      b.dataset.map = m.mapId;
+      mapButtons.push(b);
+    }
+    const diffButton = createButton(defRow, 'ui-toggle mode-weather-item', '', () => {
+      this.defenseDifficulty = this.defenseDifficulty === 'normal' ? 'hard' : 'normal';
+      syncDefense();
+    });
+    const syncDefense = (): void => {
+      for (const b of mapButtons)
+        b.setAttribute('aria-pressed', String(b.dataset.map === this.defenseMapId));
+      const hard = this.defenseDifficulty === 'hard';
+      diffButton.textContent = `難易度：${hard ? '高難度' : '通常'}`;
+      diffButton.setAttribute('aria-pressed', String(hard));
+    };
+    syncDefense();
+    const defButtons = el('div', 'campaign-buttons', defBox);
+    createButton(defButtons, 'ui-button is-ghost campaign-back', '戻る', () => {
+      this.closeDialog();
+      this.firstEnabled?.focus({ preventScroll: true });
+    });
+    createButton(defButtons, 'ui-button campaign-go', '協力（2〜4 人）', () => {
+      this.closeDialog();
+      handlers.onDefense('coop', this.defenseMapId, this.defenseDifficulty);
+    });
+    this.defenseSolo = createButton(
+      defButtons,
+      'ui-button is-primary campaign-go',
+      'ソロで出撃',
+      () => {
+        this.closeDialog();
+        handlers.onDefense('solo', this.defenseMapId, this.defenseDifficulty);
+      },
+    );
     // フリーフライトのマップの選択（6-4）
     this.mapPrompt = el('div', 'mode-prompt', root);
     this.mapPrompt.hidden = true;
@@ -211,6 +273,12 @@ export class ModeSelectScreen {
     this.raidSolo.focus({ preventScroll: true });
   }
 
+  /** 防衛戦の人数・マップ・難易度の選択を出す（7-2） */
+  showDefensePrompt(): void {
+    this.defensePrompt.hidden = false;
+    this.defenseSolo.focus({ preventScroll: true });
+  }
+
   /** 「チュートリアルを始めますか？」を出す */
   showTutorialPrompt(): void {
     this.prompt.hidden = false;
@@ -219,8 +287,15 @@ export class ModeSelectScreen {
 
   /** 案内が開いていれば閉じて true（Esc） */
   closeDialog(): boolean {
-    if (this.prompt.hidden && this.raidPrompt.hidden && this.mapPrompt.hidden) return false;
+    if (
+      this.prompt.hidden &&
+      this.raidPrompt.hidden &&
+      this.mapPrompt.hidden &&
+      this.defensePrompt.hidden
+    )
+      return false;
     this.prompt.hidden = true;
+    this.defensePrompt.hidden = true;
     this.raidPrompt.hidden = true;
     this.mapPrompt.hidden = true;
     return true;

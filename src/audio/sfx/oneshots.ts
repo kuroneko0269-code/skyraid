@@ -4,6 +4,7 @@
 // pos を渡した音は 3D 配置（敵機・爆発・対空砲）、渡さない音は自機・UI（定位なし）
 import { AAA_SOUND, GUN_SOUND, UI_SOUND } from '../../data/audio';
 import { RACE_SOUND, type RaceSoundKind } from '../../data/race';
+import { DEFENSE_SOUND, type DefenseSoundKind } from '../../data/defense';
 import { PHOTO_SHUTTER } from '../../data/photo';
 import type { ExplosionScale } from '../../data/fx';
 import type { AudioEngine } from '../engine';
@@ -101,6 +102,13 @@ export class OneShots {
   race(kind: RaceSoundKind): void {
     const c = RACE_SOUND;
     const s = kind === 'miss' ? c.miss : kind === 'goal' ? c.goal : c.ring[kind];
+    this.notes(s.freqs, s.step, s.duration, c.gain, s.wave);
+  }
+
+  /** 防衛戦（7-2）: 波の始まりのホーン・巡航ミサイルの警報・司令部の被弾・波のクリア */
+  defense(kind: DefenseSoundKind): void {
+    const c = DEFENSE_SOUND;
+    const s = c[kind];
     this.notes(s.freqs, s.step, s.duration, c.gain, s.wave);
   }
 
