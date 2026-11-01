@@ -6,7 +6,6 @@ import { ONLINE_CONFIG } from '../data/online';
 import {
   OnlineError,
   type OnlineBackend,
-  type OnlineErrorKind,
   type OnlineUser,
   type RankingQuery,
   type RankingRow,
@@ -14,6 +13,7 @@ import {
   type SaveRow,
 } from './backend';
 import type { OnlineEnv } from './env';
+import { classifyError, classifySendCodeError, type ErrorLike } from './errors';
 import {
   isJoinStatus,
   parseMemberRows,
@@ -25,32 +25,10 @@ import type { RecordInput } from './records';
 import type { RemoteSaveInfo } from './sync-rules';
 import { parseRankingRows, parseRemoteSave, parseSaveInfo } from './parse';
 
+/** 申請の表示名が使えなかったときの名前（service の既定と同じ） */
+const FALLBACK_NAME = 'PILOT';
 const VIEWS = { race: 'race_best', raid: 'raid_best', defense: 'defense_best' } as const;
 const RANKING_COLUMNS = 'user_id,display_name,aircraft_id,value_ms,detail,created_at,place';
-
-interface ErrorLike {
-  readonly code?: string;
-  readonly message?: string;
-  readonly hint?: string;
-  readonly status?: number;
-  readonly name?: string;
-}
-
-/** PostgREST・Auth のエラー → 失敗の種類 */
-export function classifyError(e: ErrorLike): OnlineErrorKind {
-  const code = e.code ?? '';
-  const msg = e.message ?? '';
-  if (e.hint === 'rate_limit' || e.status === 429 || code === 'over_email_send_rate_limit')
-    return 'rate';
-  if (code === '23514' || code === '22P02' || code === '23502') return 'invalid';
-  if (code === '23505') return 'conflict';
-  if (code === '42501' || code === 'signup_disabled' || code === 'otp_disabled') return 'denied';
-  if (code === 'otp_expired' || code === 'validation_failed') return 'code';
-  if (code === 'PGRST301' || code === 'PGRST303' || e.status === 401) return 'auth';
-  if (e.name === 'AuthRetryableFetchError' || /fetch|network/i.test(msg) || code === '')
-    return 'network';
-  return 'unknown';
-}
 
 function fail(e: ErrorLike): OnlineError {
   return new OnlineError(classifyError(e), e.message ?? 'error');
@@ -58,12 +36,17 @@ function fail(e: ErrorLike): OnlineError {
 
 function toUser(u: User | null | undefined): OnlineUser | null {
   if (!u) return null;
-  const apps: unknown = u.app_metadata.apps;
+  // ログイン直後のトークンに app_metadata が無い・apps が無いときは「承認待ち」（apps = []）として扱う（7-4d）
+  const meta: unknown = u.app_metadata;
+  const apps: unknown =
+    typeof meta === 'object' && meta !== null
+      ? Object.getOwnPropertyDescriptor(meta, 'apps')?.value
+      : undefined;
   return {
     id: u.id,
     email: u.email ?? '',
     apps: Array.isArray(apps) ? apps.filter((a): a is string => typeof a === 'string') : [],
-    role: roleFromMetadata(u.app_metadata, ONLINE_CONFIG.schema),
+    role: roleFromMetadata(meta, ONLINE_CONFIG.schema),
   };
 }
 
@@ -105,7 +88,10 @@ export class SupabaseBackend implements OnlineBackend {
         emailRedirectTo: window.location.origin + import.meta.env.BASE_URL,
       },
     });
-    if (error) throw fail(error);
+    if (error) {
+      console.warn('[skyraid] signInWithOtp failed', error.status, error.code, error.message);
+      throw new OnlineError(classifySendCodeError(error), error.message);
+    }
   }
 
   async verifyCode(email: string, code: string): Promise<OnlineUser> {
@@ -224,22 +210,37 @@ export class SupabaseBackend implements OnlineBackend {
   }
 
   async requestJoin(displayName: string): Promise<JoinStatus | null> {
-    const user = await this.currentUser();
-    if (!user) throw new OnlineError('auth', 'signed out');
-    // on conflict do nothing（もう申請していれば何もしない。却下された人も上書きしない）
-    const { error } = await this.client
-      .from('join_requests')
-      .upsert(
-        { user_id: user.id, display_name: displayName },
-        { onConflict: 'user_id', ignoreDuplicates: true },
-      );
-    if (error) throw fail(error);
+    // セッション（JWT）が確立していなければ送らない（anon のまま送ると RLS で拒否される。7-4d）
+    const { data: auth } = await this.client.auth.getSession();
+    const user = auth.session?.user;
+    if (!user) throw new OnlineError('auth', 'no session');
+    const insert = async (name: string) =>
+      // on conflict do nothing（もう申請していれば何もしない。却下された人も上書きしない）
+      this.client
+        .from('join_requests')
+        .upsert(
+          { user_id: user.id, display_name: name },
+          { onConflict: 'user_id', ignoreDuplicates: true },
+        );
+    let { error } = await insert(displayName);
+    // 表示名が SQL の check（1〜16 文字・制御文字なし）に通らなかったら、既定の名前で送り直す（7-4d）
+    if (error && classifyError(error) === 'invalid' && displayName !== FALLBACK_NAME) {
+      console.warn('[skyraid] join_requests insert rejected the name; retrying', error.message);
+      ({ error } = await insert(FALLBACK_NAME));
+    }
+    if (error) {
+      console.error('[skyraid] join_requests insert failed', error.code, error.message, error.hint);
+      throw fail(error);
+    }
     const { data, error: readError } = await this.client
       .from('join_requests')
       .select('status')
       .eq('user_id', user.id)
       .maybeSingle();
-    if (readError) throw fail(readError);
+    if (readError) {
+      console.error('[skyraid] join_requests select failed', readError.code, readError.message);
+      throw fail(readError);
+    }
     const row: unknown = data;
     if (typeof row !== 'object' || row === null || !('status' in row)) return null;
     return isJoinStatus(row.status) ? row.status : null;

@@ -42,11 +42,12 @@ export interface RankingQuery {
 }
 
 /**
- * 失敗の種類。network: つながらない / auth: ログインが切れた / denied: 権限がない（承認待ち・RLS）/
+ * 失敗の種類。network: つながらない / auth: ログインが切れた / denied: サーバーが操作を拒否した（RLS・403・owner 以外。
+ * 承認待ちは失敗ではなく状態 'pending' で表す）/ signup: このメールは登録できない（Auth の新規登録が無効で 422。7-4d）/
  * invalid: サーバーの check に通らない / rate: レート制限 / conflict: サーバーのセーブが先に変わっていた / unknown
  */
 export type OnlineErrorKind =
-  'network' | 'auth' | 'denied' | 'invalid' | 'rate' | 'conflict' | 'code' | 'unknown';
+  'network' | 'auth' | 'denied' | 'signup' | 'invalid' | 'rate' | 'conflict' | 'code' | 'unknown';
 
 export class OnlineError extends Error {
   constructor(

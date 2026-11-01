@@ -16,7 +16,7 @@ import {
 import { sanitizeDisplayName } from './format';
 import { isOwnerRole, type JoinStatus } from './members';
 import { loadMeta, storeMeta, type OnlineMeta } from './meta';
-import { JoinTracker, PendingWatch } from './pending-watch';
+import { JoinTracker, PendingWatch, type JoinFailure } from './pending-watch';
 import { RecordSender } from './record-sender';
 import type { RecordInput } from './records';
 import { SaveSync, type SaveAccess, type SyncHooks, type Timers, BROWSER_TIMERS } from './sync';
@@ -39,6 +39,8 @@ export interface OnlineStatus {
   readonly owner: boolean;
   /** 承認待ちのときの参加の申請の状態（読めていなければ null）。7-4b */
   readonly join: JoinStatus | null;
+  /** 承認待ちのときの参加の申請の失敗（送れていれば null）。7-4d */
+  readonly joinError: JoinFailure | null;
 }
 
 export function hasAccess(user: OnlineUser): boolean {
@@ -121,6 +123,7 @@ export class OnlineService {
       error: this.error,
       owner: u !== null && isOwnerRole(u.role),
       join: u !== null && !hasAccess(u) ? this.join.status : null,
+      joinError: u !== null && !hasAccess(u) ? this.join.error : null,
     };
   }
 

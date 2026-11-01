@@ -2,7 +2,7 @@
 // 表示名、オンライン連携の ON/OFF（OFF は送信・同期・ランキングを止める。ログインは保持）、ログアウト。
 // 環境変数が無いとき（オフライン）はこのセクション自体を作らない（ui/online-link.ts）
 import './online.css';
-import { errorMessage } from '../online/messages';
+import { errorMessage, joinFailureText } from '../online/messages';
 import { isEmail } from '../online/format';
 import {
   CODE_FAILURE_TEXT,
@@ -35,6 +35,9 @@ function pendingText(s: OnlineStatus): string {
   const who = `ログイン中: ${s.email ?? ''}`;
   if (s.join === 'rejected')
     return `${PENDING_PREFIX}管理者に承認されませんでした。必要なら管理者に連絡してください（${who}）`;
+  // 申請が送れていない（7-4d）: 承認待ちの案内の代わりに失敗の種類を出す（管理者の一覧に載っていないため）
+  if (s.joinError)
+    return `${PENDING_PREFIX}${joinFailureText(s.joinError.kind, s.joinError.detail)}（${who}）`;
   return `${PENDING_PREFIX}管理者が承認すると遊べます。承認されると自動で「連携中」に変わります（${who}）`;
 }
 
