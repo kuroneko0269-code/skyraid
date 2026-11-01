@@ -1,6 +1,8 @@
 import type { RaidDifficulty } from '../data/raid';
 import type { DefenseDifficulty } from '../data/defense';
 import './mode-select.css';
+import { createGlyph, type GlyphKind } from './glyphs';
+import { el } from './hud-dom';
 import { ModeDialogs } from './mode-dialogs';
 import { createButton, createScreen, setScreenShown } from './screen';
 import type { TutorialStrings } from './tutorial-text';
@@ -16,43 +18,81 @@ export const GAME_MODES = [
   'raid',
   'replay',
   'ranking',
+  'settings',
+  'info',
 ] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
-/** フリーフライトの説明（ポーズメニューの「敵」設定に合わせて書き換える） */
+/** フリーフライトの説明（設定の「敵」に合わせて書き換える） */
 const FREE_FLIGHT_NOTES = { on: '敵機と空戦・自由に飛ぶ', off: '敵なしで自由に飛ぶ' } as const;
 
-/** 表示するモード。enabled でないものは「近日」と出して選べない */
-const MODE_ENTRIES: readonly { mode: GameMode; label: string; note: string; enabled: boolean }[] = [
-  // チュートリアル（4-11）の文は i18n（コンストラクタで差し替える）
-  { mode: 'tutorial', label: '', note: '', enabled: true },
-  { mode: 'free', label: 'フリーフライト', note: FREE_FLIGHT_NOTES.on, enabled: true },
-  { mode: 'campaign', label: 'キャンペーン', note: 'ミッションを順にクリア', enabled: true },
-  // リングレース（7-1）: ソロのタイムアタック（マルチは後日）
-  { mode: 'race', label: 'リングレース', note: 'リングを抜けるタイムアタック', enabled: true },
-  // 防衛戦（7-2）: ソロはすぐ出撃、協力は PvP のロビーを使う
-  { mode: 'defense', label: '防衛戦', note: '基地を 10 波の敵から守る（1〜4 人）', enabled: true },
-  { mode: 'hangar', label: 'ハンガー', note: '機体の購入・強化', enabled: true },
-  // PvP（5-1）: 今は同じ空を飛ぶまで（撃ち合いは 5-3）
-  { mode: 'pvp', label: 'PvP', note: '2〜4 人で同じ空を飛ぶ', enabled: true },
-  // レイド（6-2）: ソロはすぐ出撃、協力は PvP のロビーを使う
-  { mode: 'raid', label: 'レイド', note: '巨大怪獣ヴォルガスを撃破（1〜4 人）', enabled: true },
-  // リプレイ（7-B）: シングルプレイの記録の一覧と再生
-  { mode: 'replay', label: 'リプレイ', note: '直近 10 本と保存した記録を見る', enabled: true },
-  // ランキング（7-4）: オンライン連携が「連携中」で ON のときだけ出す（setModeVisible）
+interface PlayEntry {
+  readonly mode: GameMode;
+  readonly label: string;
+  readonly note: string;
+  /** 人数のバッジ */
+  readonly players: string;
+  readonly glyph: GlyphKind;
+}
+
+/**
+ * 上段「遊ぶ」（7-D）。大きなカードに人数のバッジと進捗。説明の人数（1〜4 人など）はバッジに移した。
+ * チュートリアル（4-11）の文は i18n（コンストラクタで差し替える）。リングレース（7-1）は今はソロだけ
+ */
+const PLAY_ENTRIES: readonly PlayEntry[] = [
+  { mode: 'tutorial', label: '', note: '', players: 'ソロ', glyph: 'fighter' },
   {
-    mode: 'ranking',
-    label: 'ランキング',
-    note: 'メンバー内のレース・レイド・防衛戦の記録',
-    enabled: true,
+    mode: 'campaign',
+    label: 'キャンペーン',
+    note: 'ミッションを順にクリア',
+    players: 'ソロ',
+    glyph: 'star',
   },
+  {
+    mode: 'free',
+    label: 'フリーフライト',
+    note: FREE_FLIGHT_NOTES.on,
+    players: 'ソロ',
+    glyph: 'cloudWing',
+  },
+  {
+    mode: 'race',
+    label: 'リングレース',
+    note: 'リングを抜けるタイムアタック',
+    players: 'ソロ',
+    glyph: 'ring',
+  },
+  { mode: 'pvp', label: 'PvP', note: '同じ空で撃ち合う', players: '2〜4 人', glyph: 'crossedJets' },
+  {
+    mode: 'raid',
+    label: 'レイド',
+    note: '巨大怪獣ヴォルガスを撃破',
+    players: '1〜4 人',
+    glyph: 'kaiju',
+  },
+  {
+    mode: 'defense',
+    label: '防衛戦',
+    note: '基地を 10 波の敵から守る',
+    players: '1〜4 人',
+    glyph: 'radar',
+  },
+];
+
+/** 下段「管理」（7-D）。小さなタイル 1 行。ランキング（7-4）はオンライン連携の連携中だけ（setModeVisible） */
+const MANAGE_ENTRIES: readonly { mode: GameMode; label: string; glyph: GlyphKind }[] = [
+  { mode: 'hangar', label: 'ハンガー', glyph: 'hangar' },
+  { mode: 'replay', label: 'リプレイ', glyph: 'play' },
+  { mode: 'ranking', label: 'ランキング', glyph: 'trophy' },
+  { mode: 'settings', label: '設定', glyph: 'gear' },
+  { mode: 'info', label: '情報', glyph: 'info' },
 ];
 
 /** 初めは隠すモード（ランキングはオンライン連携の状態で出す） */
 const INITIALLY_HIDDEN: readonly GameMode[] = ['ranking'];
 
 /**
- * モード選択画面。チュートリアル（4-11）・フリーフライトとキャンペーン（2-4）・リングレース（7-1）・ハンガー（3-3）・PvP（5-1）・レイド（6-2）を選べる。
+ * モード選択画面（7-D で 2 段に）。上段「遊ぶ」7 枚のカード、下段「管理」のタイル。各カード・タイルの右下に線画のグリフ。
  * 初回起動（パイロット名の入力の後）に 1 度だけ「チュートリアルを始めますか？」を重ねて出す。重ねるダイアログは mode-dialogs.ts
  */
 export class ModeSelectScreen {
@@ -61,8 +101,11 @@ export class ModeSelectScreen {
   private freeNote: HTMLSpanElement | null = null;
   private readonly dialogs: ModeDialogs;
   private readonly buttons = new Map<GameMode, HTMLButtonElement>();
-  /** モード選択の上に重ねた画面（7-4: ランキング）。Esc で閉じる。閉じたら true を返す */
+  private readonly progressLines = new Map<GameMode, HTMLSpanElement>();
+  /** モード選択の上に重ねた画面（7-4: ランキング、7-D: 情報）。Esc で閉じる。閉じたら true を返す */
   private readonly overlays: (() => boolean)[] = [];
+  /** カードの進捗（7-D。出すたびに読む。Screens が差し込む） */
+  progress: () => Partial<Record<GameMode, string>> = () => ({});
 
   constructor(
     parent: HTMLElement,
@@ -78,34 +121,38 @@ export class ModeSelectScreen {
     },
   ) {
     const root = createScreen(parent, 'mode-select-screen');
-    const heading = document.createElement('h2');
-    heading.className = 'ui-heading mode-heading';
-    heading.textContent = 'モード選択';
-    const list = document.createElement('div');
-    list.className = 'mode-list';
-    root.append(heading, list);
+    const header = el('div', 'menu-header', root);
+    createButton(header, 'ui-button is-ghost menu-back', '← タイトルへ', handlers.onBack);
+    el('h2', 'ui-heading menu-heading', header, 'モード選択');
 
-    for (const entry of MODE_ENTRIES) {
-      const button = createButton(list, 'ui-button ui-item mode-button', '', () => {
-        // 6-4: フリーフライトはマップを選んでから
-        if (entry.mode === 'free') this.showMapPrompt();
-        else handlers.onSelect(entry.mode);
-      });
-      const label = document.createElement('span');
-      label.className = 'mode-label';
+    const select = (mode: GameMode): void => {
+      // 6-4: フリーフライトはマップを選んでから
+      if (mode === 'free') this.showMapPrompt();
+      else handlers.onSelect(mode);
+    };
+
+    el('div', 'ui-kicker mode-section', root, '遊ぶ');
+    const play = el('div', 'mode-play', root);
+    for (const entry of PLAY_ENTRIES) {
       const tut = entry.mode === 'tutorial';
-      label.textContent = tut ? tutorial.title : entry.label;
-      const note = document.createElement('span');
-      note.className = 'mode-note';
-      note.textContent = tut ? tutorial.note : entry.enabled ? entry.note : '近日';
-      button.append(label, note);
+      const card = this.addButton(play, 'mode-card', entry.mode, entry.glyph, select);
+      el('span', 'mode-label', card, tut ? tutorial.title : entry.label);
+      const note = el('span', 'mode-note', card, tut ? tutorial.note : entry.note);
       if (entry.mode === 'free') this.freeNote = note;
-      button.disabled = !entry.enabled;
-      button.hidden = INITIALLY_HIDDEN.includes(entry.mode);
-      this.buttons.set(entry.mode, button);
-      if (entry.enabled) this.firstEnabled ??= button;
+      // 下の行: 左に進捗、右に人数のバッジ（題の行を広く使う）
+      const foot = el('span', 'mode-card-foot', card);
+      this.progressLines.set(entry.mode, el('span', 'mode-progress', foot));
+      const multi = entry.players !== 'ソロ';
+      el('span', `mode-badge${multi ? ' is-multi' : ''}`, foot, entry.players);
     }
-    createButton(root, 'ui-button is-ghost mode-back', '← タイトルへ', handlers.onBack);
+
+    el('div', 'ui-kicker mode-section', root, '管理');
+    const manage = el('div', 'mode-manage', root);
+    for (const entry of MANAGE_ENTRIES) {
+      const tile = this.addButton(manage, 'mode-tile', entry.mode, entry.glyph, select);
+      el('span', 'mode-label', tile, entry.label);
+    }
+
     this.dialogs = new ModeDialogs(root, tutorial, {
       onStart: (mode) => {
         handlers.onSelect(mode);
@@ -115,6 +162,24 @@ export class ModeSelectScreen {
       onClose: () => this.firstEnabled?.focus({ preventScroll: true }),
     });
     this.root = root;
+  }
+
+  private addButton(
+    parent: HTMLElement,
+    cls: string,
+    mode: GameMode,
+    glyph: GlyphKind,
+    select: (mode: GameMode) => void,
+  ): HTMLButtonElement {
+    const b = createButton(parent, `ui-button ui-item ${cls}`, '', () => {
+      select(mode);
+    });
+    b.dataset.mode = mode;
+    b.appendChild(createGlyph(glyph, 'mode-glyph'));
+    b.hidden = INITIALLY_HIDDEN.includes(mode);
+    this.buttons.set(mode, b);
+    this.firstEnabled ??= b;
+    return b;
   }
 
   /** フリーフライトのマップ（6-4）・天候（7-5）・「時間が流れる」。URL の指定（?map= など）で書き換える */
@@ -187,9 +252,26 @@ export class ModeSelectScreen {
   }
 
   setShown(shown: boolean): void {
+    if (shown) this.refreshProgress();
     setScreenShown(this.root, shown);
     if (!shown) this.closeDialog();
     // キーボードでも Enter で始められるよう、選べる最初のモードにフォーカス（タッチでは枠を出さない。tap-focus.ts）
     if (shown) this.firstEnabled?.focus({ preventScroll: true });
+  }
+
+  /** 重ねた画面（ランキング・情報・設定）から戻ったとき: ダイアログを閉じずに出し直す */
+  reveal(): void {
+    this.refreshProgress();
+    setScreenShown(this.root, true);
+    this.firstEnabled?.focus({ preventScroll: true });
+  }
+
+  private refreshProgress(): void {
+    const p = this.progress();
+    for (const [mode, line] of this.progressLines) {
+      const text = p[mode] ?? '';
+      line.textContent = text;
+      line.hidden = text === '';
+    }
   }
 }

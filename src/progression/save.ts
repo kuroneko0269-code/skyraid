@@ -17,6 +17,7 @@ import {
 } from './save-settings';
 import { dropGhosts, normalizeRaces, type RaceRecord } from './save-races';
 import { defaultSkins, normalizeSkins, type SaveSkins } from './save-skins';
+import { defaultRecords, normalizeRecords, type SaveRecords } from './save-records';
 
 export {
   defaultAssist,
@@ -80,6 +81,8 @@ export interface SaveData {
   races: Record<string, RaceRecord>;
   /** 塗装（7-3。v8 から）: 所持パターン・デカール、PvP の累計撃墜、機体ごとの塗装 */
   skins: SaveSkins;
+  /** ローカルの自己ベスト（7-D。v9 から）: 防衛戦の最高波・レイドの最速 */
+  records: SaveRecords;
 }
 
 export function initialUpgrades(): UpgradeLevels {
@@ -102,6 +105,7 @@ export function createInitialSave(): SaveData {
     flags: defaultFlags(),
     races: {},
     skins: defaultSkins(),
+    records: defaultRecords(),
   };
 }
 
@@ -119,6 +123,7 @@ const V1_STARTER_ID = 'starter';
  * - v5 → v6（7-1）: リングレースの記録（races）を空で足す
  * - v6 → v7（7-B）: ゴーストを入力の記録に変えたので、古いゴースト（15Hz の位置）を捨てる（ベストタイム・ランクは残す）
  * - v7 → v8（7-3）: 塗装（skins）を初期値で足す（単色だけ所持・PvP の撃墜 0・機体の塗装は初めて使うときに作る）
+ * - v8 → v9（7-D）: ローカルの自己ベスト（records）を空で足す
  * 難易度の一度だけの normal → easy（4-11 の事前修正）は版によらず normalizeSettings で（印 settings.difficultyEased）
  */
 export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
@@ -178,6 +183,7 @@ export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
   5: (d) => ({ ...d, version: 6, races: {} }),
   6: (d) => ({ ...d, version: 7, races: dropGhosts(d.races) }),
   7: (d) => ({ ...d, version: 8, skins: defaultSkins() }),
+  8: (d) => ({ ...d, version: 9, records: defaultRecords() }),
 };
 
 /**
@@ -243,6 +249,7 @@ export function normalizeSave(d: Json): SaveData | null {
   }
   save.races = normalizeRaces(d.races);
   save.skins = normalizeSkins(d.skins);
+  save.records = normalizeRecords(d.records);
   return save;
 }
 

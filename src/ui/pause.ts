@@ -4,23 +4,28 @@ import { TOUCH_CONFIG } from '../data/touch';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 /**
- * ポーズメニュー（再開 / 設定 / ミッションを中断（ミッション中だけ）/ タイトルへ）。設定（画質・タッチ・HUD・全画面）の部品は
- * main で settings に入れる。「設定」ボタンで開閉し、開閉状態はメニューを閉じても保つ
+ * ポーズメニュー（再開 / フォトモード / すべての設定 / ミッションを中断（ミッション中だけ）/ タイトルへ）。
+ * 7-D: 設定は独立した設定画面（settings-screen.ts）に移し、ここには「画質・音量・操作補助・HUD」の 4 つだけを quick に出す
+ * （部品は設定画面から貸し出される）。「すべての設定」で設定画面へ（飛行は止まったまま。戻るとこのメニューに戻る）
  */
 export class PauseMenu {
   readonly root: HTMLDivElement;
-  /** 設定の部品を入れる場所 */
-  readonly settings: HTMLDivElement;
-  private readonly settingsButton: HTMLButtonElement;
+  /** 4 つの設定を置く場所（設定画面が部品を貸す） */
+  readonly quick: HTMLDivElement;
   private readonly abortButton: HTMLButtonElement;
   private readonly photoButton: HTMLButtonElement;
-  private settingsOpen = false;
+  private readonly resumeButton: HTMLButtonElement;
   /** 「フォトモード」（7-A。main がつなぐ） */
   onPhoto: (() => void) | null = null;
 
   constructor(
     parent: HTMLElement,
-    handlers: { onResume: () => void; onTitle: () => void; onAbort: () => void },
+    handlers: {
+      onResume: () => void;
+      onTitle: () => void;
+      onAbort: () => void;
+      onSettings: () => void;
+    },
   ) {
     const root = createScreen(parent, 'pause-screen');
     const panel = document.createElement('div');
@@ -28,36 +33,42 @@ export class PauseMenu {
     const heading = document.createElement('h2');
     heading.className = 'ui-heading pause-heading';
     heading.textContent = 'ポーズ';
-    panel.appendChild(heading);
+    const body = document.createElement('div');
+    body.className = 'pause-body';
+    const actions = document.createElement('div');
+    actions.className = 'pause-actions';
+    this.quick = document.createElement('div');
+    this.quick.className = 'settings-grid pause-quick';
+    body.append(actions, this.quick);
+    panel.append(heading, body);
     root.appendChild(panel);
 
-    createButton(panel, 'ui-button', '再開', handlers.onResume);
+    this.resumeButton = createButton(actions, 'ui-button is-primary', '再開', handlers.onResume);
     // フリーフライト・キャンペーン・ソロのレイドだけ出す（7-A）
-    this.photoButton = createButton(panel, 'ui-button', 'フォトモード', () => {
+    this.photoButton = createButton(actions, 'ui-button', 'フォトモード', () => {
       this.onPhoto?.();
     });
     this.photoButton.hidden = true;
-    this.settingsButton = createButton(panel, 'ui-button', '設定', () => {
-      this.setSettingsOpen(!this.settingsOpen);
-    });
-    this.settings = document.createElement('div');
-    this.settings.className = 'pause-settings';
-    panel.appendChild(this.settings);
+    createButton(actions, 'ui-button', 'すべての設定', handlers.onSettings);
     // ミッション中だけ出す（2-4）
     this.abortButton = createButton(
-      panel,
+      actions,
       'ui-button is-danger pause-title',
       'ミッションを中断',
       handlers.onAbort,
     );
     this.abortButton.hidden = true;
-    createButton(panel, 'ui-button is-danger pause-title', 'タイトルへ', handlers.onTitle);
-    this.setSettingsOpen(false);
+    createButton(actions, 'ui-button is-danger pause-title', 'タイトルへ', handlers.onTitle);
     this.root = root;
   }
 
   setShown(shown: boolean): void {
     setScreenShown(this.root, shown);
+  }
+
+  /** 設定画面から戻ったとき: キーボードでも続けられるよう「再開」にフォーカス */
+  focusResume(): void {
+    this.resumeButton.focus({ preventScroll: true });
   }
 
   /** ミッション中か（「ミッションを中断」を出す）。label はチュートリアル（4-11）の「チュートリアルを中断」 */
@@ -69,13 +80,6 @@ export class PauseMenu {
   /** 「フォトモード」を出すか（PvP・協力・チュートリアルでは出さない） */
   setPhotoAvailable(available: boolean): void {
     this.photoButton.hidden = !available;
-  }
-
-  private setSettingsOpen(open: boolean): void {
-    this.settingsOpen = open;
-    this.settings.hidden = !open;
-    this.settingsButton.textContent = open ? '設定 ▲' : '設定 ▼';
-    this.settingsButton.setAttribute('aria-expanded', String(open));
   }
 }
 

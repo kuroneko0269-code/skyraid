@@ -38,9 +38,9 @@ export function createAppControls(p: AppControlParts) {
 
   const hud = new Hud(document.body);
   const missionHud = new MissionHud(document.body);
-  // ポーズメニューの設定: タッチ・HUD・全画面（ここ）→ 敵・操作補助・セーブデータ（セッションの後）
+  // 設定画面（7-D）: タッチ・HUD・全画面（ここ）→ 敵・操作補助・セーブデータ（セッションの後）
   const settingsParts = {
-    panel: screens.pause.settings,
+    settings: screens.settings,
     input,
     storage: p.storage,
     save,

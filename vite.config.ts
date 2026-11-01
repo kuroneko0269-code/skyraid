@@ -3,6 +3,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { APP_MANIFEST, BRAND_ASSETS } from './src/data/app.ts';
 import { addConnectSrc } from './src/online/csp.ts';
+import { appInfo } from './scripts/vite-app-info.ts';
 
 /**
  * 7-4: 書き出しの後に dist/_headers（public/_headers の写し）の CSP の connect-src へ VITE_SUPABASE_URL のオリジンだけを足す。
@@ -36,6 +37,8 @@ export default defineConfig({
   },
   plugins: [
     supabaseCsp(),
+    // 7-D: 「情報」画面の版とライセンスの一覧（virtual:app-info）
+    appInfo(decodeURIComponent(new URL('.', import.meta.url).pathname).replace(/\/$/, '')),
     // PWA（4-10）: manifest とビルド成果物をプリキャッシュする Service Worker。
     // prompt 型（skipWaiting しない）なので、更新は全部のタブを閉じた次の起動で入る。登録は src/ui/app-shell.ts
     VitePWA({

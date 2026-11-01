@@ -1,0 +1,94 @@
+/* 「情報」画面（7-D。ui/info-screen.ts）。モード選択の上に重ねる */
+.info-screen {
+  --menu-width: min(760px, calc(100% - var(--ui-space-6)));
+  z-index: 56;
+  gap: var(--ui-space-2);
+  background: var(--ui-scrim);
+}
+
+.info-tabs {
+  width: var(--menu-width);
+}
+
+.info-tabs .ui-seg-items {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.info-body {
+  width: var(--menu-width);
+  box-sizing: border-box;
+  margin-bottom: var(--ui-space-3);
+  padding: var(--ui-space-3) var(--ui-space-4);
+}
+
+.info-tab[hidden] {
+  display: none;
+}
+
+.info-app-name {
+  font: 600 24px/1.2 var(--ui-font-display);
+  letter-spacing: 0.06em;
+}
+
+.info-version {
+  margin-top: var(--ui-space-1);
+  font-size: 15px;
+  color: var(--ui-accent);
+}
+
+.info-subheading {
+  margin: var(--ui-space-3) 0 var(--ui-space-1);
+  font: 600 15px/1.3 var(--ui-font-display);
+  letter-spacing: 0.08em;
+  color: var(--ui-accent-hud);
+}
+
+.info-subheading:first-child {
+  margin-top: 0;
+}
+
+.info-text {
+  margin: var(--ui-space-1) 0 var(--ui-space-2);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ui-text-dim);
+}
+
+.info-list {
+  margin: 0;
+  padding-left: 1.4em;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ui-text-dim);
+}
+
+.info-license {
+  padding: var(--ui-space-1) 0;
+  border-bottom: var(--ui-line-width) solid var(--ui-line-faint);
+  font-size: 13px;
+}
+
+.info-license summary {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.info-license-url {
+  color: var(--ui-text-faint);
+  overflow-wrap: anywhere;
+}
+
+.info-license-text {
+  max-height: 240px;
+  margin: var(--ui-space-1) 0;
+  padding: var(--ui-space-2);
+  overflow: auto;
+  font: 11px/1.5 var(--ui-font-body);
+  white-space: pre-wrap;
+  color: var(--ui-text-dim);
+  background: var(--ui-bg-sunken);
+}

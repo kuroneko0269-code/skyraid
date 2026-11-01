@@ -100,6 +100,10 @@ describe('GameState の遷移', () => {
     }
   });
 
+  it('設定画面（7-D）は画面の状態ではなく、開いた画面の上に重ねる（戻り先は tests/game-state-settings.test.ts）', () => {
+    expect(SCREEN_STATES as readonly string[]).not.toContain('settings');
+  });
+
   it('遷移はイベントバスで from / to を通知する', () => {
     const bus = new EventBus<{ 'state:change': StateChange }>();
     const seen: StateChange[] = [];

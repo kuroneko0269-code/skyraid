@@ -171,6 +171,43 @@
     title-blink 1.6s ease-in-out var(--title-deploy) infinite;
 }
 
+/* 右上の版と設定の歯車（7-D）。右下のパイロット名と同じ余白 */
+.title-corner {
+  position: absolute;
+  top: calc(var(--ui-space-5) + var(--ui-safe-top));
+  right: calc(var(--ui-space-6) + var(--ui-safe-right));
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-3);
+  cursor: default;
+}
+
+.title-version {
+  font: 600 12px/1 var(--ui-font-body);
+  letter-spacing: 0.12em;
+  color: var(--ui-text-faint);
+  text-shadow: var(--ui-shadow-text);
+}
+
+.title-settings {
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+
+.title-settings-icon {
+  width: 26px;
+  height: 26px;
+  color: var(--ui-accent);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.title-screen.is-deploying .title-corner,
 .title-screen.is-deploying .title-pilot {
   animation: title-fade calc(var(--title-deploy) * 0.4) ease-out calc(var(--title-deploy) * 0.6)
     both;

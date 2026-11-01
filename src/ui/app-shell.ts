@@ -1,9 +1,7 @@
-import './app-shell.css';
 import { APP_SHELL_CONFIG } from '../data/app';
 import { checkInstallHint } from '../core/install-hint';
 import { SKIP_WAITING_MESSAGE, watchForUpdate, type WorkerLike } from '../core/sw-update';
-import { el } from './hud-dom';
-import { createButton } from './screen';
+import { showToast } from './toast';
 
 /**
  * アプリとしての体裁（4-10）: Service Worker の登録と「新しいバージョンがあります」、
@@ -33,14 +31,23 @@ function registerServiceWorker(parent: HTMLElement): void {
 
 /** 更新は次回の起動で入る。「今すぐ更新」で待機中の SW に切り替えて読み込み直す */
 function showUpdateToast(parent: HTMLElement, worker: WorkerLike): void {
-  const toast = createToast(parent, '新しいバージョンがあります（次回の起動で更新）');
-  createButton(toast, 'ui-button is-primary', '今すぐ更新', () => {
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      window.location.reload();
-    });
-    worker.postMessage(SKIP_WAITING_MESSAGE);
+  showToast('新しいバージョンがあります（次回の起動で更新）', {
+    parent,
+    seconds: APP_SHELL_CONFIG.updateToastSeconds,
+    actions: [
+      {
+        label: '今すぐ更新',
+        kind: 'primary',
+        onClick: () => {
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            window.location.reload();
+          });
+          worker.postMessage(SKIP_WAITING_MESSAGE);
+        },
+      },
+      { label: '閉じる' },
+    ],
   });
-  closeLater(toast, APP_SHELL_CONFIG.updateToastSeconds);
 }
 
 interface NavigatorStandalone {
@@ -59,23 +66,9 @@ function showInstallHint(parent: HTMLElement): void {
     nav.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
   const env = { userAgent: nav.userAgent, maxTouchPoints: nav.maxTouchPoints, standalone };
   if (!checkInstallHint(env, storage)) return;
-  const toast = createToast(parent, '共有ボタン →「ホーム画面に追加」で全画面で遊べます');
-  closeLater(toast, APP_SHELL_CONFIG.installHint.toastSeconds);
-}
-
-function createToast(parent: HTMLElement, text: string): HTMLDivElement {
-  const toast = el('div', 'ui-toast app-toast', parent);
-  toast.setAttribute('role', 'status');
-  el('span', 'app-toast-text', toast, text);
-  createButton(toast, 'ui-button is-ghost', '閉じる', () => {
-    toast.remove();
+  showToast('共有ボタン →「ホーム画面に追加」で全画面で遊べます', {
+    parent,
+    seconds: APP_SHELL_CONFIG.installHint.toastSeconds,
+    actions: [{ label: '閉じる' }],
   });
-  return toast;
-}
-
-function closeLater(toast: HTMLElement, seconds: number): void {
-  if (seconds > 0)
-    window.setTimeout(() => {
-      toast.remove();
-    }, seconds * 1000);
 }

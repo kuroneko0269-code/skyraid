@@ -47,26 +47,6 @@
   color: var(--ui-text-dim);
 }
 
-/* どの画面でも出るお知らせ（セーブデータの初期化）。HUD のお知らせと同じ見た目 */
-.save-toast {
-  position: fixed;
-  left: 50%;
-  top: calc(16px + var(--ui-safe-top));
-  z-index: 80;
-  transform: translateX(-50%);
-  padding: 4px 12px;
-  border: var(--ui-line-width) solid var(--ui-accent-hud);
-  background: rgba(0, 20, 30, 0.6);
-  color: var(--ui-accent);
-  font: 14px/1.4 var(--ui-font-body);
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.save-toast[hidden] {
-  display: none;
-}
-
 /* ポーズメニューの設定の最下部（2 列のグリッドを横いっぱいに使う） */
 .save-settings {
   grid-column: 1 / -1;

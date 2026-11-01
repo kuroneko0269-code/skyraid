@@ -1,0 +1,70 @@
+/*
+ * お知らせ（7-D。ui/toast.ts）: 画面の上中央（safe-area の内側）に積み重ねる。タイトルの「タップで開始」と重ならない（7-C）。
+ * ボタンは共通の .ui-button で文字を折り返さない。幅が足りない画面（640px 以下）ではボタンを縦 2 段に
+ */
+.toast-stack {
+  position: fixed;
+  left: 50%;
+  top: calc(var(--ui-space-3) + var(--ui-safe-top));
+  z-index: 85;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ui-space-2);
+  width: max-content;
+  max-width: calc(100vw - var(--ui-space-6) - var(--ui-safe-left) - var(--ui-safe-right));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.app-toast {
+  max-width: 100%;
+  box-sizing: border-box;
+  pointer-events: auto;
+  animation: app-toast-in 0.25s ease-out both;
+}
+
+/* ボタンのない知らせ（セーブの初期化・同期）は下の操作を邪魔しない */
+.app-toast.is-passive {
+  pointer-events: none;
+  color: var(--ui-accent);
+}
+
+.app-toast-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-toast-actions {
+  display: flex;
+  flex: none;
+  gap: var(--ui-space-2);
+}
+
+.app-toast-actions .ui-button {
+  /* 文字に合わせた最小幅（折り返さない。7-C） */
+  min-width: max-content;
+  min-height: 36px;
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .app-toast-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@keyframes app-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-toast {
+    animation: none;
+  }
+}

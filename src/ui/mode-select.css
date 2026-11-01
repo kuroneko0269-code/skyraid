@@ -1,47 +1,194 @@
+/*
+ * モード選択（7-D で 2 段に）: 上段「遊ぶ」の大きなカード 7 枚（横画面のスマホ・PC は 4 + 3 の 2 行、広い PC は 1 行）、
+ * 下段「管理」の小さなタイル 1 行。各カード・タイルの右下に線画のグリフ（高さの 140%・枠で切り落とす）
+ */
 .mode-select-screen {
-  gap: var(--ui-space-3);
+  --menu-width: min(1180px, calc(100% - var(--ui-space-6)));
+  gap: var(--ui-space-2);
   background: var(--ui-scrim);
 }
 
-/* 2×2。狭い縦画面では 1 列 */
-.mode-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(200px, 260px));
-  gap: var(--ui-space-3);
+.mode-section {
+  width: var(--menu-width);
+  margin-top: var(--ui-space-1);
 }
 
-@media (max-width: 480px) {
-  .mode-list {
-    grid-template-columns: minmax(200px, 280px);
+/* 上段: 12 列のグリッドで 1 行目 4 枚（3 列ずつ）・2 行目 3 枚（4 列ずつ） */
+.mode-play {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--ui-space-3);
+  width: var(--menu-width);
+}
+
+.mode-card {
+  grid-column: span 3;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: var(--ui-space-1);
+  min-height: 112px;
+  padding: 14px 18px;
+  overflow: hidden;
+}
+
+.mode-card:nth-child(n + 5) {
+  grid-column: span 4;
+}
+
+/* 広い PC は 1 行に 7 枚 */
+@media (min-width: 1500px) and (min-height: 600px) {
+  .mode-select-screen {
+    --menu-width: min(1560px, calc(100% - var(--ui-space-6)));
+  }
+
+  .mode-play {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .mode-card,
+  .mode-card:nth-child(n + 5) {
+    grid-column: span 1;
+    min-height: 150px;
   }
 }
 
-.mode-button {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--ui-space-1);
+/* 狭い縦画面は 2 列（背の低い横画面は 4 + 3 のまま） */
+@media (max-width: 600px) and (min-height: 481px) {
+  .mode-play {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mode-card,
+  .mode-card:nth-child(n + 5) {
+    grid-column: span 1;
+  }
+}
+
+/* 下の行（進捗とバッジ）。カードの下端にそろえる */
+.mode-card-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  margin-top: auto;
+  min-height: 18px;
 }
 
 .mode-label {
-  font-size: 18px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 21px;
+}
+
+.mode-badge {
+  flex: none;
+  margin-left: auto;
+  padding: 1px 6px;
+  font: 11px/1.4 var(--ui-font-body);
+  letter-spacing: 0;
+  color: var(--ui-text-dim);
+  box-shadow: inset 0 0 0 var(--ui-line-width) var(--ui-line-faint);
+}
+
+.mode-badge.is-multi {
+  color: var(--ui-accent);
+  box-shadow: inset 0 0 0 var(--ui-line-width) var(--ui-line);
 }
 
 .mode-note {
-  font: 12px/1.3 var(--ui-font-body);
+  font: 12px/1.35 var(--ui-font-body);
   letter-spacing: 0;
   color: var(--ui-text-dim);
 }
 
-.mode-button:disabled .mode-note {
-  color: var(--ui-text-faint);
+.mode-progress {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 12px/1.35 var(--ui-font-body);
+  letter-spacing: 0.04em;
+  color: var(--ui-accent-hud);
 }
 
-.mode-back {
-  /* 文字に合わせた最小幅（折り返さない。7-C） */
-  min-width: max-content;
-  min-height: 40px;
-  margin-top: var(--ui-space-1);
-  font-size: 15px;
+.mode-progress[hidden] {
+  display: none;
+}
+
+/* 下段: 小さなタイル 1 行 */
+.mode-manage {
+  display: flex;
+  gap: var(--ui-space-3);
+  width: var(--menu-width);
+}
+
+.mode-tile {
+  flex: 1 1 0;
+  min-height: 52px;
+  padding: 8px 16px;
+  overflow: hidden;
+}
+
+.mode-tile .mode-label {
+  font-size: 17px;
+}
+
+/* 7-4: 条件で出すモード（ランキングはオンライン連携の連携中だけ） */
+.mode-tile[hidden],
+.mode-card[hidden] {
+  display: none;
+}
+
+/* 背景グリフ: 右下に高さの 140% で置き、枠（clip-path・overflow）で切り落とす。不透明度 12%、タップ / ホバーで 25% と右へ */
+.mode-glyph {
+  position: absolute;
+  right: -4%;
+  bottom: -26%;
+  height: 140%;
+  width: auto;
+  max-width: none;
+  aspect-ratio: 1;
+  color: var(--ui-accent);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.12;
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+/* グリフより手前に文字 */
+.mode-card > :not(.mode-glyph),
+.mode-tile > :not(.mode-glyph) {
+  position: relative;
+}
+
+.mode-card:active .mode-glyph,
+.mode-tile:active .mode-glyph,
+:root:not([data-input='touch']) .mode-card:focus-visible .mode-glyph,
+:root:not([data-input='touch']) .mode-tile:focus-visible .mode-glyph {
+  opacity: 0.25;
+  transform: translateX(var(--glyph-shift, 6px));
+}
+
+@media (hover: hover) {
+  .mode-card:hover .mode-glyph,
+  .mode-tile:hover .mode-glyph {
+    opacity: 0.25;
+    transform: translateX(var(--glyph-shift, 6px));
+  }
+}
+
+/* 動きを減らす設定では右へ動かさない（不透明度だけ） */
+@media (prefers-reduced-motion: reduce) {
+  .mode-select-screen {
+    --glyph-shift: 0px;
+  }
 }
 
 /* モード選択の上に重ねるダイアログ（mode-dialogs.ts）。背の低い画面では中だけスクロール（上下を切らない。7-C） */
@@ -105,18 +252,49 @@
   }
 }
 
-/* 背の低い横画面（スマホ）: 3 列にして縦に詰め、ダイアログの文字を小さく */
-@media (max-height: 480px) and (min-width: 640px) {
-  .mode-list {
-    grid-template-columns: repeat(3, minmax(180px, 250px));
+/* 背の低い横画面（スマホ 844×390・568×320 など）: カード・タイルを詰め、ダイアログの文字を小さく */
+@media (max-height: 480px) {
+  .mode-select-screen {
+    gap: 6px;
+  }
+
+  .mode-section {
+    margin-top: 0;
+    font-size: 11px;
+  }
+
+  .mode-play,
+  .mode-manage {
     gap: var(--ui-space-2);
   }
 
-  .mode-button {
-    min-height: 56px;
-    padding: 6px 14px;
+  .mode-card {
+    min-height: 84px;
+    padding: 8px 12px;
+    gap: 2px;
   }
 
+  .mode-label {
+    font-size: 18px;
+  }
+
+  .mode-tile {
+    min-height: 44px;
+    padding: 6px 12px;
+  }
+
+  .mode-tile .mode-label {
+    font-size: 15px;
+  }
+
+  .mode-note,
+  .mode-progress {
+    font-size: 11px;
+  }
+}
+
+/* ダイアログ（7-C のまま。背の低い横画面で文字を小さく） */
+@media (max-height: 480px) and (min-width: 640px) {
   .mode-prompt-box {
     gap: 8px;
     padding: var(--ui-space-3) var(--ui-space-4);
@@ -128,7 +306,24 @@
   }
 }
 
-/* 7-4: 条件で出すモード（ランキングはオンライン連携の連携中だけ） */
-.mode-button[hidden] {
-  display: none;
+/* 幅の狭い横画面（iPhone SE 568×320 など）: カードの題を小さく */
+@media (max-height: 480px) and (max-width: 700px) {
+  .mode-card {
+    min-height: 76px;
+    padding: 6px 8px;
+  }
+
+  .mode-label {
+    font-size: 15px;
+    letter-spacing: 0.02em;
+  }
+
+  .mode-tile .mode-label {
+    font-size: 14px;
+  }
+
+  .mode-badge {
+    padding: 0 4px;
+    font-size: 10px;
+  }
 }

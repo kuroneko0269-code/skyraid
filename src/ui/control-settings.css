@@ -14,7 +14,7 @@
   color: var(--ui-accent-hud);
 }
 
-.pause-settings .control-slider {
+.settings-grid .control-slider {
   justify-content: space-between;
   gap: var(--ui-space-3);
 }
