@@ -28,8 +28,11 @@ export const ONLINE_CONFIG = {
   raceFloorRatio: 0.5,
   /** 防衛戦の波数の上限（これを超える記録は拒否） */
   defenseMaxWaves: 10,
-  /** 6 桁のコード */
-  otpLength: 6,
+  /**
+   * メールのコードの桁数（7-4c: Supabase の設定で 6〜10 桁に変えられるので幅を持たせる。今のプロジェクトは 8 桁）。
+   * expirySec は Supabase の「Email OTP Expiration」と同じ値（不一致と期限切れは同じエラーで返るので、送ってからの時間で分ける）
+   */
+  otp: { minLength: 4, maxLength: 10, expirySec: 3600 },
   /** 承認待ちの間、トークンを取り直して承認を確かめる間隔（ミリ秒。7-4b） */
   pendingRecheckMs: 5 * 60 * 1000,
 } as const;

@@ -1,4 +1,4 @@
-// 表示の整形（7-4、DOM・Supabase 非依存）: 記録の値・日付・表示名・ランキングの行、メールと 6 桁のコードの入力
+// 表示の整形（7-4、DOM・Supabase 非依存）: 記録の値・日付・表示名・ランキングの行、メールの入力（コードは otp.ts）
 import { findAircraftModel } from '../data/aircraft';
 import { ONLINE_CONFIG, type RecordKind } from '../data/online';
 import type { RankingRow } from './backend';
@@ -41,14 +41,6 @@ export function sanitizeDisplayName(name: string): string | null {
 /** メールの形（大まかに。正しさはメールが届くかで分かる） */
 export function isEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim()) && s.trim().length <= 254;
-}
-
-/** 入力されたコード → 数字 6 桁（全角数字・空白・ハイフンは許す）。違えば null */
-export function normalizeCode(s: string): string | null {
-  const digits = s
-    .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
-    .replace(/[\s-]/g, '');
-  return new RegExp(`^\\d{${String(ONLINE_CONFIG.otpLength)}}$`).test(digits) ? digits : null;
 }
 
 export interface RankingLine {

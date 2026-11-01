@@ -28,6 +28,27 @@
   display: none;
 }
 
+.online-code-error {
+  font-size: 14px;
+  color: var(--ui-warn-text);
+}
+
+.online-code-error[hidden] {
+  display: none;
+}
+
+/* コード入力の補足（迷惑メール・ホーム画面のアプリ。7-4c） */
+.online-hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ui-text-dim);
+}
+
+.online-hint.is-strong {
+  font-size: 13px;
+  color: var(--ui-gold);
+}
+
 .online-field {
   min-height: 44px;
   font-size: 16px;

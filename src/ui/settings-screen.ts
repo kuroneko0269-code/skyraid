@@ -37,16 +37,19 @@ export class SettingsScreen {
   private readonly anchors = new Map<SettingsSlot, Comment>();
   private readonly panels = new Map<string, HTMLDivElement>();
   private readonly back: HTMLButtonElement;
+  private readonly scroller: HTMLDivElement;
   private readonly tabs: Segmented;
   private lent = false;
 
   constructor(parent: HTMLElement, onBack: () => void) {
-    const root = createScreen(parent, 'settings-screen');
-    const header = el('div', 'menu-header', root);
+    const root = createScreen(parent, 'settings-screen menu-fixed');
+    // 見出し・戻る・タブは上に固定し、内容だけスクロールする（7-4c。タブの位置が内容の高さで動かない）
+    const top = el('div', 'menu-top', root);
+    const header = el('div', 'menu-header', top);
     this.back = createButton(header, 'ui-button is-ghost menu-back', '← 戻る', onBack);
     el('h2', 'ui-heading menu-heading', header, '設定');
     this.tabs = new Segmented(
-      root,
+      top,
       '',
       TABS.map((t) => ({ value: t.id, label: t.label })),
       TABS[0]?.id ?? 'display',
@@ -55,7 +58,8 @@ export class SettingsScreen {
       },
       'settings-tabs',
     );
-    const body = el('div', 'ui-panel settings-body', root);
+    this.scroller = el('div', 'menu-scroll', root);
+    const body = el('div', 'ui-panel settings-body', this.scroller);
     for (const tab of TABS) {
       const panel = el('div', 'settings-grid settings-tab', body);
       panel.dataset.tab = tab.id;
@@ -112,5 +116,6 @@ export class SettingsScreen {
 
   private showTab(id: string): void {
     for (const [tab, panel] of this.panels) panel.hidden = tab !== id;
+    this.scroller.scrollTop = 0;
   }
 }

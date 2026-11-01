@@ -49,6 +49,7 @@ export class InfoScreen {
   readonly root: HTMLDivElement;
   private readonly panels = new Map<string, HTMLDivElement>();
   private readonly tabs: Segmented;
+  private readonly scroller: HTMLDivElement;
   private open = false;
 
   constructor(
@@ -56,14 +57,16 @@ export class InfoScreen {
     private readonly modeSelect: ModeSelectScreen,
     private readonly onClose: () => void,
   ) {
-    const root = createScreen(parent, 'info-screen');
-    const header = el('div', 'menu-header', root);
+    const root = createScreen(parent, 'info-screen menu-fixed');
+    // 見出し・戻る・タブは上に固定し、内容だけスクロールする（7-4c）
+    const top = el('div', 'menu-top', root);
+    const header = el('div', 'menu-header', top);
     createButton(header, 'ui-button is-ghost menu-back', '← モード選択へ', () => {
       this.close();
     });
     el('h2', 'ui-heading menu-heading', header, '情報');
     this.tabs = new Segmented(
-      root,
+      top,
       '',
       TABS,
       'version',
@@ -72,7 +75,8 @@ export class InfoScreen {
       },
       'info-tabs',
     );
-    const body = el('div', 'ui-panel info-body', root);
+    this.scroller = el('div', 'menu-scroll', root);
+    const body = el('div', 'ui-panel info-body', this.scroller);
     for (const t of TABS) {
       const panel = el('div', 'info-tab', body);
       this.panels.set(t.value, panel);
@@ -118,6 +122,7 @@ export class InfoScreen {
 
   private showTab(id: string): void {
     for (const [tab, p] of this.panels) p.hidden = tab !== id;
+    this.scroller.scrollTop = 0;
   }
 
   private buildVersion(p: HTMLElement): void {
