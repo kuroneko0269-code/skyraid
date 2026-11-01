@@ -27,8 +27,8 @@ const TABS: readonly { id: string; label: string; slots: readonly SettingsSlot[]
   { id: 'data', label: 'データ', slots: ['data'] },
 ];
 
-/** ポーズメニューに残す 4 つ（この順に並べる） */
-export const QUICK_SLOTS: readonly SettingsSlot[] = ['quality', 'volume', 'assist', 'hud'];
+/** ポーズメニューに残す 4 つ（この順に並べる）。HUD は画質の右に詰める（8-1 の事前修正。音量は 2 列ぶち抜き） */
+export const QUICK_SLOTS: readonly SettingsSlot[] = ['quality', 'hud', 'volume', 'assist'];
 
 export class SettingsScreen {
   readonly root: HTMLDivElement;

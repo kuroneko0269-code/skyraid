@@ -94,7 +94,7 @@ screens.paintHooks = hangarStage.paintHooks;
 const quality = new QualityLink(renderer, pipeline, world, storage);
 installTouchGuards(document);
 installAppShell(document.body);
-// 設定（7-D: 設定画面のタブごとの slot。画質・音量・操作補助・HUD はポーズメニューにも貸す）
+// 設定（7-D: 設定画面のタブごとの slot。画質・HUD・音量・操作補助はポーズメニューにも貸す）
 const settingsUi = screens.settings;
 quality.createSelect(settingsUi.slot('quality'));
 
