@@ -56,6 +56,8 @@ export class MockBackend implements OnlineBackend {
   };
   /** join_requests（user_id → 表示名・状態）。7-4b */
   joins = new Map<string, { name: string; status: JoinStatus }>();
+  /** 次の requestJoin を失敗させる（先頭から 1 つずつ使う。7-4d） */
+  joinFailures: OnlineErrorKind[] = [];
   /** list_members() の返す行（owner の画面のテスト用） */
   memberRows: MemberRow[] = [];
   /** 次の refresh で返すユーザー（承認されたことにする）。null なら今のまま */
@@ -161,6 +163,8 @@ export class MockBackend implements OnlineBackend {
   }
   requestJoin(displayName: string): Promise<JoinStatus | null> {
     this.calls.requestJoin++;
+    const failure = this.joinFailures.shift();
+    if (failure) return Promise.reject(new OnlineError(failure, `join ${failure}`));
     const u = this.user;
     if (!u) return Promise.reject(new OnlineError('auth', 'signed out'));
     // on conflict do nothing

@@ -133,17 +133,22 @@ URL に `?net=local` を付けると、PeerJS の代わりに**同じブラウ�
 `supabase/migrations/skyraid_0002_members.sql` を入れると、承認待ちの人はログインした時点で「承認待ち一覧」に載り、持ち主（owner）がゲームの設定「メンバー管理」の「承認」ボタンで承認できます（相手の画面は 5 分以内に自動で「連携中」に変わります）。規約からの逸脱（関数が `auth.users` の `apps` の `skyraid` だけを書き換える）は `docs/supabase-design.md` の 8 章。
 
 1. **SQL を流す**: SQL エディタに `supabase/migrations/skyraid_0002_members.sql` の全文を貼り付けて実行。もう一度実行してもエラーにならないことも確かめる。`select * from skyraid.schema_migrations;` に `skyraid_0002_members` が増える（0001 を流し直したときは 0002 も続けて流し直す）
-2. **自分を owner にする**（初回だけ。規約 3.3 の形で `apps` と `roles` の両方を付ける。他アプリの値は消さない。何度流しても同じ結果）:
+2. **自分を owner にする**（初回だけ。規約 3.3 の形で `apps` と `roles` の両方を付ける。他アプリの値は消さない。何度流しても同じ結果。`roles` の階層がまだ無いユーザーでも付く: 7-4d）:
 
    ```sql
+   -- (1) apps に skyraid を足す（上の 6 の付与と同じ）
    update auth.users
    set raw_app_meta_data = jsonb_set(
-     jsonb_set(
-       coalesce(raw_app_meta_data, '{}'::jsonb), '{apps}',
-       (select coalesce(jsonb_agg(distinct v), '[]'::jsonb)
-          from jsonb_array_elements_text(coalesce(raw_app_meta_data -> 'apps', '[]'::jsonb) || '["skyraid"]'::jsonb) v)),
-     '{roles}',
-     coalesce(raw_app_meta_data -> 'roles', '{}'::jsonb) || '{"skyraid": "owner"}'::jsonb)
+     coalesce(raw_app_meta_data, '{}'::jsonb), '{apps}',
+     (select coalesce(jsonb_agg(distinct v), '[]'::jsonb)
+        from jsonb_array_elements_text(coalesce(raw_app_meta_data -> 'apps', '[]'::jsonb) || '["skyraid"]'::jsonb) v))
+   where email = '<持ち主のメール>';
+
+   -- (2) roles.skyraid = owner（roles が無ければ作る。他アプリの roles は残る）
+   update auth.users
+   set raw_app_meta_data = jsonb_set(
+     coalesce(raw_app_meta_data, '{}'::jsonb), '{roles}',
+     coalesce(raw_app_meta_data -> 'roles', '{}'::jsonb) || '{"skyraid": "owner"}'::jsonb, true)
    where email = '<持ち主のメール>';
 
    -- 確認: apps に "skyraid"、roles に "skyraid": "owner" がある（他アプリの値も残っている）
@@ -153,6 +158,21 @@ URL に `?net=local` を付けると、PeerJS の代わりに**同じブラウ�
    まだ SkyRaid でログインしたことが無ければ、先に上の 5 の手順でログインしてユーザーを作ってから流す
 3. **ゲームで反映**: 設定の「オンライン連携」で「承認を再確認」を押す（またはログインし直す）→ 状態が「連携中」になり、その下に「メンバー管理」が出る
 4. 以後の承認はすべてゲームの中で: 相手がログインすると「承認待ち」に載る →「承認」（1 タップ）/「却下」（1 タップ）。承認済みの人は「取り消し」（確認ダイアログあり）。却下・取り消しした人をもう一度承認するときは、上の 6 の付与の SQL を使う
+
+### 承認待ちの人が「メンバー管理」に出ないとき（7-4d）
+
+- **「このメールは登録できません。管理者に連絡してください」と出る**: Auth の新規登録（Authentication → Sign In / Providers → Allow new users to sign up）が無効で、そのメールのユーザーがまだ無い（`/auth/v1/otp` が 422）。ログインできていないので申請も入らない。新規登録の設定はプロジェクト共通（規約 3.3）なので変えず、持ち主が **Authentication → Users → Add user → Create new user**（メールと、使わない長いパスワード。Auto Confirm User を ON。または Send invitation）でユーザーを作る → 相手にもう一度「コードを送る」からログインしてもらう → 承認待ちに載る
+- **「申請の送信に失敗しました（理由: …）」と出る**: 申請（`skyraid.join_requests` への insert）がサーバーに断られた。理由の「サーバーが拒否（権限・RLS）」は 0002 が流れていない・権限が外れている、「ログインが確立していない」はセッションが無い。ブラウザの console に `[skyraid] join_requests insert failed` とサーバーのエラーコードが出る。まず次の SQL で 0002 の権限とポリシーを確かめ、足りなければ `skyraid_0002_members.sql` を流し直す（冪等）
+
+  ```sql
+  select version from skyraid.schema_migrations order by version;            -- skyraid_0002_members がある
+  select has_table_privilege('authenticated', 'skyraid.join_requests', 'insert') as can_insert,
+         has_table_privilege('authenticated', 'skyraid.join_requests', 'select') as can_select;  -- 両方 true
+  select policyname, cmd, roles from pg_policies where schemaname = 'skyraid' and tablename = 'join_requests';
+  select user_id, display_name, status, requested_at from skyraid.join_requests order by requested_at desc;
+  ```
+
+- SQL の挙動は手元の Postgres 16 で Supabase のロールを模して確かめられる（`supabase/tests/run.sh`。使い方はファイルの先頭）。承認前のユーザーが申請でき・他人の行は見えず・owner の一覧に載ることと、上の owner の付与の SQL を確かめる
 
 ### 確かめること（連携中になった後）
 

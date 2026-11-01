@@ -1,7 +1,8 @@
 // 承認待ちの間の処理（7-4b、DOM・Supabase 非依存）:
 // - PendingWatch: 承認待ちの間だけ、決めた間隔でトークンを取り直す（承認待ちでなくなったら止める）。間隔は pendingRecheckMs（5 分）
-// - JoinTracker: 承認待ちになったら参加を申請する（同じユーザーでは 1 回だけ。失敗したら次のログイン・起動でまた試す）
-import type { OnlineBackend } from './backend';
+// - JoinTracker: 承認待ちになったら参加を申請する（同じユーザーでは 1 回だけ。失敗したら console に出し、画面に種類を出して、
+//   次のトークンの更新・「承認を再確認」・起動でまた試す。7-4d）
+import { errorKind, type OnlineBackend, type OnlineErrorKind } from './backend';
 import type { JoinStatus } from './members';
 import type { Timers } from './sync';
 
@@ -38,9 +39,16 @@ export class PendingWatch {
   }
 }
 
+/** 申請の失敗（種類とサーバーの一言） */
+export interface JoinFailure {
+  readonly kind: OnlineErrorKind;
+  readonly detail: string;
+}
+
 export class JoinTracker {
   private requestedFor: string | null = null;
   private current: JoinStatus | null = null;
+  private failure: JoinFailure | null = null;
 
   constructor(
     private readonly backend: OnlineBackend,
@@ -55,10 +63,16 @@ export class JoinTracker {
     return this.current;
   }
 
+  /** 最後の申請の失敗（成功したら null） */
+  get error(): JoinFailure | null {
+    return this.failure;
+  }
+
   /** ユーザーが変わった */
   reset(): void {
     this.requestedFor = null;
     this.current = null;
+    this.failure = null;
   }
 
   /** userId で申請する。isCurrent: 返ってきたときにまだ同じユーザーか */
@@ -69,9 +83,15 @@ export class JoinTracker {
       const status = await this.backend.requestJoin(this.displayName());
       if (!isCurrent(userId)) return;
       this.current = status;
+      this.failure = null;
       this.changed();
-    } catch {
+    } catch (e) {
+      // 握りつぶさない: console に出し、画面に種類を出す。同じユーザーなら次の機会にまた送る
+      console.error('[skyraid] join request failed', e);
       if (this.requestedFor === userId) this.requestedFor = null;
+      if (!isCurrent(userId)) return;
+      this.failure = { kind: errorKind(e), detail: e instanceof Error ? e.message : String(e) };
+      this.changed();
     }
   }
 }
