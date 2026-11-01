@@ -6,12 +6,14 @@ import { FlightSession } from '../src/missions/flight-session';
 import { isCoopMode, sameSide } from '../src/net/lobby-rules';
 import { PvpMirror } from '../src/net/pvp-mirror';
 import type { PlayerInfo } from '../src/net/protocol';
+import { TEST_PAINT } from './net-helpers';
 
 function player(id: number, team = 0): PlayerInfo {
   return {
     id,
     name: `P${id}`,
     aircraftId: 'kestrel',
+    paint: TEST_PAINT,
     maxHp: 100,
     team,
     ready: true,

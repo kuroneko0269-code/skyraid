@@ -7,6 +7,7 @@ import { buildJoinUrl, withoutRoomParam } from '../src/ui/pvp-entry';
 import { rosterNotices } from '../src/ui/pvp-lobby-actions';
 import { createLobby, profile, pump } from './net-helpers';
 import { startMatch } from './pvp-match';
+import { TEST_PAINT } from './net-helpers';
 
 const UPGRADED = { engine: 3, airframe: 4, weapons: 2, avionics: 1 };
 
@@ -63,6 +64,7 @@ describe('ロビー（5-4。インメモリ transport）', () => {
     const swift = netLoadout('swift', undefined).flight.hull.maxHp;
     expect(host.players.find((p) => p.id === 1)).toMatchObject({
       aircraftId: 'swift',
+      paint: TEST_PAINT,
       maxHp: swift,
     });
     expect(host.joinProfiles.get(1)?.aircraftId).toBe('swift');
@@ -135,6 +137,7 @@ describe('ロビー（5-4。インメモリ transport）', () => {
       id,
       name: `P${id}`,
       aircraftId: 'kestrel',
+      paint: TEST_PAINT,
       maxHp: 1,
       team: 0,
       ready: false,

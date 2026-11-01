@@ -5,11 +5,13 @@ import type { ClientRoom } from '../net/client-room';
 import { netLoadout } from '../net/loadout';
 import type { HostRoom, PlayerProfile } from '../net/room';
 import type { Hangar } from '../progression/hangar';
+import type { Paintshop } from '../progression/paintshop';
 import type { Loadout } from '../progression/loadout';
 
 /** 自分のプロフィール（パイロット名・機体・シングルの強化 Lv。強化の無効はホストが決める） */
 export function pilotProfile(
   hangar: Hangar,
+  paintshop: Paintshop,
   pilotName: () => string | null,
   aircraftId: string = hangar.selectedId,
 ): PlayerProfile {
@@ -17,6 +19,7 @@ export function pilotProfile(
     name: pilotName() ?? SAVE_CONFIG.defaultPilotName,
     aircraftId,
     upgrades: { ...hangar.levels(aircraftId) },
+    paint: paintshop.paint(aircraftId),
   };
 }
 

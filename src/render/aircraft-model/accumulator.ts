@@ -1,5 +1,6 @@
-// 機体モデルの頂点を 1 つのジオメトリに積む入れ物。属性は位置・法線・UV・色（リニア）・部品の番号（aPart）
+// 機体モデルの頂点を 1 つのジオメトリに積む入れ物。属性は位置・法線・UV・塗装の UV（uv1。7-3）・色（リニア）・部品の番号（aPart）
 import { BufferAttribute, BufferGeometry, Color, Vector3 } from 'three';
+import { defaultSkinUv } from './skin-atlas';
 
 /** 色（リニアの RGB） */
 export type Rgb = readonly [number, number, number];
@@ -29,6 +30,7 @@ export class MeshAccumulator {
   private readonly positions: number[] = [];
   private readonly normals: number[] = [];
   private readonly uvs: number[] = [];
+  private readonly uv1s: number[] = [];
   private readonly colors: number[] = [];
   private readonly parts: number[] = [];
   private readonly indices: number[] = [];
@@ -52,10 +54,13 @@ export class MeshAccumulator {
     v: number,
     color: Rgb,
     part: number,
+    skinUv: readonly [number, number] | null = null,
   ): number {
     this.positions.push(x, y, z);
     this.normals.push(nx, ny, nz);
     this.uvs.push(u, v);
+    const s = skinUv ?? defaultSkinUv(u, v, color[0], color[1], color[2]);
+    this.uv1s.push(s[0], s[1]);
     this.colors.push(color[0], color[1], color[2]);
     this.parts.push(part);
     return this.parts.length - 1;
@@ -67,6 +72,7 @@ export class MeshAccumulator {
 
   /**
    * Three.js のジオメトリ（法線あり）を位置・法線を変換して積む。UV は uv で付け直す（null ならジオメトリの UV）。
+   * 塗装の UV はジオメトリに uv1 があればそれ、なければ UV と色から決める。
    * transform は位置を書き換える関数、rotateNormal は法線を回す関数
    */
   addGeometry(
@@ -80,6 +86,7 @@ export class MeshAccumulator {
     const pos = g.getAttribute('position');
     const nor = g.getAttribute('normal');
     const tex = g.getAttribute('uv');
+    const skin = g.hasAttribute('uv1') ? g.getAttribute('uv1') : null;
     const base = this.vertexCount;
     for (let i = 0; i < pos.count; i++) {
       p.fromBufferAttribute(pos, i);
@@ -88,7 +95,8 @@ export class MeshAccumulator {
       rotateNormal(n);
       n.normalize();
       const [u, v] = uv ? uv(p.x, p.y, p.z) : [tex.getX(i), tex.getY(i)];
-      this.vertex(p.x, p.y, p.z, n.x, n.y, n.z, u, v, color, part);
+      const s: [number, number] | null = skin ? [skin.getX(i), skin.getY(i)] : null;
+      this.vertex(p.x, p.y, p.z, n.x, n.y, n.z, u, v, color, part, s);
     }
     const index = g.getIndex();
     if (index) {
@@ -104,6 +112,7 @@ export class MeshAccumulator {
     g.setAttribute('position', new BufferAttribute(new Float32Array(this.positions), 3));
     g.setAttribute('normal', new BufferAttribute(new Float32Array(this.normals), 3));
     g.setAttribute('uv', new BufferAttribute(new Float32Array(this.uvs), 2));
+    g.setAttribute('uv1', new BufferAttribute(new Float32Array(this.uv1s), 2));
     g.setAttribute('color', new BufferAttribute(new Float32Array(this.colors), 3));
     g.setAttribute('aPart', new BufferAttribute(new Float32Array(this.parts), 1));
     const count = this.vertexCount;

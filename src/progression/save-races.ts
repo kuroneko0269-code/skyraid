@@ -84,3 +84,12 @@ export function normalizeRaces(v: unknown): Record<string, RaceRecord> {
   }
   return out;
 }
+
+/** v6 → v7: races の各コースのゴーストを捨てる（形が違うものはそのまま。normalizeRaces が確かめる） */
+export function dropGhosts(races: unknown): unknown {
+  if (typeof races !== 'object' || races === null || Array.isArray(races)) return races;
+  const out: Record<string, unknown> = {};
+  for (const [id, r] of Object.entries(races as Record<string, unknown>))
+    out[id] = typeof r === 'object' && r !== null ? { ...r, ghost: null } : r;
+  return out;
+}

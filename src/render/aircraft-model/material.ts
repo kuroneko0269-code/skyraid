@@ -77,12 +77,29 @@ const MOVE_POSITION = /* glsl */ `
 }
 `;
 
+/**
+ * 塗装テクスチャ（7-3）: 色は塗装の UV（uv1）の map、その上に 4-3 のパネルライン・汚れ（法線マップと同じ uv）を掛ける。
+ * テクスチャ 1 枚を足すだけで draw call は増えない
+ */
+const PANEL_HEADER = /* glsl */ `
+uniform sampler2D uPanelMap;
+`;
+const PANEL_SHADE = /* glsl */ `
+diffuseColor.rgb *= texture2D(uPanelMap, vNormalMapUv).rgb;
+`;
+
 function patch(
   shader: WebGLProgramParametersWithUniforms,
   u: SurfaceUniforms,
   normals: boolean,
 ): void {
   Object.assign(shader.uniforms, u);
+  if (normals) {
+    shader.uniforms.uPanelMap = { value: panelTextures().map };
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\n${PANEL_HEADER}`)
+      .replace('#include <map_fragment>', `#include <map_fragment>\n${PANEL_SHADE}`);
+  }
   shader.vertexShader = shader.vertexShader
     .replace('#include <common>', `#include <common>\n${HEADER}`)
     .replace('#include <begin_vertex>', `#include <begin_vertex>\n${MOVE_POSITION}`);
@@ -131,15 +148,20 @@ export function createPaintMaterial(): MeshStandardMaterial {
   return useEnvironment(material, p.envIntensity);
 }
 
-/** 塗装と影のマテリアルに操舵面・ミサイルのシェーダーを付ける（自機・ハンガー） */
+/**
+ * 塗装と影のマテリアルに操舵面・ミサイルのシェーダーを付ける（自機・ハンガー・他プレイヤー）。
+ * 色は skin（塗装テクスチャ。uv1）、パネルライン・汚れはシェーダーで掛ける（7-3）
+ */
 export function animatePaint(
   material: MeshStandardMaterial,
   u: SurfaceUniforms,
+  skin: Texture,
 ): MeshDepthMaterial {
+  material.map = skin;
   material.onBeforeCompile = (shader) => {
     patch(shader, u, true);
   };
-  material.customProgramCacheKey = () => 'aircraft-surfaces';
+  material.customProgramCacheKey = () => 'aircraft-surfaces-skin';
   const depth = new MeshDepthMaterial({ depthPacking: RGBADepthPacking });
   depth.onBeforeCompile = (shader) => {
     patch(shader, u, false);

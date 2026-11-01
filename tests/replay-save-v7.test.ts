@@ -6,7 +6,7 @@ import { createInitialSave, migrateSave } from '../src/progression/save';
 
 describe('セーブ v6 → v7', () => {
   it('古いゴーストを捨て、ベスト・ランク・完走回数は残す', () => {
-    expect(SAVE_CONFIG.version).toBe(7);
+    expect(SAVE_CONFIG.version).toBe(8);
     const v7 = createInitialSave();
     const entry = {
       time: 50.5,
@@ -37,7 +37,7 @@ describe('セーブ v6 → v7', () => {
       },
     };
     const save = migrateSave(v6);
-    expect(save?.version).toBe(7);
+    expect(save?.version).toBe(8);
     expect(save?.credits).toBe(4321);
     const coast = save?.races.coast;
     expect(coast?.ghost).toBeNull();
@@ -51,7 +51,7 @@ describe('セーブ v6 → v7', () => {
     const v5: Record<string, unknown> = { ...createInitialSave(), version: 5 };
     delete v5.races;
     const save = migrateSave(v5);
-    expect(save?.version).toBe(7);
+    expect(save?.version).toBe(8);
     expect(save?.races).toEqual({});
   });
 

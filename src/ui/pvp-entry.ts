@@ -62,7 +62,10 @@ export class PvpEntry {
     private readonly screens: Screens,
     /** URL のクエリ文字列（?room・?netdebug） */
     search: string,
-    deps: Omit<PvpDeps, 'aircraftDetail' | 'parent' | 'hangar' | 'debug' | 'transport'> & {
+    deps: Omit<
+      PvpDeps,
+      'aircraftDetail' | 'parent' | 'hangar' | 'paintshop' | 'debug' | 'transport'
+    > & {
       readonly game: GameState;
       /** パイロット名がまだない（初回起動） */
       readonly needsPilotName: () => boolean;
@@ -72,6 +75,7 @@ export class PvpEntry {
       ...deps,
       parent: document.body,
       hangar: screens.hangar,
+      paintshop: screens.paintshop,
       debug: parseNetDebug(search),
       transport: parseNetTransport(search),
     };

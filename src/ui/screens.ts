@@ -1,3 +1,5 @@
+import type { Paint } from '../progression/paint';
+import { Paintshop } from '../progression/paintshop';
 import { parseUnlockAll } from '../core/debug-flags';
 import { usesDemoCamera, type GameState, type ScreenState } from '../core/game-state';
 import { detectLocale } from '../core/locale';
@@ -46,6 +48,13 @@ export class Screens {
   readonly hangarScreen: HangarScreen;
   /** 機体の所持・強化・選択（3-3） */
   readonly hangar: Hangar;
+  /** 塗装の売り買いと機体ごとの塗装（7-3） */
+  readonly paintshop: Paintshop;
+  /** ハンガーの試し塗り・塗装タブ（7-3。main.ts が展示の機体とカメラに反映する） */
+  paintHooks: { paint(p: Readonly<Paint>): void; tab(open: boolean): void } = {
+    paint: () => undefined,
+    tab: () => undefined,
+  };
   readonly pause: PauseMenu;
   readonly pauseButton: HTMLButtonElement;
   /** ミッション一覧で選んだミッション（ブリーフィング・もう一度で使う） */
@@ -90,6 +99,7 @@ export class Screens {
       parseUnlockAll(search),
     );
     this.hangar = new Hangar(save, (id) => this.progress.isCleared(id));
+    this.paintshop = new Paintshop(save);
     const missionIds = missions.map((m) => m.id);
     // 初回起動（パイロット名がまだない）はタイトルの後に名前の入力（3-1）
     this.title = new TitleScreen(parent, () =>
@@ -168,7 +178,7 @@ export class Screens {
       },
     });
     this.briefing.setAircraftName(this.hangar.selectedModel.name);
-    this.hangarScreen = new HangarScreen(parent, this.hangar, {
+    this.hangarScreen = new HangarScreen(parent, this.hangar, this.paintshop, {
       onBack: () => {
         this.closeHangar(game);
       },
@@ -178,6 +188,12 @@ export class Screens {
       unlockText: (id) => {
         const i = missionIds.indexOf(id);
         return i >= 0 ? `M${i + 1} クリアで解放` : '未解放';
+      },
+      onPaint: (p) => {
+        this.paintHooks.paint(p);
+      },
+      onPaintTab: (open) => {
+        this.paintHooks.tab(open);
       },
     });
     this.result = new ResultScreen(parent, {

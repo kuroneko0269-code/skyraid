@@ -11,6 +11,8 @@ export const HANGAR_CONFIG = {
     position: { x: 0, y: 650, z: 5600 },
     /** 機体から見たカメラの位置（m） */
     cameraOffset: { x: 0, y: 3, z: 28 },
+    /** 「塗装」タブ（7-3）: 主翼の上面のデカールが見えるよう、上から斜めに見る位置（m） */
+    paintCameraOffset: { x: 0, y: 14, z: 22 },
     /** 注視点の高さ（機体の中心からの m） */
     lookAtHeight: 0,
     fov: 40,

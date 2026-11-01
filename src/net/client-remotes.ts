@@ -29,10 +29,12 @@ export class RemoteInterpolation {
     for (const p of players) {
       if (p.id === localId) continue;
       ids.add(p.id);
-      if (!this.remotes.has(p.id)) {
+      const known = this.remotes.get(p.id);
+      if (known) known.sample.paint = p.paint;
+      else {
         this.remotes.set(p.id, {
           buffer: new SnapshotBuffer(),
-          sample: createRemoteSample(p.id, p.aircraftId),
+          sample: createRemoteSample(p.id, p.aircraftId, p.paint),
         });
       }
     }

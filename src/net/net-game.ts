@@ -1,5 +1,6 @@
 // PvP の飛行の共通部分（5-1）: 開始位置、他機の表示用の値、通信の計測値。
 // ホストは host-game.ts、クライアントは client-game.ts。Three.js 非依存
+import type { Paint } from '../progression/paint';
 import { RAID_CONFIG } from '../data/kaiju';
 import { findDefenseMap } from '../data/defense';
 import { NET_CONFIG } from '../data/net';
@@ -76,6 +77,8 @@ export function spawnOrientation(raid: boolean): Readonly<Quat> {
 export interface RemoteSample {
   id: number;
   aircraftId: string;
+  /** 塗装（7-3。名簿の値） */
+  paint: Paint;
   readonly position: Vec3;
   readonly orientation: Quat;
   alive: boolean;
@@ -89,10 +92,11 @@ export interface RemoteSample {
   invulnerable: boolean;
 }
 
-export function createRemoteSample(id: number, aircraftId: string): RemoteSample {
+export function createRemoteSample(id: number, aircraftId: string, paint: Paint): RemoteSample {
   return {
     id,
     aircraftId,
+    paint,
     position: { x: 0, y: 0, z: 0 },
     orientation: { x: 0, y: 0, z: 0, w: 1 },
     alive: true,

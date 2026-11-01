@@ -2,6 +2,7 @@
 // 撃ったミサイルはパイロンから消え、アフターバーナーで炎、高 G 旋回で翼端から飛行機雲、巡航中はノズルの後ろに陽炎（4-4）
 import { Group, Vector3, type Camera, type Object3D, type Scene } from 'three';
 import type { AircraftModel } from '../data/aircraft';
+import type { Paint } from '../progression/paint';
 import { CONTRAIL_CONFIG, type AircraftDetail } from '../data/aircraft-model';
 import type { Aircraft, AircraftControls } from '../entities/aircraft';
 import { applyInterpolatedPose } from './aircraft-mesh';
@@ -36,10 +37,11 @@ export class PlayerView {
     scene.add(this.mesh, this.contrails.mesh);
   }
 
-  /** 見た目を機体の形とパイロンの数（積める数）にする。同じなら作り直さない */
-  setModel(model: AircraftModel, missiles: number): void {
+  /** 見た目を機体の形とパイロンの数（積める数）・塗装（7-3。null は機体の初期の塗装）にする。同じなら作り直さない */
+  setModel(model: AircraftModel, missiles: number, paint: Readonly<Paint> | null): void {
     this.modelOf = model;
     this.model.build(model.shape, this.detail, missiles);
+    this.model.setPaint(paint);
   }
 
   /** 画質（「低」は LOD） */

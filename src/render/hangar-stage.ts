@@ -7,6 +7,7 @@ import {
   type Scene,
 } from 'three';
 import type { AircraftModel } from '../data/aircraft';
+import type { Paint } from '../progression/paint';
 import { HANGAR_CONFIG } from '../data/hangar';
 import { AircraftObject } from './aircraft-model/aircraft-object';
 
@@ -21,6 +22,8 @@ export class HangarStage {
   readonly mesh = new Group();
   private readonly model = new AircraftObject();
   private yaw = 0;
+  /** 「塗装」タブ（7-3）: カメラを上から見る位置に */
+  private paintView = false;
 
   constructor(
     scene: Scene,
@@ -53,6 +56,25 @@ export class HangarStage {
     this.model.build(model.shape, 'high', missiles);
   }
 
+  /** 展示の機体の塗装（7-3。試し塗りもすぐ反映する） */
+  setPaint(paint: Readonly<Paint>): void {
+    this.model.setPaint(paint);
+  }
+
+  setPaintView(on: boolean): void {
+    this.paintView = on;
+  }
+
+  /** ハンガー画面の塗装タブから呼ぶ（Screens.paintHooks） */
+  readonly paintHooks = {
+    paint: (p: Readonly<Paint>): void => {
+      this.setPaint(p);
+    },
+    tab: (open: boolean): void => {
+      this.setPaintView(open);
+    },
+  };
+
   setShown(shown: boolean): void {
     this.mesh.visible = shown;
   }
@@ -64,7 +86,7 @@ export class HangarStage {
     // 床は水平のまま、機体だけ回して機首を少し上げる
     this.model.group.rotation.set(c.pitchDeg * DEG, this.yaw, 0, 'YXZ');
     const p = c.position;
-    const o = c.cameraOffset;
+    const o = this.paintView ? c.paintCameraOffset : c.cameraOffset;
     const camera = this.camera;
     // 縦長の画面では横幅に収まるよう離れる（minAspect より細いと、その比で遠ざける）
     const k = Math.max(1, c.minAspect / camera.aspect);

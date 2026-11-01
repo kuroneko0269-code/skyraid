@@ -10,9 +10,11 @@ import {
   PL_READY,
   readPlayer,
   readSettings,
+  readPaint,
   readUpgrades,
   writePlayer,
   writeSettings,
+  writePaint,
   writeUpgrades,
 } from './codec-lobby';
 import {
@@ -74,6 +76,7 @@ export function encodeMessage(msg: NetMessage): ArrayBuffer {
     case 'join':
       w.u8(msg.version).str(msg.name).str(msg.aircraftId);
       writeUpgrades(w, msg.upgrades);
+      writePaint(w, msg.paint);
       w.u8(msg.resumeId).u32(msg.token);
       break;
     case 'welcome':
@@ -86,6 +89,7 @@ export function encodeMessage(msg: NetMessage): ArrayBuffer {
     case 'lobby':
       w.u8((msg.ready ? PL_READY : 0) | (msg.again ? PL_AGAIN : 0)).str(msg.aircraftId);
       writeUpgrades(w, msg.upgrades);
+      writePaint(w, msg.paint);
       break;
     case 'chat':
       w.u8(msg.from).u8(msg.phrase);
@@ -171,9 +175,10 @@ function decodeBody(r: ByteReader): NetMessage | null {
       const name = r.str();
       const aircraftId = r.str();
       const upgrades = readUpgrades(r);
+      const paint = readPaint(r);
       const resumeId = r.u8();
       const token = r.u32();
-      return { type: 'join', version, name, aircraftId, upgrades, resumeId, token };
+      return { type: 'join', version, name, aircraftId, upgrades, paint, resumeId, token };
     }
     case TYPE_IDS.welcome: {
       const status = WELCOME_STATUS[r.u8()];
@@ -191,8 +196,10 @@ function decodeBody(r: ByteReader): NetMessage | null {
       const f = r.u8();
       const aircraftId = r.str();
       const upgrades = readUpgrades(r);
+      const paint = readPaint(r);
       return {
         type: 'lobby',
+        paint,
         ready: (f & PL_READY) !== 0,
         again: (f & PL_AGAIN) !== 0,
         aircraftId,

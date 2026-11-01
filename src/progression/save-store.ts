@@ -9,8 +9,6 @@ import { SAVE_CONFIG } from '../data/save';
 import {
   clampCredits,
   createInitialSave,
-  decodeSave,
-  encodeSave,
   parseSave,
   sanitizePilotName,
   type MissionRecord,
@@ -224,5 +222,26 @@ export class SaveStore {
       }
     }
     return true;
+  }
+}
+
+// ---------------------------------------------------------------- エクスポート / インポート
+// 端末を変えるとき用の文字列: JSON を UTF-8 にして base64（パイロット名に日本語が入っても壊れない）
+
+export function encodeSave(data: SaveData): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
+/** エクスポートした文字列を読む。前後・途中の空白と改行は無視する。読めなければ null */
+export function decodeSave(text: string): SaveData | null {
+  try {
+    const binary = atob(text.replace(/\s+/g, ''));
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return parseSave(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  } catch {
+    return null;
   }
 }

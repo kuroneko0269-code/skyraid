@@ -3,6 +3,18 @@ import { NET_CONFIG } from '../src/data/net';
 import { ClientRoom } from '../src/net/client-room';
 import { HostRoom, type PlayerProfile } from '../src/net/room';
 import { MemoryNetwork, type MemoryNetworkOptions } from '../src/net/transport';
+import type { Paint } from '../src/progression/paint';
+
+/** 通信のテストの塗装（7-3。初期値でない値も入れて往復を確かめる） */
+export const TEST_PAINT: Paint = {
+  pattern: 'splitter',
+  base: 9,
+  accent: 5,
+  marking: 7,
+  number: 42,
+  wing: { decal: 'star', x: 10, y: 200, size: 128, rotation: 255 },
+  fin: { decal: null, x: 0, y: 1, size: 2, rotation: 3 },
+};
 
 /** 決定的な乱数（mulberry32） */
 export function seeded(seed: number): () => number {
@@ -17,7 +29,12 @@ export function seeded(seed: number): () => number {
 }
 
 export function profile(name: string, aircraftId = 'kestrel'): PlayerProfile {
-  return { name, aircraftId, upgrades: { engine: 0, airframe: 0, weapons: 0, avionics: 0 } };
+  return {
+    name,
+    aircraftId,
+    upgrades: { engine: 0, airframe: 0, weapons: 0, avionics: 0 },
+    paint: TEST_PAINT,
+  };
 }
 
 /** 保留中の Promise の続きを流す */

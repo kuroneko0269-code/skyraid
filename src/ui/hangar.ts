@@ -10,6 +10,10 @@ import { ConfirmDialog, STAT_KEYS, StatBars, UpgradeRow, type StatTexts } from '
 import { el } from './hud-dom';
 import { formatCredits } from './mission-text';
 import { createButton, createScreen, setScreenShown } from './screen';
+import type { Paint } from '../progression/paint';
+import type { Paintshop } from '../progression/paintshop';
+import { PaintPanel } from './paint-panel';
+import { Segmented } from './segmented';
 
 export interface HangarHandlers {
   onBack: () => void;
@@ -17,6 +21,10 @@ export interface HangarHandlers {
   onView: (model: AircraftModel) => void;
   /** ミッション id → 解放条件の表示（例「M4 クリアで解放」） */
   unlockText: (missionId: string) => string;
+  /** 塗装（7-3）の試し塗り・保存済みに戻したとき（展示の機体に反映する） */
+  onPaint: (paint: Readonly<Paint>) => void;
+  /** 「塗装」タブを開いた・閉じた（展示のカメラを上から見る位置にする） */
+  onPaintTab: (open: boolean) => void;
 }
 
 /**
@@ -41,10 +49,14 @@ export class HangarScreen {
   private readonly balance: HTMLDivElement;
   private readonly notice: HTMLDivElement;
   private readonly confirm: ConfirmDialog;
+  private readonly tabs: Segmented;
+  private readonly perf: HTMLDivElement;
+  private readonly paint: PaintPanel;
 
   constructor(
     parent: HTMLElement,
     private readonly hangar: Hangar,
+    paintshop: Paintshop,
     private readonly handlers: HangarHandlers,
   ) {
     this.viewing = hangar.selectedId;
@@ -74,14 +86,30 @@ export class HangarScreen {
     this.balance = el('div', 'hangar-balance', detail);
     this.name = el('h2', 'ui-title campaign-title hangar-name', detail);
     this.role = el('div', 'hangar-role', detail);
-    this.bars = new StatBars(detail, maxStats(hangar.models));
-    this.payload = el('div', 'hangar-payload', detail);
-    this.action = createButton(detail, 'ui-button is-primary campaign-go hangar-action', '', () => {
+    // 7-3: 性能（強化）と塗装のタブ
+    this.tabs = new Segmented(
+      detail,
+      '',
+      [
+        { value: 'perf', label: '性能' },
+        { value: 'paint', label: '塗装' },
+      ],
+      'perf',
+      (v) => {
+        this.showTab(v === 'paint');
+      },
+      'hangar-tabs',
+    );
+    const perf = el('div', 'hangar-perf', detail);
+    this.perf = perf;
+    this.bars = new StatBars(perf, maxStats(hangar.models));
+    this.payload = el('div', 'hangar-payload', perf);
+    this.action = createButton(perf, 'ui-button is-primary campaign-go hangar-action', '', () => {
       this.buy();
     });
-    this.notice = el('div', 'hangar-notice', detail);
-    el('div', 'campaign-label', detail, '強化（この機体だけ）');
-    this.upgradeWrap = el('div', 'hangar-upgrades', detail);
+    this.notice = el('div', 'hangar-notice', perf);
+    el('div', 'campaign-label', perf, '強化（この機体だけ）');
+    this.upgradeWrap = el('div', 'hangar-upgrades', perf);
     for (const k of UPGRADE_KINDS)
       this.upgrades.set(
         k,
@@ -89,8 +117,29 @@ export class HangarScreen {
           this.upgrade(kind);
         }),
       );
+    this.paint = new PaintPanel(detail, paintshop, {
+      onPreview: (p) => {
+        handlers.onPaint(p);
+      },
+      onPurchase: () => {
+        this.refresh();
+      },
+    });
+    this.paint.root.hidden = true;
     this.confirm = new ConfirmDialog(root);
     this.root = root;
+  }
+
+  /** 性能 / 塗装のタブを切り替える。塗装を閉じるときは試し塗りを捨てる */
+  private showTab(paint: boolean): void {
+    this.tabs.value = paint ? 'paint' : 'perf';
+    this.perf.hidden = paint;
+    this.paint.root.hidden = !paint;
+    if (!paint) {
+      const saved = this.paint.revert();
+      if (saved) this.handlers.onPaint(saved);
+    }
+    this.handlers.onPaintTab(paint);
   }
 
   /** 確認ダイアログが開いていれば閉じて true（Esc で画面を戻る前に呼ぶ） */
@@ -104,6 +153,7 @@ export class HangarScreen {
     setScreenShown(this.root, shown);
     if (!shown) {
       this.confirm.close();
+      if (!this.paint.root.hidden) this.showTab(false);
       return;
     }
     this.notice.textContent = '';
@@ -117,6 +167,7 @@ export class HangarScreen {
     this.hangar.select(id);
     this.notice.textContent = '';
     this.refresh();
+    this.paint.setAircraft(id);
   }
 
   private buy(): void {

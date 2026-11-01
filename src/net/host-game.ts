@@ -5,6 +5,7 @@
 // 5-4: 開始前のカウントダウン（全機を止め操作を無視）、チーム戦、初心者保護、強化の無効、切断した人の機体を止めて
 // 待ち（away）、戻ったら入力が届き直してから出現位置へ戻す（クライアントはその seq から計算し直す）。
 // 6-2: レイド（全員が同じチーム）は怪獣をホストで動かし（RaidHost）、state に怪獣を入れ、倒すか街に到達されたら終わる。Three.js 非依存
+import type { Paint } from '../progression/paint';
 import { quatIdentity, type Vec3 } from '../flight/math';
 import { headingQuat } from '../entities/enemy-aircraft';
 import { NET_CONFIG } from '../data/net';
@@ -133,7 +134,7 @@ export class HostGame extends NetGameEvents implements NetGame {
     const start = startPose(0, settings);
     deps.own.respawn(start, headingQuat(quatIdentity(), start.headingDeg));
     this.own = this.arena.add(0, deps.own, fighterSpec(this.loadout(p.aircraftId, p.upgrades)));
-    for (const pl of room.players) if (pl.id !== 0) this.addRemote(pl.id, pl.aircraftId);
+    for (const pl of room.players) if (pl.id !== 0) this.addRemote(pl.id, pl.aircraftId, pl.paint);
     this.raid = raid ? createRaidHost(this.arena, room, deps, this.sendEvent) : null;
     this.defense = createDefenseHost(this.arena, room, deps, this.sendEvent);
     room.onPlayerLeave((id) => {
@@ -164,7 +165,7 @@ export class HostGame extends NetGameEvents implements NetGame {
     return netLoadout(aircraftId, this.room.settings.noUpgrades ? undefined : upgrades);
   }
 
-  private addRemote(id: number, aircraftId: string): void {
+  private addRemote(id: number, aircraftId: string, paint: Paint): void {
     const join = this.room.joinProfiles.get(id);
     const loadout = this.loadout(join?.aircraftId ?? aircraftId, join?.upgrades);
     const aircraft = new Aircraft(loadout.flight, {}, FLIGHT_CONFIG, this.deps.groundHeight);
@@ -174,7 +175,7 @@ export class HostGame extends NetGameEvents implements NetGame {
       id,
       fighter: this.arena.add(id, aircraft, fighterSpec(loadout)),
       input: new InputBuffer(),
-      sample: createRemoteSample(id, aircraftId),
+      sample: createRemoteSample(id, aircraftId, paint),
       pendingResume: false,
     });
   }

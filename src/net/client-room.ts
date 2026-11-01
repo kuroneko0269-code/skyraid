@@ -133,6 +133,7 @@ export class ClientRoom extends RoomBase {
       again: this.again,
       aircraftId: this.profile.aircraftId,
       upgrades: this.profile.upgrades,
+      paint: this.profile.paint,
     };
     this.send(msg, 'reliable');
   }
