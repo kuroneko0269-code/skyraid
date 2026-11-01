@@ -19,6 +19,10 @@ import { ResultScreen } from './result';
 import { FadeCurtain, LoadingScreen, applyScreenFade } from './screen';
 import { syncHudScreen } from './hud-screen';
 import { TitleScreen } from './title';
+import { InfoScreen } from './info-screen';
+import { SettingsNav } from './settings-nav';
+import { SettingsScreen } from './settings-screen';
+import { modeProgress } from '../progression/mode-progress';
 import { TUTORIAL_MISSION } from '../data/tutorial';
 import { MAPS } from '../data/maps';
 import { RAID_MISSION, raidMission } from '../data/missions-special';
@@ -57,6 +61,11 @@ export class Screens {
   };
   readonly pause: PauseMenu;
   readonly pauseButton: HTMLButtonElement;
+  /** 設定画面（7-D）と開閉（開いた元へ戻る） */
+  readonly settings: SettingsScreen;
+  readonly settingsNav: SettingsNav;
+  /** 情報画面（7-D。モード選択の上に重ねる） */
+  readonly info: InfoScreen;
   /** ミッション一覧で選んだミッション（ブリーフィング・もう一度で使う） */
   selectedMission: MissionDef | null = null;
   /** 次に飛行へ入るときのミッション（null はフリーフライト。チュートリアル（4-11）・ブリーフィングの出撃で決める） */
@@ -104,8 +113,10 @@ export class Screens {
     this.paintshop = new Paintshop(save);
     const missionIds = missions.map((m) => m.id);
     // 初回起動（パイロット名がまだない）はタイトルの後に名前の入力（3-1）
-    this.title = new TitleScreen(parent, () =>
-      game.transition(save.needsPilotName ? 'pilot_name' : 'mode_select'),
+    this.title = new TitleScreen(
+      parent,
+      () => game.transition(save.needsPilotName ? 'pilot_name' : 'mode_select'),
+      () => this.settingsNav.open(),
     );
     this.title.setPilotName(save.pilotName);
     this.pilotName = new PilotNameScreen(parent, {
@@ -135,6 +146,8 @@ export class Screens {
         else if (mode === 'race') game.transition('race_select');
         else if (mode === 'replay') game.transition('replay_select');
         else if (mode === 'ranking') this.onRanking();
+        else if (mode === 'settings') this.settingsNav.open();
+        else if (mode === 'info') this.info.show();
         else if (mode === 'hangar') this.openHangar(game, 'mode_select');
         else if (mode === 'pvp') this.pvp?.onSelect(false);
         else if (mode === 'defense') this.modeSelect.showDefensePrompt();
@@ -153,6 +166,8 @@ export class Screens {
       },
       onBack: () => game.transition('title'),
     });
+    this.modeSelect.progress = () => modeProgress(save.snapshot, missionIds);
+    this.info = InfoScreen.over(parent, this.modeSelect, game);
     this.missionSelect = new MissionSelectScreen(
       parent,
       missions,
@@ -210,6 +225,13 @@ export class Screens {
         onAbortMission();
         game.transition(this.listState());
       },
+      onSettings: () => this.settingsNav.open(),
+    });
+    this.settings = new SettingsScreen(parent, () => this.settingsNav.close());
+    this.settingsNav = new SettingsNav(game, this.settings, {
+      title: this.title,
+      modeSelect: this.modeSelect,
+      pause: this.pause,
     });
     // PvP の飛行中はゲームを止めずに PvP のメニュー
     this.pauseButton = createPauseButton(parent, () => {
@@ -283,6 +305,8 @@ export class Screens {
   /** Esc / Start（メニュー中）: ポーズ → 再開、モード選択 → タイトルなど 1 つ前の画面へ */
   navigateBack(game: GameState): void {
     const state = game.state;
+    // 設定画面（7-D）が開いていれば閉じて元の画面へ
+    if (this.settingsNav.close()) return;
     if (state === 'pause' || state === 'photo') game.transition('flight');
     else if (state === 'mode_select') {
       if (!this.modeSelect.closeDialog()) game.transition('title');
@@ -330,6 +354,8 @@ export class Screens {
     this.modeSelect.setShown(state === 'mode_select');
     this.missionSelect.setShown(state === 'mission_select');
     this.briefing.setShown(state === 'briefing');
+    // ポーズには設定画面の 4 つ（画質・音量・操作補助・HUD）を貸す（7-D）
+    if (state === 'pause') this.settings.lend(this.pause.quick);
     this.pause.setShown(state === 'pause');
     this.result.setShown(state === 'result' && !this.inRace() && !this.inDefense());
     this.hangarScreen.setShown(state === 'hangar');

@@ -82,6 +82,52 @@
 
 /* メニューのボタン・パネルなどの共通部品は theme.css（4-10） */
 
+/* ---- メニュー画面の見出しの行（7-D: モード選択・設定・情報）: 左に「← 戻る」、中央に画面名。幅は --menu-width ---- */
+.menu-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--menu-width, min(720px, calc(100% - var(--ui-space-6))));
+  min-height: 44px;
+  margin-top: var(--ui-space-3);
+}
+
+.menu-heading {
+  margin: 0;
+  letter-spacing: 0.3em;
+  margin-right: -0.3em;
+}
+
+.menu-back {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  /* 文字に合わせた最小幅（折り返さない。7-C） */
+  min-width: max-content;
+  min-height: 40px;
+  padding: 6px 16px;
+  font-size: 15px;
+}
+
+@media (max-height: 480px) and (min-width: 640px) {
+  .menu-header {
+    min-height: 36px;
+    margin-top: var(--ui-space-2);
+  }
+
+  .menu-heading {
+    font-size: 19px;
+  }
+
+  .menu-back {
+    min-height: 34px;
+    padding: 4px 12px;
+    font-size: 14px;
+  }
+}
+
 /* ---- 読み込み中 ---- */
 .loading-screen {
   z-index: 70;

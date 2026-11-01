@@ -5,6 +5,7 @@ import type { FlightSession } from '../missions/flight-session';
 import type { GamePlay } from '../missions/game-play';
 import { bindMissionRewards } from '../progression/mission-rewards';
 import { raidRecord, recordOutbox } from '../online/outbox';
+import { recordRaidTime } from '../progression/save-records';
 import type { SaveStore } from '../progression/save-store';
 import type { ChaseCamera } from '../render/chase-camera';
 import type { PlayerView } from '../render/player-view';
@@ -53,6 +54,10 @@ export function linkMissionEvents(p: MissionWiringParts): void {
         runner.bus.on('mission:end', ({ result }) => {
           if (result.outcome !== 'success') return;
           const aircraftId = screens.hangar.selectedId;
+          // 7-D: モード選択のカードに出す自己ベスト（ローカル）
+          p.save.transact((data) =>
+            recordRaidTime(data.records, raid.difficulty, result.elapsedSeconds * 1000),
+          );
           recordOutbox.submit(
             raidRecord(raid.difficulty, result.elapsedSeconds, aircraftId, result.rank),
           );

@@ -1,15 +1,17 @@
 import './title.css';
 import './save.css';
+import { APP_VERSION } from 'virtual:app-info';
 import { APP_SHELL_CONFIG } from '../data/app';
 import { logoUrl, probeImage, resolveLogo, type ImageProbe } from './brand';
+import { createGlyph } from './glyphs';
 import { el } from './hud-dom';
-import { createScreen, setScreenShown } from './screen';
+import { createButton, createScreen, setScreenShown } from './screen';
 
 /**
  * タイトル画面。背景は実際のシーン（デモカメラ）で、ここは文字だけの DOM。
  * ロゴは public/brand/logo.png があれば画像、無ければ「SkyRaid」のテキスト（4-10）。画面のどこをタップしても / Enter で開始。
  * 起動して最初に出すときだけ HUD の展開アニメ（枠の線が伸びて中身がフェードイン）。薄いスキャンライン。
- * 右下にパイロット名（3-1。未入力の初回起動では出さない）
+ * 右下にパイロット名（3-1。未入力の初回起動では出さない）。右上に設定の歯車と版（7-D。歯車のタップは開始にしない）
  */
 export class TitleScreen {
   readonly root: HTMLDivElement;
@@ -21,6 +23,7 @@ export class TitleScreen {
   constructor(
     parent: HTMLElement,
     private readonly onStart: () => void,
+    onSettings: () => void,
     probe: ImageProbe = probeImage,
   ) {
     const root = createScreen(parent, 'title-screen');
@@ -42,6 +45,15 @@ export class TitleScreen {
     this.pilot = el('div', 'title-pilot', root);
     this.pilot.hidden = true;
     el('div', 'title-scanlines', root);
+    const corner = el('div', 'title-corner', root);
+    el('span', 'title-version', corner, `v${APP_VERSION}`);
+    const gear = createButton(corner, 'ui-button title-settings', '', onSettings);
+    gear.setAttribute('aria-label', '設定');
+    gear.appendChild(createGlyph('gear', 'title-settings-icon'));
+    // 歯車のタップ・クリックは画面の「タップで開始」に渡さない
+    gear.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
     root.addEventListener('click', this.start);
     window.addEventListener('keydown', this.onKeyDown);
     this.root = root;

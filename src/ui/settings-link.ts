@@ -1,5 +1,5 @@
-// ポーズメニューの設定の組み立て（main.ts から分けた。4-11 の事前修正。並びと挙動は変えていない）:
-// タッチ・HUD・全画面・敵・操作補助・セーブデータ。画質（先頭）と音量（セーブデータの上）は各モジュールが入れる
+// 設定の組み立て（main.ts から分けた。4-11 の事前修正）: タッチ・HUD・全画面・敵・操作補助・セーブデータ。
+// 7-D: 設定画面（settings-screen.ts）のタブごとの slot に入れる。画質・音量・操作・オンライン連携は各モジュールが入れる
 import type { AssistFlags } from '../core/assist-settings';
 import type { Input } from '../core/input';
 import type { StorageLike } from '../core/settings';
@@ -14,10 +14,12 @@ import type { MissionHud } from './mission-hud';
 import { createFullscreenButton, createToggleButton } from './mobile';
 import type { ModeSelectScreen } from './mode-select';
 import { createSaveSettings } from './save-settings';
+import type { SettingsScreen } from './settings-screen';
 import { createTouchLink, type TouchLink } from './touch-link';
 
 export interface PauseSettingsParts {
-  readonly panel: HTMLElement;
+  /** 設定画面（7-D）。部品は slot(...) に入れる */
+  readonly settings: SettingsScreen;
   readonly input: Input;
   readonly storage: StorageLike;
   readonly save: SaveStore;
@@ -34,16 +36,27 @@ export function createDisplaySettings(p: PauseSettingsParts): {
   hudToggle: HudToggle;
 } {
   // タッチ操作（自動 / 強制表示 / 強制非表示）。飛行中だけ出す
-  const touch = createTouchLink(document.body, p.input, p.storage, p.panel, p.inFlight);
+  const touch = createTouchLink(
+    document.body,
+    p.input,
+    p.storage,
+    p.settings.slot('display'),
+    p.inFlight,
+  );
   // HUD: H キー / ポーズメニューの設定のボタンで表示切替（3-1 から保存）。ミッションの HUD（2-4）も合わせる
-  const hudToggle = createHudToggle(p.panel, p.hud, p.missionHud, p.save);
+  const hudToggle = createHudToggle(p.settings.slot('hud'), p.hud, p.missionHud, p.save);
   // 7-5: 夜は HUD を少し暗くする（ui/weather-link.ts が毎フレーム読む）
-  createToggleButton(p.panel, '夜の HUD 減光', p.save.settings.nightHudDim, () => {
-    const on = !p.save.settings.nightHudDim;
-    p.save.setSetting('nightHudDim', on);
-    return on;
-  });
-  createFullscreenButton(p.panel);
+  createToggleButton(
+    p.settings.slot('display'),
+    '夜の HUD 減光',
+    p.save.settings.nightHudDim,
+    () => {
+      const on = !p.save.settings.nightHudDim;
+      p.save.setSetting('nightHudDim', on);
+      return on;
+    },
+  );
+  createFullscreenButton(p.settings.slot('display'));
   return { touch, hudToggle };
 }
 
@@ -60,13 +73,13 @@ export function createGameSettings(
   },
 ): AssistFlags {
   // 敵の有無・難易度（ポーズメニューの設定。セーブに保存）
-  createEnemySettings(p.panel, p.storage, (enabled, difficulty) => {
+  createEnemySettings(p.settings.slot('game'), p.storage, (enabled, difficulty) => {
     configure(enabled, difficulty);
     p.modeSelect.setEnemiesEnabled(enabled);
   });
   // 操作補助（4-12）: エイムアシスト（タッチ・パッドだけ）・ターゲットカメラ・HUD 補助。ポーズメニューの設定で OFF にできる
-  const assistFlags = createAssistSettings(p.panel, p.storage);
+  const assistFlags = createAssistSettings(p.settings.slot('assist'), p.storage);
   // 設定の最下部: セーブデータのコピー / 復元 / 削除。復元・削除の後は読み込み直して新しいセーブで始める
-  createSaveSettings(p.panel, p.save);
+  createSaveSettings(p.settings.slot('data'), p.save);
   return assistFlags;
 }

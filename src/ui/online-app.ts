@@ -74,7 +74,7 @@ export function startOnline(env: OnlineEnv, p: OnlineLinkParts): void {
   });
 
   // 設定の「オンライン連携」と「メンバー管理」（owner だけ。7-4b）（セーブデータの欄の上）
-  const panel = screens.pause.settings;
+  const panel = screens.settings.slot('data');
   const saveBox = panel.querySelector('.save-settings');
   say = createOnlineSettings(panel, service, saveBox).say;
   const members = createMemberSettings(

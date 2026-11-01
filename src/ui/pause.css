@@ -8,9 +8,9 @@
   flex-direction: column;
   align-items: stretch;
   gap: 10px;
-  max-height: 100%;
+  width: min(760px, calc(100% - var(--ui-space-6)));
+  box-sizing: border-box;
   padding: var(--ui-space-3) var(--ui-space-4);
-  overflow-y: auto;
 }
 
 .pause-heading {
@@ -20,29 +20,54 @@
   margin-right: -0.3em;
 }
 
-/* 設定（画質・タッチ・HUD・全画面）。部品は mobile.ts / quality-select.ts のものを流用 */
-.pause-settings {
+/* 左にボタン、右に 4 つの設定（7-D）。狭い縦画面は縦に並べる */
+.pause-body {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  gap: var(--ui-space-4);
+  align-items: start;
 }
 
-.pause-settings[hidden] {
-  display: none;
-}
-
-.pause-settings .settings-item {
+.pause-actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 44px;
-  font-size: 14px;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.pause-settings select {
-  min-height: 32px;
-  font-size: 15px;
+.pause-actions .ui-button {
+  min-width: max-content;
+}
+
+@media (max-width: 600px) {
+  .pause-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 背の低い横画面（スマホ）: ボタンを詰めて 1 画面に収める */
+@media (max-height: 480px) and (min-width: 600px) {
+  .pause-panel {
+    gap: 6px;
+    padding: var(--ui-space-2) var(--ui-space-3);
+  }
+
+  .pause-heading {
+    font-size: 19px;
+  }
+
+  .pause-actions {
+    gap: 6px;
+  }
+
+  .pause-actions .ui-button {
+    min-height: 40px;
+    padding: 6px 16px;
+    font-size: 16px;
+  }
+
+  .pause-quick .settings-item {
+    min-height: 38px;
+  }
 }
 
 /* ⏸ ボタン。飛行中だけ表示 */

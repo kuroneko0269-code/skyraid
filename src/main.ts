@@ -94,9 +94,9 @@ screens.paintHooks = hangarStage.paintHooks;
 const quality = new QualityLink(renderer, pipeline, world, storage);
 installTouchGuards(document);
 installAppShell(document.body);
-// 設定（画質・タッチ・HUD・全画面）はポーズメニューの中
-const settingsPanel = screens.pause.settings;
-quality.createSelect(settingsPanel);
+// 設定（7-D: 設定画面のタブごとの slot。画質・音量・操作補助・HUD はポーズメニューにも貸す）
+const settingsUi = screens.settings;
+quality.createSelect(settingsUi.slot('quality'));
 
 window.addEventListener('resize', () => {
   pipeline.resize(window.innerWidth, window.innerHeight);
@@ -153,10 +153,18 @@ const fxEvents = new FxEvents(session, getGroundHeight);
 const views = new FlightViews(scene, aircraftMesh, session, fxEvents, camera.position, (k) => {
   chaseCamera.addImpact(k);
 });
-const audio = createGameAudio(session, fxEvents, getGroundHeight, settingsPanel, save);
+const audio = createGameAudio(session, fxEvents, getGroundHeight, settingsUi.slot('volume'), save);
 // 操作設定（4-11）: 感度・デッドゾーン・反転・オートレベル（URL の ?invert / ?autolevel が優先）・左右入替・振動・大きさ・キー割当
 const overrides = parseFlightOverrides(window.location.search);
-createControlsLink(settingsPanel, save, input, touch.controls, session, fxEvents, overrides);
+createControlsLink(
+  settingsUi.slot('controls'),
+  save,
+  input,
+  touch.controls,
+  session,
+  fxEvents,
+  overrides,
+);
 // チュートリアル（4-11）の指示と、タッチ操作のヒント。指示の「中断」はモード選択へ
 const tutorial = new TutorialLink(document.body, save, input, touch, hud, () => {
   screens.abortTutorial(game);

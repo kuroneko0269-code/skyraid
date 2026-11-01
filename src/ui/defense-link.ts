@@ -19,6 +19,8 @@ import { DefenseResultScreen } from './defense-result';
 import type { Screens } from './screens';
 import type { ReplayHub } from '../replay/hub';
 import { defenseRecord, recordOutbox } from '../online/outbox';
+import { defenseKey } from '../online/records';
+import { recordDefenseWaves } from '../progression/save-records';
 
 export interface DefenseLinkParts {
   readonly game: GameState;
@@ -160,6 +162,10 @@ export function createDefenseLink(p: DefenseLinkParts): DefenseLink {
       // 7-4: オンライン連携の記録（ソロだけ。連携していなければ何もしない）
       if (selection) {
         const { mapId, difficulty } = selection;
+        // 7-D: モード選択のカードに出す自己ベスト（ローカル）
+        save.transact((data) =>
+          recordDefenseWaves(data.records, defenseKey(mapId, difficulty), score.wavesCleared),
+        );
         recordOutbox.submit(
           defenseRecord({ ...score, mapId, difficulty }, d.elapsed, screens.hangar.selectedId),
         );

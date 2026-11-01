@@ -53,12 +53,12 @@ function freshStore(): { store: SaveStore; storage: FakeStorage } {
 
 describe('セーブ v5 → v6', () => {
   it('v5 のデータにレースの記録（空）を足す。ほかはそのまま', () => {
-    expect(SAVE_CONFIG.version).toBe(8);
+    expect(SAVE_CONFIG.version).toBe(9);
     const v6 = createInitialSave();
     const v5: Record<string, unknown> = { ...v6, version: 5, credits: 1234, pilotName: 'ACE' };
     delete v5.races;
     const save = migrateSave(v5);
-    expect(save?.version).toBe(8);
+    expect(save?.version).toBe(SAVE_CONFIG.version);
     expect(save?.races).toEqual({});
     expect(save?.credits).toBe(1234);
     expect(save?.pilotName).toBe('ACE');
