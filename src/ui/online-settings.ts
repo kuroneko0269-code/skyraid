@@ -16,6 +16,16 @@ const STATE_LABELS = {
   error: 'エラー',
 } as const;
 
+const PENDING_PREFIX = '【承認待ち】';
+
+/** 承認待ちの案内（7-4b: 申請は自動で送り、承認されれば 5 分以内に自動で連携中になる） */
+function pendingText(s: OnlineStatus): string {
+  const who = `ログイン中: ${s.email ?? ''}`;
+  if (s.join === 'rejected')
+    return `${PENDING_PREFIX}管理者に承認されませんでした。必要なら管理者に連絡してください（${who}）`;
+  return `${PENDING_PREFIX}管理者が承認すると遊べます。承認されると自動で「連携中」に変わります（${who}）`;
+}
+
 function button(parent: HTMLElement, label: string): HTMLButtonElement {
   const b = el('button', 'ui-toggle settings-item settings-button', parent, label);
   b.type = 'button';
@@ -95,10 +105,9 @@ export function createOnlineSettings(
     toggle.button.hidden = !signedIn;
     toggle.sync(s.enabled);
     signOut.hidden = !signedIn;
-    if (s.state === 'pending')
-      say(`管理者に承認を依頼してください（ログイン中: ${s.email ?? ''}）`);
+    if (s.state === 'pending') say(pendingText(s));
     else if (s.state === 'error') say(errorMessage(s.error ?? 'unknown'));
-    else if (message.startsWith('管理者に承認')) say('');
+    else if (message.startsWith(PENDING_PREFIX)) say('');
   };
 
   send.addEventListener('click', () => {
@@ -166,8 +175,7 @@ export function createOnlineSettings(
     recheck.disabled = true;
     void service.recheck().finally(() => {
       recheck.disabled = false;
-      if (service.status.state === 'pending')
-        say('まだ承認されていません。管理者に承認を依頼してください');
+      if (service.status.state === 'pending') say(`${pendingText(service.status)}（まだです）`);
     });
   });
 

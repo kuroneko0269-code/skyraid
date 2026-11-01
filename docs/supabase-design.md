@@ -1,9 +1,10 @@
-# SkyRaid の Supabase 設計書（7-4）
+# SkyRaid の Supabase 設計書（7-4 / 7-4b）
 
 - 対象: 共有の Supabase プロジェクト（無料枠）に入居する SkyRaid: Titan Skies のクラウドセーブとメンバー内ランキング
 - 従う規約: `docs/supabase-conventions.md`（Supabase 共有プロジェクトの規約 **v1.0**）
-- マイグレーション: `supabase/migrations/skyraid_0001_init.sql`
-- クライアント: `src/online/`（Three.js・DOM 非依存のロジック）と `src/ui/online-*.ts`・`ranking-screen.ts`・`sync-dialog.ts`（画面）。数値は `src/data/online.ts`
+- マイグレーション: `supabase/migrations/skyraid_0001_init.sql`（7-4）→ `skyraid_0002_members.sql`（7-4b: メンバー承認・セーブのバックアップの削除）。番号の順に流す（0001 を流し直したら 0002 も流し直す: 0001 は saves の権限を付け直すため）
+- クライアント: `src/online/`（Three.js・DOM 非依存のロジック）と `src/ui/online-*.ts`・`member-settings.ts`・`ranking-screen.ts`・`sync-dialog.ts`（画面）。数値は `src/data/online.ts`
+- **規約からの逸脱があります（8 章）。プロジェクトの持ち主が承認済み**
 
 ## 1. 方針
 
@@ -12,7 +13,8 @@
 | アプリ名・スキーマ | `skyraid`。オブジェクトはすべてスキーマ `skyraid` の中。`public`・`auth`・`storage` には何も作らない |
 | Storage | 使わない（バケットなし） |
 | Auth | メール OTP（6 桁のコード）。プロジェクト共通の Auth の設定は変えない前提（5 章の注意） |
-| アプリの権限 | `app_metadata.apps` に `'skyraid'` があるユーザーだけ（規約 3.3 の a）。確かめる関数は `skyraid.has_app_access()`。authenticated のポリシーはすべてこれを確かめる |
+| アプリの権限 | `app_metadata.apps` に `'skyraid'` があるユーザーだけ（規約 3.3 の a）。確かめる関数は `skyraid.has_app_access()`。authenticated のポリシーはすべてこれを確かめる（例外は `join_requests` だけ。8 章） |
+| 承認（7-4b） | 承認待ちの人はログインすると `join_requests` に自動で申請が入る。owner（`app_metadata.roles.skyraid = 'owner'`）がゲームの設定「メンバー管理」で承認・却下・取り消しをする。owner の付与だけは持ち主が SQL で 1 回（README） |
 | anon | テーブル・ビュー・関数の権限なし。anon に公開する関数も作らない（匿名向けの機能はない） |
 | セーブ | ローカル（localStorage の `skyraid.save`）が正、サーバーはバックアップ。オンライン連携はオプトインで、連携しなくても全機能が今までどおり動く |
 | 環境変数 | `VITE_SUPABASE_URL`・`VITE_SUPABASE_ANON_KEY`（Cloudflare Pages の環境変数）。無ければオフライン（連携の部分を読み込まず、UI も出さない）。**service_role key は使わない**（クライアントは誤って入れられた secret key・service_role の JWT を拒否してオフラインになる） |
@@ -20,7 +22,7 @@
 
 ## 2. テーブル
 
-すべて RLS を `enable` と `force` の両方で有効にしている。delete の権限はどのテーブルにも与えない。
+すべて RLS を `enable` と `force` の両方で有効にしている。delete の権限は saves の本人の行だけ（7-4b。「セーブデータを削除」の「サーバーのバックアップも削除する」）。
 
 ### `skyraid.profiles`（表示名）
 
@@ -43,7 +45,9 @@
 | `size_bytes` | int | トリガで `octet_length(data::text)` を入れる（使用量の確認用） |
 | `updated_at` | timestamptz | トリガでサーバーの時刻。同期の競合判定に使う |
 
-- select / insert / update: 本人だけ（delete 不可）。update で `user_id` は変えられない（トリガで元の値に戻す）
+- select / insert / update / delete: 本人だけ（delete は 0002 で追加: `saves_authenticated_delete`。`has_app_access()` も確かめる）。update で `user_id` は変えられない（トリガで元の値に戻す）
+- 「セーブデータを削除」（設定）: 既定は **サーバーのバックアップを残す**。そのときは `skyraid.online` に `preferServer` を立て、次の同期では送らず、サーバーのセーブを正として 1 回だけ受け取る（初期化したばかりのセーブでサーバーを上書きしない）。「サーバーのバックアップも削除する」（連携中のときだけ選べる）は先にサーバーの行を消し、消せなければローカルも消さない
+- サーバーに行が無いと分かったとき（他の端末でバックアップを消した）は、同期の記録があっても insert で作り直す
 - クライアントの update は「`updated_at` が前回の同期のときのまま」の行だけを書く（他の端末が先に書いていたら 0 行 = 競合）
 
 ### `skyraid.records`（記録）
@@ -67,12 +71,27 @@
   - クライアントも送る前に同じ規則で確かめ（`checkRecord`）、通らない記録は送らない
 - 送るのは: レースの完走（時間切れは送らない）・ソロのレイドのクリア・ソロの防衛戦の終わり（成功・陥落とも）。リプレイの再生・ゴーストからは送らない。協力（P2P）は人数で難しさが変わるので送らない（7-4 の質問で決定）
 
+### `skyraid.join_requests`（参加の申請。7-4b。1 ユーザー 1 行）
+
+| 列 | 型 | 説明 |
+| --- | --- | --- |
+| `user_id` | uuid PK | 既定値 `auth.uid()`。auth.users への外部キーは張らない |
+| `display_name` | text | 申請したときのパイロット名（profiles と同じ check。承認前は profiles に書けないため） |
+| `requested_at` | timestamptz | トリガでサーバーの時刻 |
+| `status` | text | `pending` / `approved` / `rejected` |
+
+- insert / select: 本人の行だけ（insert は `status = 'pending'` のときだけ）。**`has_app_access()` は確かめない**（承認前の人が書くため。8 章）
+- select / update: owner は全行。update は `status` の列だけ（列の権限）、しかも `pending` か `rejected` にだけ（approved にするのは app_metadata も変える `approve_member` だけ）。トリガで `user_id`・表示名・申請の時刻は変えさせない
+- delete: 誰にも与えない。却下・取り消しの後に申請し直すことはできない（もう一度承認するときは持ち主が規約 3.3 の SQL で付与する）
+- クライアントはログイン直後（と起動時）に承認待ちなら `insert ... on conflict do nothing` で申請し、自分の行の状態を読む（却下なら「承認されませんでした」と出す）
+
 ### トリガ
 
 | トリガ | 内容 |
 | --- | --- |
 | `profiles_touch` / `saves_touch` | `updated_at` をサーバーの時刻に、セーブの `size_bytes` を計算、update で `user_id` を変えさせない |
 | `records_before_insert` | **レート制限: 1 ユーザー 1 分 20 行**（超えたら `P0001`・hint `rate_limit`）。`created_at` をサーバーの時刻に |
+| `join_requests_touch` | 申請の時刻をサーバーの時刻に、update で `user_id`・表示名・申請の時刻を変えさせない（7-4b） |
 | `records_after_insert` | **間引き: kind × key × ユーザー（レースは機体も）ごとに最良 3 件だけ残す**。直近 1 分の行はレート制限で数えるため残し、次の送信で消す |
 
 - 間引きをレースだけ機体で分けたのは、ランキングがコース × 機体のため（機体ごとの最速が消えないように）。1 ユーザーの行は最大 66 行（レース 4 コース × 4 機体 × 3 + レイド 2 × 3 + 防衛戦 4 × 3）+ 直近 1 分の 20 行
@@ -95,7 +114,11 @@
 | --- | --- | --- |
 | `skyraid.has_app_access()` | authenticated（ポリシーの評価用） | 規約 3.3 のまま。`(auth.jwt() -> 'app_metadata' -> 'apps') ? 'skyraid'` |
 | `skyraid.record_sort_key(text, jsonb)` | authenticated（ビューの評価用） | 記録の並びのキー（immutable） |
-| `skyraid.touch_updated_at()` / `records_before_insert()` / `records_after_insert()` | なし（トリガ専用） | |
+| `skyraid.touch_updated_at()` / `records_before_insert()` / `records_after_insert()` / `join_requests_touch()` | なし（トリガ専用） | |
+| `skyraid.is_owner()` | **なし（API 非公開）** | 7-4b。`auth.jwt() -> 'app_metadata' -> 'roles' ->> 'skyraid' = 'owner'`。下の 3 つの関数が所有者の権限で呼ぶ。ポリシーは同じ式を `(select auth.jwt())` で直接書く（authenticated に execute を与えないため） |
+| `skyraid.approve_member(p_user uuid)` | authenticated（owner でなければ例外 42501） | 7-4b。security definer。`auth.users.raw_app_meta_data.apps` に `skyraid` を足す（規約 3.3 の付与の式のまま。他アプリの値は保持）・`join_requests.status = 'approved'`。居ないユーザーは例外 P0002 |
+| `skyraid.revoke_member(p_user uuid)` | authenticated（owner でなければ例外 42501） | 7-4b。security definer。`apps` から `skyraid` を除く（規約 3.3 の取り消しの式）・`status = 'rejected'`。自分自身は取り消せない（例外 22023） |
+| `skyraid.list_members()` | authenticated（owner でなければ例外 42501） | 7-4b。security definer。承認済み（apps に skyraid。SQL で承認した人も含む）と承認待ちの `user_id, display_name, status, requested_at`。**メールは返さない**。表示名はプロフィール → 申請の順 |
 
 - すべて `set search_path = ''`、中はスキーマ名付き。すべて `revoke all ... from public`（Postgres の仕様で、`alter default privileges in schema skyraid revoke execute on functions from public` は全体の既定値の「public に execute」を取り消せないため、個別にも revoke している）
 
@@ -152,7 +175,7 @@ delete from skyraid.profiles where user_id = '<uuid>';
   - リンクしか無ければ、リンクを開いてもログインできる（`emailRedirectTo` を SkyRaid の URL にし、`detectSessionInUrl` で受け取る）。このためには **Auth → URL Configuration の Redirect URLs に SkyRaid の URL を足す**（規約 3.3: 各アプリが自分の URL を足すだけ）
   - テンプレートに `{{ .Token }}` を足す（リンクと併記）ときは、全アプリのメールが変わるので、規約の版の変更点に書いてから
 - 新規登録（Allow new users to sign up）が無効なら、新しい人はコードを受け取れない（既存のユーザーはログインできる）。SkyRaid は「登録を無効にしている」ことを権限の根拠にしていない（権限は app_metadata）
-- 権限を付けた・外した後、反映はアクセストークンの更新まで（既定 1 時間以内）。承認待ちの画面の「承認を再確認」でトークンを取り直すとすぐ反映する
+- 権限を付けた・外した後、反映はアクセストークンの更新まで（既定 1 時間以内）。承認待ちの間はクライアントが起動時と 5 分ごとにトークンを取り直すので、承認は 5 分以内に「連携中」に変わる（「承認を再確認」を押せばすぐ）。取り消しは相手のトークンの自動更新（最大 1 時間）まで残ることがある
 
 ## 6. 規約に合わせなかった点
 
@@ -162,6 +185,8 @@ delete from skyraid.profiles where user_id = '<uuid>';
 | 4.2 の雛形 | schema_migrations も `force` にし、postgres 用のポリシーを足した | 7-4 の指示（全テーブルで enable と force）。force でも所有者が適用の記録を書けるように |
 
 ## 7. 入居時のチェックリスト（規約 7 章）
+
+（7-4b の追加分は 8 章の最後）
 
 | 項目 | 結果 |
 | --- | --- |
@@ -175,3 +200,31 @@ delete from skyraid.profiles where user_id = '<uuid>';
 | 設計書に使用量の上限を書き、合計が 6.1 節の配分の上限に収まる | 上限は 3 章（DB 20MB・転送量 月 100MB・Storage 0）。**合計の確認は人間**（既存アプリの上限が分からないため） |
 | service_role key がどこにもない（`service_role`・`sb_secret_` で検索） | 済。検索に当たるのは、誤って入れられた secret key を拒否するコード（`src/online/env.ts`）・テスト・文書の説明だけで、key の値はない |
 | `<app>.ping()` と定期実行を置いた | **未実施**（6 章の理由） |
+
+## 8. 規約からの逸脱（7-4b。プロジェクトの持ち主が承認済み）
+
+規約の前提「プロジェクトの管理作業はプロジェクトの持ち主 1 人がダッシュボードで行う。アプリから管理者の権限は使わない」に対し、メンバーの承認をゲームの中で 1 タップで済ませるため、次の 2 点を例外にした。**どちらもプロジェクトの持ち主（SkyRaid の持ち主と同じ人）が 7-4b の依頼で承認済み**。規約の他の部分（スキーマ・anon・CSP・使用量）はそのまま。
+
+| # | 逸脱 | 規約 | 限定（これより広げない） |
+| --- | --- | --- | --- |
+| 1 | `skyraid.approve_member` / `revoke_member`（security definer）が **`auth.users` を更新する** | 4.3 は「`auth.users` の app_metadata の自アプリの値の付与・取り消し」を許すが、前提の「アプリから管理者の権限を使わない」に触れる | 変えるのは `raw_app_meta_data -> 'apps'` の `'skyraid'` だけ（規約 3.3 の付与・取り消しの jsonb の式をそのまま使い、他アプリの値・`roles`・他の列は変えない）。呼べるのは JWT の `app_metadata.roles.skyraid = 'owner'` の人だけ（関数の最初で確かめ、違えば例外）。anon には execute を与えない。`roles`（owner）は関数からは付けられず、持ち主が SQL で付ける |
+| 2 | `skyraid.join_requests` の insert / select のポリシーが **`has_app_access()` を確かめない** | 3.3・7 章「authenticated のポリシーはすべて `has_app_access()` を確かめる」 | 承認前の人が申請するため。本人の行だけ（`user_id = (select auth.uid())`）・insert は `status = 'pending'` だけ。中身は user_id・表示名（16 文字まで）・申請の時刻・状態だけで、メールは置かない。他人の行は owner しか読めない。1 ユーザー 1 行（主キー）なので容量は増えない |
+
+- 他アプリへの影響: 関数が書くのは `apps` の `skyraid` の要素だけなので、他アプリの権限（`apps` の他の要素・`roles` の他のキー）は変わらない（手元の Postgres で `{"apps":["other","skyraid"],"roles":{"other":"admin","skyraid":"owner"}}` の他の値が残ることを確かめた）
+- `skyraid.is_owner()` は API に公開しない（authenticated にも execute を与えない）。ポリシーには同じ式を直接書いた
+- Supabase の権限について: 関数は SQL エディタで流した postgres が所有し、postgres の権限で `auth.users` を更新する。Supabase が将来 postgres から `auth.users` の更新の権限を外した場合、承認・取り消しは例外になる（そのときは README の規約 3.3 の SQL で承認する）
+- Security Advisor: 「authenticated が実行できる security definer の関数」（approve_member・revoke_member・list_members）の警告が出る見込み。owner の確認を関数の中で行う意図した形なので、この 3 つは許容する（それ以外の警告は 0 にする）
+- 使用量: `join_requests` は 1 ユーザー 1 行（約 0.2KB）。一覧は owner が設定を開いたとき・「一覧を更新」のときだけ読む（1 回 数 KB）。3 章の上限は変えない
+- 退去（4 章）: `drop schema skyraid cascade` で関数・テーブルも消える。`apps` から `skyraid` を除く SQL は 4 章のまま（`roles` の `skyraid` も消すなら `raw_app_meta_data #- '{roles,skyraid}'`）
+
+### 7-4b のチェック
+
+| 項目 | 結果 |
+| --- | --- |
+| 0002 を 2 回流してエラーにならない（0001 → 0002 → 0001 → 0002） | 済（ローカルの Postgres 16。postgres を BYPASSRLS の無いロールにし、auth.users・auth.jwt()・auth.uid() を模した）。**本番は人間** |
+| owner 以外（roles 無し・`roles.skyraid = 'member'`・他アプリの owner）の approve / revoke / list が拒否される。anon は execute 自体が無い。is_owner は authenticated からも呼べない | 済（同上） |
+| 承認・取り消しで他アプリの値が残る。承認は 2 回呼んでも同じ。自分の取り消し・居ないユーザーは例外 | 済（同上） |
+| 本人は他人の行・`approved` の行を insert できない。2 回目の申請は何もしない（on conflict do nothing が RLS の下で動く）。owner の update は status だけ・approved にできない | 済（同上） |
+| saves の delete は本人かつ has_app_access のときだけ | 済（同上） |
+| Advisors（Security）の警告が上の 3 つの関数のものだけ | **人間が確認** |
+

@@ -30,6 +30,8 @@ export const ONLINE_CONFIG = {
   defenseMaxWaves: 10,
   /** 6 桁のコード */
   otpLength: 6,
+  /** 承認待ちの間、トークンを取り直して承認を確かめる間隔（ミリ秒。7-4b） */
+  pendingRecheckMs: 5 * 60 * 1000,
 } as const;
 
 /** 記録の種類 */

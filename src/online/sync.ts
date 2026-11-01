@@ -3,7 +3,13 @@
 // 判定は sync-rules.ts。受け取ったセーブの反映と「どちらを使うか」のダイアログは、飛行中を避けて whenSafe で行う。
 // どの処理も await で待つだけで、ゲームのフレームは止めない
 import { ONLINE_CONFIG } from '../data/online';
-import { errorKind, type OnlineBackend, type RemoteSave, type SaveRow } from './backend';
+import {
+  OnlineError,
+  errorKind,
+  type OnlineBackend,
+  type RemoteSave,
+  type SaveRow,
+} from './backend';
 import type { OnlineMeta } from './meta';
 import { decideSync, type SyncDecision } from './sync-rules';
 
@@ -122,6 +128,8 @@ export class SaveSync {
 
   /** 送る。サーバーが前回の同期の後に変わっていたら（conflict）比べ直す */
   private async pushOrResolve(user: string): Promise<SyncDecision | null> {
+    // サーバーを正として受け取る約束のある間は送らない（7-4b）
+    if (this.meta.preferServer) return this.resolve(user);
     if (!this.meta.localDirty && this.meta.syncedUser === user) return 'none';
     try {
       await this.push(user);
@@ -135,7 +143,13 @@ export class SaveSync {
   private async resolve(user: string): Promise<SyncDecision> {
     const info = await this.backend.fetchSaveInfo();
     const decision = decideSync(this.meta, user, info, this.save.version);
-    if (decision === 'push') await this.push(user);
+    if (decision === 'push' && this.meta.preferServer) {
+      // サーバーにバックアップが無かった: 受け取るものが無いので、ふだんどおりローカルを送る
+      this.meta.preferServer = false;
+      this.storeMeta();
+    }
+    // サーバーに行が無い（他の端末でバックアップを消した: 7-4b）なら、同期の記録があっても新しく作る
+    if (decision === 'push') await this.push(user, info === null);
     else if (decision === 'none') this.hooks.report('upToDate');
     else if (decision === 'tooNew') this.hooks.report('tooNew');
     else {
@@ -152,7 +166,7 @@ export class SaveSync {
     return decision;
   }
 
-  private async push(user: string): Promise<void> {
+  private async push(user: string, insert = false): Promise<void> {
     const data = this.save.data();
     if (jsonBytes(data) > ONLINE_CONFIG.saveMaxBytes) {
       this.hooks.report('tooLarge');
@@ -160,7 +174,7 @@ export class SaveSync {
     }
     const row: SaveRow = { version: this.save.version, data };
     const seq = this.seq;
-    const expected = this.meta.syncedUser === user ? this.meta.syncedServerAt : null;
+    const expected = !insert && this.meta.syncedUser === user ? this.meta.syncedServerAt : null;
     const info =
       expected === null
         ? await this.backend.insertSave(row)
@@ -187,6 +201,7 @@ export class SaveSync {
       this.meta.syncedUser = user;
       this.meta.syncedServerAt = server.updatedAt;
       this.meta.localDirty = false;
+      this.meta.preferServer = false;
       this.storeMeta();
       this.hooks.report('pulled');
       this.save.reload();
@@ -214,7 +229,34 @@ export class SaveSync {
     this.meta.syncedUser = user;
     this.meta.syncedServerAt = server.updatedAt;
     this.meta.localDirty = true;
+    this.meta.preferServer = false;
     this.storeMeta();
     await this.run('push');
+  }
+
+  /** サーバーのバックアップを消す（7-4b。連携中かつ ON のときだけ）。消したら同期の記録を捨てる */
+  async deleteServer(): Promise<void> {
+    if (this.activeUser() === null) throw new OnlineError('denied', 'not linked');
+    await this.backend.deleteSave();
+    this.forgetServer();
+  }
+
+  /** 同期の記録を捨て、次はローカルを新しく送る（insert） */
+  private forgetServer(): void {
+    if (this.timer !== null) this.timers.clearTimeout(this.timer);
+    this.timer = null;
+    this.meta.syncedUser = null;
+    this.meta.syncedServerAt = null;
+    this.meta.localDirty = true;
+    this.meta.preferServer = false;
+    this.storeMeta();
+  }
+
+  /** ローカルを初期化してサーバーを残す（7-4b）: 送信の予定を消し、次の同期でサーバーを受け取る */
+  preferServerOnce(): void {
+    if (this.timer !== null) this.timers.clearTimeout(this.timer);
+    this.timer = null;
+    this.meta.preferServer = true;
+    this.storeMeta();
   }
 }

@@ -5,15 +5,18 @@ import { getBrowserStorage } from '../core/settings';
 import type { ScreenState } from '../core/game-state';
 import { SAVE_CONFIG } from '../data/save';
 import type { OnlineEnv } from '../online/env';
-import { SYNC_TEXT } from '../online/messages';
+import { MemberAdmin } from '../online/member-admin';
+import { errorMessage, SYNC_TEXT } from '../online/messages';
 import { recordOutbox } from '../online/outbox';
 import { OnlineService } from '../online/service';
 import { SupabaseBackend } from '../online/supabase-backend';
 import type { SaveAccess, SyncHooks } from '../online/sync';
 import type { OnlineLinkParts } from './online-link';
+import { createMemberSettings } from './member-settings';
 import { createOnlineSettings } from './online-settings';
 import { RankingScreen } from './ranking-screen';
 import { showToast } from './save-link';
+import { setServerBackupOption } from './save-settings';
 import { setScreenShown } from './screen';
 import { askSaveChoice } from './sync-dialog';
 
@@ -55,8 +58,9 @@ export function startOnline(env: OnlineEnv, p: OnlineLinkParts): void {
       showToast(document.body, text, TOAST_SECONDS);
     },
   };
+  const backend = new SupabaseBackend(env);
   const service = new OnlineService(
-    new SupabaseBackend(env),
+    backend,
     getBrowserStorage(),
     access,
     hooks,
@@ -69,9 +73,29 @@ export function startOnline(env: OnlineEnv, p: OnlineLinkParts): void {
     service.submitRecord(r);
   });
 
-  // 設定の「オンライン連携」（セーブデータの欄の上）
+  // 設定の「オンライン連携」と「メンバー管理」（owner だけ。7-4b）（セーブデータの欄の上）
   const panel = screens.pause.settings;
-  say = createOnlineSettings(panel, service, panel.querySelector('.save-settings')).say;
+  const saveBox = panel.querySelector('.save-settings');
+  say = createOnlineSettings(panel, service, saveBox).say;
+  const members = createMemberSettings(
+    panel,
+    new MemberAdmin(backend, () => service.status.owner),
+    saveBox,
+  );
+  service.onStatus(members.update);
+
+  // 「セーブデータを削除」の「サーバーのバックアップも削除する」（7-4b）
+  setServerBackupOption({
+    canDelete: () => service.activeUserId !== null,
+    deleteServer: () =>
+      service.sync.deleteServer().then(
+        () => null,
+        (e: unknown) => errorMessage(e),
+      ),
+    keepServer: () => {
+      service.sync.preferServerOnce();
+    },
+  });
 
   // ランキング: モード選択の上に重ねる
   const ranking = new RankingScreen(
@@ -103,5 +127,6 @@ export function startOnline(env: OnlineEnv, p: OnlineLinkParts): void {
     if (!available) ranking.close();
   });
 
+  members.update(service.status);
   void service.start();
 }

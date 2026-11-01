@@ -10,6 +10,7 @@ import {
   type RemoteSave,
   type SaveRow,
 } from '../src/online/backend';
+import type { JoinStatus, MemberRow } from '../src/online/members';
 import type { RecordInput } from '../src/online/records';
 import type { RemoteSaveInfo } from '../src/online/sync-rules';
 import type { Timers } from '../src/online/sync';
@@ -18,8 +19,20 @@ export const MEMBER: OnlineUser = {
   id: 'u1',
   email: 'pilot@example.com',
   apps: ['other', 'skyraid'],
+  role: null,
 };
-export const STRANGER: OnlineUser = { id: 'u2', email: 'x@example.com', apps: ['other'] };
+export const STRANGER: OnlineUser = {
+  id: 'u2',
+  email: 'x@example.com',
+  apps: ['other'],
+  role: null,
+};
+export const OWNER: OnlineUser = {
+  id: 'u0',
+  email: 'owner@example.com',
+  apps: ['skyraid'],
+  role: 'owner',
+};
 
 /** サーバーの代わり。saves は 1 行、records は配列。fail に入れた種類で次の呼び出しを失敗させる */
 export class MockBackend implements OnlineBackend {
@@ -32,7 +45,23 @@ export class MockBackend implements OnlineBackend {
   saveFailure: OnlineErrorKind | null = null;
   private clock = 0;
   private authListener: ((u: OnlineUser | null) => void) | null = null;
-  readonly calls = { insertSave: 0, updateSave: 0, fetchSave: 0, fetchSaveInfo: 0 };
+  readonly calls = {
+    insertSave: 0,
+    updateSave: 0,
+    fetchSave: 0,
+    fetchSaveInfo: 0,
+    deleteSave: 0,
+    refresh: 0,
+    requestJoin: 0,
+  };
+  /** join_requests（user_id → 表示名・状態）。7-4b */
+  joins = new Map<string, { name: string; status: JoinStatus }>();
+  /** list_members() の返す行（owner の画面のテスト用） */
+  memberRows: MemberRow[] = [];
+  /** 次の refresh で返すユーザー（承認されたことにする）。null なら今のまま */
+  nextRefresh: OnlineUser | null = null;
+  refreshFailure: OnlineErrorKind | null = null;
+  readonly memberCalls: string[] = [];
   rankingRows: RankingRow[] = [];
   /** 呼ばれた条件は mock.calls で見る */
   readonly queries: RankingQuery[] = [];
@@ -70,6 +99,9 @@ export class MockBackend implements OnlineBackend {
     return Promise.resolve(MEMBER);
   }
   refresh(): Promise<OnlineUser | null> {
+    this.calls.refresh++;
+    if (this.refreshFailure) return Promise.reject(new OnlineError(this.refreshFailure, 'x'));
+    if (this.nextRefresh) this.user = this.nextRefresh;
     return Promise.resolve(this.user);
   }
   signOut(): Promise<void> {
@@ -120,6 +152,49 @@ export class MockBackend implements OnlineBackend {
   saveDisplayName(name: string): Promise<void> {
     if (this.user) this.names.set(this.user.id, name);
     return Promise.resolve();
+  }
+  deleteSave(): Promise<void> {
+    this.calls.deleteSave++;
+    if (this.saveFailure) return Promise.reject(new OnlineError(this.saveFailure, 'x'));
+    this.server = null;
+    return Promise.resolve();
+  }
+  requestJoin(displayName: string): Promise<JoinStatus | null> {
+    this.calls.requestJoin++;
+    const u = this.user;
+    if (!u) return Promise.reject(new OnlineError('auth', 'signed out'));
+    // on conflict do nothing
+    if (!this.joins.has(u.id)) this.joins.set(u.id, { name: displayName, status: 'pending' });
+    return Promise.resolve(this.joins.get(u.id)?.status ?? null);
+  }
+  private ownerOnly(): void {
+    if (this.user?.role !== 'owner') throw new OnlineError('denied', 'owner only');
+  }
+  listMembers(): Promise<MemberRow[]> {
+    try {
+      this.ownerOnly();
+    } catch (e) {
+      return Promise.reject(e instanceof Error ? e : new Error('x'));
+    }
+    return Promise.resolve(this.memberRows.map((r) => ({ ...r })));
+  }
+  private member(kind: string, userId: string): Promise<void> {
+    try {
+      this.ownerOnly();
+    } catch (e) {
+      return Promise.reject(e instanceof Error ? e : new Error('x'));
+    }
+    this.memberCalls.push(`${kind}:${userId}`);
+    return Promise.resolve();
+  }
+  approveMember(userId: string): Promise<void> {
+    return this.member('approve', userId);
+  }
+  rejectMember(userId: string): Promise<void> {
+    return this.member('reject', userId);
+  }
+  revokeMember(userId: string): Promise<void> {
+    return this.member('revoke', userId);
   }
 }
 

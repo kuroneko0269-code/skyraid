@@ -14,6 +14,13 @@ import {
   type SaveRow,
 } from './backend';
 import type { OnlineEnv } from './env';
+import {
+  isJoinStatus,
+  parseMemberRows,
+  roleFromMetadata,
+  type JoinStatus,
+  type MemberRow,
+} from './members';
 import type { RecordInput } from './records';
 import type { RemoteSaveInfo } from './sync-rules';
 import { parseRankingRows, parseRemoteSave, parseSaveInfo } from './parse';
@@ -56,6 +63,7 @@ function toUser(u: User | null | undefined): OnlineUser | null {
     id: u.id,
     email: u.email ?? '',
     apps: Array.isArray(apps) ? apps.filter((a): a is string => typeof a === 'string') : [],
+    role: roleFromMetadata(u.app_metadata, ONLINE_CONFIG.schema),
   };
 }
 
@@ -205,6 +213,65 @@ export class SupabaseBackend implements OnlineBackend {
     const { error } = await this.client
       .from('profiles')
       .upsert({ user_id: user.id, display_name: name }, { onConflict: 'user_id' });
+    if (error) throw fail(error);
+  }
+
+  async deleteSave(): Promise<void> {
+    const user = await this.currentUser();
+    if (!user) throw new OnlineError('auth', 'signed out');
+    const { error } = await this.client.from('saves').delete().eq('user_id', user.id);
+    if (error) throw fail(error);
+  }
+
+  async requestJoin(displayName: string): Promise<JoinStatus | null> {
+    const user = await this.currentUser();
+    if (!user) throw new OnlineError('auth', 'signed out');
+    // on conflict do nothing（もう申請していれば何もしない。却下された人も上書きしない）
+    const { error } = await this.client
+      .from('join_requests')
+      .upsert(
+        { user_id: user.id, display_name: displayName },
+        { onConflict: 'user_id', ignoreDuplicates: true },
+      );
+    if (error) throw fail(error);
+    const { data, error: readError } = await this.client
+      .from('join_requests')
+      .select('status')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (readError) throw fail(readError);
+    const row: unknown = data;
+    if (typeof row !== 'object' || row === null || !('status' in row)) return null;
+    return isJoinStatus(row.status) ? row.status : null;
+  }
+
+  async listMembers(): Promise<MemberRow[]> {
+    const res = await this.client.rpc('list_members');
+    if (res.error) throw fail(res.error);
+    const rows: unknown = res.data;
+    return parseMemberRows(rows);
+  }
+
+  async approveMember(userId: string): Promise<void> {
+    const { error } = await this.client.rpc('approve_member', { p_user: userId });
+    if (error) throw fail(error);
+  }
+
+  async rejectMember(userId: string): Promise<void> {
+    const { data, error } = await this.client
+      .from('join_requests')
+      .update({ status: 'rejected' })
+      .eq('user_id', userId)
+      .eq('status', 'pending')
+      .select('user_id');
+    if (error) throw fail(error);
+    const rows: unknown = data;
+    // 0 行 = もう承認待ちではない（他の端末で操作した）か、owner ではない
+    if (!Array.isArray(rows) || rows.length === 0) throw new OnlineError('conflict', 'not pending');
+  }
+
+  async revokeMember(userId: string): Promise<void> {
+    const { error } = await this.client.rpc('revoke_member', { p_user: userId });
     if (error) throw fail(error);
   }
 }
