@@ -5,6 +5,7 @@
 //  3. サーバーだけ変更（他の端末で遊んだ）   → 受け取る（pull。updated_at の新しいサーバーを採用）
 //  4. 両方に変更                             → どちらを使うか聞く（ask）
 // サーバーのセーブの版がこのアプリより新しいときは受け取らない（tooNew: 読むと壊れたセーブ扱いで初期化されるため）
+// 7-4b: ローカルを初期化してサーバーのバックアップを残した直後（preferServer）は、サーバーにあれば必ず受け取る
 import type { OnlineMeta } from './meta';
 
 export interface RemoteSaveInfo {
@@ -15,12 +16,14 @@ export interface RemoteSaveInfo {
 export type SyncDecision = 'push' | 'pull' | 'ask' | 'none' | 'tooNew';
 
 export function decideSync(
-  meta: Pick<OnlineMeta, 'syncedUser' | 'syncedServerAt' | 'localDirty'>,
+  meta: Pick<OnlineMeta, 'syncedUser' | 'syncedServerAt' | 'localDirty'> &
+    Partial<Pick<OnlineMeta, 'preferServer'>>,
   userId: string,
   server: RemoteSaveInfo | null,
   appSaveVersion: number,
 ): SyncDecision {
   if (server === null) return 'push';
+  if (meta.preferServer === true) return server.version > appSaveVersion ? 'tooNew' : 'pull';
   // 別のユーザー（またはこの端末で初めて）: 同期の記録が無いので、ローカルは未送信の変更があるとみなす
   const sameUser = meta.syncedUser === userId;
   const serverChanged = !sameUser || meta.syncedServerAt !== server.updatedAt;

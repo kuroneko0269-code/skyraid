@@ -108,7 +108,7 @@ URL に `?net=local` を付けると、PeerJS の代わりに**同じブラウ�
 4. **Advisors で警告 0 を確かめる**: Advisors → Security Advisor で SkyRaid（スキーマ `skyraid`）の警告が無いこと
 5. **自分のメールで登録**: プレビュー URL → 飛行中に Esc（⏸）→「設定 ▼」→「オンライン連携」でメールアドレスを入れて「コードを送る」→ メールの 6 桁のコードを入れて「ログイン」。状態が「承認待ち」になる
    - メールにコードが無くリンクしか無いときは、リンクを開いてもログインできます（そのためには Auth → URL Configuration → Redirect URLs に SkyRaid の URL を**足す**。既存の URL は消さない）。コードを出すにはメールのテンプレートに `{{ .Token }}` が要りますが、テンプレートは全アプリ共通の設定なので、変えるときは規約の版の変更点に書いてから（`docs/supabase-design.md` の 5 章）
-6. **SQL で app_metadata に skyraid を付与**（規約 3.3 の SQL。他アプリの値は消さない。何度流しても同じ結果）:
+6. **SQL で app_metadata に skyraid を付与**（規約 3.3 の SQL。他アプリの値は消さない。何度流しても同じ結果。7-4b の後は、持ち主自身を owner にする 1 回だけで、ほかの人の承認はゲームの中で行う。下の「メンバー承認をゲームの中で行う」）:
 
    ```sql
    -- 付与（何度流しても同じ結果）
@@ -126,7 +126,33 @@ URL に `?net=local` を付けると、PeerJS の代わりに**同じブラウ�
    where email = '<利用者のメール>';
    ```
 
-7. **承認待ちが連携中に変わることを確かめる**: 設定の「承認を再確認」を押す（またはトークンの自動更新を待つ。既定 1 時間以内）→ 状態が「連携中」になり、表示名の欄にパイロット名が入る。モード選択に「ランキング」が出る
+7. **承認待ちが連携中に変わることを確かめる**: 設定の「承認を再確認」を押す（7-4b からは承認待ちの間 5 分ごとに自動で確かめる）→ 状態が「連携中」になり、表示名の欄にパイロット名が入る。モード選択に「ランキング」が出る
+
+### メンバー承認をゲームの中で行う（7-4b。最初に 1 回だけ）
+
+`supabase/migrations/skyraid_0002_members.sql` を入れると、承認待ちの人はログインした時点で「承認待ち一覧」に載り、持ち主（owner）がゲームの設定「メンバー管理」の「承認」ボタンで承認できます（相手の画面は 5 分以内に自動で「連携中」に変わります）。規約からの逸脱（関数が `auth.users` の `apps` の `skyraid` だけを書き換える）は `docs/supabase-design.md` の 8 章。
+
+1. **SQL を流す**: SQL エディタに `supabase/migrations/skyraid_0002_members.sql` の全文を貼り付けて実行。もう一度実行してもエラーにならないことも確かめる。`select * from skyraid.schema_migrations;` に `skyraid_0002_members` が増える（0001 を流し直したときは 0002 も続けて流し直す）
+2. **自分を owner にする**（初回だけ。規約 3.3 の形で `apps` と `roles` の両方を付ける。他アプリの値は消さない。何度流しても同じ結果）:
+
+   ```sql
+   update auth.users
+   set raw_app_meta_data = jsonb_set(
+     jsonb_set(
+       coalesce(raw_app_meta_data, '{}'::jsonb), '{apps}',
+       (select coalesce(jsonb_agg(distinct v), '[]'::jsonb)
+          from jsonb_array_elements_text(coalesce(raw_app_meta_data -> 'apps', '[]'::jsonb) || '["skyraid"]'::jsonb) v)),
+     '{roles}',
+     coalesce(raw_app_meta_data -> 'roles', '{}'::jsonb) || '{"skyraid": "owner"}'::jsonb)
+   where email = '<持ち主のメール>';
+
+   -- 確認: apps に "skyraid"、roles に "skyraid": "owner" がある（他アプリの値も残っている）
+   select email, raw_app_meta_data from auth.users where email = '<持ち主のメール>';
+   ```
+
+   まだ SkyRaid でログインしたことが無ければ、先に上の 5 の手順でログインしてユーザーを作ってから流す
+3. **ゲームで反映**: 設定の「オンライン連携」で「承認を再確認」を押す（またはログインし直す）→ 状態が「連携中」になり、その下に「メンバー管理」が出る
+4. 以後の承認はすべてゲームの中で: 相手がログインすると「承認待ち」に載る →「承認」（1 タップ）/「却下」（1 タップ）。承認済みの人は「取り消し」（確認ダイアログあり）。却下・取り消しした人をもう一度承認するときは、上の 6 の付与の SQL を使う
 
 ### 確かめること（連携中になった後）
 

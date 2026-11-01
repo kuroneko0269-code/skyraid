@@ -142,3 +142,52 @@
 .ranking-message:empty {
   display: none;
 }
+
+/* メンバー管理（7-4b。owner だけ） */
+.member-settings[hidden] {
+  display: none;
+}
+
+.member-heading {
+  font: 600 13px/1.2 var(--ui-font-body);
+  letter-spacing: 0.08em;
+  color: var(--ui-accent-hud);
+}
+
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.member-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 8px;
+  background: var(--ui-bg-sunken);
+  border: var(--ui-line-width) solid var(--ui-line-faint);
+}
+
+.member-name {
+  flex: 1 1 8em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+}
+
+.member-date,
+.member-empty {
+  font-size: 13px;
+  color: var(--ui-text-dim);
+}
+
+.member-button {
+  min-height: 40px;
+  min-width: 5em;
+  padding: 0 12px;
+  white-space: nowrap;
+}

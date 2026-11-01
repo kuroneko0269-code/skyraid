@@ -1,5 +1,6 @@
 // サーバーとのやり取りの窓口（7-4）。本物は supabase-backend.ts（@supabase/supabase-js）、テストはモックに差し替える
 import type { RecordKind } from '../data/online';
+import type { JoinStatus, MemberRow } from './members';
 import type { RecordDetail, RecordInput } from './records';
 import type { RemoteSaveInfo } from './sync-rules';
 
@@ -9,6 +10,8 @@ export interface OnlineUser {
   readonly email: string;
   /** app_metadata.apps（管理者だけが書き換えられる。規約 3.3） */
   readonly apps: readonly string[];
+  /** app_metadata.roles.skyraid（'owner' ならメンバー管理を出す。7-4b）。無ければ null */
+  readonly role: string | null;
 }
 
 export interface RemoteSave extends RemoteSaveInfo {
@@ -85,4 +88,19 @@ export interface OnlineBackend {
 
   fetchDisplayName(): Promise<string | null>;
   saveDisplayName(name: string): Promise<void>;
+
+  /** サーバーのセーブのバックアップを消す（本人の行だけ。7-4b） */
+  deleteSave(): Promise<void>;
+
+  // ---- メンバー承認（7-4b）
+  /** 承認待ちの人が参加を申請する（もう行があれば何もしない）。自分の行の状態を返す（読めなければ null） */
+  requestJoin(displayName: string): Promise<JoinStatus | null>;
+  /** owner だけ: 承認済み・承認待ちの一覧（メールは返らない） */
+  listMembers(): Promise<MemberRow[]>;
+  /** owner だけ: 承認（app_metadata.apps に skyraid を足す） */
+  approveMember(userId: string): Promise<void>;
+  /** owner だけ: 却下（申請の状態だけを変える） */
+  rejectMember(userId: string): Promise<void>;
+  /** owner だけ: 取り消し（app_metadata.apps から skyraid を除く） */
+  revokeMember(userId: string): Promise<void>;
 }

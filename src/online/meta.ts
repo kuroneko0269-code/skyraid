@@ -17,6 +17,11 @@ export interface OnlineMeta {
   localUpdatedAt: string | null;
   /** 送信待ちの記録（古い順。最大 20） */
   queue: RecordInput[];
+  /**
+   * 「セーブデータを削除」でサーバーのバックアップを残したとき（7-4b）: 次の同期では送らず、サーバーのセーブを正として
+   * 1 回だけ受け取る（初期化したばかりのローカルでサーバーを上書きしないため）。受け取るかサーバーに無いと分かったら下ろす
+   */
+  preferServer: boolean;
 }
 
 export function createMeta(): OnlineMeta {
@@ -27,6 +32,7 @@ export function createMeta(): OnlineMeta {
     localDirty: true,
     localUpdatedAt: null,
     queue: [],
+    preferServer: false,
   };
 }
 
@@ -76,6 +82,7 @@ export function loadMeta(storage: StorageLike | null): OnlineMeta {
     meta.syncedServerAt = str(o.syncedServerAt);
     if (typeof o.localDirty === 'boolean') meta.localDirty = o.localDirty;
     meta.localUpdatedAt = str(o.localUpdatedAt);
+    if (typeof o.preferServer === 'boolean') meta.preferServer = o.preferServer;
     if (Array.isArray(o.queue)) {
       meta.queue = o.queue
         .map(parseRecord)
