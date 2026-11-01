@@ -111,8 +111,19 @@ for (const size of SIZES) {
   };
   const shown = (sel) => page.locator(`${sel}.is-shown`).waitFor({ timeout: 20000 });
   const flow = async (name, ok) => flows.push({ size: size.name, flow: name, ok });
-  const isShown = (sel) =>
-    page.evaluate((s) => document.querySelector(s)?.classList.contains('is-shown') ?? false, sel);
+  /** 条件が成り立つまで待つ（SwiftShader ではキーの処理が描画のフレームに乗るので遅い）。10 秒で諦めて false */
+  const until = (fn, arg) =>
+    page.waitForFunction(fn, arg, { timeout: 10000 }).then(
+      () => true,
+      () => false,
+    );
+  const shownOnly = (show, hide) =>
+    until(
+      ([a, b]) =>
+        document.querySelector(a)?.classList.contains('is-shown') === true &&
+        document.querySelector(b)?.classList.contains('is-shown') === false,
+      [show, hide],
+    );
 
   // 初回: タイトル → パイロット名 → モード選択（チュートリアルの案内は閉じる）。進捗が出るよう記録を入れて読み直す
   await page.goto(base);
@@ -154,11 +165,7 @@ for (const size of SIZES) {
     await shot(`settings-${name}`, '.settings-screen');
   }
   await page.click('.settings-screen .menu-back');
-  await page.waitForTimeout(400);
-  await flow(
-    'タイトル → 設定 → 戻る',
-    (await isShown('.title-screen')) && !(await isShown('.settings-screen')),
-  );
+  await flow('タイトル → 設定 → 戻る', await shownOnly('.title-screen', '.settings-screen'));
 
   // モード選択
   await page.locator('.title-screen').click({ position: { x: 40, y: size.height / 2 } });
@@ -167,11 +174,7 @@ for (const size of SIZES) {
   await page.click('.mode-tile[data-mode="settings"]');
   await shown('.settings-screen');
   await page.keyboard.press('Escape');
-  await page.waitForTimeout(400);
-  await flow(
-    'モード選択 → 設定 → Esc',
-    (await isShown('.mode-select-screen')) && !(await isShown('.settings-screen')),
-  );
+  await flow('モード選択 → 設定 → Esc', await shownOnly('.mode-select-screen', '.settings-screen'));
   await page.click('.mode-tile[data-mode="info"]');
   await shown('.info-screen');
   for (const [tab, name] of [
@@ -184,8 +187,7 @@ for (const size of SIZES) {
     await shot(`info-${name}`, '.info-screen');
   }
   await page.click('.info-screen .menu-back');
-  await page.waitForTimeout(400);
-  await flow('情報 → 戻る', await isShown('.mode-select-screen'));
+  await flow('情報 → 戻る', await shownOnly('.mode-select-screen', '.info-screen'));
 
   // トースト（更新の知らせと同じ部品・ボタン 2 つ）
   await page.evaluate(async () => {
@@ -216,11 +218,12 @@ for (const size of SIZES) {
   await shown('.settings-screen');
   const paused = await page.evaluate(() => document.documentElement.dataset.screen);
   await page.click('.settings-screen .menu-back');
-  await page.waitForTimeout(400);
+  const back = await shownOnly('.pause-screen', '.settings-screen');
   const quick = await page.locator('.pause-quick .settings-item').count();
+  const still = await page.evaluate(() => document.documentElement.dataset.screen);
   await flow(
     'ポーズ → すべての設定 → 戻る（飛行は止まったまま）',
-    paused === 'pause' && (await isShown('.pause-screen')) && quick > 0,
+    paused === 'pause' && still === 'pause' && back && quick > 0,
   );
   results.push({
     size: size.name,

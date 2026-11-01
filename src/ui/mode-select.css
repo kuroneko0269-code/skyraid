@@ -310,11 +310,12 @@
 @media (max-height: 480px) and (max-width: 700px) {
   .mode-card {
     min-height: 76px;
-    padding: 6px 10px;
+    padding: 6px 8px;
   }
 
   .mode-label {
-    font-size: 16px;
+    font-size: 15px;
+    letter-spacing: 0.02em;
   }
 
   .mode-tile .mode-label {
