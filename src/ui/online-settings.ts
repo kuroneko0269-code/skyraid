@@ -1,13 +1,25 @@
-// ポーズメニューの設定「オンライン連携」（7-4）: 状態（未連携 / 承認待ち / 連携中 / エラー）、メール → 6 桁のコード → ログイン、
+// ポーズメニューの設定「オンライン連携」（7-4）: 状態（未連携 / 承認待ち / 連携中 / エラー）、メール → コード（4〜10 桁。7-4c）→ ログイン、
 // 表示名、オンライン連携の ON/OFF（OFF は送信・同期・ランキングを止める。ログインは保持）、ログアウト。
 // 環境変数が無いとき（オフライン）はこのセクション自体を作らない（ui/online-link.ts）
 import './online.css';
 import { errorMessage } from '../online/messages';
-import { isEmail, normalizeCode } from '../online/format';
+import { isEmail } from '../online/format';
+import {
+  CODE_FAILURE_TEXT,
+  CODE_PLACEHOLDER,
+  checkCode,
+  codeFailure,
+  sanitizeCodeInput,
+} from '../online/otp';
 import type { OnlineService, OnlineStatus } from '../online/service';
 import { el } from './hud-dom';
 import { isolateKeys } from './pilot-name';
 import { createToggleButton } from './mobile';
+import { isStandaloneDisplay } from './standalone';
+
+const SPAM_HINT = 'メールが届かない場合は迷惑メールフォルダを確認してください';
+const STANDALONE_HINT =
+  'ホーム画面のアプリではメールのリンクは使えません。コードを入力してください';
 
 const STATE_LABELS = {
   signedOut: '未連携',
@@ -61,13 +73,39 @@ export function createOnlineSettings(
   const sendRow = el('div', 'save-settings-row', signIn);
   const send = button(sendRow, 'コードを送る');
   const codeRow = el('div', 'online-form', box);
-  const code = field(codeRow, 'text', '6 桁のコード');
+  const code = field(codeRow, 'text', CODE_PLACEHOLDER);
   code.inputMode = 'numeric';
   code.autocomplete = 'one-time-code';
-  code.maxLength = 12;
+  code.pattern = '[0-9]*';
+  code.setAttribute('aria-label', CODE_PLACEHOLDER);
+  // 失敗はコード欄のすぐ下に出す（7-4c: 上の案内は背の低い画面だとスクロールの外で見えなかった）
+  const codeError = el('div', 'online-code-error', codeRow);
+  codeError.setAttribute('role', 'alert');
+  codeError.hidden = true;
   const verifyRow = el('div', 'save-settings-row', codeRow);
   const verify = button(verifyRow, 'ログイン');
   const resend = button(verifyRow, 'メールを入れ直す');
+  // ホーム画面のアプリ（PWA）ではメールのリンクが Safari で開き、別の保存領域になる → コード入力が唯一の経路
+  if (isStandaloneDisplay()) el('div', 'online-hint is-strong', codeRow, STANDALONE_HINT);
+  el('div', 'online-hint', codeRow, SPAM_HINT);
+
+  const showCodeError = (text: string): void => {
+    codeError.textContent = text;
+    codeError.hidden = text === '';
+  };
+  // 数字以外は入力したそばから落とす（日本語入力の変換中は待つ）
+  const cleanCode = (): void => {
+    const v = sanitizeCodeInput(code.value);
+    if (v !== code.value) code.value = v;
+    showCodeError('');
+  };
+  code.addEventListener('input', (e) => {
+    if (!(e instanceof InputEvent && e.isComposing)) cleanCode();
+  });
+  code.addEventListener('compositionend', cleanCode);
+  code.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.isComposing) verify.click();
+  });
 
   // 承認待ち: 案内・再確認
   const pendingRow = el('div', 'save-settings-row', box);
@@ -87,6 +125,7 @@ export function createOnlineSettings(
   const signOut = button(box, 'ログアウト');
 
   let codeSentTo: string | null = null;
+  let codeSentAt = 0;
   let message = '';
   const say = (text: string): void => {
     message = text;
@@ -123,9 +162,13 @@ export function createOnlineSettings(
       .then(
         () => {
           codeSentTo = v;
+          codeSentAt = Date.now();
           code.value = '';
+          showCodeError('');
           say(
-            `${v} に 6 桁のコードを送りました。メールのコードを入力してください（メールにリンクしか無いときは、そのリンクを開いても連携できます）`,
+            isStandaloneDisplay()
+              ? `${v} にコードを送りました。メールのコードを入力してください`
+              : `${v} にコードを送りました。メールのコードを入力してください（メールのリンクを開いても連携できます）`,
           );
           render(service.status);
           code.focus({ preventScroll: true });
@@ -140,16 +183,18 @@ export function createOnlineSettings(
   });
 
   verify.addEventListener('click', () => {
-    const c = normalizeCode(code.value);
     if (codeSentTo === null) return;
-    if (c === null) {
-      say('6 桁の数字を入力してください');
+    const checked = checkCode(code.value);
+    if (!checked.ok) {
+      showCodeError(CODE_FAILURE_TEXT[checked.reason]);
       return;
     }
+    code.value = checked.code;
     verify.disabled = true;
+    showCodeError('');
     say('確認中…');
     service
-      .verifyCode(codeSentTo, c)
+      .verifyCode(codeSentTo, checked.code)
       .then(
         () => {
           codeSentTo = null;
@@ -157,7 +202,8 @@ export function createOnlineSettings(
           render(service.status);
         },
         (e: unknown) => {
-          say(errorMessage(e));
+          say('');
+          showCodeError(CODE_FAILURE_TEXT[codeFailure(e, Date.now() - codeSentAt)]);
         },
       )
       .finally(() => {
@@ -167,6 +213,7 @@ export function createOnlineSettings(
 
   resend.addEventListener('click', () => {
     codeSentTo = null;
+    showCodeError('');
     say('');
     render(service.status);
   });

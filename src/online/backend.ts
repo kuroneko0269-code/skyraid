@@ -67,7 +67,7 @@ export interface OnlineBackend {
   currentUser(): Promise<OnlineUser | null>;
   /** ログイン・ログアウト・トークンの更新 */
   onAuthChange(fn: (user: OnlineUser | null) => void): void;
-  /** 6 桁のコードをメールで送る */
+  /** ログイン用のコード（4〜10 桁）をメールで送る */
   sendCode(email: string): Promise<void>;
   /** コードでログインする */
   verifyCode(email: string, code: string): Promise<OnlineUser>;

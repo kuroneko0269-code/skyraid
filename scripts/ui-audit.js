@@ -1,4 +1,4 @@
-/* global console, process, document, getComputedStyle, innerWidth, localStorage */
+/* global console, process, document, getComputedStyle, innerWidth, innerHeight, localStorage */
 // UI の自動点検（7-C の手順を 7-D でスクリプトにした）: 3 サイズでメニューの画面を撮り、機械チェックをする。
 // 使い方: 開発サーバーを立ててから `node scripts/ui-audit.js <出力先> [URL]`（既定 http://localhost:5173/）。
 // Playwright はクラウドセッションに入っているもの（依存には足さない）。結果は <出力先>/audit.json と各 PNG
@@ -12,6 +12,8 @@
 //   hscroll  横スクロールが出ている（画面の幅を超える）
 //   offscreen ボタンが画面の外（左右）にある
 //   vscroll  画面が縦にスクロールする（情報。7-C で背の低い画面は可とした）
+//   band     固定部分（見出し・戻る・タブ。.menu-top）の高さが画面の 30% を超える（7-4c）
+//   tabsMoved タブの位置がタブの切り替え・内容のスクロールで動いた（7-4c）
 // 画面遷移のチェック: 設定画面の「戻る」で開いた元（タイトル / モード選択 / ポーズ）に戻るか
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -84,6 +86,28 @@ function inspect(rootSelector) {
   return { issues, vscroll: root.scrollHeight > root.clientHeight + 1, buttons: buttons.length };
 }
 
+/** 固定部分の高さと、内容を一番下までスクロールしたときのタブの位置（7-4c） */
+async function measureBand(page, rootSelector) {
+  return page.evaluate((sel) => {
+    const root = document.querySelector(sel);
+    const top = root?.querySelector('.menu-top');
+    const tabs = top?.querySelector('.ui-seg');
+    const scroller = root?.querySelector('.menu-scroll');
+    if (!top || !tabs || !scroller) return null;
+    const tabsTop = tabs.getBoundingClientRect().top;
+    scroller.scrollTop = scroller.scrollHeight;
+    const tabsTopScrolled = tabs.getBoundingClientRect().top;
+    scroller.scrollTop = 0;
+    return {
+      bandPx: Math.round(top.getBoundingClientRect().bottom),
+      bandRatio: top.getBoundingClientRect().bottom / innerHeight,
+      tabsTop: Math.round(tabsTop),
+      tabsTopScrolled: Math.round(tabsTopScrolled),
+      scrolls: scroller.scrollHeight > scroller.clientHeight + 1,
+    };
+  }, rootSelector);
+}
+
 const results = [];
 const flows = [];
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader'] });
@@ -103,9 +127,26 @@ for (const size of SIZES) {
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(m.text());
   });
+  /** 設定・情報の各タブで最初に測ったタブの位置（切り替えで動かないこと） */
+  const tabsTopOf = {};
   const shot = async (name, selector) => {
     await page.waitForTimeout(700);
     const r = await page.evaluate(inspect, selector);
+    const band = await measureBand(page, selector);
+    if (band) {
+      r.band = band;
+      if (band.bandRatio > 0.3)
+        r.issues.push({
+          kind: 'band',
+          target: `${band.bandPx}px / ${Math.round(band.bandRatio * 100)}%`,
+        });
+      tabsTopOf[selector] ??= band.tabsTop;
+      if (band.tabsTop !== tabsTopOf[selector] || band.tabsTopScrolled !== band.tabsTop)
+        r.issues.push({
+          kind: 'tabsMoved',
+          target: `${tabsTopOf[selector]} → ${band.tabsTop} / スクロール後 ${band.tabsTopScrolled}`,
+        });
+    }
     results.push({ size: size.name, screen: name, ...r });
     await page.screenshot({ path: `${out}/${size.name}-${name}.png` });
   };
@@ -159,6 +200,7 @@ for (const size of SIZES) {
   for (const [tab, name] of [
     ['音', 'sound'],
     ['操作', 'controls'],
+    ['ゲーム', 'game'],
     ['データ', 'data'],
   ]) {
     await page.click(`.settings-tabs .ui-seg-item:text-is("${tab}")`);
@@ -216,6 +258,17 @@ for (const size of SIZES) {
   await shot('pause', '.pause-screen');
   await page.click('.pause-actions .ui-button:text-is("すべての設定")');
   await shown('.settings-screen');
+  for (const [tab, name] of [
+    ['表示', 'display'],
+    ['音', 'sound'],
+    ['操作', 'controls'],
+    ['ゲーム', 'game'],
+    ['データ', 'data'],
+  ]) {
+    await page.click(`.settings-tabs .ui-seg-item:text-is("${tab}")`);
+    await shot(`pause-settings-${name}`, '.settings-screen');
+  }
+  await page.click('.settings-tabs .ui-seg-item:text-is("表示")');
   const paused = await page.evaluate(() => document.documentElement.dataset.screen);
   await page.click('.settings-screen .menu-back');
   const back = await shownOnly('.pause-screen', '.settings-screen');
@@ -236,8 +289,11 @@ await browser.close();
 writeFileSync(`${out}/audit.json`, JSON.stringify({ results, flows }, null, 2));
 for (const r of results) {
   const kinds = r.issues.map((i) => i.kind);
+  const band = r.band
+    ? `\tband ${r.band.bandPx}px(${Math.round(r.band.bandRatio * 100)}%) tabs@${r.band.tabsTop}${r.band.scrolls ? ' scrolls' : ''}`
+    : '';
   console.log(
-    `${r.size}\t${r.screen}\t${r.vscroll ? 'vscroll ' : ''}${kinds.length ? kinds.join(',') : 'OK'}`,
+    `${r.size}\t${r.screen}\t${r.vscroll ? 'vscroll ' : ''}${kinds.length ? kinds.join(',') : 'OK'}${band}`,
   );
   for (const i of r.issues) console.log(`    ${i.kind}: ${i.target}`);
 }

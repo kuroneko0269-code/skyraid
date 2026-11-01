@@ -12,7 +12,7 @@
 | --- | --- |
 | アプリ名・スキーマ | `skyraid`。オブジェクトはすべてスキーマ `skyraid` の中。`public`・`auth`・`storage` には何も作らない |
 | Storage | 使わない（バケットなし） |
-| Auth | メール OTP（6 桁のコード）。プロジェクト共通の Auth の設定は変えない前提（5 章の注意） |
+| Auth | メール OTP（コードは 4〜10 桁を受け付ける。今のプロジェクトは 8 桁。7-4c）。プロジェクト共通の Auth の設定は変えない前提（5 章の注意） |
 | アプリの権限 | `app_metadata.apps` に `'skyraid'` があるユーザーだけ（規約 3.3 の a）。確かめる関数は `skyraid.has_app_access()`。authenticated のポリシーはすべてこれを確かめる（例外は `join_requests` だけ。8 章） |
 | 承認（7-4b） | 承認待ちの人はログインすると `join_requests` に自動で申請が入る。owner（`app_metadata.roles.skyraid = 'owner'`）がゲームの設定「メンバー管理」で承認・却下・取り消しをする。owner の付与だけは持ち主が SQL で 1 回（README） |
 | anon | テーブル・ビュー・関数の権限なし。anon に公開する関数も作らない（匿名向けの機能はない） |

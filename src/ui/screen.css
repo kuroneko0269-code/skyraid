@@ -80,6 +80,66 @@
   opacity: 0;
 }
 
+/*
+ * 見出し・「← 戻る」・タブを上に固定する画面（7-4c: 設定・情報）。画面ごとのスクロールと中央寄せをやめ、
+ * 固定部分（.menu-top）の下の .menu-scroll だけがスクロールする。内容の高さに関係なくタブの位置は動かない
+ */
+.screen.menu-fixed {
+  overflow: hidden;
+}
+
+.screen.menu-fixed::before,
+.screen.menu-fixed::after {
+  display: none;
+}
+
+.menu-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ui-space-2);
+  width: 100%;
+}
+
+.screen.menu-fixed > .menu-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.menu-scroll > * {
+  flex-shrink: 0;
+}
+
+/* とても背の低い画面（568×320 など）: 固定部分を画面の 30% 以内に収める */
+@media (max-height: 360px) {
+  .menu-top {
+    gap: var(--ui-space-1);
+  }
+
+  .menu-top .menu-header {
+    min-height: 36px;
+    margin-top: var(--ui-space-1);
+  }
+
+  .menu-top .menu-back {
+    min-height: 36px;
+    padding: 4px 12px;
+    font-size: 14px;
+  }
+
+  .menu-top .ui-seg-item {
+    min-height: 40px;
+  }
+}
+
 /* メニューのボタン・パネルなどの共通部品は theme.css（4-10） */
 
 /* ---- メニュー画面の見出しの行（7-D: モード選択・設定・情報）: 左に「← 戻る」、中央に画面名。幅は --menu-width ---- */

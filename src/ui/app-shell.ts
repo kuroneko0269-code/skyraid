@@ -2,6 +2,7 @@ import { APP_SHELL_CONFIG } from '../data/app';
 import { checkInstallHint } from '../core/install-hint';
 import { SKIP_WAITING_MESSAGE, watchForUpdate, type WorkerLike } from '../core/sw-update';
 import { showToast } from './toast';
+import { isStandaloneDisplay } from './standalone';
 
 /**
  * アプリとしての体裁（4-10）: Service Worker の登録と「新しいバージョンがあります」、
@@ -50,10 +51,6 @@ function showUpdateToast(parent: HTMLElement, worker: WorkerLike): void {
   });
 }
 
-interface NavigatorStandalone {
-  standalone?: boolean;
-}
-
 function showInstallHint(parent: HTMLElement): void {
   let storage: Storage;
   try {
@@ -61,10 +58,11 @@ function showInstallHint(parent: HTMLElement): void {
   } catch {
     return;
   }
-  const nav: Navigator & NavigatorStandalone = navigator;
-  const standalone =
-    nav.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-  const env = { userAgent: nav.userAgent, maxTouchPoints: nav.maxTouchPoints, standalone };
+  const env = {
+    userAgent: navigator.userAgent,
+    maxTouchPoints: navigator.maxTouchPoints,
+    standalone: isStandaloneDisplay(),
+  };
   if (!checkInstallHint(env, storage)) return;
   showToast('共有ボタン →「ホーム画面に追加」で全画面で遊べます', {
     parent,

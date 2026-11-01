@@ -6,7 +6,6 @@ import {
   formatMs,
   formatRecordValue,
   isEmail,
-  normalizeCode,
   rankingLines,
   sanitizeDisplayName,
   selfPlaceText,
@@ -51,14 +50,6 @@ describe('入力の整え', () => {
     expect(sanitizeDisplayName('   ')).toBeNull();
     // コードポイントで数える（SQL の char_length と同じ）
     expect(sanitizeDisplayName('😀'.repeat(17))).toBe('😀'.repeat(16));
-  });
-
-  it('6 桁のコード: 全角・空白・ハイフンは許し、桁が違えば null', () => {
-    expect(normalizeCode('123456')).toBe('123456');
-    expect(normalizeCode('１２３ ４５６')).toBe('123456');
-    expect(normalizeCode('123-456')).toBe('123456');
-    expect(normalizeCode('12345')).toBeNull();
-    expect(normalizeCode('12345a')).toBeNull();
   });
 
   it('メールの形', () => {
