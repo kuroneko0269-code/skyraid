@@ -125,3 +125,20 @@
 .save-settings-checkbox:disabled + span {
   color: var(--ui-text-dim);
 }
+
+/* 設定 → データの「パイロット名を変更」（8-1 の事前修正） */
+.pilot-rename-current {
+  font-size: 14px;
+  letter-spacing: 0.06em;
+}
+
+.pilot-rename-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.pilot-rename-form[hidden] {
+  display: none;
+}

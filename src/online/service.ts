@@ -17,6 +17,7 @@ import { sanitizeDisplayName } from './format';
 import { isOwnerRole, type JoinStatus } from './members';
 import { loadMeta, storeMeta, type OnlineMeta } from './meta';
 import { JoinTracker, PendingWatch, type JoinFailure } from './pending-watch';
+import { ProfileName, type PilotRenameResult } from './profile-name';
 import { RecordSender } from './record-sender';
 import type { RecordInput } from './records';
 import { SaveSync, type SaveAccess, type SyncHooks, type Timers, BROWSER_TIMERS } from './sync';
@@ -54,8 +55,8 @@ export class OnlineService {
   private readonly records: RecordSender;
   readonly sync: SaveSync;
   private readonly listeners: ((s: OnlineStatus) => void)[] = [];
-  /** サーバーの表示名（連携中に読む。無ければパイロット名で作る） */
-  private name: string | null = null;
+  /** サーバーの表示名（連携中に読む。無ければパイロット名で作る。8-1 でパイロット名の変更も） */
+  private readonly profile: ProfileName;
   private readonly watch: PendingWatch;
   private readonly join: JoinTracker;
 
@@ -88,6 +89,19 @@ export class OnlineService {
       hooks,
       () => this.activeUserId,
       timers,
+    );
+    this.profile = new ProfileName(
+      backend,
+      this.meta,
+      () => {
+        this.persistMeta();
+      },
+      () => this.activeUserId,
+      defaultName,
+      () => {
+        this.records.clearCache();
+        this.emit();
+      },
     );
     this.watch = new PendingWatch(
       timers,
@@ -134,7 +148,7 @@ export class OnlineService {
 
   /** 表示名（まだ読んでいなければ null） */
   get profileName(): string | null {
-    return this.name;
+    return this.profile.name;
   }
 
   get queued(): number {
@@ -221,14 +235,17 @@ export class OnlineService {
   }
 
   /** 表示名を変える。整えた名前を返す（空なら null で何もしない） */
-  async setDisplayName(name: string): Promise<string | null> {
-    const clean = sanitizeDisplayName(name);
-    if (clean === null || this.activeUserId === null) return null;
-    await this.backend.saveDisplayName(clean);
-    this.records.clearCache();
-    this.name = clean;
-    this.emit();
-    return clean;
+  setDisplayName(name: string): Promise<string | null> {
+    return this.profile.setManual(name);
+  }
+
+  /**
+   * 設定でパイロット名を変えた（8-1 の事前修正）: 承認済みでログイン中ならサーバーの表示名も変える。
+   * 送れなければ（失敗・OFF）次に連携したときに送る
+   */
+  renameFromPilot(name: string): Promise<PilotRenameResult> {
+    const u = this.user;
+    return this.profile.renameFromPilot(name, u && hasAccess(u) ? u.id : null);
   }
 
   // ---- 内部
@@ -252,27 +269,13 @@ export class OnlineService {
   /** 連携中になった: セーブを比べ、プロフィールが無ければパイロット名で作り、記録を送り直す */
   private afterLinked(): void {
     void this.sync.pull();
-    void this.ensureProfile();
+    void this.profile.ensure();
     void this.records.flush();
-  }
-
-  private async ensureProfile(): Promise<void> {
-    try {
-      let name = await this.backend.fetchDisplayName();
-      if (name === null) {
-        name = sanitizeDisplayName(this.defaultName()) ?? 'PILOT';
-        await this.backend.saveDisplayName(name);
-      }
-      this.name = name;
-      this.emit();
-    } catch {
-      // 次のログインでまた試す
-    }
   }
 
   private setUser(user: OnlineUser | null): void {
     if (user?.id !== this.user?.id) {
-      this.name = null;
+      this.profile.name = null;
       this.join.reset();
     }
     this.user = user;
