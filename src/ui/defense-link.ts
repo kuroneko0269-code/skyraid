@@ -18,6 +18,7 @@ import { DefenseHud, type DefenseHudState } from './defense-hud';
 import { DefenseResultScreen } from './defense-result';
 import type { Screens } from './screens';
 import type { ReplayHub } from '../replay/hub';
+import { defenseRecord, recordOutbox } from '../online/outbox';
 
 export interface DefenseLinkParts {
   readonly game: GameState;
@@ -156,6 +157,13 @@ export function createDefenseLink(p: DefenseLinkParts): DefenseLink {
         kills: play.session.combat.kills,
       };
       save.addCredits(defenseReward(score).total);
+      // 7-4: オンライン連携の記録（ソロだけ。連携していなければ何もしない）
+      if (selection) {
+        const { mapId, difficulty } = selection;
+        recordOutbox.submit(
+          defenseRecord({ ...score, mapId, difficulty }, d.elapsed, screens.hangar.selectedId),
+        );
+      }
       pending = { score, at: performance.now() + RESULT_DELAY_MS };
     });
   };

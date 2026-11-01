@@ -127,3 +127,8 @@
     line-height: 1.4;
   }
 }
+
+/* 7-4: 条件で出すモード（ランキングはオンライン連携の連携中だけ） */
+.mode-button[hidden] {
+  display: none;
+}

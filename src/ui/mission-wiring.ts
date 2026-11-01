@@ -4,6 +4,7 @@ import type { ActiveMap } from '../missions/active-map';
 import type { FlightSession } from '../missions/flight-session';
 import type { GamePlay } from '../missions/game-play';
 import { bindMissionRewards } from '../progression/mission-rewards';
+import { raidRecord, recordOutbox } from '../online/outbox';
 import type { SaveStore } from '../progression/save-store';
 import type { ChaseCamera } from '../render/chase-camera';
 import type { PlayerView } from '../render/player-view';
@@ -44,8 +45,20 @@ export function linkMissionEvents(p: MissionWiringParts): void {
     p.tutorial.attach(runner, inTutorial);
     // 成功の記録と報酬をセーブへ（3-2）。チュートリアルの報酬は初回だけ（TutorialLink）
     // 7-B: 再生中は記録・報酬を入れない
-    if (runner && !inTutorial && !replaying)
+    if (runner && !inTutorial && !replaying) {
       bindMissionRewards(runner.bus, p.save, screens.progress);
+      // 7-4: ソロのレイドのクリアをオンライン連携の記録に（連携していなければ何もしない）
+      const raid = runner.def.reward.raid;
+      if (raid) {
+        runner.bus.on('mission:end', ({ result }) => {
+          if (result.outcome !== 'success') return;
+          const aircraftId = screens.hangar.selectedId;
+          recordOutbox.submit(
+            raidRecord(raid.difficulty, result.elapsedSeconds, aircraftId, result.rank),
+          );
+        });
+      }
+    }
   });
   // 撃墜（地面への墜落も）されたら揺らし、リスポーンしたら機体とカメラを新しい位置へすぐ移す（4-12b。
   // 次の描画を待つと、揺れ・地面の高さ・飛行機雲が撃墜された場所のまま 1 フレーム残る）

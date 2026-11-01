@@ -15,6 +15,7 @@ export const GAME_MODES = [
   'pvp',
   'raid',
   'replay',
+  'ranking',
 ] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
@@ -38,7 +39,17 @@ const MODE_ENTRIES: readonly { mode: GameMode; label: string; note: string; enab
   { mode: 'raid', label: 'レイド', note: '巨大怪獣ヴォルガスを撃破（1〜4 人）', enabled: true },
   // リプレイ（7-B）: シングルプレイの記録の一覧と再生
   { mode: 'replay', label: 'リプレイ', note: '直近 10 本と保存した記録を見る', enabled: true },
+  // ランキング（7-4）: オンライン連携が「連携中」で ON のときだけ出す（setModeVisible）
+  {
+    mode: 'ranking',
+    label: 'ランキング',
+    note: 'メンバー内のレース・レイド・防衛戦の記録',
+    enabled: true,
+  },
 ];
+
+/** 初めは隠すモード（ランキングはオンライン連携の状態で出す） */
+const INITIALLY_HIDDEN: readonly GameMode[] = ['ranking'];
 
 /**
  * モード選択画面。チュートリアル（4-11）・フリーフライトとキャンペーン（2-4）・リングレース（7-1）・ハンガー（3-3）・PvP（5-1）・レイド（6-2）を選べる。
@@ -49,6 +60,9 @@ export class ModeSelectScreen {
   private firstEnabled: HTMLButtonElement | null = null;
   private freeNote: HTMLSpanElement | null = null;
   private readonly dialogs: ModeDialogs;
+  private readonly buttons = new Map<GameMode, HTMLButtonElement>();
+  /** モード選択の上に重ねた画面（7-4: ランキング）。Esc で閉じる。閉じたら true を返す */
+  private readonly overlays: (() => boolean)[] = [];
 
   constructor(
     parent: HTMLElement,
@@ -87,6 +101,8 @@ export class ModeSelectScreen {
       button.append(label, note);
       if (entry.mode === 'free') this.freeNote = note;
       button.disabled = !entry.enabled;
+      button.hidden = INITIALLY_HIDDEN.includes(entry.mode);
+      this.buttons.set(entry.mode, button);
       if (entry.enabled) this.firstEnabled ??= button;
     }
     createButton(root, 'ui-button is-ghost mode-back', '← タイトルへ', handlers.onBack);
@@ -148,9 +164,21 @@ export class ModeSelectScreen {
     this.dialogs.showTutorial();
   }
 
-  /** 案内が開いていれば閉じて true（Esc） */
+  /** 案内（と重ねた画面）が開いていれば閉じて true（Esc） */
   closeDialog(): boolean {
-    return this.dialogs.close();
+    if (this.dialogs.close()) return true;
+    return this.overlays.some((close) => close());
+  }
+
+  /** モードのボタンを出す・隠す（7-4: ランキング） */
+  setModeVisible(mode: GameMode, visible: boolean): void {
+    const b = this.buttons.get(mode);
+    if (b) b.hidden = !visible;
+  }
+
+  /** モード選択の上に重ねる画面の「閉じる」を登録する（7-4） */
+  addOverlay(close: () => boolean): void {
+    this.overlays.push(close);
   }
 
   /** フリーフライトの説明を敵の設定（ON/OFF）に合わせる */
