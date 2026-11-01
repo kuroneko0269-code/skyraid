@@ -1,4 +1,5 @@
 // 部屋コード・PeerJS の ID・参加の失敗の型（5-1 の room.ts から 5-4 で分けた）。Three.js・DOM 非依存
+import type { Paint } from '../progression/paint';
 import { NET_CONFIG } from '../data/net';
 import type { GameSettings, UpgradeLevelsMsg, WelcomeStatus } from './protocol';
 import type { TransportOpener } from './transport';
@@ -36,6 +37,8 @@ export interface PlayerProfile {
   name: string;
   aircraftId: string;
   upgrades: UpgradeLevelsMsg;
+  /** 塗装（7-3） */
+  paint: Paint;
 }
 
 /** 終わり方: ホストが抜けた / 自分で抜けた / 再接続できなかった（5-4） */

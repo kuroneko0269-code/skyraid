@@ -15,7 +15,8 @@ import {
   normalizeSettings,
   type SaveSettings,
 } from './save-settings';
-import { normalizeRaces, type RaceRecord } from './save-races';
+import { dropGhosts, normalizeRaces, type RaceRecord } from './save-races';
+import { defaultSkins, normalizeSkins, type SaveSkins } from './save-skins';
 
 export {
   defaultAssist,
@@ -77,6 +78,8 @@ export interface SaveData {
   flags: SaveFlags;
   /** リングレースの記録（7-1。v6 から）: コース id → 最高ランク・ベスト 5・ゴースト */
   races: Record<string, RaceRecord>;
+  /** 塗装（7-3。v8 から）: 所持パターン・デカール、PvP の累計撃墜、機体ごとの塗装 */
+  skins: SaveSkins;
 }
 
 export function initialUpgrades(): UpgradeLevels {
@@ -98,6 +101,7 @@ export function createInitialSave(): SaveData {
     settings: defaultSettings(),
     flags: defaultFlags(),
     races: {},
+    skins: defaultSkins(),
   };
 }
 
@@ -114,6 +118,7 @@ const V1_STARTER_ID = 'starter';
  * - v4 → v5（4-11）: 設定に操作（settings.controls）、案内の記録（flags）を足す（初期値。どれもまだ出していない扱い）
  * - v5 → v6（7-1）: リングレースの記録（races）を空で足す
  * - v6 → v7（7-B）: ゴーストを入力の記録に変えたので、古いゴースト（15Hz の位置）を捨てる（ベストタイム・ランクは残す）
+ * - v7 → v8（7-3）: 塗装（skins）を初期値で足す（単色だけ所持・PvP の撃墜 0・機体の塗装は初めて使うときに作る）
  * 難易度の一度だけの normal → easy（4-11 の事前修正）は版によらず normalizeSettings で（印 settings.difficultyEased）
  */
 export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
@@ -172,6 +177,7 @@ export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
   },
   5: (d) => ({ ...d, version: 6, races: {} }),
   6: (d) => ({ ...d, version: 7, races: dropGhosts(d.races) }),
+  7: (d) => ({ ...d, version: 8, skins: defaultSkins() }),
 };
 
 /**
@@ -236,6 +242,7 @@ export function normalizeSave(d: Json): SaveData | null {
     for (const k of SAVE_FLAGS) if (d.flags[k] === true) save.flags[k] = true;
   }
   save.races = normalizeRaces(d.races);
+  save.skins = normalizeSkins(d.skins);
   return save;
 }
 
@@ -276,36 +283,6 @@ export function parseSave(text: string): SaveData | null {
   }
 }
 
-// ---------------------------------------------------------------- エクスポート / インポート
-// 端末を変えるとき用の文字列: JSON を UTF-8 にして base64（パイロット名に日本語が入っても壊れない）
-
-export function encodeSave(data: SaveData): string {
-  const bytes = new TextEncoder().encode(JSON.stringify(data));
-  let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary);
-}
-
-/** エクスポートした文字列を読む。前後・途中の空白と改行は無視する。読めなければ null */
-export function decodeSave(text: string): SaveData | null {
-  try {
-    const binary = atob(text.replace(/\s+/g, ''));
-    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-    return parseSave(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-  } catch {
-    return null;
-  }
-}
-
 function isRank(v: unknown): v is Rank {
   return isOneOf(RANKS, v);
-}
-
-/** v6 → v7: races の各コースのゴーストを捨てる（形が違うものはそのまま。normalizeRaces が確かめる） */
-function dropGhosts(races: unknown): unknown {
-  if (typeof races !== 'object' || races === null || Array.isArray(races)) return races;
-  const out: Record<string, unknown> = {};
-  for (const [id, r] of Object.entries(races as Record<string, unknown>))
-    out[id] = typeof r === 'object' && r !== null ? { ...r, ghost: null } : r;
-  return out;
 }

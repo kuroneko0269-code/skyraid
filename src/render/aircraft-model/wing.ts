@@ -5,6 +5,7 @@ import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { AircraftShape, WingShape } from '../../data/aircraft-shapes';
 import type { MeshAccumulator, Rgb } from './accumulator';
 import { finSection, wingSection, type WingSection } from './planform';
+import { finSkinUv, stabSkinUv, wingSkinUv } from './skin-atlas';
 
 /** NACA 00xx の半分の厚さ（翼弦 1 あたり）。後縁は閉じる形 */
 function halfThickness(x: number, t: number): number {
@@ -75,6 +76,25 @@ function panelUv(kind: WingKind, u: number, x: number): [number, number] {
   return [0.5 * cu, 0.75 + 0.25 * cx];
 }
 
+/**
+ * 塗装の UV（7-3）: 翼型の上側（y ≥ 0）が上面・垂直尾翼は外へ傾けた向きの面。垂直尾翼は +X / −X 向きの面を分ける
+ * （左の尾翼は x の反転で上側が −X 向き）
+ */
+function panelSkinUv(
+  kind: WingKind,
+  side: number,
+  u: number,
+  x: number,
+  y: number,
+): [number, number] {
+  const cu = Math.min(1, Math.max(0, u));
+  const cx = Math.min(1, Math.max(0, x));
+  const upper = y >= 0;
+  if (kind === 'wing') return wingSkinUv(side, upper, cu, cx);
+  if (kind === 'stabilizer') return stabSkinUv(upper, cu, cx);
+  return finSkinUv(upper === side > 0, cu, cx);
+}
+
 /** 翼の 1 枚（翼幅 u0〜u1・翼弦 x0〜x1）を acc に積む */
 export function addWingPanel(
   acc: MeshAccumulator,
@@ -99,6 +119,7 @@ export function addWingPanel(
   g.deleteAttribute('normal');
   const pos = g.getAttribute('position');
   const uvs = new Float32Array(pos.count * 2);
+  const skin = new Float32Array(pos.count * 2);
   const cant = p.kind === 'fin' ? (w.dihedralDeg * Math.PI) / 180 : 0;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
@@ -108,6 +129,9 @@ export function addWingPanel(
     const [tu, tv] = panelUv(p.kind, u, x);
     uvs[i * 2] = tu;
     uvs[i * 2 + 1] = tv;
+    const [su, sv] = panelSkinUv(p.kind, p.side, u, x, y);
+    skin[i * 2] = su;
+    skin[i * 2 + 1] = sv;
     let wx: number;
     let wy: number;
     if (p.kind === 'fin') {
@@ -121,6 +145,7 @@ export function addWingPanel(
     pos.setXYZ(i, wx * p.side, wy, s.z + x * s.chord);
   }
   g.setAttribute('uv', new BufferAttribute(uvs, 2));
+  g.setAttribute('uv1', new BufferAttribute(skin, 2));
   const merged = mergeVertices(g, 1e-5);
   g.dispose();
   // 押し出しの軸の入れ替え（翼弦 x ⇄ 翼幅 z）は鏡映なので右の主翼・尾翼は裏返る。左は x の反転で元に戻る。

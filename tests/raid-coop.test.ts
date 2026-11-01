@@ -24,6 +24,7 @@ import {
 } from '../src/net/protocol';
 import { RAID_OUTCOME, RaidHost } from '../src/net/raid-host';
 import { DT, startMatch } from './pvp-match';
+import { TEST_PAINT } from './net-helpers';
 
 const SPEC = fighterSpec(netLoadout('kestrel', undefined));
 
@@ -81,6 +82,7 @@ describe('ロビー: レイドのモード', () => {
       id,
       name: `P${id}`,
       aircraftId: 'kestrel',
+      paint: TEST_PAINT,
       maxHp: 200,
       team: 0,
       ready: id === 1,

@@ -19,6 +19,7 @@ import { allAgain, autoTeams, sameSide, startBlock, teamForNewcomer } from '../s
 import { netLoadout } from '../src/net/loadout';
 import { NO_TARGET, type PlayerInfo } from '../src/net/protocol';
 import { seeded } from './net-helpers';
+import { TEST_PAINT } from './net-helpers';
 
 const DT = 1 / 60;
 const KESTREL = netLoadout('kestrel', undefined);
@@ -51,6 +52,7 @@ function player(id: number, over: Partial<PlayerInfo> = {}): PlayerInfo {
     id,
     name: `P${id}`,
     aircraftId: 'kestrel',
+    paint: TEST_PAINT,
     maxHp: 200,
     team: id % 2,
     ready: false,

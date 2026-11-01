@@ -82,6 +82,7 @@ export function newPlayer(
     id,
     name: p.name,
     aircraftId: p.aircraftId,
+    paint: p.paint,
     maxHp,
     team,
     ready,

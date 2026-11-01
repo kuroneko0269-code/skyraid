@@ -1,0 +1,159 @@
+/* ハンガーの「塗装」タブ（7-3。ui/paint-panel.ts） */
+.hangar-tabs {
+  flex: none;
+}
+
+.paint-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* タブで隠す（display を指定した要素は hidden 属性だけでは消えない） */
+.paint-panel[hidden],
+.hangar-perf[hidden] {
+  display: none;
+}
+
+.hangar-perf {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.paint-grid,
+.paint-decals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.paint-decals {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.paint-item,
+.paint-decal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+
+.paint-decal {
+  align-items: center;
+  padding: 4px;
+}
+
+.paint-item-name {
+  font-size: 13px;
+}
+
+.paint-item-status {
+  font-size: 11px;
+  color: var(--ui-accent);
+}
+
+.paint-item.is-viewing,
+.paint-decal.is-viewing {
+  --fill: var(--ui-accent-fill);
+  --edge: var(--ui-accent);
+}
+
+.paint-item.is-locked {
+  opacity: 0.6;
+}
+
+.paint-buy {
+  min-width: max-content;
+}
+
+.paint-row,
+.paint-slider {
+  display: grid;
+  grid-template-columns: 5.2em 1fr;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.paint-slider {
+  grid-template-columns: 5.2em 1fr 3em;
+}
+
+.paint-row-label {
+  color: var(--ui-text-dim);
+  white-space: nowrap;
+}
+
+.paint-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.paint-swatch {
+  aspect-ratio: 1;
+  min-width: 0;
+  min-height: 26px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.paint-swatch[aria-checked='true'] {
+  border-color: var(--ui-accent);
+  box-shadow: 0 0 0 2px var(--ui-accent);
+}
+
+.paint-decal-icon {
+  width: 34px;
+  height: 26px;
+  fill: currentColor;
+}
+
+.paint-decal-none {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.08;
+}
+
+.paint-range {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--ui-accent);
+}
+
+.paint-slider-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.paint-number {
+  grid-template-columns: 5.2em auto auto auto 1fr;
+}
+
+.paint-step {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 4px 8px;
+}
+
+.paint-number-value {
+  min-width: 2.2em;
+  text-align: center;
+  font: 700 18px/1 var(--ui-font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.paint-random {
+  justify-self: start;
+  min-width: max-content;
+  min-height: 40px;
+  padding: 4px 10px;
+}

@@ -1,4 +1,4 @@
-// PvP の他プレイヤーの機体（5-1）: 自機と同じモデル生成器（AircraftObject）で、機体の色をプレイヤーごとに変える。
+// PvP の他プレイヤーの機体（5-1）: 自機と同じモデル生成器（AircraftObject）で、各プレイヤーの塗装（7-3。名簿の値）で描く。
 // 1 機あたり draw call は機体 1・キャノピー 1・炎 1（点火中だけ）。最大 3 機。陽炎は出さない。
 // 他機の見た目の機銃の弾（5-3。発射の event から出す）はまとめて 1 つで描く。復帰後の無敵中は半透明
 import { Group, type Scene } from 'three';
@@ -8,40 +8,10 @@ import { PVP_CONFIG } from '../data/pvp';
 import type { Vec3 } from '../flight/math';
 import { TracerRenderer } from './tracers';
 import { findAircraftModel, AIRCRAFT_MODELS, type AircraftModel } from '../data/aircraft';
-import type { AircraftShape } from '../data/aircraft-shapes';
 import type { AircraftDetail } from '../data/aircraft-model';
-import { NET_CONFIG } from '../data/net';
 import type { RemoteSample } from '../net/net-game';
 import { resolveLoadout } from '../progression/loadout';
 import { AircraftObject } from './aircraft-model/aircraft-object';
-
-/** 色を混ぜる（0xrrggbb、t は b の割合） */
-function mixColor(a: number, b: number, t: number): number {
-  let out = 0;
-  for (const shift of [16, 8, 0]) {
-    const ca = (a >> shift) & 0xff;
-    const cb = (b >> shift) & 0xff;
-    out |= Math.round(ca + (cb - ca) * t) << shift;
-  }
-  return out;
-}
-
-const shapeCache = new Map<string, AircraftShape>();
-
-/** プレイヤー ID の色を付けた機体の形（アクセント色 = プレイヤーの色、胴体も少しその色に寄せる） */
-export function playerShape(model: AircraftModel, id: number): AircraftShape {
-  const key = `${model.id}:${id}`;
-  const cached = shapeCache.get(key);
-  if (cached) return cached;
-  const color = NET_CONFIG.playerColors[id % NET_CONFIG.playerColors.length] ?? 0xffffff;
-  const shape: AircraftShape = {
-    ...model.shape,
-    accentColor: color,
-    bodyColor: mixColor(model.shape.bodyColor, color, NET_CONFIG.playerBodyTint),
-  };
-  shapeCache.set(key, shape);
-  return shape;
-}
 
 export function modelOf(aircraftId: string): AircraftModel {
   const m = findAircraftModel(aircraftId) ?? AIRCRAFT_MODELS[0];
@@ -130,9 +100,10 @@ export class RemoteView {
       o = { group, object };
       this.objects.set(s.id, o);
     }
-    // 形・細かさが同じなら作り直さない（AircraftObject.build が比べる）
+    // 形・細かさ・塗装が同じなら作り直さない（AircraftObject が比べる）
     const model = modelOf(s.aircraftId);
-    o.object.build(playerShape(model, s.id), this.detail, pylonsOf(model));
+    o.object.build(model.shape, this.detail, pylonsOf(model));
+    o.object.setPaint(s.paint);
     return o;
   }
 }

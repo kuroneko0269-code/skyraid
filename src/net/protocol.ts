@@ -4,6 +4,7 @@
 import type { PvpMode } from '../data/pvp';
 import type { Quat, Vec3 } from '../flight/math';
 import type { NetControls } from './net-controls';
+import type { Paint } from '../progression/paint';
 
 export { NO_TARGET, createNetControls, quantizeControls, type NetControls } from './net-controls';
 
@@ -32,6 +33,8 @@ export interface PlayerInfo {
   id: number;
   name: string;
   aircraftId: string;
+  /** 塗装（7-3。見た目だけ。14 バイト） */
+  paint: Paint;
   /** 最大 HP（ホストが機体と強化から決める。名札の HP バー。5-3） */
   maxHp: number;
   /** チーム戦のチーム（0 / 1。個人戦でもホストの割当を残す。5-4） */
@@ -57,6 +60,8 @@ export interface JoinMsg {
   name: string;
   aircraftId: string;
   upgrades: UpgradeLevelsMsg;
+  /** 塗装（7-3） */
+  paint: Paint;
   /** 再接続（5-4）: 前の ID（NO_RESUME は新しく参加）と合言葉 */
   resumeId: number;
   token: number;
@@ -72,6 +77,8 @@ export interface LobbyMsg {
   again: boolean;
   aircraftId: string;
   upgrades: UpgradeLevelsMsg;
+  /** 塗装（7-3） */
+  paint: Paint;
 }
 
 /** 定型文（5-4）。クライアント → ホスト（from は無視）、ホスト → 全員（from は送った人） */

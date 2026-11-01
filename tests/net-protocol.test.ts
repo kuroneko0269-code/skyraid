@@ -13,6 +13,7 @@ import {
 } from '../src/net/protocol';
 
 import { angleDeg, randomQuat, rng } from './quat-helpers';
+import { TEST_PAINT } from './net-helpers';
 
 function roundTrip(msg: NetMessage): NetMessage | null {
   return decodeMessage(encodeMessage(msg));
@@ -30,6 +31,7 @@ describe('protocol: 直列化の往復', () => {
         version: 1,
         name: 'パイロット✈',
         aircraftId: 'swift',
+        paint: TEST_PAINT,
         upgrades: { engine: 1, airframe: 2, weapons: 3, avionics: 5 },
         resumeId: 255,
         token: 0,
@@ -39,6 +41,7 @@ describe('protocol: 直列化の往復', () => {
         version: 3,
         name: 'P2',
         aircraftId: 'kestrel',
+        paint: TEST_PAINT,
         upgrades: { engine: 0, airframe: 0, weapons: 0, avionics: 0 },
         resumeId: 2,
         token: 0xdeadbeef,
@@ -64,6 +67,7 @@ describe('protocol: 直列化の往復', () => {
             id: 0,
             name: 'HOST',
             aircraftId: 'kestrel',
+            paint: TEST_PAINT,
             maxHp: 200,
             team: 0,
             ready: true,
@@ -74,6 +78,7 @@ describe('protocol: 直列化の往復', () => {
             id: 2,
             name: 'ゲスト',
             aircraftId: 'bastion',
+            paint: TEST_PAINT,
             maxHp: 1234,
             team: 1,
             ready: false,
@@ -105,6 +110,7 @@ describe('protocol: 直列化の往復', () => {
         ready: true,
         again: false,
         aircraftId: 'vector',
+        paint: TEST_PAINT,
         upgrades: { engine: 5, airframe: 4, weapons: 3, avionics: 2 },
       },
       { type: 'chat', from: 3, phrase: 5 },

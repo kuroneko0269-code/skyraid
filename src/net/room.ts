@@ -127,6 +127,7 @@ export class HostRoom extends RoomBase {
     if (change.profile && !this.started) {
       this.hostProfile = change.profile;
       me.aircraftId = change.profile.aircraftId;
+      me.paint = change.profile.paint;
     }
     if (change.again) me.again = true;
     this.refreshHp();
@@ -248,6 +249,7 @@ export class HostRoom extends RoomBase {
       name: truncateChars(msg.name, NET_CONFIG.nameMaxLength),
       aircraftId: msg.aircraftId,
       upgrades: msg.upgrades,
+      paint: msg.paint,
     };
     this.joinProfiles.set(id, profile);
     this.players.push(
@@ -294,6 +296,10 @@ export class HostRoom extends RoomBase {
       p.aircraftId = msg.aircraftId;
       p.maxHp = this.maxHpOf(next);
     }
+    // 7-3: 塗装は見た目だけ（HP は変わらない）
+    p.paint = msg.paint;
+    const cur = this.joinProfiles.get(id);
+    if (cur) this.joinProfiles.set(id, { ...cur, paint: msg.paint });
     this.sendRoster();
   }
 

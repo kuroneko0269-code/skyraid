@@ -12,14 +12,8 @@ import { TOUCH_CONFIG } from '../src/data/touch';
 import type { MissionEvents, MissionResult } from '../src/missions/events';
 import { CampaignProgress } from '../src/progression/campaign-progress';
 import { bindMissionRewards } from '../src/progression/mission-rewards';
-import {
-  createInitialSave,
-  decodeSave,
-  encodeSave,
-  migrateSave,
-  sanitizePilotName,
-} from '../src/progression/save';
-import { SaveStore, type SaveStorage } from '../src/progression/save-store';
+import { createInitialSave, migrateSave, sanitizePilotName } from '../src/progression/save';
+import { SaveStore, decodeSave, encodeSave, type SaveStorage } from '../src/progression/save-store';
 
 /** localStorage の偽物。fail を true にすると読み書きで例外 */
 class FakeStorage implements SaveStorage {

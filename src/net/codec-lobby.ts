@@ -1,6 +1,14 @@
 // ロビーの部分の直列化（5-4。message-codec.ts から分けた）: 設定・名簿の 1 人・強化 Lv。Three.js 非依存
 import type { ByteReader, ByteWriter } from './codec';
 import type { GameSettings, PlayerInfo, UpgradeLevelsMsg } from './protocol';
+import { AIRCRAFT_MODELS } from '../data/aircraft';
+import {
+  PAINT_BYTES,
+  decodePaint,
+  defaultPaint,
+  encodePaint,
+  type Paint,
+} from '../progression/paint';
 
 // 設定・名簿・ロビーの真偽値のビット（5-4）
 const SET_TEAM = 1;
@@ -20,6 +28,21 @@ export function writeUpgrades(w: ByteWriter, u: Readonly<UpgradeLevelsMsg>): voi
 
 export function readUpgrades(r: ByteReader): UpgradeLevelsMsg {
   return { engine: r.u8(), airframe: r.u8(), weapons: r.u8(), avionics: r.u8() };
+}
+
+/** 塗装（7-3）: 14 バイト（1 人 16 バイト以内）。壊れていれば初期機の初期の塗装 */
+export function writePaint(w: ByteWriter, p: Readonly<Paint>): void {
+  for (const b of encodePaint(p)) w.u8(b);
+}
+
+export function readPaint(r: ByteReader): Paint {
+  const b = new Uint8Array(PAINT_BYTES);
+  for (let i = 0; i < PAINT_BYTES; i++) b[i] = r.u8();
+  const p = decodePaint(b);
+  if (p) return p;
+  const shape = AIRCRAFT_MODELS[0]?.shape;
+  if (!shape) throw new Error('機体の定義がありません');
+  return defaultPaint(shape, 0);
 }
 
 export function writeSettings(w: ByteWriter, s: Readonly<GameSettings>): void {
@@ -60,6 +83,7 @@ export function readSettings(r: ByteReader): GameSettings {
 
 export function writePlayer(w: ByteWriter, p: Readonly<PlayerInfo>): void {
   w.u8(p.id).str(p.name).str(p.aircraftId);
+  writePaint(w, p.paint);
   w.u16(Math.round(Math.min(65535, Math.max(0, p.maxHp)))).u8(p.team);
   w.u8((p.ready ? PL_READY : 0) | (p.again ? PL_AGAIN : 0) | (p.away ? PL_AWAY : 0));
 }
@@ -68,6 +92,7 @@ export function readPlayer(r: ByteReader): PlayerInfo {
   const id = r.u8();
   const name = r.str();
   const aircraftId = r.str();
+  const paint = readPaint(r);
   const maxHp = r.u16();
   const team = r.u8();
   const f = r.u8();
@@ -75,6 +100,7 @@ export function readPlayer(r: ByteReader): PlayerInfo {
     id,
     name,
     aircraftId,
+    paint,
     maxHp,
     team,
     ready: (f & PL_READY) !== 0,

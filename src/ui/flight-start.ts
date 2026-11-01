@@ -2,6 +2,7 @@
 // 演出・カメラ・画質の監視をやり直す。
 // 7-B: シングルプレイ（チュートリアル以外）は「初期状態」（src/replay/types.ts の ReplayStart）を作ってから、記録・再生と同じ
 // startFromHeader で始める（起動直後の状態に戻す → 敵の設定 → 装備 → マップ → シード → モード）。再生も同じ道を通る
+import { paintFromHex, paintToHex } from '../progression/paint';
 import { findAircraftModel } from '../data/aircraft';
 import type { DefenseDifficulty } from '../data/defense';
 import { findMap, ISLAND_MAP } from '../data/maps';
@@ -69,6 +70,7 @@ export function liveStart(p: FlightStartParts, def: MissionDef | null): ReplaySt
   const base = {
     aircraftId,
     upgrades: { ...hangar.levels(aircraftId) },
+    paint: paintToHex(screens.paintshop.paint(aircraftId)),
     enemies: p.session.freeEnemies,
     seed: freshSeed(),
   };
@@ -117,7 +119,8 @@ export function createFlightStarter(
     if (start) {
       startFromHeader(p.world, start);
       const model = findAircraftModel(start.aircraftId) ?? p.screens.hangar.selectedModel;
-      p.playerView.setModel(model, loadoutFor(start).missiles);
+      // 7-3: 塗装はヘッダから（リプレイは記録したときの塗装。古い記録は機体の初期の塗装）
+      p.playerView.setModel(model, loadoutFor(start).missiles, paintFromHex(start.paint));
       if (start.mode === 'race') p.race.afterStart(pending !== null);
       if (start.mode === 'defense' && !pending) p.defense.afterStart();
       if (pending) p.replay.replayStarted();
@@ -145,7 +148,8 @@ function startUnrecorded(p: FlightStartParts, def: MissionDef | null, net: boole
     p.session.setFreeEnemies(enemies);
   }
   p.session.applyLoadout(loadout);
-  p.playerView.setModel(p.screens.hangar.selectedModel, loadout.missiles);
+  const model = p.screens.hangar.selectedModel;
+  p.playerView.setModel(model, loadout.missiles, p.screens.paintshop.paint(model.id));
   // 6-4: マップ（PvP はロビーのホスト設定、ミッションは定義）
   const mapId = net ? p.pvp.mapId : def ? def.mapId : p.screens.modeSelect.freeMapId;
   p.activeMap.use(mapId);

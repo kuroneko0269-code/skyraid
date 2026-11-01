@@ -19,9 +19,10 @@ import { HostRoom, JoinFailure, normalizeRoomCode } from '../net/room';
 import type { PlayerProfile, RoomEndReason } from '../net/room';
 import type { TransportOpener } from '../net/transport';
 import type { Hangar } from '../progression/hangar';
+import type { Paintshop } from '../progression/paintshop';
 import type { Loadout } from '../progression/loadout';
 import type { PlayerView } from '../render/player-view';
-import { RemoteView, playerShape } from '../render/remote-view';
+import { RemoteView } from '../render/remote-view';
 import { findAircraftModel } from '../data/aircraft';
 import { LobbyScreen } from './lobby';
 import {
@@ -37,6 +38,7 @@ import { PvpHud } from './pvp-hud';
 import { PvpOverlay } from './pvp-overlay';
 import { RaidBriefing } from './raid-briefing';
 import { pilotProfile, roomLoadout, rosterAircraftId } from './pvp-profile';
+import { rosterPaint, settleMatch } from './pvp-settle';
 import { QUICK_PHRASES } from '../data/pvp';
 
 export interface PvpDeps {
@@ -47,6 +49,8 @@ export interface PvpDeps {
   readonly session: FlightSession;
   readonly playerView: PlayerView;
   readonly hangar: Hangar;
+  /** 7-3: 塗装（自分の塗装を名簿で配る・PvP の撃墜の累計） */
+  readonly paintshop: Paintshop;
   readonly pilotName: () => string | null;
   readonly groundHeight: GroundHeightFn;
   /** 守れた建物の割合（%）と高層の建物の衝突（6-4） */
@@ -176,7 +180,7 @@ export class PvpLink {
 
   /** 自分のプロフィール（パイロット名・機体・シングルの強化 Lv。強化の無効はホストが決める） */
   private profile(aircraftId = this.deps.hangar.selectedId): PlayerProfile {
-    return pilotProfile(this.deps.hangar, this.deps.pilotName, aircraftId);
+    return pilotProfile(this.deps.hangar, this.deps.paintshop, this.deps.pilotName, aircraftId);
   }
 
   /** ロビーのホスト設定（マップ・天候。7-5 で mapId から置き換え）。部屋がなければ null */
@@ -291,8 +295,7 @@ export class PvpLink {
       briefing: this.briefing,
     });
     const model = findAircraftModel(rosterAircraftId(room, d.hangar)) ?? d.hangar.selectedModel;
-    const missiles = this.loadout().missiles;
-    d.playerView.setModel({ ...model, shape: playerShape(model, room.localPlayerId) }, missiles);
+    d.playerView.setModel(model, this.loadout().missiles, rosterPaint(room, d.paintshop, model.id));
     d.playerView.respawn(d.session.aircraft);
   }
 
@@ -307,10 +310,7 @@ export class PvpLink {
     if (game.state === 'flight') game.transition('lobby');
     const room = this.room;
     const result = f.result();
-    // 6-6: レイドの報酬（全員同じ額）をセーブに足す
-    // 7-2: 防衛戦の報酬も（全員同じ額）
-    const credits = (result.raid?.credits ?? 0) + (result.defense?.credits ?? 0);
-    if (result.raid || result.defense) this.deps.addCredits(credits);
+    settleMatch(result, this.deps);
     if (room) this.lobby.showResult(result, room.players);
   }
 

@@ -42,6 +42,11 @@ export interface ReplayStart {
   readonly seed: number;
   /** 天候（7-5。見た目だけ。再生で同じ空にする） */
   readonly weatherId: string;
+  /**
+   * 記録したときの塗装（7-3。見た目だけ。progression/paint.ts の 14 バイトの 16 進）。7-3 より前の記録にはない
+   * （機体の初期の塗装で再生する）
+   */
+  readonly paint?: string;
 }
 
 /** 記録の結果（一覧の「結果」） */

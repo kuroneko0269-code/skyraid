@@ -86,6 +86,8 @@ const screens = new Screens(document.body, game, MISSIONS, save, () => {
 screens.onAircraftView((model) => {
   hangarStage.setModel(model, screens.hangar.loadout(model.id).missiles);
 });
+// 7-3: ハンガーの塗装（試し塗りもすぐ反映）と、塗装タブの上からのカメラ
+screens.paintHooks = hangarStage.paintHooks;
 
 // 品質設定（初期判定・切り替え・自動ダウングレード）と露出
 const quality = new QualityLink(renderer, pipeline, world, storage);

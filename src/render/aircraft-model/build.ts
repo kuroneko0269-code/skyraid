@@ -3,7 +3,7 @@
 import type { BufferGeometry } from 'three';
 import type { AircraftShape } from '../../data/aircraft-shapes';
 import { AIRCRAFT_MODEL_CONFIG, type AircraftDetail } from '../../data/aircraft-model';
-import { MeshAccumulator, rgb, type UvFn } from './accumulator';
+import { MeshAccumulator, rgb, type Rgb, type UvFn } from './accumulator';
 import {
   addCanopy,
   addFuselage,
@@ -44,7 +44,14 @@ export interface BuildOptions {
   readonly missiles: number;
   /** キャノピーを機体に入れる（InstancedMesh 1 つで描く敵機・輸送機） */
   readonly mergeCanopy: boolean;
+  /**
+   * 塗装テクスチャで色を付ける（7-3。自機・ハンガー・他プレイヤー）: 機体の色・アクセント色の頂点を白にして、色は
+   * 塗装の UV（uv1）のテクスチャに任せる。false は 4-3 のまま頂点の色（敵機・輸送機）
+   */
+  readonly skinned?: boolean;
 }
+
+const WHITE: Rgb = [1, 1, 1];
 
 const cleanUv: UvFn = () => [0.75, 0.875];
 
@@ -54,8 +61,8 @@ export function buildAircraft(
 ): BuiltAircraft {
   const cfg = AIRCRAFT_MODEL_CONFIG;
   const d = cfg.detail[o.detail];
-  const body = rgb(shape.bodyColor);
-  const accent = rgb(shape.accentColor);
+  const body = o.skinned ? WHITE : rgb(shape.bodyColor);
+  const accent = o.skinned ? WHITE : rgb(shape.accentColor);
   const acc = new MeshAccumulator();
 
   addFuselage(acc, shape, d.fuselageStations, d.fuselageRadial, body);
