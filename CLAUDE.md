@@ -22,6 +22,7 @@ npm run dev     # 開発サーバー
 npm run build   # 本番ビルド（push 前に必ず通す）
 npm run check   # tsc --noEmit && eslint .
 npm test        # vitest
+npm run bench   # 時間の計測（テストには時間の判定を入れず、ここで測る。8-1）
 npm run format  # prettier --write .（整形。*.md は対象外）
 ```
 
