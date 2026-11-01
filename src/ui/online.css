@@ -1,0 +1,144 @@
+/* オンライン連携（7-4）: 設定のセクション・競合のダイアログ・ランキング画面 */
+
+.online-state {
+  font-size: 14px;
+  color: var(--ui-text);
+}
+
+.online-state[data-state='linked'] {
+  color: var(--ui-accent);
+}
+
+.online-state[data-state='pending'] {
+  color: var(--ui-gold);
+}
+
+.online-state[data-state='error'] {
+  color: var(--ui-warn-text);
+}
+
+.online-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.online-form[hidden],
+.online-note[hidden] {
+  display: none;
+}
+
+.online-field {
+  min-height: 44px;
+  font-size: 16px;
+}
+
+/* 競合のダイアログ: どの画面の上にも出す */
+.online-sync-dialog {
+  position: fixed;
+  z-index: 70;
+}
+
+.online-sync-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ui-space-2);
+}
+
+.online-sync-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--ui-space-2) var(--ui-space-3);
+  background: var(--ui-bg-sunken);
+  border: var(--ui-line-width) solid var(--ui-line);
+  font-size: 14px;
+}
+
+.online-sync-title {
+  font: 600 15px/1.2 var(--ui-font-display);
+  letter-spacing: 0.1em;
+  color: var(--ui-accent-hud);
+}
+
+/* ランキング画面 */
+.ranking-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
+  width: min(880px, 100%);
+  padding: var(--ui-space-3);
+  box-sizing: border-box;
+  background: var(--ui-bg);
+  border: var(--ui-line-width) solid var(--ui-line);
+}
+
+.ranking-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
+}
+
+.ranking-filters[hidden] {
+  display: none;
+}
+
+.ranking-self {
+  font: 600 14px/1.3 var(--ui-font-body);
+  color: var(--ui-accent);
+}
+
+.ranking-scroll {
+  max-height: 46vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 500 14px/1.6 var(--ui-font-body);
+}
+
+.ranking-table td {
+  padding: 2px 8px;
+  white-space: nowrap;
+  border-bottom: var(--ui-line-width) solid var(--ui-line-faint);
+}
+
+.ranking-table .ranking-place {
+  width: 3em;
+  text-align: right;
+  color: var(--ui-text-dim);
+}
+
+.ranking-table .ranking-name {
+  max-width: 14em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ranking-table .ranking-value {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+.ranking-table .ranking-aircraft,
+.ranking-table .ranking-date {
+  color: var(--ui-text-dim);
+  font-size: 13px;
+}
+
+.ranking-table tr.is-self td {
+  background: var(--ui-accent-fill);
+  color: var(--ui-accent);
+}
+
+.ranking-message,
+.ranking-note {
+  font-size: 13px;
+  color: var(--ui-text-dim);
+}
+
+.ranking-message:empty {
+  display: none;
+}

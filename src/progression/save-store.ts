@@ -29,6 +29,8 @@ export type SaveLoadStatus = 'new' | 'loaded' | 'migrated' | 'reset';
 
 export class SaveStore {
   private data: SaveData;
+  /** 保存のたびに呼ぶ（7-4: オンライン連携のセーブの送信。登録は起動の後） */
+  private readonly persistListeners: (() => void)[] = [];
   /** 設定の部品に渡す StorageLike。古いキーで読み書きすると、セーブの設定に振り分けて保存する */
   readonly settingsStorage: StorageLike;
 
@@ -171,6 +173,27 @@ export class SaveStore {
     return this.persist();
   }
 
+  /**
+   * サーバーのセーブ（7-4）で置き換えて保存する。版の移行と値の確かめはエクスポートの読み込みと同じ（parseSave）。
+   * 読めなければ何もせず false
+   */
+  replaceWith(raw: unknown): boolean {
+    let data: SaveData | null;
+    try {
+      data = parseSave(JSON.stringify(raw));
+    } catch {
+      data = null;
+    }
+    if (!data) return false;
+    this.data = data;
+    return this.persist();
+  }
+
+  /** 保存のたびに呼ぶ関数を足す（7-4） */
+  onPersist(fn: () => void): void {
+    this.persistListeners.push(fn);
+  }
+
   /** セーブデータを消して初期値に戻す（ポーズメニューの「セーブデータを削除」） */
   clear(): void {
     this.data = createInitialSave();
@@ -183,6 +206,7 @@ export class SaveStore {
 
   /** 保存する。書けなければ（容量超過・プライベートモード等）false */
   persist(): boolean {
+    for (const fn of this.persistListeners) fn();
     if (!this.storage) return false;
     try {
       this.storage.setItem(SAVE_CONFIG.storageKey, JSON.stringify(this.data));

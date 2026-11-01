@@ -49,6 +49,7 @@ import { ReplayHub } from './replay/hub';
 import type { SimWorld } from './replay/sim';
 import { StateSnapshot } from './replay/state-walk';
 import { startFlightRuntime } from './ui/flight-runtime';
+import { linkOnline } from './ui/online-link';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app が見つかりません');
@@ -292,6 +293,9 @@ const runtime = startFlightRuntime({
   replayHub,
   simWorld,
 });
+
+// オンライン連携（7-4）: 環境変数があるときだけ読み込む（クラウドセーブ・記録の送信・ランキング）
+linkOnline({ game, screens, save });
 
 // 起動シーケンス: 読み込み（今はアセットなしで即完了）を待ってからタイトルへ。?skipTitle なら飛行へ直行
 void runBoot(BOOT_TASKS, (progress) => {

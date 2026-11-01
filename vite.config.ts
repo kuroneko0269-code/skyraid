@@ -1,6 +1,33 @@
+import type { Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { APP_MANIFEST, BRAND_ASSETS } from './src/data/app.ts';
+import { addConnectSrc } from './src/online/csp.ts';
+
+/**
+ * 7-4: 書き出しの後に dist/_headers（public/_headers の写し）の CSP の connect-src へ VITE_SUPABASE_URL のオリジンだけを足す。
+ * 環境変数（Cloudflare Pages の環境変数・.env）が無ければ何もしない（public/_headers のまま）
+ */
+function supabaseCsp(): Plugin {
+  let headersFile = '';
+  let url: string | undefined;
+  return {
+    name: 'skyraid-supabase-csp',
+    apply: 'build',
+    configResolved(config) {
+      const outDir = config.build.outDir;
+      headersFile = `${outDir.startsWith('/') ? outDir : `${config.root}/${outDir}`}/_headers`;
+      const v: unknown = config.env.VITE_SUPABASE_URL;
+      url = typeof v === 'string' ? v : undefined;
+    },
+    async writeBundle() {
+      if (!url) return;
+      const before = await this.fs.readFile(headersFile, { encoding: 'utf8' });
+      const after = addConnectSrc(before, url);
+      if (after !== before) await this.fs.writeFile(headersFile, after);
+    },
+  };
+}
 
 export default defineConfig({
   build: {
@@ -8,6 +35,7 @@ export default defineConfig({
     target: 'es2022',
   },
   plugins: [
+    supabaseCsp(),
     // PWA（4-10）: manifest とビルド成果物をプリキャッシュする Service Worker。
     // prompt 型（skipWaiting しない）なので、更新は全部のタブを閉じた次の起動で入る。登録は src/ui/app-shell.ts
     VitePWA({

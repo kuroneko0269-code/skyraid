@@ -13,6 +13,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "peerjs": "^1.5.5",
     "three": "^0.186.1"
   },

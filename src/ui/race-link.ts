@@ -12,6 +12,7 @@ import type { ReplayHub } from '../replay/hub';
 import type { RaceResult, RaceRunner } from '../missions/race/runner';
 import type { CourseDef } from '../missions/race/types';
 import { raceRecord, recordRace, type RaceRecordOutcome } from '../progression/race-records';
+import { raceRecord as onlineRaceRecord, recordOutbox } from '../online/outbox';
 import type { SaveStore } from '../progression/save-store';
 import type { GhostView } from '../render/ghost-view';
 import type { WeatherView } from '../render/weather/weather-view';
@@ -125,6 +126,9 @@ export function createRaceLink(p: RaceLinkParts): RaceLink {
         levels: hangar.levels(id),
       };
       pending = { result: r, out: recordRace(save, r, machine, replay.ghostData()) };
+      // 7-4: オンライン連携の記録（完走だけ。連携していなければ何もしない）
+      const rec = onlineRaceRecord(r, id);
+      if (rec) recordOutbox.submit(rec);
     });
   };
 

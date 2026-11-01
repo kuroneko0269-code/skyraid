@@ -1,0 +1,46 @@
+// オンライン連携（7-4）の決めた数値。仕組みは src/online/、SQL は supabase/migrations/skyraid_0001_init.sql、
+// 設計は docs/supabase-design.md。SQL と同じ値を使うものは tests/online-sql.test.ts で突き合わせる
+
+export const ONLINE_CONFIG = {
+  /** Supabase のスキーマ（規約 1.1。アプリ名と同じ） */
+  schema: 'skyraid',
+  /** 端末に残す連携の状態（オンライン連携の ON/OFF・同期の記録・送信待ちの記録）。セーブとは別のキー */
+  storageKey: 'skyraid.online',
+  /** 保存イベントから送信までのデバウンス（ミリ秒）。連続した保存は最後の 1 回だけ送る */
+  pushDebounceMs: 3000,
+  /** 送信できなかった記録を残す数（超えたら古いものから捨てる） */
+  queueMax: 20,
+  /** ランキングのキャッシュ（ミリ秒） */
+  rankingCacheMs: 5 * 60 * 1000,
+  /** ランキングに出す数（ビューの上位と同じ） */
+  rankingTop: 100,
+  /** 表示名の文字数（コードポイント。SQL の char_length と同じ数え方） */
+  displayName: { min: 1, max: 16 },
+  /** セーブの JSON の上限（バイト。SQL の check と同じ） */
+  saveMaxBytes: 256 * 1024,
+  /** 1 ユーザーが 1 分に送れる記録の数（SQL のトリガと同じ） */
+  recordsPerMinute: 20,
+  /** kind × key × ユーザーごとに残す記録の数（SQL の間引きのトリガと同じ） */
+  keepPerKey: 3,
+  /** 記録の値の範囲（ミリ秒。1 時間を超える記録は受け付けない） */
+  valueMaxMs: 60 * 60 * 1000,
+  /** レースは「コースの理論最短 × この倍率」未満を拒否する */
+  raceFloorRatio: 0.5,
+  /** 防衛戦の波数の上限（これを超える記録は拒否） */
+  defenseMaxWaves: 10,
+  /** 6 桁のコード */
+  otpLength: 6,
+} as const;
+
+/** 記録の種類 */
+export const RECORD_KINDS = ['race', 'raid', 'defense'] as const;
+export type RecordKind = (typeof RECORD_KINDS)[number];
+
+export const RECORD_KIND_LABELS: Readonly<Record<RecordKind, string>> = {
+  race: 'レース',
+  raid: 'レイド',
+  defense: '防衛戦',
+};
+
+/** records.client_version（記録の形を変えたら上げる） */
+export const ONLINE_CLIENT_VERSION = 'skyraid-web/1';

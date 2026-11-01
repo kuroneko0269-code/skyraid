@@ -87,3 +87,50 @@ URL に `?net=local` を付けると、PeerJS の代わりに**同じブラウ�
 - 「その部屋は見つかりません」: 部屋コードの打ち間違い、またはホストがロビーを出た。0・O・1・I は使っていません
 - 「接続できませんでした」「応答がありません」: 片方のネットワークが WebRTC の直接接続を通さない可能性があります（会社・学校の Wi-Fi、一部のモバイル回線）。両方を同じ Wi-Fi にして試してください。中継サーバー（TURN）は今は使っていません
 - 「ホストとバージョンが違います」: 片方が古い版をキャッシュしています。両方とも再読み込み（PWA ならアプリを一度閉じて開き直す）
+
+## オンライン連携（クラウドセーブとランキング）の準備（7-4）
+
+バックエンドは共有の Supabase プロジェクト（`docs/supabase-conventions.md` の規約 v1.0）。設計は `docs/supabase-design.md`、SQL は `supabase/migrations/skyraid_0001_init.sql`。
+環境変数が無ければオフラインのまま（連携の UI は出ず、全モードが今までどおり動く）なので、準備は急がなくて構いません。
+
+**service_role key（secret key、`sb_secret_...`）は使いません。** コード・リポジトリ・Cloudflare の環境変数・CI のどこにも置かないでください（RLS を素通りして全アプリのデータを読み書きできてしまいます）。使うのは公開前提の anon key（publishable key）だけです。管理作業はすべてダッシュボードで行います。
+
+1. **Exposed schemas に `skyraid` を足す**: Project Settings → Data API → Exposed schemas に `skyraid` を追加（既存の値は消さない）
+2. **SQL を流す**: SQL エディタに `supabase/migrations/skyraid_0001_init.sql` の全文を貼り付けて実行。**もう一度そのまま実行してもエラーにならない**ことも確かめる（冪等）。`select * from skyraid.schema_migrations;` に `skyraid_0001_init` が 1 行
+3. **Cloudflare Pages の環境変数**: Settings → Variables and Secrets（Production と Preview の両方）に次の 2 つを入れて再デプロイ。ビルドで `_headers` の CSP の `connect-src` にこの URL のオリジンが足されます（`dist/_headers` で確認できます）
+
+   | 変数 | 値 |
+   | --- | --- |
+   | `VITE_SUPABASE_URL` | `https://<ref>.supabase.co`（Project Settings → Data API の URL） |
+   | `VITE_SUPABASE_ANON_KEY` | anon key または publishable key（`sb_publishable_...`） |
+
+   ローカルで試すときは `.env.example` を `.env` に写して値を入れる（`.env` はコミットされません）
+4. **Advisors で警告 0 を確かめる**: Advisors → Security Advisor で SkyRaid（スキーマ `skyraid`）の警告が無いこと
+5. **自分のメールで登録**: プレビュー URL → 飛行中に Esc（⏸）→「設定 ▼」→「オンライン連携」でメールアドレスを入れて「コードを送る」→ メールの 6 桁のコードを入れて「ログイン」。状態が「承認待ち」になる
+   - メールにコードが無くリンクしか無いときは、リンクを開いてもログインできます（そのためには Auth → URL Configuration → Redirect URLs に SkyRaid の URL を**足す**。既存の URL は消さない）。コードを出すにはメールのテンプレートに `{{ .Token }}` が要りますが、テンプレートは全アプリ共通の設定なので、変えるときは規約の版の変更点に書いてから（`docs/supabase-design.md` の 5 章）
+6. **SQL で app_metadata に skyraid を付与**（規約 3.3 の SQL。他アプリの値は消さない。何度流しても同じ結果）:
+
+   ```sql
+   -- 付与（何度流しても同じ結果）
+   update auth.users
+   set raw_app_meta_data = jsonb_set(
+     coalesce(raw_app_meta_data, '{}'::jsonb), '{apps}',
+     (select coalesce(jsonb_agg(distinct v), '[]'::jsonb)
+        from jsonb_array_elements_text(coalesce(raw_app_meta_data -> 'apps', '[]'::jsonb) || '["skyraid"]'::jsonb) v))
+   where email = '<利用者のメール>';
+
+   -- 取り消し
+   update auth.users
+   set raw_app_meta_data = jsonb_set(raw_app_meta_data, '{apps}',
+     coalesce((raw_app_meta_data -> 'apps') - 'skyraid', '[]'::jsonb))
+   where email = '<利用者のメール>';
+   ```
+
+7. **承認待ちが連携中に変わることを確かめる**: 設定の「承認を再確認」を押す（またはトークンの自動更新を待つ。既定 1 時間以内）→ 状態が「連携中」になり、表示名の欄にパイロット名が入る。モード選択に「ランキング」が出る
+
+### 確かめること（連携中になった後）
+
+- レースを完走・ソロのレイドをクリア・ソロの防衛戦を終える →「ランキング」に自分の行がハイライトで出る（キャッシュは 5 分。表示名を変えたときと記録を送ったときはすぐ取り直す）
+- 2 台目の端末（または別のブラウザ）で同じメールでログイン → 1 台目のセーブを受け取るか「どちらのセーブを使いますか？」が出る
+- 「オンライン連携 OFF」にすると送信・同期・ランキングが止まる（モード選択の「ランキング」が消える）。ログインは残る
+- SQL エディタで `select kind, key, count(*) from skyraid.records group by 1, 2;` と `select user_id, version, size_bytes, updated_at from skyraid.saves;`

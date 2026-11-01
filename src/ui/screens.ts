@@ -77,6 +77,8 @@ export class Screens {
   inDefense: () => boolean = () => false;
   onDefense: (kind: 'solo' | 'coop', mapId: string, difficulty: DefenseDifficulty) => void = () =>
     undefined;
+  /** ランキング（7-4。ui/online-app.ts が差し込む。オンライン連携が無ければ何もしない） */
+  onRanking: () => void = () => undefined;
   /** PvP（5-1）: モード選択の「PvP」（raid: 協力レイド（6-2）の部屋）・ロビーの Esc・飛行中の ⏸（main が差し込む） */
   private pvp: PvpHandlers | null = null;
 
@@ -132,6 +134,7 @@ export class Screens {
         } else if (mode === 'campaign') game.transition('mission_select');
         else if (mode === 'race') game.transition('race_select');
         else if (mode === 'replay') game.transition('replay_select');
+        else if (mode === 'ranking') this.onRanking();
         else if (mode === 'hangar') this.openHangar(game, 'mode_select');
         else if (mode === 'pvp') this.pvp?.onSelect(false);
         else if (mode === 'defense') this.modeSelect.showDefensePrompt();
