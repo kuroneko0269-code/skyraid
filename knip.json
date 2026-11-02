@@ -11,6 +11,9 @@
     "/src/data/card.ts",
     "/src/ui/card/card-canvas.ts",
     "/src/ui/card/card-model.ts",
-    "/src/ui/card/og-image.ts"
+    "/src/ui/card/og-image.ts",
+    "/src/ui/member-settings.ts",
+    "/src/ui/online-settings.ts",
+    "/src/ui/card/card-dialog.ts"
   ]
 }

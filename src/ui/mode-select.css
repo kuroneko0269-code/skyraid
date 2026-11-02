@@ -199,6 +199,8 @@
   padding: var(--ui-space-2) var(--ui-space-3);
   box-sizing: border-box;
   overflow-y: auto;
+  /* 8-6d: 縦だけスクロールする（overflow-y: auto だけだと横も auto になり、中身が数 px 広いと横にずれる） */
+  overflow-x: hidden;
   overscroll-behavior: contain;
   background: var(--ui-scrim);
 }

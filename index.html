@@ -51,9 +51,16 @@
         -webkit-tap-highlight-color: transparent;
         -webkit-text-size-adjust: 100%;
       }
+      /* 8-6d: body の大きさは src/core/viewport-fit.ts が測った画面の大きさ（--app-width / --app-height。無ければ 100%）。
+         iOS を横向きのまま起動すると 100% の基準（初期包含ブロック）が小さいまま残り、下に黒い余白が出たため。
+         contain: layout で body を position: fixed の画面（タイトル・メニュー・HUD・ダイアログ）の基準にする */
       body {
         position: fixed;
-        inset: 0;
+        top: 0;
+        left: 0;
+        width: var(--app-width, 100%);
+        height: var(--app-height, 100%);
+        contain: layout;
       }
       #app {
         width: 100%;

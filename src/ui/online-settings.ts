@@ -1,5 +1,5 @@
 // ポーズメニューの設定「オンライン連携」（7-4）: 状態（未連携 / 承認待ち / 連携中 / エラー）、メール → コード（4〜10 桁。7-4c）→ ログイン、
-// パイロット名（8-6: 名前はパイロット名の 1 つ。8-6b: 今の名前の表示と説明だけ。変更は設定 → データの上の欄）、オンライン連携の ON/OFF（OFF は送信・同期・ランキングを止める。ログインは保持）、ログアウト。
+// パイロット名（8-6: 名前はパイロット名の 1 つ。8-6b: 今の名前の表示と説明だけ。変更は設定 → データの上の欄。8-6d: 説明の 1 行に名前を入れる）、オンライン連携の ON/OFF（OFF は送信・同期・ランキングを止める。ログインは保持）、ログアウト。
 // 環境変数が無いとき（オフライン）はこのセクション自体を作らない（ui/online-link.ts）
 import './online.css';
 import { t } from '../core/i18n';
@@ -108,9 +108,9 @@ export function createOnlineSettings(
   const recheck = button(pendingRow, t('online.recheck'));
 
   // 連携中: パイロット名（8-6。前は別の「表示名」を入れられ、パイロット名と食い違った。8-6b: 表示だけ）
+  // 8-6d: 名前は説明の 1 行の中だけ（「今の名前」をパイロット名の欄と 2 つ並べない）
   const nameRow = el('div', 'online-form online-pilot', box);
-  createPilotNameView(nameRow);
-  el('div', 'online-hint', nameRow, t('online.nameHint'));
+  createPilotNameView(nameRow, (name) => t('online.nameHint', { name }), 'online-hint');
 
   const toggle = createToggleButton(box, t('online.toggle'), service.status.enabled, () => {
     service.setEnabled(!service.status.enabled);

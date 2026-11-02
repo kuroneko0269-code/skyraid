@@ -1,0 +1,62 @@
+/* ?debug=viewport（8-6d）の表示。左上（下に黒い余白が出ても見える位置）。触っても下の画面に届く */
+.viewport-debug {
+  position: fixed;
+  top: max(4px, env(safe-area-inset-top));
+  left: max(4px, env(safe-area-inset-left));
+  z-index: 200;
+  max-width: calc(100% - 8px - env(safe-area-inset-left));
+  margin: 0;
+  padding: 4px 6px;
+  overflow: hidden;
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font:
+    9px/1.3 ui-monospace,
+    Menlo,
+    monospace;
+  color: #7dff9a;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+/* 測るための見えない要素（高さで 100vh 等、padding で安全領域を読む）。html の直下ではなく body の下に置くので、
+   vh の単位は body の大きさによらない */
+.viewport-debug-probes {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.viewport-debug-probe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+}
+
+.viewport-debug-probe.is-vh {
+  height: 100vh;
+}
+
+.viewport-debug-probe.is-dvh {
+  height: 100dvh;
+}
+
+.viewport-debug-probe.is-svh {
+  height: 100svh;
+}
+
+.viewport-debug-probe.is-lvh {
+  height: 100lvh;
+}
+
+.viewport-debug-probe.is-safe {
+  height: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}

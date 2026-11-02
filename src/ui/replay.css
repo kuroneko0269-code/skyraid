@@ -4,6 +4,8 @@
 .replay-list {
   max-height: min(56vh, 520px);
   overflow-y: auto;
+  /* 8-6d: 縦だけスクロールする（overflow-y: auto だけだと横も auto になり、中身が数 px 広いと横にずれる） */
+  overflow-x: hidden;
 }
 
 .replay-entry-sub {

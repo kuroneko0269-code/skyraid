@@ -4,6 +4,7 @@ import { t } from '../core/i18n';
 import { RAID_RULES, type RaidDifficulty } from './raid';
 import type { MissionDef } from '../missions/types';
 import { RAID_CONFIG } from './kaiju';
+import { CAMPAIGN_MISSILE_RESUPPLY_SECONDS } from './campaign-rules';
 
 /** M3 の輸送機の経路（東岸の沖 → 西岸）。高度 800m は経路の真下の地表（最高 約 450m）より 300m 以上上 */
 export const ESCORT_ROUTE = {
@@ -25,6 +26,8 @@ export const ESCORT_MISSION: MissionDef = {
   start: { x: 2800, y: 1000, z: -600, headingDeg: 270 },
   // 輸送機が着くまでの時間（約 58 秒）は縮められないので制限時間なし。基準時間はそれより長くし、評価は被弾だけで決まる
   parTimeSeconds: 75,
+  // 8-6d: ミサイルの補充（キャンペーン共通）
+  missileResupplySeconds: CAMPAIGN_MISSILE_RESUPPLY_SECONDS,
   spawns: [
     {
       kind: 'transport',
@@ -101,6 +104,8 @@ export const STRIKE_MISSION: MissionDef = {
   start: { x: 0, y: 600, z: 4500, headingDeg: 0 },
   timeLimitSeconds: 360,
   parTimeSeconds: 180,
+  // 8-6d: ミサイルの補充（キャンペーン共通）
+  missileResupplySeconds: CAMPAIGN_MISSILE_RESUPPLY_SECONDS,
   spawns: [
     {
       kind: 'groundTarget',
@@ -164,6 +169,8 @@ export const ENCOUNTER_MISSION: MissionDef = {
   start: { x: 0, y: 600, z: 4500, headingDeg: 45 },
   timeLimitSeconds: 420,
   parTimeSeconds: 180,
+  // 8-6d: ミサイルの補充（キャンペーン共通）
+  missileResupplySeconds: CAMPAIGN_MISSILE_RESUPPLY_SECONDS,
   spawns: [
     {
       kind: 'enemyFighter',

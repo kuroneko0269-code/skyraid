@@ -183,6 +183,9 @@
 }
 
 .title-version {
+  /* 8-6d: 5 回押すと画面の大きさの表示（ui/viewport-debug-toggle.ts）。押せる範囲だけ広げる（見た目の位置は同じ） */
+  padding: 14px 8px;
+  margin: -14px -8px;
   font: 600 12px/1 var(--ui-font-body);
   letter-spacing: 0.12em;
   color: var(--ui-text-faint);

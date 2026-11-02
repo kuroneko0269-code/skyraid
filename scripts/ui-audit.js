@@ -1,4 +1,4 @@
-/* global console, process, document, getComputedStyle, innerWidth, innerHeight, localStorage */
+/* global console, process, document, innerHeight, localStorage */
 // UI の自動点検（7-C の手順を 7-D でスクリプトにした）: 3 サイズでメニューの画面を撮り、機械チェックをする。
 // 使い方: 開発サーバーを立ててから `node scripts/ui-audit.js <出力先> [URL]`（既定 http://localhost:5173/）。
 // Playwright はクラウドセッションに入っているもの（依存には足さない）。結果は <出力先>/audit.json と各 PNG
@@ -14,6 +14,12 @@
 //   vscroll  画面が縦にスクロールする（情報。7-C で背の低い画面は可とした）
 //   band     固定部分（見出し・戻る・タブ。.menu-top）の高さが画面の 30% を超える（7-4c）
 //   tabsMoved タブの位置がタブの切り替え・内容のスクロールで動いた（7-4c）
+//   hscrollEl 横にスクロールできる要素がある（8-6d。画面の外のダイアログ・お知らせも。意図した一覧は audit-inspect.js の除外リスト）
+//   hclip    縦にスクロールする入れ物で中身が横に切れている（8-6d）
+//   serif    文字の計算後のフォントがブラウザ既定（serif）（8-6d。アプリのフォントを受け継いでいない）
+// 8-6d: 画面はタイトル・名前の入力・設定 5 タブ・モード選択・情報 4 タブ・お知らせ・ポーズ・ポーズの設定 5 タブに加え、
+//      キャンペーン・ブリーフィング・レース・各ダイアログ・ハンガー・リプレイ・ロビー・設定のデータ（オンライン連携の見本）・
+//      記録カード（scripts/ui-audit-screens.js）。ページの中の点検は scripts/audit-inspect.js
 // 画面遷移のチェック: 設定画面の「戻る」で開いた元（タイトル / モード選択 / ポーズ）に戻るか
 // 8-1: `--release` を付けると公開前の点検（scripts/ui-audit-release.js。本番ビルド dist を _headers 付きで配信して全モード）
 // 8-3: `--browser chromium|firefox|webkit|all`（既定 chromium）で Playwright のエンジンを選ぶ。all は 3 つを <出力先>/<エンジン>/ に。
@@ -23,6 +29,8 @@ import { CONTEXT_LOCALE, L } from './audit-lang.js';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { pickBrowsers } from './audit-browsers.js';
 import { showSampleToasts } from './audit-helpers.js';
+import { inspect } from './audit-inspect.js';
+import { auditMoreScreens, setScreensOut } from './ui-audit-screens.js';
 
 const argv = process.argv.slice(2);
 const valueOf = (name) => {
@@ -40,6 +48,7 @@ const SIZES = [
   { name: 'pc', width: 1920, height: 1080, touch: false },
 ];
 mkdirSync(out, { recursive: true });
+setScreensOut(out);
 if (argv.includes('--release')) {
   const { runReleaseAudit } = await import('./ui-audit-release.js');
   const summary = [];
@@ -67,62 +76,6 @@ if (engines.length !== 1 || !engines[0].available)
   throw new Error(
     `開発サーバーの点検はエンジン 1 つ（取得済み）だけ: ${engines.map((e) => e.name).join(', ')}`,
   );
-
-/** ページの中で動かす点検（visible な screen の中の要素） */
-function inspect(rootSelector) {
-  const root = document.querySelector(rootSelector);
-  const issues = [];
-  if (!root) return { issues: [{ kind: 'missing', target: rootSelector }], vscroll: false };
-  const vis = (e) => {
-    const r = e.getBoundingClientRect();
-    const s = getComputedStyle(e);
-    return (
-      r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && e.closest('[hidden]') === null
-    );
-  };
-  const label = (e) => (e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24);
-  const buttons = [...root.querySelectorAll('.ui-button, button.ui-toggle, .ui-seg-item')].filter(
-    vis,
-  );
-  const rects = buttons.map((b) => b.getBoundingClientRect());
-  buttons.forEach((b, i) => {
-    const r = rects[i];
-    const card = b.classList.contains('ui-item');
-    if (!card) {
-      const range = document.createRange();
-      range.selectNodeContents(b);
-      const tops = new Set(
-        [...range.getClientRects()].filter((x) => x.width > 1).map((x) => Math.round(x.top)),
-      );
-      if (tops.size > 1) issues.push({ kind: 'wrap', target: label(b) });
-      if (b.scrollWidth > b.clientWidth + 1) issues.push({ kind: 'clip', target: label(b) });
-    } else {
-      for (const c of b.children)
-        if (c.tagName !== 'svg' && vis(c) && c.scrollWidth > c.clientWidth + 1)
-          issues.push({
-            kind: 'ellipsis',
-            target: `${label(b).slice(0, 10)} / ${c.textContent.slice(0, 16)}`,
-          });
-    }
-    if (r.height < 36)
-      issues.push({ kind: 'small', target: `${label(b)} (${Math.round(r.height)}px)` });
-    if (r.left < -1 || r.right > innerWidth + 1)
-      issues.push({ kind: 'offscreen', target: label(b) });
-    for (let j = i + 1; j < buttons.length; j++) {
-      const o = rects[j];
-      const ix = Math.min(r.right, o.right) - Math.max(r.left, o.left);
-      const iy = Math.min(r.bottom, o.bottom) - Math.max(r.top, o.top);
-      if (ix > 2 && iy > 2 && !b.contains(buttons[j]) && !buttons[j].contains(b))
-        issues.push({ kind: 'overlap', target: `${label(b)} × ${label(buttons[j])}` });
-    }
-  });
-  if (
-    document.documentElement.scrollWidth > innerWidth + 1 ||
-    root.scrollWidth > root.clientWidth + 1
-  )
-    issues.push({ kind: 'hscroll', target: rootSelector });
-  return { issues, vscroll: root.scrollHeight > root.clientHeight + 1, buttons: buttons.length };
-}
 
 /** 固定部分の高さと、内容を一番下までスクロールしたときのタブの位置（7-4c） */
 async function measureBand(page, rootSelector) {
@@ -210,6 +163,7 @@ for (const size of SIZES) {
   await shown('.title-screen');
   await page.locator('.title-screen').click({ position: { x: 40, y: size.height / 2 } });
   await shown('.pilot-name-screen');
+  await shot('pilot-name', '.pilot-name-screen');
   await page.fill('.pilot-name-input', 'ACE');
   await page.keyboard.press('Enter');
   await shown('.mode-select-screen');
@@ -307,6 +261,8 @@ for (const size of SIZES) {
     'ポーズ → すべての設定 → 戻る（飛行は止まったまま）',
     paused === 'pause' && still === 'pause' && back && quick > 0,
   );
+  // 8-6d: 残りの画面・タブ・ダイアログ（横スクロールとフォントも。scripts/ui-audit-screens.js）
+  await auditMoreScreens(page, base, size, shot, shown);
   results.push({
     size: size.name,
     screen: 'console',

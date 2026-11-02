@@ -929,7 +929,17 @@
 - メニューのタップ（`src/ui/tap-rescue.ts`・判定は `src/core/tap.ts`・数値は `src/data/touch.ts` の `TAP_CONFIG`）: ボタン（button・role=button / tab / radio・summary）を 1 本指で押し、動いた距離 24px 以内・1 秒以内・離した点がボタンの上（周り 8px まで）・上の一覧のスクロール 4px 以内ならタップとして click() を呼ぶ（touchend の既定の動作を止めてブラウザのクリックと二重にしない）
 - 排気（8-6b で原因を特定）: 黒い輪は陽炎の筒（12 角形・先が広がる）の先端。シェーダーの `pow(1.0 - along, 1.3)` で、縁の画素の補間のはみ出しで along が 1 をわずかに超えると負の数の累乗（iOS の GPU は NaN）になり、画質「中」以上の HalfFloat の描画先に残って黒い点の輪になった。along を 0〜1 に収めた。8-6 の胴体の後端のふたの色の変更は不要だったので元に戻した
 - 記録カード: display の役の文（ステージ・見出し・数値・ランク）に Rajdhani に無い字（日本語など）があれば、文ごと日本語のフォントの太字（`heading`）で描く（`CARD_CONFIG.displayChars`）
-- メンバー管理の行: 1 段目に名前と申請日・2 段目にボタン（右寄せ）の格子。2 段目はボタンの無い行（自分）でもボタンの高さ（40px）を取っておき、1 段目も 22px に固定（ボタンの有無・日本語の字で高さが変わらない）
+- メンバー管理の行（8-6d で 1 人 1 行の表に変えた。下の 8-6d）: 1 段目に名前と申請日・2 段目にボタン（右寄せ）の格子。2 段目はボタンの無い行（自分）でもボタンの高さ（40px）を取っておき、1 段目も 22px に固定（ボタンの有無・日本語の字で高さが変わらない）
+
+#### 実機確認の修正 その 2（8-6d。決定は `docs/decisions.md` の 8-6d。点検は `node scripts/ui-audit.js <出力先>` と `node scripts/ui-audit-device.js <出力先>`）
+
+- ルート要素の大きさ（`src/core/viewport-fit.ts`）: `window.innerWidth / innerHeight`・`visualViewport`（拡大していないとき）・`documentElement.clientWidth / clientHeight` の大きい方（タッチの端末は screen の長辺・短辺（向きに合わせる）まで）。iOS のホーム画面から起動したとき（`navigator.standalone`）は screen の大きさを下限にする。CSS 変数 `--app-width / --app-height` に書き、`index.html` の body がこの大きさになって `contain: layout` で position: fixed の画面の基準になる。測り直すのは起動時・起動から 0.1〜5 秒（`VIEWPORT_CONFIG.startupRecheckMs`）・load・resize・向きの変更・pageshow・focus・表示に戻ったとき・visualViewport の resize
+- `?debug=viewport`（ホーム画面のアプリはタイトルの版の表示を 5 回押す。端末に保存し、もう 5 回で消す。`src/ui/viewport-debug-toggle.ts`）: 左上に inner / outer・visualViewport・screen・向き・client・100vh / dvh / svh / lvh・安全領域・ホーム画面からの起動か・ルート要素 / html / body / #app / canvas の実寸と描画バッファ、値が変わった時刻の記録（ルート要素を合わせたときの測った値は起動直後から最新 10 件、表示の値は最新 4 件。時刻は読み込みからの秒）を出す（`src/ui/viewport-debug.ts`。遅延チャンク。fps の表示は出さない）
+- フォント: body に本文のフォント（`--ui-font-body`）。.screen の外に置く要素（記録カードの画面・確認のダイアログ・お知らせ）も受け継ぐ
+- キャンペーン M1〜M5 共通: ミサイルを撃ち尽くして 8 秒で満タンに補充（お知らせ。`src/data/campaign-rules.ts`）。レイドは無し
+- パイロット名を変えられるのは初回の入力と設定 → データの「パイロット名を変更」だけ。オンライン連携の欄は説明の 1 行に名前を入れる。データのタブの並びはパイロット名 → オンライン連携 → メンバー管理 → セーブデータ
+- メンバー管理: 1 人 1 行（名前・申請日・状態・操作）の表。承認待ち → 承認済みの順、件数は見出しの横。設定の 2 列をまたいで横幅いっぱい
+- 横スクロール: 点検（`scripts/audit-inspect.js`）は、画面に出ている要素で overflow-x が auto / scroll のまま中身が広いもの（`hscrollEl`）と、計算後のフォントがブラウザ既定のもの（`serif`）を数える。意図して横にスクロールさせる一覧は除外リスト（今は無し）
 
 #### タイトル・ブランド素材・PWA（4-10）
 

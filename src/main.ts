@@ -6,9 +6,13 @@ import { startApp } from './app';
 import { loadLocale } from './core/i18n-load';
 import { detectLocale } from './core/locale';
 import { readSavedLanguage } from './progression/save-language';
+import { installViewportFit } from './core/viewport-fit';
 import { probeWebGL, showCompatNotice, webglProblem } from './ui/compat-notice';
+import { installViewportDebug } from './ui/viewport-debug-toggle';
 
 document.documentElement.dataset.app = 'started';
+// 8-6d: html・body の大きさを測った画面の大きさに（横向きで起動したときの下の黒い余白）。言語の読み込みより先に
+installViewportFit();
 
 function localStorageOrNull(): Storage | null {
   try {
@@ -47,6 +51,8 @@ if (!renderer) {
 } else {
   try {
     startApp(renderer);
+    // ?debug=viewport・タイトルの版の表示を 5 回押す: 画面の大きさの値を左上に（8-6d）
+    installViewportDebug(document.querySelector('.title-version'));
   } catch (e) {
     console.error(e);
     renderer.domElement.remove();

@@ -2,7 +2,8 @@
 // オンライン連携中はサーバーの表示名（profiles.display_name）も変える。オンライン連携は動的 import なので、
 // 読み込まれたときに setPilotRenameHook でつなぐ（ui/online-app.ts）。
 // 8-6: 名前はパイロット名の 1 つだけ。8-6b: オンライン連携の欄は「今の名前」の表示だけ（createPilotNameView。変更はこの欄の
-// 1 か所。変えるとオンライン連携の欄の表示も変わる）
+// 1 か所。変えるとオンライン連携の欄の表示も変わる）。8-6d: 名前を変えられるのは初回の入力（pilot-name.ts）とこの欄だけ。
+// オンライン連携の欄は説明の 1 行に名前を入れて出す（パイロット名の欄と同じ「今の名前」が 2 つ並ばないように）
 import './save.css';
 import { t, tn } from '../core/i18n';
 import { SAVE_CONFIG } from '../data/save';
@@ -39,16 +40,19 @@ export function createPilotRename(
 
 /**
  * オンライン連携の欄の「パイロット名」（8-6b）: 今の名前の表示だけを parent に作る（変更は設定 → データの欄だけ）。
+ * 8-6d: 「今の名前: X」がパイロット名の欄と同じ見た目で 2 か所に並んでいたので、説明の 1 行（text が名前から文を作る）にした。
  * 設定 → データの欄（createPilotRename）を先に作っておくこと。無ければ何もしない
  */
-export function createPilotNameView(parent: HTMLElement): void {
+export function createPilotNameView(
+  parent: HTMLElement,
+  text: (name: string) => string,
+  className = '',
+): void {
   const save = context?.save;
   if (!save) return;
-  const current = el('div', 'pilot-rename-current', parent);
+  const line = el('div', className, parent);
   const show = (): void => {
-    current.textContent = t('pilot.current', {
-      name: save.pilotName ?? SAVE_CONFIG.defaultPilotName,
-    });
+    line.textContent = text(save.pilotName ?? SAVE_CONFIG.defaultPilotName);
   };
   currentViews.add(show);
   show();

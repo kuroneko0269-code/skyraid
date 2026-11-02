@@ -2,6 +2,7 @@
 // ミッションを増やすときは MISSIONS に足すだけ。タイトル・ブリーフィング文は src/data/i18n/*.json の missions[id]。
 // 距離は m、時間は秒。島の中心が原点、海岸線は半径 約 2.6〜3.2km、北は -Z。向き（headingDeg）は -Z から右回り（東 = 90）
 import type { MissionDef } from '../missions/types';
+import { CAMPAIGN_MISSILE_RESUPPLY_SECONDS } from './campaign-rules';
 import { ENCOUNTER_MISSION, ESCORT_MISSION, STRIKE_MISSION } from './missions-special';
 import { DEFAULT_RANK_MULTIPLIERS } from './ranking';
 
@@ -28,8 +29,8 @@ export const TRAINING_MISSION: MissionDef = {
   start: { x: 0, y: 500, z: 4500, headingDeg: 0 },
   timeLimitSeconds: 480,
   parTimeSeconds: 240,
-  // 8-6b: ミサイルを撃ち尽くして 8 秒で満タンに（外し切っても詰まない）
-  missileResupplySeconds: 8,
+  // 8-6b: ミサイルを撃ち尽くして 8 秒で満タンに（外し切っても詰まない）。8-6d: キャンペーン共通
+  missileResupplySeconds: CAMPAIGN_MISSILE_RESUPPLY_SECONDS,
   spawns: [
     {
       kind: 'enemyFighter',
@@ -108,6 +109,8 @@ export const FIRST_SORTIE_MISSION: MissionDef = {
   start: { x: 0, y: 500, z: 4500, headingDeg: 0 },
   timeLimitSeconds: 420,
   parTimeSeconds: 210,
+  // 8-6d: ミサイルの補充（キャンペーン共通）
+  missileResupplySeconds: CAMPAIGN_MISSILE_RESUPPLY_SECONDS,
   spawns: [
     {
       kind: 'enemyFighter',
