@@ -1,5 +1,5 @@
 // 太陽光（平行光源 + シャドウマップ）と空の半球ライト（4-1）。色・強さは大気散乱から計算する
-import { DirectionalLight, HemisphereLight, type Object3D, type Scene } from 'three';
+import { DirectionalLight, HemisphereLight, type Scene } from 'three';
 import { SHADOW_CONFIG } from '../data/sky';
 import type { Vec3 } from '../flight/math';
 import type { Atmosphere } from './atmosphere';
@@ -96,12 +96,4 @@ function setLight(light: DirectionalLight, c: Readonly<Rgb>): void {
   const k = Math.max(c[0], c[1], c[2], 1e-6);
   light.intensity = k;
   light.color.setRGB(c[0] / k, c[1] / k, c[2] / k);
-}
-
-/** 影を落とす・受ける設定（子孫のメッシュすべて） */
-export function setShadowFlags(object: Object3D, cast: boolean, receive: boolean): void {
-  object.traverse((o) => {
-    o.castShadow = cast;
-    o.receiveShadow = receive;
-  });
 }

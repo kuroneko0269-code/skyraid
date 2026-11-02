@@ -98,8 +98,8 @@ export class OnlineService {
       },
       () => this.activeUserId,
       defaultName,
-      () => {
-        this.records.clearCache();
+      (renamed) => {
+        if (renamed) this.records.clearCache();
         this.emit();
       },
     );

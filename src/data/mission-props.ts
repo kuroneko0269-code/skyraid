@@ -15,18 +15,3 @@ export const TRANSPORT_CONFIG = {
   hitFlashSeconds: 0.08,
   color: 0xd9dee6,
 } as const;
-
-/** 地上目標の仮置き（M4。2-6 で地上目標と無誘導兵器を作るまでの「静止した大きな的」） */
-export const GROUND_TARGET_PLACEHOLDER_CONFIG = {
-  /** 箱の大きさ（幅・高さ・奥行き）。地表に置く */
-  size: { width: 30, height: 16, depth: 30 },
-  /** HP。機銃 40 発（連射 約 3 秒）、ミサイルなら 3 発 */
-  maxHp: 400,
-  /** 当たり判定の球の半径（箱の中心から角まで 約 23m） */
-  hitRadius: 22,
-  visualRadius: 20,
-  /** 同時に出せる数 */
-  maxCount: 8,
-  hitFlashSeconds: 0.08,
-  color: 0xb5562b,
-} as const;

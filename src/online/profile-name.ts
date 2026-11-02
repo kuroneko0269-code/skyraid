@@ -29,8 +29,8 @@ export class ProfileName {
     private readonly activeUserId: () => string | null,
     /** プロフィールが無いときの表示名（パイロット名） */
     private readonly defaultName: () => string,
-    /** 表示名が変わった（ランキングのキャッシュを捨てて画面を直す） */
-    private readonly changed: () => void,
+    /** 表示名を読んだ・変えた（画面を直す）。renamed は変えたとき（ランキングのキャッシュを捨てる） */
+    private readonly changed: (renamed: boolean) => void,
   ) {}
 
   /** 連携中になった: 送れていないパイロット名の変更があれば送り、無ければ読む（無ければパイロット名で作る） */
@@ -43,7 +43,7 @@ export class ProfileName {
         await this.backend.saveDisplayName(name);
       }
       this.name = name;
-      this.changed();
+      this.changed(false);
     } catch {
       // 次のログインでまた試す
     }
@@ -90,7 +90,7 @@ export class ProfileName {
 
   private apply(name: string): void {
     this.name = name;
-    this.changed();
+    this.changed(true);
   }
 
   private setPending(p: OnlineMeta['pendingName']): void {

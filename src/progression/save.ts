@@ -19,14 +19,7 @@ import { dropGhosts, normalizeRaces, type RaceRecord } from './save-races';
 import { defaultSkins, normalizeSkins, type SaveSkins } from './save-skins';
 import { defaultRecords, normalizeRecords, type SaveRecords } from './save-records';
 
-export {
-  defaultAssist,
-  defaultSettings,
-  defaultVolume,
-  type AssistSettings,
-  type SaveSettings,
-  type VolumeSettings,
-} from './save-settings';
+export { type SaveSettings } from './save-settings';
 
 /** ミッションごとの記録 */
 export interface MissionRecord {

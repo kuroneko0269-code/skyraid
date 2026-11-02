@@ -154,7 +154,7 @@ export const KAIJU_ATTACK_CONFIG = {
   },
 } as const;
 
-/** 攻撃ごとの予兆・攻撃・硬直（型の確認用） */
+/** 攻撃ごとの予兆・攻撃・硬直（型の確認用。KAIJU_ATTACK_CONFIG が型に合うかをコンパイル時に確かめる。8-1 の knip では残す） @public */
 export const KAIJU_ATTACK_TIMINGS: Readonly<Record<KaijuAttack, KaijuAttackSpec>> =
   KAIJU_ATTACK_CONFIG;
 

@@ -82,14 +82,6 @@ export function clonePaint(p: Readonly<Paint>): Paint {
   return { ...p, wing: { ...p.wing }, fin: { ...p.fin } };
 }
 
-export function samePaint(a: Readonly<Paint>, b: Readonly<Paint>): boolean {
-  return equalBytes(encodePaint(a), encodePaint(b));
-}
-
-function equalBytes(a: Uint8Array, b: Uint8Array): boolean {
-  return a.length === b.length && a.every((v, i) => v === b[i]);
-}
-
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 

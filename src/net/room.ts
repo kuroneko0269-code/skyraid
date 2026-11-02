@@ -19,7 +19,6 @@ import {
   type JoinMsg,
   type LobbyMsg,
   type NetMessage,
-  type PlayerInfo,
   type WelcomeStatus,
 } from './protocol';
 import { generateRoomCode, hostPeerId, type PlayerProfile, type RoomOptions } from './room-code';
@@ -357,5 +356,3 @@ export class HostRoom extends RoomBase {
     this.emitRoster();
   }
 }
-
-export type { PlayerInfo };

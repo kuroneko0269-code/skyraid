@@ -119,7 +119,6 @@ export interface KaijuSpawn {
 
 export type SpawnDef =
   EnemyFighterSpawn | TargetSpawn | DroneSpawn | GroundTargetSpawn | TransportSpawn | KaijuSpawn;
-export type SpawnKind = SpawnDef['kind'];
 
 // ---- 目標 ----
 

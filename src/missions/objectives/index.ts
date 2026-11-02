@@ -30,9 +30,3 @@ export function createObjective(def: ObjectiveDef): Objective {
 
 export { Objective, type ObjectiveStatus } from './objective';
 export { RingPassObjective } from './ring-pass';
-export { SurviveTimeObjective } from './survive-time';
-export { KillCountObjective } from './kill-count';
-export { EscortObjective } from './escort';
-export { DestroyObjective } from './destroy';
-export { KaijuObjective } from './kaiju';
-export { SpeedObjective } from './speed';

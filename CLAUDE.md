@@ -23,6 +23,8 @@ npm run build   # 本番ビルド（push 前に必ず通す）
 npm run check   # tsc --noEmit && eslint .
 npm test        # vitest
 npm run bench   # 時間の計測（テストには時間の判定を入れず、ここで測る。8-1）
+npm run unused  # 使われていないコード・依存の検出（knip。8-1）
+node scripts/ui-audit.js <出力先> --release  # 公開前の点検（build の後。docs/release-checklist.md）
 npm run format  # prettier --write .（整形。*.md は対象外）
 ```
 
