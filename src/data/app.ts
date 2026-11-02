@@ -44,3 +44,9 @@ export const APP_SHELL_CONFIG = {
   /** 読み込みに失敗したお知らせを出しておく秒数（0 なら閉じるまで出す） */
   lazyErrorToastSeconds: 0,
 } as const;
+
+/** ゲームの描画の大きさ（8-6。src/core/viewport.ts） */
+export const VIEWPORT_CONFIG = {
+  /** resize・向きの変更の後に測り直す時刻（ms。iOS は向きの変更の後に大きさが遅れて変わる） */
+  recheckMs: [120, 400, 1000],
+} as const;

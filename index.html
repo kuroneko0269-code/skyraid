@@ -62,6 +62,14 @@
       canvas {
         display: block;
       }
+      /* ゲームの描画は画面の端まで（8-6）。大きさは CSS で決め、描画バッファは src/core/viewport.ts が実際の大きさに合わせる。
+         ボタンや HUD は各 CSS で safe-area の内側に置く */
+      #app > canvas {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
       /* 起動できないときの案内（8-3。src/ui/compat-notice.ts と src/legacy/legacy-check.js）。アプリの CSS が読めなくても出す */
       .compat-notice {
         position: fixed;

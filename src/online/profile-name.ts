@@ -1,9 +1,9 @@
 // サーバーの表示名（profiles.display_name）の扱い（7-4 / 8-1 の事前修正、DOM・Supabase 非依存）。service.ts から分けた。
-// - 連携中になったら読む。無ければパイロット名で作る
-// - 設定の「表示名を保存」で変える
+// 8-6: 名前はパイロット名の 1 つだけ。表示名はパイロット名の写しで、手で別の名前にはしない（「表示名を保存」はやめた）
+// - 連携中になったら（起動・ログイン・ON に戻す）サーバーの表示名をパイロット名に合わせる（無ければ作る・食い違っていれば
+//   パイロット名で上書き。決定は docs/decisions.md の 8-6）
 // - 設定の「パイロット名を変更」で、連携中ならサーバーの表示名も変える。送れなかった（通信の失敗・OFF）ときは
-//   端末（OnlineMeta.pendingName）に覚えておき、次に連携したとき（起動・ログイン・ON に戻す）に送る。
-//   ローカルのパイロット名は変えたまま（戻さない）。決定は docs/decisions.md の 8-1
+//   端末（OnlineMeta.pendingName）に覚えておき、次に連携したときに送る。ローカルのパイロット名は変えたまま（戻さない）
 import type { OnlineBackend } from './backend';
 import { sanitizeDisplayName } from './format';
 import type { OnlineMeta } from './meta';
@@ -33,32 +33,24 @@ export class ProfileName {
     private readonly changed: (renamed: boolean) => void,
   ) {}
 
-  /** 連携中になった: 送れていないパイロット名の変更があれば送り、無ければ読む（無ければパイロット名で作る） */
+  /**
+   * 連携中になった: サーバーの表示名をパイロット名に合わせる（8-6。無ければ作り、食い違っていれば上書き）。
+   * 送れていないパイロット名の変更は、今のパイロット名を送るので要らなくなる
+   */
   async ensure(): Promise<void> {
     try {
-      if (await this.pushPending()) return;
-      let name = await this.backend.fetchDisplayName();
-      if (name === null) {
-        name = sanitizeDisplayName(this.defaultName()) ?? 'PILOT';
-        await this.backend.saveDisplayName(name);
-      }
-      this.name = name;
-      this.changed(false);
+      const want = sanitizeDisplayName(this.defaultName()) ?? 'PILOT';
+      const pending = this.meta.pendingName;
+      const name = await this.backend.fetchDisplayName();
+      if (name !== want) await this.backend.saveDisplayName(want);
+      // 送っている間にパイロット名を変えていたら、その変更は残す（renameFromPilot が送る）
+      if (pending && pending.user === this.activeUserId() && this.meta.pendingName === pending)
+        this.setPending(null);
+      this.name = want;
+      this.changed(name !== null && name !== want);
     } catch {
       // 次のログインでまた試す
     }
-  }
-
-  /** 設定の「表示名を保存」。整えた名前を返す（空・連携していなければ null で何もしない） */
-  async setManual(raw: string): Promise<string | null> {
-    const clean = sanitizeDisplayName(raw);
-    const id = this.activeUserId();
-    if (clean === null || id === null) return null;
-    await this.backend.saveDisplayName(clean);
-    // 手で決めた表示名を、前に送れなかったパイロット名で上書きしない
-    if (this.meta.pendingName?.user === id) this.setPending(null);
-    this.apply(clean);
-    return clean;
   }
 
   /**

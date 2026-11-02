@@ -3,6 +3,7 @@ import { TOUCH_MODES, TOUCH_MODE_LABELS, type TouchMode } from '../data/touch';
 import { t } from '../core/i18n';
 import { isTouchMode } from '../core/touch-settings';
 import { installTapFocus } from './tap-focus';
+import { installTapRescue } from './tap-rescue';
 
 /** タッチ操作の表示設定（自動 / 表示 / 非表示） */
 export function createTouchModeSelect(
@@ -132,6 +133,8 @@ export function createRotateHint(parent: HTMLElement): HTMLDivElement {
  */
 export function installTouchGuards(target: Document): void {
   installTapFocus(target);
+  // メニューのタップの取りこぼし対策（8-6）
+  installTapRescue(target);
   const prevent = (e: Event): void => {
     e.preventDefault();
   };

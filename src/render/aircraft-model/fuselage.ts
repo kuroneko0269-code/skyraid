@@ -87,13 +87,14 @@ export function addFuselage(
       s < shape.noseFraction * 0.7 ? [body[0] * radome, body[1] * radome, body[2] * radome] : body;
     rings.push({ cx: 0, z: stationZ(shape, s), color, s, ...sec });
   }
-  // 後端のふた（ノズルの奥。暗い色）
+  // 後端のふた。輸送機（4 発）はノズルの奥なので暗い色。戦闘機はふたのうちノズルの外側（胴体の外形とノズルの間の
+  // 細い輪・双発の 2 本のノズルの周り）が見えるので胴体の色にする（8-6: 暗い色だとノズルの外側に黒い輪が見えた）
   const last = rings[rings.length - 1];
   if (last) {
-    const dark = rgbOf(AIRCRAFT_MODEL_CONFIG.colors.nozzle);
+    const cap = shape.engines === 4 ? rgbOf(AIRCRAFT_MODEL_CONFIG.colors.nozzle) : body;
     const n: [number, number, number] = [0, 0, 1];
-    rings.push({ ...last, color: dark, seam: true, normal: n });
-    rings.push({ ...last, a: 0, top: 0, bottom: 0, color: dark, normal: n });
+    rings.push({ ...last, color: cap, seam: true, normal: n });
+    rings.push({ ...last, a: 0, top: 0, bottom: 0, color: cap, normal: n });
   }
   loft(acc, rings, radial, fuselageUv, PART.none);
 }
@@ -226,15 +227,18 @@ export function addNozzles(
     const r = n.radius;
     const z = n.z;
     const p = NOZZLE_PROTRUDE;
+    // 奥のふたは胴体の後端のふた（z − p）より手前に置く（8-6: 胴体のふたを胴体の色にしたので、奥がそれより深いと
+    // ノズルの中に胴体の色が見える）。色は以前に奥に見えていた胴体のふたと同じ
+    const deep = p - 0.05;
     const rings: Ring[] = [
       duct(n.x, n.y, z - p - 0.5, r, r, 2, metal, { s: 0.95 }),
       duct(n.x, n.y, z - p * 0.6, r, r, 2, metal, { s: 0.97 }),
       duct(n.x, n.y, z, r * 0.88, r * 0.88, 2, metal, { s: 1 }),
       duct(n.x, n.y, z, r * 0.8, r * 0.8, 2, metal, { s: 1 }),
       duct(n.x, n.y, z - 0.08, r * 0.76, r * 0.76, 2, dark, { s: 1 }),
-      duct(n.x, n.y, z - 0.9, r * 0.7, r * 0.7, 2, dark, { s: 1 }),
-      duct(n.x, n.y, z - 0.9, r * 0.7, r * 0.7, 2, dark, { s: 1, seam: true, normal: back }),
-      duct(n.x, n.y, z - 0.9, 0, 0, 2, dark, { s: 1, normal: back }),
+      duct(n.x, n.y, z - deep, r * 0.72, r * 0.72, 2, dark, { s: 1 }),
+      duct(n.x, n.y, z - deep, r * 0.72, r * 0.72, 2, metal, { s: 1, seam: true, normal: back }),
+      duct(n.x, n.y, z - deep, 0, 0, 2, metal, { s: 1, normal: back }),
     ];
     loft(acc, rings, radial, fuselageUv, PART.none);
   }

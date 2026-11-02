@@ -30,7 +30,12 @@ export interface CardModel {
   readonly url: string;
 }
 
-export type CardFontFamily = 'display' | 'body';
+export type CardFontFamily = 'display' | 'heading' | 'body';
+
+/** 文を描くフォント（8-6）: display の役の文に Rajdhani に無い字があれば、文ごと heading（日本語のフォント）にする */
+export function cardFamily(text: string, family: CardFontFamily): CardFontFamily {
+  return family === 'display' && !CARD_CONFIG.displayChars.test(text) ? 'heading' : family;
+}
 export type CardColor = keyof typeof CARD_CONFIG.color;
 
 /** 文字の幅（px）を測る */
@@ -131,7 +136,8 @@ export function layoutCard(
     maxWidth: number,
     o: { min?: number; align?: CardTextOp['align'] } = {},
   ): CardTextOp | null => {
-    const fit = fitText(t, px, o.min ?? px, maxWidth, family, measure);
+    const fam = cardFamily(t, family);
+    const fit = fitText(t, px, o.min ?? px, maxWidth, fam, measure);
     if (!fit.text) return null;
     const op: CardTextOp = {
       kind: 'text',
@@ -140,7 +146,7 @@ export function layoutCard(
       x,
       y,
       size: fit.size,
-      family,
+      family: fam,
       color,
       align: o.align ?? 'left',
       width: fit.width,

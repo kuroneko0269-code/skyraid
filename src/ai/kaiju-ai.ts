@@ -10,8 +10,10 @@ import {
 } from '../data/kaiju';
 import { vec3, type Vec3 } from '../flight/math';
 import type { Kaiju } from '../entities/kaiju';
+import { RAID_RULES } from '../data/raid';
 import { forwardOf, headingToward, mouthPosition } from '../entities/kaiju-pose';
 import {
+  aimAt,
   chooseAttack,
   createRock,
   launchRock,
@@ -105,7 +107,7 @@ export class KaijuAi {
   }
 
   reset(): void {
-    this.cooldown = A.intervalSeconds;
+    this.cooldown = A.intervalSeconds * this.intervalScale;
     this.history.length = 0;
     this.targetId = null;
     this.beam.on = false;
@@ -137,7 +139,13 @@ export class KaijuAi {
   }
 
   private get intervalScale(): number {
-    return this.kaiju.phase >= 2 ? KAIJU_CONFIG.phases.phase2IntervalScale : 1;
+    const raid = this.kaiju.raid ? RAID_RULES.tuning.attackInterval : 1;
+    return (this.kaiju.phase >= 2 ? KAIJU_CONFIG.phases.phase2IntervalScale : 1) * raid;
+  }
+
+  /** 攻撃のダメージの倍率（レイドだけ。8-6） */
+  private get damageScale(): number {
+    return this.kaiju.raid ? RAID_RULES.tuning.attackDamage : 1;
   }
 
   private stepWalk(targets: readonly KaijuTarget[], dt: number): void {
@@ -270,7 +278,7 @@ export class KaijuAi {
       case 'beam': {
         const b = this.beam;
         mouthPosition(b.origin, k.feet, k.heading, k.pose);
-        if (target) this.aimAt(b.direction, b.origin, target.position);
+        if (target) aimAt(b.direction, b.origin, target.position);
         else forwardOf(b.direction, k.heading);
         b.length = A.beam.range;
         b.on = true;
@@ -297,7 +305,7 @@ export class KaijuAi {
         const d = Math.hypot(t.position.x - k.feet.x, t.position.z - k.feet.z);
         if (d <= s.radius + t.hitRadius && t.position.y - k.feet.y <= s.maxAltitude) {
           this.hitThisAttack.add(t.id);
-          this.hits.damage(t.id, s.damage, 'sweep');
+          this.hits.damage(t.id, s.damage * this.damageScale, 'sweep');
         }
       }
       return;
@@ -307,14 +315,14 @@ export class KaijuAi {
     const s = A.beam;
     mouthPosition(b.origin, k.feet, k.heading, k.pose);
     if (target) {
-      this.aimAt(this.want, b.origin, target.position);
+      aimAt(this.want, b.origin, target.position);
       trackDirection(b.direction, this.want, s.trackDegPerSecond * DEG * dt);
       k.turnToward(headingToward(b.direction.x, b.direction.z), s.trackDegPerSecond * 2, dt);
     }
     for (const t of targets) {
       if (!t.active) continue;
       if (distanceToRay(t.position, b.origin, b.direction, b.length) <= s.width / 2 + t.hitRadius)
-        this.hits.damage(t.id, s.damagePerSecond * dt, 'beam');
+        this.hits.damage(t.id, s.damagePerSecond * dt * this.damageScale, 'beam');
     }
   }
 
@@ -336,19 +344,9 @@ export class KaijuAi {
     for (const r of this.rocks) {
       const hit = stepRock(r, targets, floor, dt);
       if (hit === null) continue;
-      if (hit !== 'ground') this.hits.damage(hit.id, A.throw.damage, 'throw');
+      if (hit !== 'ground') this.hits.damage(hit.id, A.throw.damage * this.damageScale, 'throw');
       const p = r.position;
       this.emit({ kind: 'rockImpact', x: p.x, y: p.y, z: p.z });
     }
-  }
-
-  private aimAt(out: Vec3, from: Readonly<Vec3>, to: Readonly<Vec3>): void {
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
-    const dz = to.z - from.z;
-    const n = Math.hypot(dx, dy, dz) || 1;
-    out.x = dx / n;
-    out.y = dy / n;
-    out.z = dz / n;
   }
 }

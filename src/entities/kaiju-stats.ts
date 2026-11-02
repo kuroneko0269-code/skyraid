@@ -3,6 +3,20 @@
 import { KAIJU_CONFIG, KAIJU_PARTS } from '../data/kaiju';
 import { RAID_RULES } from '../data/raid';
 
+/** 出現のしかた（kaiju.ts の emerge。8-6 で kaiju.ts から移した） */
+export interface KaijuEmergeOptions {
+  /** 遊ぶ人数（1〜4）。HP とブレイクの成立（1 人は不成立・部位ダメージ増し）に使う */
+  readonly players?: number;
+  /** この割合のダメージで撤退する（M5）。1 なら撤退せず倒せる */
+  readonly retreatRatio?: number;
+  /** 最終フェーズの制限時間を使う（レイド。M5 は撤退が先なので使わない） */
+  readonly finalTimer?: boolean;
+  /** 高難度（6-6）: HP ×1.4・予兆 −0.5 秒（AI が読む）・最終フェーズ 3.5 分 */
+  readonly hard?: boolean;
+  /** レイド（ソロ・協力。8-6）: RAID_RULES.tuning の強さ（受けるダメージ・攻撃の間隔と威力。AI も読む）。M5 は false */
+  readonly raid?: boolean;
+}
+
 /** 全体 HP の人数スケール（1 人は solo の倍率。6-1b）。6-6: 高難度は ×1.4 */
 export function kaijuMaxHp(
   players: number,

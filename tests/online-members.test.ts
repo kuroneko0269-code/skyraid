@@ -267,3 +267,22 @@ describe('メンバー管理（MemberAdmin）', () => {
     });
   });
 });
+
+describe('8-6: パイロット名を変えたらメンバー管理の自分の名前も変わる', () => {
+  it('読んだ後の一覧の自分の行だけ、読み直さずに新しい名前にする', async () => {
+    const backend = new MockBackend();
+    backend.user = OWNER;
+    backend.memberRows = ROWS;
+    const admin = new MemberAdmin(backend, () => true);
+    await admin.load();
+    const before = admin.rows.find((r) => r.userId === 'u0')?.displayName;
+    expect(admin.renameSelf('u0', 'FALCON')).toBe(true);
+    expect(admin.rows.find((r) => r.userId === 'u0')?.displayName).toBe('FALCON');
+    expect(before).not.toBe('FALCON');
+    // 同じ名前・一覧に無い人は何もしない。ほかの行は変えない
+    expect(admin.renameSelf('u0', 'FALCON')).toBe(false);
+    expect(admin.renameSelf('zz', 'X')).toBe(false);
+    expect(admin.rows.filter((r) => r.displayName === 'FALCON')).toHaveLength(1);
+    expect(memberLists(admin.rows, 'u0').approved[0]?.name).toBe('FALCON');
+  });
+});

@@ -115,6 +115,8 @@ export interface KaijuSpawn {
   readonly finalTimer?: boolean;
   /** 高難度（6-6。ソロのレイド） */
   readonly hard?: boolean;
+  /** レイドの強さ（8-6。RAID_RULES.tuning）を使う。ソロのレイドだけ true（M5 は省略） */
+  readonly raid?: boolean;
 }
 
 export type SpawnDef =

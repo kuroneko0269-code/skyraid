@@ -136,6 +136,7 @@ export class MissionProps {
       retreatRatio: def.retreatDamageRatio,
       finalTimer: def.finalTimer ?? def.retreatDamageRatio >= 1,
       hard: def.hard ?? false,
+      raid: def.raid ?? false,
     });
     this.kaijuAi.configure({
       goal: w,

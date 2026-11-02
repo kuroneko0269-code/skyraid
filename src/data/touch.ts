@@ -58,3 +58,16 @@ export const TOUCH_CONFIG = {
     top: 12,
   },
 } as const;
+
+/**
+ * メニューのタップの取りこぼし対策（8-6。判定は src/core/tap.ts、DOM は src/ui/tap-rescue.ts）。
+ * ブラウザはタップ中に指が少し（Chrome で約 15px、iOS はもっと小さい）動くとクリックを取り消すので、メニューのボタンは
+ * 自分でタップを判定する: 動いた距離 slopPx 以内・押していた時間 maxMs 以内・離した点がボタンの上（周り marginPx まで）・
+ * スクロールした量 scrollPx 以内ならタップ
+ */
+export const TAP_CONFIG = {
+  slopPx: 24,
+  maxMs: 1000,
+  marginPx: 8,
+  scrollPx: 4,
+} as const;

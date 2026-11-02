@@ -231,6 +231,7 @@ export function raidMission(difficulty: RaidDifficulty = 'normal'): MissionDef {
         arrivalFails: true,
         retreatDamageRatio: 1,
         hard: difficulty === 'hard',
+        raid: true,
       },
     ],
     objectives: [

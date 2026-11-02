@@ -19,13 +19,18 @@ function localStorageOrNull(): Storage | null {
 }
 
 await loadLocale(
-  detectLocale(window.location.search, navigator.languages, readSavedLanguage(localStorageOrNull())),
+  detectLocale(
+    window.location.search,
+    navigator.languages,
+    readSavedLanguage(localStorageOrNull()),
+  ),
 );
 
 function createRenderer(container: HTMLElement): WebGLRenderer | null {
   try {
     const renderer = new WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    // 表示の大きさは CSS（index.html の #app > canvas）。描画バッファは起動後に core/viewport.ts が合わせる（8-6）
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
     container.appendChild(renderer.domElement);
     return renderer;
   } catch {

@@ -10,9 +10,9 @@ import { RAID_RULES } from '../data/raid';
 import { clamp, copyVec3, vec3, type Vec3 } from '../flight/math';
 import type { GroundHeightFn } from './aircraft';
 import { KaijuPart, type KaijuPartOwner } from './kaiju-part';
-import { KaijuStats, kaijuMaxHp } from './kaiju-stats';
+import { KaijuStats, kaijuMaxHp, type KaijuEmergeOptions } from './kaiju-stats';
 
-export { kaijuMaxHp } from './kaiju-stats';
+export { kaijuMaxHp, type KaijuEmergeOptions } from './kaiju-stats';
 import {
   createPose,
   derivePose,
@@ -37,17 +37,6 @@ export type KaijuEvent =
   | { readonly kind: 'killed' }
   | { readonly kind: 'retreat' }
   | { readonly kind: 'cityReached' };
-
-export interface KaijuEmergeOptions {
-  /** 遊ぶ人数（1〜4）。HP とブレイクの成立（1 人は不成立・部位ダメージ増し）に使う */
-  readonly players?: number;
-  /** この割合のダメージで撤退する（M5）。1 なら撤退せず倒せる */
-  readonly retreatRatio?: number;
-  /** 最終フェーズの制限時間を使う（レイド。M5 は撤退が先なので使わない） */
-  readonly finalTimer?: boolean;
-  /** 高難度（6-6）: HP ×1.4・予兆 −0.5 秒（AI が読む）・最終フェーズ 3.5 分 */
-  readonly hard?: boolean;
-}
 
 const config = KAIJU_CONFIG;
 
@@ -81,6 +70,8 @@ export class Kaiju implements KaijuPartOwner, KaijuPoseInput {
   players = 1;
   /** 高難度（6-6） */
   hard = false;
+  /** レイド（8-6。RAID_RULES.tuning） */
+  raid = false;
   /** 与ダメージとブレイクの記録（6-6） */
   readonly stats = new KaijuStats();
   private hpValue = 1;
@@ -152,6 +143,7 @@ export class Kaiju implements KaijuPartOwner, KaijuPoseInput {
   emerge(x: number, z: number, facingX: number, facingZ: number, o: KaijuEmergeOptions = {}): void {
     this.players = clamp(Math.round(o.players ?? 1), 1, 4);
     this.hard = o.hard ?? false;
+    this.raid = o.raid ?? false;
     this.stats.reset();
     this.maxHpValue = kaijuMaxHp(this.players, undefined, this.hard);
     this.hpValue = this.maxHpValue;
@@ -199,6 +191,7 @@ export class Kaiju implements KaijuPartOwner, KaijuPoseInput {
     this.registerHit(part, attacker);
     let dmg = amount;
     dmg *= config.partyDamageScale[this.players - 1] ?? 1;
+    if (this.raid) dmg /= RAID_RULES.tuning.toughness;
     if (this.downTimer > 0) dmg *= config.down.damageScale;
     if (part.breakTimer > 0) dmg *= config.break.damageScale;
     this.flashTimer = config.hitFlashSeconds;

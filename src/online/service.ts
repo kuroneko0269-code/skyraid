@@ -55,7 +55,7 @@ export class OnlineService {
   private readonly records: RecordSender;
   readonly sync: SaveSync;
   private readonly listeners: ((s: OnlineStatus) => void)[] = [];
-  /** サーバーの表示名（連携中に読む。無ければパイロット名で作る。8-1 でパイロット名の変更も） */
+  /** サーバーの表示名（連携中にパイロット名に合わせる。8-1 でパイロット名の変更も。8-6 で名前をパイロット名に一本化） */
   private readonly profile: ProfileName;
   private readonly watch: PendingWatch;
   private readonly join: JoinTracker;
@@ -232,11 +232,6 @@ export class OnlineService {
 
   invalidateRanking(kind: RecordKind, key: string, aircraftId?: string): void {
     this.records.invalidate(kind, key, aircraftId);
-  }
-
-  /** 表示名を変える。整えた名前を返す（空なら null で何もしない） */
-  setDisplayName(name: string): Promise<string | null> {
-    return this.profile.setManual(name);
   }
 
   /**

@@ -26,6 +26,7 @@ npm run bench   # 時間の計測（テストには時間の判定を入れず�
 npm run unused  # 使われていないコード・依存の検出（knip。8-1）
 npm run perf    # 本番ビルドのチャンク一覧・起動時間・Lighthouse（8-2。結果は perf-report/。docs/perf.md）
 node scripts/ui-audit.js <出力先> --release [--browser all]  # 公開前の点検（build の後。docs/release-checklist.md。互換性は docs/compat.md）
+node scripts/ui-audit-device.js <出力先>  # 実機確認の修正の点検（8-6。タップのずれ・画面の端・メンバー管理の行・排気口）
 npm run format  # prettier --write .（整形。*.md は対象外）
 ```
 
