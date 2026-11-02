@@ -51,6 +51,7 @@ import { StateSnapshot } from './replay/state-walk';
 import { startFlightRuntime } from './ui/flight-runtime';
 import { linkOnline } from './ui/online-link';
 import { linkContextLoss } from './ui/context-loss';
+import { createLanguageSettings } from './ui/language-settings';
 
 /**
  * ゲーム本体を組み立てて起動する（8-3: main.ts が WebGL2 の描画を作れたときだけ呼ぶ。作れなければ案内画面）。
@@ -99,6 +100,13 @@ export function startApp(renderer: WebGLRenderer): void {
   // 設定（7-D: 設定画面のタブごとの slot。画質・HUD・音量・操作補助はポーズメニューにも貸す）
   const settingsUi = screens.settings;
   quality.createSelect(settingsUi.slot('quality'));
+  // 8-4: 言語の切り替え（選ぶとセーブして読み込み直す。飛行中は切り替えない）
+  createLanguageSettings(settingsUi.slot('language'), {
+    setLanguage: (locale) => {
+      save.setSetting('language', locale);
+    },
+    inFlight: () => screens.settingsNav.route.origin === 'pause',
+  });
 
   window.addEventListener('resize', () => {
     pipeline.resize(window.innerWidth, window.innerHeight);

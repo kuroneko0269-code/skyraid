@@ -1,6 +1,7 @@
 // モード選択の上に重ねるダイアログ（7-C で mode-select.ts から分けた）: チュートリアルの案内（4-11）・
 // フリーフライトのマップと天候（6-4・7-5）・レイドの人数と難易度（6-2・6-6）・防衛戦の人数・マップ・難易度（7-2）。
 // 選択はセグメント（ui/segmented.ts。高さ 48px 以上・選択中は塗りつぶし）、決定は下のボタン
+import { t } from '../core/i18n';
 import { DEFENSE_MAPS, type DefenseDifficulty } from '../data/defense';
 import { ISLAND_MAP, SELECTABLE_MAPS } from '../data/maps';
 import { RAID_DIFFICULTY_LABELS, type RaidDifficulty } from '../data/raid';
@@ -22,8 +23,18 @@ export interface ModeDialogHandlers {
 }
 
 const DIFFICULTY_OPTIONS = [
-  { value: 'normal', label: RAID_DIFFICULTY_LABELS.normal },
-  { value: 'hard', label: RAID_DIFFICULTY_LABELS.hard },
+  {
+    value: 'normal',
+    get label() {
+      return RAID_DIFFICULTY_LABELS.normal;
+    },
+  },
+  {
+    value: 'hard',
+    get label() {
+      return RAID_DIFFICULTY_LABELS.hard;
+    },
+  },
 ] as const;
 
 const asDifficulty = (v: string): 'normal' | 'hard' => (v === 'hard' ? 'hard' : 'normal');
@@ -55,7 +66,7 @@ export class ModeDialogs {
   private readonly defenseDiff: Segmented;
 
   constructor(root: HTMLElement, tutorial: TutorialStrings, h: ModeDialogHandlers) {
-    const back = (parent: HTMLElement, label = '戻る'): void => {
+    const back = (parent: HTMLElement, label = t('modes.dialog.back')): void => {
       createButton(parent, 'ui-button is-ghost campaign-back', label, () => {
         this.close();
         h.onClose();
@@ -77,18 +88,18 @@ export class ModeDialogs {
     });
 
     // フリーフライト: マップ・天候・時間
-    [this.freeWrap, box] = this.dialog(root, 'フリーフライト');
+    [this.freeWrap, box] = this.dialog(root, t('modes.free.label'));
     box.classList.add('mode-prompt-wide');
     this.freeMap = new Segmented(
       box,
-      'マップ',
+      t('modes.dialog.map'),
       SELECTABLE_MAPS.map((m) => ({ value: m.id, label: m.name })),
       this.freeMapId,
       (v) => (this.freeMapId = v),
     );
     this.freeWeather = new Segmented(
       box,
-      '天候',
+      t('modes.dialog.weather'),
       WEATHER_PRESETS.map((w) => ({ value: w.id, label: weatherLabel(w.id) })),
       this.freeWeatherId,
       (v) => (this.freeWeatherId = v),
@@ -96,68 +107,68 @@ export class ModeDialogs {
     );
     this.freeTime = new Segmented(
       box,
-      '時間',
+      t('modes.dialog.time'),
       [
-        { value: 'fixed', label: '止める' },
-        { value: 'flow', label: '流れる' },
+        { value: 'fixed', label: t('modes.dialog.timeFixed') },
+        { value: 'flow', label: t('modes.dialog.timeFlow') },
       ],
       'fixed',
       (v) => (this.freeTimeFlow = v === 'flow'),
     );
     buttons = el('div', 'campaign-buttons', box);
     back(buttons);
-    this.freeGo = go(buttons, '出撃', true, () => {
+    this.freeGo = go(buttons, t('modes.dialog.launch'), true, () => {
       h.onStart('free');
     });
 
     // レイド（6-2・6-6）: 高難度は HP ×1.4・予兆 −0.5 秒・最終フェーズ 3.5 分・報酬 ×1.8
     [this.raidWrap, box] = this.dialog(
       root,
-      'レイド：ヴォルガス',
-      '1 人は難易度を選んですぐ出撃（高難度は HP ×1.4・予兆が短い・最終フェーズ 3.5 分・報酬 ×1.8）。2〜4 人は部屋を作るか、部屋コードで参加します（全員が同じチーム。難易度はホストが選ぶ）。',
+      t('modes.raidDialog.title'),
+      t('modes.raidDialog.body'),
     );
     this.raidDiff = new Segmented(
       box,
-      '難易度（ソロ）',
+      t('modes.raidDialog.difficulty'),
       DIFFICULTY_OPTIONS,
       this.raidDifficulty,
       (v) => (this.raidDifficulty = asDifficulty(v)),
     );
     buttons = el('div', 'campaign-buttons', box);
     back(buttons);
-    go(buttons, '協力 2〜4人', false, () => {
+    go(buttons, t('modes.dialog.coop'), false, () => {
       h.onRaid('coop', 'normal');
     });
-    this.raidSolo = go(buttons, 'ソロで出撃', true, () => {
+    this.raidSolo = go(buttons, t('modes.dialog.solo'), true, () => {
       h.onRaid('solo', this.raidDifficulty);
     });
 
     // 防衛戦（7-2）
     [this.defenseWrap, box] = this.dialog(
       root,
-      '防衛戦',
-      '基地の司令部を全 10 波の敵から守ります。波の間に基地の上を低く遅く（高度 300m 以下・速度 150 以下）通ると補給。高難度は敵 ×1.3・司令部 HP 1500。2〜4 人は部屋を作るか、部屋コードで参加します（全員が同じチーム）。',
+      t('modes.defense.label'),
+      t('modes.defenseDialog.body'),
     );
     this.defenseMap = new Segmented(
       box,
-      'マップ',
+      t('modes.dialog.map'),
       DEFENSE_MAPS.map((m) => ({ value: m.mapId, label: m.name })),
       this.defenseMapId,
       (v) => (this.defenseMapId = v),
     );
     this.defenseDiff = new Segmented(
       box,
-      '難易度',
+      t('modes.defenseDialog.difficulty'),
       DIFFICULTY_OPTIONS,
       this.defenseDifficulty,
       (v) => (this.defenseDifficulty = asDifficulty(v)),
     );
     buttons = el('div', 'campaign-buttons', box);
     back(buttons);
-    go(buttons, '協力 2〜4人', false, () => {
+    go(buttons, t('modes.dialog.coop'), false, () => {
       h.onDefense('coop', this.defenseMapId, this.defenseDifficulty);
     });
-    this.defenseSolo = go(buttons, 'ソロで出撃', true, () => {
+    this.defenseSolo = go(buttons, t('modes.dialog.solo'), true, () => {
       h.onDefense('solo', this.defenseMapId, this.defenseDifficulty);
     });
   }

@@ -1,4 +1,5 @@
 import './hangar.css';
+import { t } from '../core/i18n';
 import { UI_SOUND_EVENTS } from '../data/audio';
 import type { AircraftModel, AircraftStats } from '../data/aircraft';
 import { HANGAR_CONFIG } from '../data/hangar';
@@ -75,7 +76,7 @@ export class HangarScreen {
       const status = el('span', 'hangar-entry-status', button);
       this.entries.set(m.id, { button, status });
     }
-    createButton(list, 'ui-button is-ghost campaign-back hangar-back', '← 戻る', () => {
+    createButton(list, 'ui-button is-ghost campaign-back hangar-back', t('hangar.back'), () => {
       handlers.onBack();
     });
 
@@ -91,8 +92,8 @@ export class HangarScreen {
       detail,
       '',
       [
-        { value: 'perf', label: '性能' },
-        { value: 'paint', label: '塗装' },
+        { value: 'perf', label: t('hangar.tab.perf') },
+        { value: 'paint', label: t('hangar.tab.paint') },
       ],
       'perf',
       (v) => {
@@ -108,7 +109,7 @@ export class HangarScreen {
       this.buy();
     });
     this.notice = el('div', 'hangar-notice', perf);
-    el('div', 'campaign-label', perf, '強化（この機体だけ）');
+    el('div', 'campaign-label', perf, t('hangar.upgradesHeading'));
     this.upgradeWrap = el('div', 'hangar-upgrades', perf);
     for (const k of UPGRADE_KINDS)
       this.upgrades.set(
@@ -173,9 +174,10 @@ export class HangarScreen {
   private buy(): void {
     const m = this.hangar.model(this.viewing);
     if (!m || this.hangar.canBuy(m.id) !== 'ok') return;
-    this.withConfirm(`${m.name} を ${formatCredits(m.price)} で購入しますか？`, m.price, () => {
+    const message = t('hangar.confirmBuy', { name: m.name, price: formatCredits(m.price) });
+    this.withConfirm(message, m.price, () => {
       if (this.hangar.buy(m.id) === 'ok') {
-        this.notice.textContent = `${m.name} を購入しました`;
+        this.notice.textContent = t('hangar.bought', { name: m.name });
         notifyPurchase();
       }
       this.refresh();
@@ -186,7 +188,7 @@ export class HangarScreen {
     const id = this.viewing;
     const price = this.hangar.upgradePrice(id, kind);
     if (price === null || this.hangar.canUpgrade(id, kind) !== 'ok') return;
-    this.withConfirm(`${formatCredits(price)} で強化しますか？`, price, () => {
+    this.withConfirm(t('hangar.confirmUpgrade', { price: formatCredits(price) }), price, () => {
       if (this.hangar.upgrade(id, kind) === 'ok') notifyPurchase();
       this.notice.textContent = '';
       this.refresh();
@@ -202,7 +204,7 @@ export class HangarScreen {
   private refresh(): void {
     const h = this.hangar;
     const credits = h.credits;
-    this.balance.textContent = `残高 ${formatCredits(credits)}`;
+    this.balance.textContent = t('hangar.balance', { credits: formatCredits(credits) });
     for (const m of h.models) {
       const entry = this.entries.get(m.id);
       if (!entry) continue;
@@ -211,9 +213,9 @@ export class HangarScreen {
       entry.button.classList.toggle('is-locked', status === 'locked');
       entry.status.textContent =
         m.id === h.selectedId
-          ? '出撃機'
+          ? t('hangar.selected')
           : status === 'owned'
-            ? '所持'
+            ? t('hangar.owned')
             : status === 'buyable'
               ? formatCredits(m.price)
               : this.lockText(m);
@@ -227,14 +229,19 @@ export class HangarScreen {
     const base = resolveLoadout(m, initialUpgrades());
     const now = resolveLoadout(m, levels);
     this.bars.update(loadoutStats(base), loadoutStats(now), statTexts(now));
-    this.payload.textContent = `ミサイル ${now.missiles} / ロケット ${now.rockets} / 爆弾 ${now.bombs} / フレア ${now.flares}`;
+    this.payload.textContent = t('hangar.payload', {
+      missiles: now.missiles,
+      rockets: now.rockets,
+      bombs: now.bombs,
+      flares: now.flares,
+    });
     const owned = status === 'owned';
     for (const [kind, row] of this.upgrades)
       row.update(levels[kind], nextUpgradePrice(levels[kind]), owned, credits);
     this.upgradeWrap.classList.toggle('is-disabled', !owned);
     this.action.hidden = owned;
     if (status === 'buyable') {
-      this.action.textContent = `購入する ${formatCredits(m.price)}`;
+      this.action.textContent = t('hangar.buy', { price: formatCredits(m.price) });
       this.action.disabled = credits < m.price;
     } else if (status === 'locked') {
       this.action.textContent = this.lockText(m);
@@ -244,7 +251,7 @@ export class HangarScreen {
   }
 
   private lockText(m: AircraftModel): string {
-    return m.unlockMission ? this.handlers.unlockText(m.unlockMission) : '未解放';
+    return m.unlockMission ? this.handlers.unlockText(m.unlockMission) : t('hangar.locked');
   }
 }
 

@@ -42,7 +42,7 @@ function request<T>(r: IDBRequest<T>): Promise<T> {
       resolve(r.result);
     };
     r.onerror = () => {
-      reject(r.error ?? new Error('IndexedDB の要求に失敗'));
+      reject(r.error ?? new Error('IndexedDB request failed'));
     };
   });
 }
@@ -53,10 +53,10 @@ function done(tx: IDBTransaction): Promise<void> {
       resolve();
     };
     tx.onerror = () => {
-      reject(tx.error ?? new Error('IndexedDB の書き込みに失敗'));
+      reject(tx.error ?? new Error('IndexedDB write failed'));
     };
     tx.onabort = () => {
-      reject(tx.error ?? new Error('IndexedDB の書き込みを中断'));
+      reject(tx.error ?? new Error('IndexedDB write aborted'));
     };
   });
 }
@@ -82,7 +82,7 @@ export class ReplayStore {
         resolve(new ReplayStore(r.result));
       };
       r.onerror = () => {
-        reject(r.error ?? new Error('IndexedDB を開けない'));
+        reject(r.error ?? new Error('Cannot open IndexedDB'));
       };
     });
   }

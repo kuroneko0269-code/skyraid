@@ -1,5 +1,7 @@
 // セーブデータの決めた値（3-1）。スキーマと読み書きは src/progression/save.ts
 
+import { t } from '../core/i18n';
+
 export const SAVE_CONFIG = {
   /** localStorage のキー（値は JSON 1 つ） */
   storageKey: 'skyraid.save',
@@ -10,7 +12,9 @@ export const SAVE_CONFIG = {
   /** 空のまま決定したときのパイロット名 */
   defaultPilotName: 'PILOT',
   /** 壊れたセーブデータを初期値に戻したときのお知らせと表示秒数 */
-  resetNotice: 'セーブデータを初期化しました',
+  get resetNotice(): string {
+    return t('save.resetNotice');
+  },
   noticeSeconds: 3,
   /** クレジット残高の上限（表示とオーバーフロー対策。普通に遊んで届かない値） */
   maxCredits: 999_999_999,

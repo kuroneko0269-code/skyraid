@@ -1,6 +1,6 @@
+import { t } from '../core/i18n';
 import './campaign.css';
 import './save.css';
-import type { Locale } from '../core/locale';
 import type { MissionDef } from '../missions/types';
 import type { CampaignProgress } from '../progression/campaign-progress';
 import { el } from './hud-dom';
@@ -28,13 +28,12 @@ export class MissionSelectScreen {
     private readonly progress: CampaignProgress,
     /** クレジット残高（表示のたびに読む） */
     private readonly credits: () => number,
-    locale: Locale,
     handlers: { onSelect: (mission: MissionDef) => void; onBack: () => void },
   ) {
     const root = createScreen(parent, 'campaign-screen');
-    el('h2', 'ui-heading campaign-heading', root, 'キャンペーン');
+    el('h2', 'ui-heading campaign-heading', root, t('campaign.heading'));
     const balance = el('div', 'campaign-balance', root);
-    el('span', '', balance, '残高');
+    el('span', '', balance, t('campaign.balance'));
     this.balance = el('span', 'campaign-balance-value', balance);
     const list = el('div', 'mission-list', root);
     missions.forEach((m, i) => {
@@ -47,10 +46,15 @@ export class MissionSelectScreen {
       const level = missionDifficultyText(m);
       if (level) el('span', 'mission-entry-level', head, level);
       const status = el('span', 'mission-entry-status', head);
-      el('span', 'mission-entry-title', button, missionStrings(m.id, locale).title);
+      el('span', 'mission-entry-title', button, missionStrings(m.id).title);
       this.entries.push({ mission: m, button, status });
     });
-    createButton(root, 'ui-button is-ghost campaign-back', '← モード選択', handlers.onBack);
+    createButton(
+      root,
+      'ui-button is-ghost campaign-back',
+      t('campaign.backToModes'),
+      handlers.onBack,
+    );
     this.root = root;
     this.refresh();
   }

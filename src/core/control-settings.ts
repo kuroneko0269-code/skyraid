@@ -7,6 +7,7 @@ import {
   type ButtonSize,
   type RemappableAction,
 } from '../data/controls';
+import { t } from './i18n';
 import { FLIGHT_CONFIG } from '../data/flight';
 import { ACTIONS, DEFAULT_KEYBINDS, type Action, type KeyBindings } from '../data/keybinds';
 
@@ -141,17 +142,23 @@ const KEY_NAMES: Readonly<Record<string, string>> = {
   ArrowLeft: '←',
   ArrowRight: '→',
   ShiftLeft: 'Shift',
-  ShiftRight: '右Shift',
   ControlLeft: 'Ctrl',
-  ControlRight: '右Ctrl',
   AltLeft: 'Alt',
-  AltRight: '右Alt',
   Space: 'Space',
   Escape: 'Esc',
 };
 
+/** 言語で表示が変わるキー（右 Shift など）の文言のキー */
+const LOCALIZED_KEYS: Readonly<Record<string, string>> = {
+  ShiftRight: 'controls.keyName.shiftRight',
+  ControlRight: 'controls.keyName.controlRight',
+  AltRight: 'controls.keyName.altRight',
+};
+
 /** KeyboardEvent.code の表示名（KeyW → W、Digit1 → 1、ArrowUp → ↑） */
 export function keyLabel(code: string): string {
+  const localized = LOCALIZED_KEYS[code];
+  if (localized) return t(localized);
   const named = KEY_NAMES[code];
   if (named) return named;
   if (/^Key[A-Z]$/.test(code)) return code.slice(3);

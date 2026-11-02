@@ -1,4 +1,10 @@
 // 表示の整形（7-4、DOM・Supabase 非依存）: 記録の値・日付・表示名・ランキングの行、メールの入力（コードは otp.ts）
+import {
+  formatCredits,
+  formatDate as formatLocalDate,
+  formatDateTime as formatLocalDateTime,
+} from '../core/format';
+import { t, tn } from '../core/i18n';
 import { findAircraftModel } from '../data/aircraft';
 import { ONLINE_CONFIG, type RecordKind } from '../data/online';
 import type { RankingRow } from './backend';
@@ -13,20 +19,17 @@ export function formatMs(ms: number): string {
   return m > 0 ? `${String(m)}:${String(s).padStart(2, '0')}.${frac}` : `${String(s)}.${frac}`;
 }
 
-/** 記録の値の表示。防衛戦は「10 波・司令部 85%」 */
+/** 記録の値の表示。防衛戦は「10 波・司令部 85%」（en「10 waves · HQ 85%」） */
 export function formatRecordValue(kind: RecordKind, valueMs: number, detail: RecordDetail): string {
   if (kind !== 'defense') return formatMs(valueMs);
   const waves = typeof detail.waves === 'number' ? detail.waves : 0;
   const hq = typeof detail.hq === 'number' ? detail.hq : 0;
-  return `${String(waves)} 波・司令部 ${String(hq)}%`;
+  return tn('ranking.defenseValue', waves, { hq });
 }
 
-/** ISO の時刻 → ローカルの「2026-11-01」 */
+/** ISO の時刻 → ローカルの日付（ja「2026/11/01」・en「11/01/2026」。core/format）。読めなければ空 */
 export function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const p = (n: number): string => String(n).padStart(2, '0');
-  return `${String(d.getFullYear())}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  return Number.isNaN(new Date(iso).getTime()) ? '' : formatLocalDate(iso);
 }
 
 /** 表示名の整え: 制御文字を除き、前後の空白を落とし、16 文字（コードポイント）まで。空なら null */
@@ -60,7 +63,7 @@ export function rankingLines(
 ): RankingLine[] {
   return rows.map((r) => ({
     place: String(r.place),
-    name: r.displayName ?? '（名前なし）',
+    name: r.displayName ?? t('online.unnamed'),
     value: formatRecordValue(kind, r.valueMs, r.detail),
     aircraft: findAircraftModel(r.aircraftId)?.name ?? r.aircraftId,
     date: formatDate(r.createdAt),
@@ -71,9 +74,7 @@ export function rankingLines(
 /** 自分の順位の一言（上位 100 に無ければ「圏外」） */
 export function selfPlaceText(rows: readonly RankingRow[], selfId: string | null): string {
   const mine = selfId === null ? undefined : rows.find((r) => r.userId === selfId);
-  return mine
-    ? `あなたの順位: ${String(mine.place)} 位 / ${String(rows.length)} 人`
-    : 'あなたの記録はまだありません（上位 100 位以内に入ると表示）';
+  return mine ? tn('ranking.selfPlace', rows.length, { place: mine.place }) : t('ranking.selfNone');
 }
 
 export interface SaveSummary {
@@ -85,8 +86,8 @@ export interface SaveSummary {
 /** 競合のダイアログに出すセーブの要約（パイロット名・クレジット・クリアしたミッションの数）。形が違っても落ちない */
 export function summarizeSave(data: unknown): SaveSummary {
   const o: Record<string, unknown> = typeof data === 'object' && data !== null ? { ...data } : {};
-  const pilot = typeof o.pilotName === 'string' ? o.pilotName : '（未設定）';
-  const credits = typeof o.credits === 'number' ? `${o.credits.toLocaleString('ja-JP')} CR` : '—';
+  const pilot = typeof o.pilotName === 'string' ? o.pilotName : t('sync.pilotUnset');
+  const credits = typeof o.credits === 'number' ? formatCredits(o.credits) : '—';
   let cleared = 0;
   if (typeof o.missions === 'object' && o.missions !== null) {
     const missions: Record<string, unknown> = { ...o.missions };
@@ -94,14 +95,11 @@ export function summarizeSave(data: unknown): SaveSummary {
       if (typeof m === 'object' && m !== null && 'bestRank' in m && m.bestRank !== null) cleared++;
     }
   }
-  return { pilot, credits, cleared: `クリア ${String(cleared)} 件` };
+  return { pilot, credits, cleared: t('sync.cleared', { count: cleared }) };
 }
 
-/** ISO → ローカルの「2026-11-01 14:05」（無ければ「不明」） */
+/** ISO → ローカルの日時（ja「2026/11/01 14:05」。core/format。無ければ「不明」） */
 export function formatDateTime(iso: string | null): string {
-  if (iso === null) return '不明';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '不明';
-  const p = (n: number): string => String(n).padStart(2, '0');
-  return `${formatDate(iso)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  if (iso === null || Number.isNaN(new Date(iso).getTime())) return t('sync.unknownTime');
+  return formatLocalDateTime(iso);
 }

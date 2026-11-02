@@ -13,11 +13,13 @@ export const BRAND_ASSETS = {
   favicon: 'brand/favicon.ico',
 } as const;
 
-/** manifest.webmanifest（vite.config.ts の vite-plugin-pwa が書き出す） */
+/**
+ * manifest.webmanifest（vite.config.ts の vite-plugin-pwa が書き出す）。説明文は文言の表の app.description（8-4。manifest には
+ * vite.config.ts が ja.json から入れ、情報画面は今の言語で引く）
+ */
 export const APP_MANIFEST = {
   name: 'SkyRaid: Titan Skies',
   shortName: 'SkyRaid',
-  description: 'ブラウザで動く 3D フライトシューティング',
   /** アドレスバー・ステータスバーの色（読み込み画面の背景と同じ濃紺） */
   themeColor: '#050a12',
   backgroundColor: '#000000',

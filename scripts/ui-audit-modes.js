@@ -1,6 +1,7 @@
 /* global document */
 // 公開前の点検（8-1）: 全モードを 844×390 のタッチ端末で通しで起動する。飛行するモードはポーズが開くまで、
 // PvP・協力はロビー画面まで（?net=local では部屋を作ってロビーの部屋まで）。ハンガーとリプレイの一覧も開く
+import { CONTEXT_LOCALE, L } from './audit-lang.js';
 import {
   VIEWPORT,
   collectCsp,
@@ -37,7 +38,7 @@ const MODES = [
     go: async (p) => {
       await p.click('.mode-card[data-mode="race"]');
       await p.locator('.race-course').first().click();
-      await p.locator('.ui-button.is-primary:text-is("スタート")').click();
+      await p.locator(`.ui-button.is-primary:text-is("${L('スタート')}"):visible`).click();
     },
   },
   {
@@ -79,7 +80,7 @@ const MODES = [
     query: '?net=local',
     go: async (p) => {
       await p.click('.mode-card[data-mode="pvp"]');
-      await p.locator('.ui-button:text-is("部屋を作る")').click();
+      await p.locator(`.ui-button:text-is("${L('部屋を作る')}")`).click();
     },
   },
   {
@@ -98,6 +99,7 @@ export async function auditModes(browser, base, out) {
       viewport: VIEWPORT,
       hasTouch: true,
       deviceScaleFactor: 1,
+      locale: CONTEXT_LOCALE,
     });
     const log = await watch(context);
     const page = await context.newPage();

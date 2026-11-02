@@ -2,6 +2,7 @@
 // 「コピー」（コードだけ）、「QR」（参加用 URL の QR コードを 220px 四方で出すダイアログ）。
 // QR を読んだ相手は OS のカメラから ?room= 付きで開く（アプリ内の読み取りは作らない）。文字は textContent だけで入れる
 import { encodeQr } from '../core/qr';
+import { t } from '../core/i18n';
 import { el } from './hud-dom';
 import { createButton } from './screen';
 
@@ -54,11 +55,11 @@ export class LobbyShare {
 
   constructor(parent: HTMLElement, dialogParent: HTMLElement) {
     this.root = el('div', 'lobby-share', parent);
-    createButton(this.root, 'ui-button lobby-share-button', '共有', () => {
+    createButton(this.root, 'ui-button lobby-share-button', t('lobby.share.share'), () => {
       void this.share();
     });
-    createButton(this.root, 'ui-button lobby-share-button', 'コピー', () => {
-      void this.copy(this.code, 'コードをコピーしました');
+    createButton(this.root, 'ui-button lobby-share-button', t('lobby.share.copy'), () => {
+      void this.copy(this.code, t('lobby.share.codeCopied'));
     });
     createButton(this.root, 'ui-button lobby-share-button', 'QR', () => {
       this.openQr();
@@ -70,13 +71,13 @@ export class LobbyShare {
     this.dialog.hidden = true;
     const box = el('div', 'ui-dialog lobby-dialog lobby-qr', this.dialog);
     el('div', 'ui-kicker', box, 'QR CODE');
-    el('p', 'briefing-text', box, 'スマホのカメラで読むと、この部屋に参加できます');
+    el('p', 'briefing-text', box, t('lobby.share.qrNote'));
     const frame = el('div', 'lobby-qr-frame', box);
     this.canvas = el('canvas', 'lobby-qr-canvas', frame);
     this.canvas.setAttribute('role', 'img');
     this.urlText = el('p', 'lobby-qr-url', box);
     const buttons = el('div', 'campaign-buttons', box);
-    createButton(buttons, 'ui-button is-primary campaign-go', '閉じる', () => {
+    createButton(buttons, 'ui-button is-primary campaign-go', t('lobby.close'), () => {
       this.closeQr();
     });
     this.dialog.addEventListener('click', (e) => {
@@ -101,7 +102,7 @@ export class LobbyShare {
   private async share(): Promise<void> {
     const data: ShareData = {
       title: 'SkyRaid',
-      text: `SkyRaid の対戦に参加（部屋コード ${this.code}）`,
+      text: t('lobby.share.invite', { code: this.code }),
       url: this.url,
     };
     if ('share' in navigator && (!('canShare' in navigator) || navigator.canShare(data))) {
@@ -113,12 +114,12 @@ export class LobbyShare {
         if (e instanceof DOMException && e.name === 'AbortError') return;
       }
     }
-    await this.copy(this.url, 'リンクをコピーしました');
+    await this.copy(this.url, t('lobby.share.linkCopied'));
   }
 
   private async copy(text: string, done: string): Promise<void> {
     const ok = await copyText(text);
-    this.showStatus(ok ? done : `コピーできませんでした: ${text}`);
+    this.showStatus(ok ? done : t('lobby.share.copyFailed', { text }));
   }
 
   private showStatus(text: string): void {
@@ -131,8 +132,8 @@ export class LobbyShare {
 
   private openQr(): void {
     const ok = drawQr(this.canvas, this.url);
-    this.canvas.setAttribute('aria-label', `参加用 URL の QR コード: ${this.url}`);
-    this.urlText.textContent = ok ? this.url : 'QR コードを作れませんでした';
+    this.canvas.setAttribute('aria-label', t('lobby.share.qrLabel', { url: this.url }));
+    this.urlText.textContent = ok ? this.url : t('lobby.share.qrFailed');
     this.dialog.hidden = false;
   }
 }

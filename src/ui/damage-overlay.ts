@@ -1,4 +1,5 @@
 // 被弾の赤いフラッシュ（薄く）と「撃墜された」の表示（2-3）。DOM は最初に作り、値が変わったときだけ書く
+import { t } from '../core/i18n';
 import './damage-overlay.css';
 import { AIRCRAFT_COMBAT } from '../data/aircraft';
 import { HUD_CONFIG } from '../data/hud';
@@ -16,7 +17,7 @@ export class DamageOverlay {
     this.shade = el('div', 'down-shade', parent);
     this.flash = el('div', 'damage-flash', parent);
     this.message = el('div', 'down-message', parent);
-    el('div', 'down-message-main', this.message, '撃墜された');
+    el('div', 'down-message-main', this.message, t('hud.shotDown'));
     this.countdown = el('div', 'down-message-sub', this.message);
     this.shade.hidden = this.message.hidden = true;
   }
@@ -39,7 +40,7 @@ export class DamageOverlay {
       this.shade.hidden = this.message.hidden = !isDown;
     }
     if (!isDown) return;
-    const seconds = `${Math.max(1, Math.ceil(respawnTimer))} 秒後に復帰`;
+    const seconds = t('hud.respawnIn', { seconds: Math.max(1, Math.ceil(respawnTimer)) });
     if (seconds !== last.seconds) this.countdown.textContent = last.seconds = seconds;
   }
 }

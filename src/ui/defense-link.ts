@@ -3,6 +3,7 @@
 import type { Object3D, PerspectiveCamera } from 'three';
 import type { GameAudio } from '../audio/game-audio';
 import { usesDemoCamera, type GameState } from '../core/game-state';
+import { t } from '../core/i18n';
 import {
   DEFENSE_CONFIG,
   FACILITY_KINDS,
@@ -54,11 +55,21 @@ export interface DefenseLink {
 
 /** 施設が壊れたときの文 */
 export const FACILITY_LOST_TEXT: Readonly<Record<(typeof FACILITY_KINDS)[number], string>> = {
-  hq: '司令部が破壊された',
-  radar: 'レーダー喪失 — 敵の予告が出なくなる',
-  fuel: '燃料タンク喪失 — 補給が半分になる',
-  aaa1: '対空砲 1 喪失 — 支援が減る',
-  aaa2: '対空砲 2 喪失 — 支援が減る',
+  get hq() {
+    return t('defense.lost.hq');
+  },
+  get radar() {
+    return t('defense.lost.radar');
+  },
+  get fuel() {
+    return t('defense.lost.fuel');
+  },
+  get aaa1() {
+    return t('defense.lost.aaa1');
+  },
+  get aaa2() {
+    return t('defense.lost.aaa2');
+  },
 };
 
 /** 終わってからリザルトを出すまでの秒数（大きな文字を見せる） */
@@ -98,7 +109,7 @@ export function createDefenseLink(p: DefenseLinkParts): DefenseLink {
     hud,
     afterStart() {
       hud.onSkip = soloSkip;
-      screens.pause.setInMission(true, '防衛戦を中断');
+      screens.pause.setInMission(true, t('defense.abort'));
     },
     render(width, height) {
       // 協力の防衛戦の HUD は ui/defense-flight.ts が出す（ここはソロだけ。メニューの間は CSS で隠れる）
@@ -203,11 +214,11 @@ export function bindDefenseFeedback(
   let lastHit = 0;
   bus.on('defense:wave', ({ wave }) => {
     audio.playDefense('horn');
-    hud.flash(`WAVE ${wave}`, '敵襲', 'bad', 2);
+    hud.flash(`WAVE ${wave}`, t('defense.flash.incoming'), 'bad', 2);
   });
   bus.on('defense:waveClear', ({ wave }) => {
     audio.playDefense('clear');
-    hud.flash(`WAVE ${wave} CLEAR`, '補給して次の波に備えよ', 'good', 2.5);
+    hud.flash(`WAVE ${wave} CLEAR`, t('defense.flash.clearSub'), 'good', 2.5);
   });
   bus.on('defense:spawn', ({ kind }) => {
     if (kind === 'cruise') audio.playDefense('cruise');
@@ -220,15 +231,21 @@ export function bindDefenseFeedback(
   });
   bus.on('defense:facilityLost', ({ index }) => {
     const k = FACILITY_KINDS[index];
-    if (k && k !== 'hq') hud.flash('施設喪失', FACILITY_LOST_TEXT[k], 'bad', 2.5);
+    if (k && k !== 'hq')
+      hud.flash(t('defense.flash.facilityLost'), FACILITY_LOST_TEXT[k], 'bad', 2.5);
   });
   bus.on('defense:supply', ({ id, fraction }) => {
     if (isSelf(id))
-      hud.flash('補給完了', fraction < 1 ? '燃料タンク喪失のため半分' : '', 'good', 1.8);
+      hud.flash(
+        t('defense.flash.supplied'),
+        fraction < 1 ? t('defense.flash.suppliedHalf') : '',
+        'good',
+        1.8,
+      );
   });
   bus.on('defense:end', ({ outcome }) => {
     hud.flash(
-      outcome === 'cleared' ? '防衛成功' : '基地陥落',
+      outcome === 'cleared' ? t('defense.outcome.cleared') : t('defense.outcome.fallen'),
       '',
       outcome === 'cleared' ? 'good' : 'bad',
       3,

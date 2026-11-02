@@ -1,4 +1,5 @@
 // 品質設定（低/中/高）のパラメータ。適用は src/render/pipeline.ts、選択ロジックは src/core/settings.ts
+import { t } from '../core/i18n';
 import type { AircraftDetail } from './aircraft-model';
 
 export const QUALITY_LEVELS = ['low', 'medium', 'high'] as const;
@@ -169,9 +170,15 @@ export const QUALITY_PRESETS: Readonly<Record<QualityLevel, QualityPreset>> = {
 
 /** UI 表示名 */
 export const QUALITY_LABELS: Readonly<Record<QualityLevel, string>> = {
-  low: '低',
-  medium: '中',
-  high: '高',
+  get low() {
+    return t('quality.low');
+  },
+  get medium() {
+    return t('quality.medium');
+  },
+  get high() {
+    return t('quality.high');
+  },
 };
 
 export const QUALITY_CONFIG = {
@@ -204,7 +211,9 @@ export const QUALITY_CONFIG = {
     sampleSeconds: 5,
     minFps: 30,
     noticeSeconds: 2,
-    notice: '画質を下げました',
+    get notice() {
+      return t('quality.downgraded');
+    },
   },
   /**
    * 空気遠近（散乱の霧）とは別に、描画距離の果てを空の色に溶かしきる範囲（描画距離に対する比）。

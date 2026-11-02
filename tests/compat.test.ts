@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { COMPAT_NOTICE, MIN_ENVIRONMENT, MIN_ENVIRONMENT_NOTE } from '../src/data/compat';
+import { buildLegacyScript } from '../scripts/vite-legacy-check';
+import { COMPAT_NOTICE, MIN_ENVIRONMENT, minEnvironmentNote } from '../src/data/compat';
 import { SAVE_CONFIG } from '../src/data/save';
 import { SaveStore, type SaveStorage } from '../src/progression/save-store';
+import { tableFor, useLocale } from './i18n-helpers';
 
 /** 書き込みで容量超過になる localStorage の偽物 */
 class FullStorage implements SaveStorage {
@@ -86,9 +88,16 @@ describe('最低動作環境と案内の文（8-3）', () => {
     }
   });
 
-  it('古いブラウザの案内（public/legacy-check.js。ES5 で別に書いている）も同じ動作環境を出す', () => {
-    const legacy = readFileSync(new URL('../public/legacy-check.js', import.meta.url), 'utf8');
-    for (const m of MIN_ENVIRONMENT) expect(legacy).toContain(`${m.platform}: ${m.browser}`);
-    expect(legacy).toContain(MIN_ENVIRONMENT_NOTE);
+  it('古いブラウザの案内（src/legacy/legacy-check.js。ES5）にはビルド時に同じ動作環境を日本語・英語で埋め込む', () => {
+    const source = readFileSync(new URL('../src/legacy/legacy-check.js', import.meta.url), 'utf8');
+    expect(source).toContain('__LEGACY_STRINGS__');
+    const legacy = buildLegacyScript(source, { ja: tableFor('ja'), en: tableFor('en') });
+    expect(legacy).not.toContain('__LEGACY_STRINGS__');
+    for (const locale of ['ja', 'en'] as const) {
+      useLocale(locale);
+      for (const m of MIN_ENVIRONMENT) expect(legacy).toContain(`${m.platform}: ${m.browser}`);
+      expect(legacy).toContain(minEnvironmentNote());
+    }
+    useLocale('ja');
   });
 });

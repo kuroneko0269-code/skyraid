@@ -1,5 +1,6 @@
 import './quality-select.css';
 import { QUALITY_LABELS, QUALITY_LEVELS, type QualityLevel } from '../data/quality';
+import { t } from '../core/i18n';
 import { isQualityLevel } from '../core/settings';
 
 /** 品質セレクト（ポーズメニューの設定に置く）。選択が変わると onSelect を呼ぶ */
@@ -10,7 +11,7 @@ export function createQualitySelect(
 ): HTMLSelectElement {
   const label = document.createElement('label');
   label.className = 'ui-toggle settings-item quality-select';
-  label.textContent = '画質 ';
+  label.textContent = `${t('settings.quality')} `;
 
   const select = document.createElement('select');
   for (const level of QUALITY_LEVELS) {

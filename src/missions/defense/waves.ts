@@ -1,4 +1,5 @@
 // 防衛戦（7-2）の波: 定義（src/data/defense-waves.ts）に人数・難易度の倍率を掛けて、出す敵の列と予告の数にする。Three.js 非依存
+import { t, tn } from '../../core/i18n';
 import type { Difficulty } from '../../data/ai';
 import { DEFENSE_CONFIG, type DefenseDifficulty } from '../../data/defense';
 import {
@@ -84,8 +85,8 @@ export function countWave(spawns: readonly WaveSpawn[]): WaveCounts {
 /** 予告の文（例「北東から 爆撃機 2・戦闘機 3」。0 の種類は書かない） */
 export function forecastText(direction: string, c: Readonly<WaveCounts>): string {
   const parts: string[] = [];
-  if (c.bomber > 0) parts.push(`爆撃機 ${c.bomber}`);
-  if (c.fighter > 0) parts.push(`戦闘機 ${c.fighter}`);
-  if (c.cruise > 0) parts.push(`巡航ミサイル ${c.cruise}`);
-  return `${direction}から ${parts.join('・')}`;
+  if (c.bomber > 0) parts.push(tn('defense.forecast.bomber', c.bomber));
+  if (c.fighter > 0) parts.push(tn('defense.forecast.fighter', c.fighter));
+  if (c.cruise > 0) parts.push(tn('defense.forecast.cruise', c.cruise));
+  return t('defense.forecast.text', { direction, list: parts.join(t('defense.forecast.sep')) });
 }

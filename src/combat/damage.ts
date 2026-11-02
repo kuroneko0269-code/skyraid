@@ -14,7 +14,7 @@ export class Health implements Damageable {
   private current: number;
 
   constructor(readonly maxHp: number) {
-    if (!(maxHp > 0)) throw new Error('maxHp は正の値にする');
+    if (!(maxHp > 0)) throw new Error('maxHp must be positive');
     this.current = maxHp;
   }
 

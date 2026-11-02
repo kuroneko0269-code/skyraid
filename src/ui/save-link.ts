@@ -1,4 +1,5 @@
 import './save.css';
+import { t } from '../core/i18n';
 import { getBrowserStorage } from '../core/settings';
 import { COMPAT_CONFIG } from '../data/compat';
 import { SAVE_CONFIG } from '../data/save';
@@ -19,7 +20,7 @@ export function openBrowserSave(parent: HTMLElement): SaveStore {
     showCommonToast(COMPAT_CONFIG.storageNotice, {
       parent,
       seconds: COMPAT_CONFIG.storageNoticeSeconds,
-      actions: [{ label: '閉じる' }],
+      actions: [{ label: t('save.close') }],
     });
   });
   return store;

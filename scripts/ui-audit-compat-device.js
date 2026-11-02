@@ -1,5 +1,6 @@
 /* global document, window, navigator, screen, getComputedStyle, Event, Document, Element, Navigator */
 // 互換性の点検の端末の機能（8-3。scripts/ui-audit-compat.js から呼ぶ）: 音・全画面 / 向きの固定 / 振動・縦向き・ゲームパッド
+import { L } from './audit-lang.js';
 import {
   VIEWPORT,
   dialogButton,
@@ -52,21 +53,23 @@ export async function auditDeviceApis(browser, base, out) {
   await shown(page, '.title-screen');
   await page.click('.title-settings');
   await shown(page, '.settings-screen');
-  const fullscreen = await page.locator('.settings-screen button', { hasText: '全画面' }).count();
+  const fullscreen = await page
+    .locator('.settings-screen button', { hasText: L('全画面') })
+    .count();
   await page.screenshot({ path: `${out}/compat-no-device-display.png` });
-  await page.click('.settings-tabs .ui-seg-item:text-is("操作")');
+  await page.click(`.settings-tabs .ui-seg-item:text-is("${L('操作', 'settings.')}")`);
   await page.waitForTimeout(500);
-  const vib = await page.evaluate(() => {
+  const vib = await page.evaluate((vibLabel) => {
     const b = [
       ...document.querySelectorAll('.settings-screen button, .settings-screen label'),
-    ].find((e) => (e.textContent ?? '').includes('振動'));
+    ].find((e) => (e.textContent ?? '').includes(vibLabel));
     return b
       ? {
           text: b.textContent.trim(),
           disabled: b.disabled === true || b.matches('[aria-disabled="true"]'),
         }
       : null;
-  });
+  }, L('振動'));
   await page.screenshot({ path: `${out}/compat-no-device-controls.png` });
   r.steps.push(`全画面のボタン ${fullscreen ? 'あり ⚠' : 'なし'}`);
   r.steps.push(

@@ -2,6 +2,7 @@
 // タブはレース（コース × 機体）/ レイド（難易度）/ 防衛戦（マップ × 難易度）。メンバーの表示名・記録・機体・日付、自分の行をハイライト。
 // 読み込みは OnlineService.ranking（5 分キャッシュ）
 import './online.css';
+import { t } from '../core/i18n';
 import { AIRCRAFT_MODELS } from '../data/aircraft';
 import { COURSES } from '../data/courses';
 import { DEFENSE_MAPS } from '../data/defense';
@@ -15,10 +16,13 @@ import { el } from './hud-dom';
 import { createButton, createScreen, setScreenShown } from './screen';
 import { Segmented } from './segmented';
 
-const DIFFICULTIES = [
-  { value: 'normal', label: RAID_DIFFICULTY_LABELS.normal },
-  { value: 'hard', label: RAID_DIFFICULTY_LABELS.hard },
-] as const;
+/** 難易度の選択肢（ラベルは表から引くので、画面を作るときに呼ぶ） */
+function difficulties(): readonly { value: string; label: string }[] {
+  return [
+    { value: 'normal', label: RAID_DIFFICULTY_LABELS.normal },
+    { value: 'hard', label: RAID_DIFFICULTY_LABELS.hard },
+  ];
+}
 
 export interface RankingSource {
   ranking(q: RankingQuery): Promise<readonly RankingRow[]>;
@@ -50,7 +54,7 @@ export class RankingScreen {
     private readonly onClose: () => void,
   ) {
     const root = createScreen(parent, 'campaign-screen ranking-screen');
-    el('h2', 'ui-heading campaign-heading', root, 'ランキング');
+    el('h2', 'ui-heading campaign-heading', root, t('ranking.title'));
     const panel = el('div', 'ranking-panel', root);
     this.tabs = new Segmented(
       panel,
@@ -69,7 +73,7 @@ export class RankingScreen {
     this.raceRows = el('div', 'ranking-filters', panel);
     new Segmented(
       this.raceRows,
-      'コース',
+      t('ranking.course'),
       COURSES.map((c) => ({ value: c.id, label: c.name })),
       this.course,
       (v) => {
@@ -79,7 +83,7 @@ export class RankingScreen {
     );
     new Segmented(
       this.raceRows,
-      '機体',
+      t('ranking.aircraft'),
       AIRCRAFT_MODELS.map((m) => ({ value: m.id, label: m.name })),
       this.aircraft,
       (v) => {
@@ -88,14 +92,14 @@ export class RankingScreen {
       },
     );
     this.raidRows = el('div', 'ranking-filters', panel);
-    new Segmented(this.raidRows, '難易度', DIFFICULTIES, this.raidDiff, (v) => {
+    new Segmented(this.raidRows, t('ranking.difficulty'), difficulties(), this.raidDiff, (v) => {
       this.raidDiff = v;
       reload();
     });
     this.defenseRows = el('div', 'ranking-filters', panel);
     new Segmented(
       this.defenseRows,
-      'マップ',
+      t('ranking.map'),
       DEFENSE_MAPS.map((m) => ({ value: m.mapId, label: m.name })),
       this.defenseMap,
       (v) => {
@@ -103,23 +107,24 @@ export class RankingScreen {
         reload();
       },
     );
-    new Segmented(this.defenseRows, '難易度', DIFFICULTIES, this.defenseDiff, (v) => {
-      this.defenseDiff = v;
-      reload();
-    });
+    new Segmented(
+      this.defenseRows,
+      t('ranking.difficulty'),
+      difficulties(),
+      this.defenseDiff,
+      (v) => {
+        this.defenseDiff = v;
+        reload();
+      },
+    );
     this.self = el('div', 'ranking-self', panel);
     const scroller = el('div', 'ranking-scroll', panel);
-    const t = el('table', 'ranking-table', scroller);
-    this.table = el('tbody', '', t);
+    const table = el('table', 'ranking-table', scroller);
+    this.table = el('tbody', '', table);
     this.message = el('div', 'ranking-message', panel);
-    el(
-      'div',
-      'ranking-note',
-      panel,
-      'メンバー内のランキング（5 分ごとに更新）。P2P の協力は対象外の参考記録です',
-    );
+    el('div', 'ranking-note', panel, t('ranking.note'));
     const buttons = el('div', 'campaign-buttons', root);
-    createButton(buttons, 'ui-button is-ghost campaign-back', '← モード選択', () => {
+    createButton(buttons, 'ui-button is-ghost campaign-back', t('ranking.back'), () => {
       this.close();
     });
     this.root = root;
@@ -162,7 +167,7 @@ export class RankingScreen {
     this.defenseRows.hidden = this.kind !== 'defense';
     const q = this.query();
     const id = ++this.request;
-    this.message.textContent = '読み込み中…';
+    this.message.textContent = t('ranking.loading');
     this.source.ranking(q).then(
       (rows) => {
         if (id === this.request) this.render(q.kind, rows);
@@ -188,6 +193,6 @@ export class RankingScreen {
       el('td', 'ranking-date', tr, line.date);
     }
     this.self.textContent = selfPlaceText(rows, selfId);
-    this.message.textContent = rows.length === 0 ? 'まだ記録がありません' : '';
+    this.message.textContent = rows.length === 0 ? t('ranking.empty') : '';
   }
 }

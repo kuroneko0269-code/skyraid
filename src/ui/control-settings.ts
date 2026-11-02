@@ -1,5 +1,6 @@
 import './control-settings.css';
 import type { ControlSettings } from '../core/control-settings';
+import { t } from '../core/i18n';
 import { BUTTON_SIZES, CONTROL_LABELS, CONTROL_SETTINGS, type ButtonSize } from '../data/controls';
 import type { SaveStore } from '../progression/save-store';
 import { el } from './hud-dom';
@@ -29,7 +30,7 @@ export function createControlSettings(
 
   const box = document.createElement('div');
   box.className = 'control-settings';
-  el('div', 'control-settings-heading', box, '操作');
+  el('div', 'control-settings-heading', box, t('controls.heading'));
   const s = CONTROL_SETTINGS;
   slider(
     box,

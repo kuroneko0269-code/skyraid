@@ -1,6 +1,7 @@
 // 防衛戦（7-2）の数値: 基地（施設の配置・司令部の HP）、敵の来る方向、補給の条件、新しい敵（爆撃機・巡航ミサイル・爆弾）、
 // 人数と難易度のスケール、報酬。波の構成は src/data/defense-waves.ts。ロジックは src/missions/defense/（Three.js 非依存）。
 // 距離は m、時間は秒、速度は m/s。座標は北 −Z・南 +Z・東 +X
+import { t } from '../core/i18n';
 import type { BlastSpec } from './ground-targets';
 
 export const DEFENSE_DIFFICULTIES = ['normal', 'hard'] as const;
@@ -37,7 +38,9 @@ export interface DefenseMapDef {
 /** 島: 基地は東岸（地表 10〜40m の低い所）。敵は東の海（北東・東・南東）から */
 export const DEFENSE_ISLAND: DefenseMapDef = {
   mapId: 'island',
-  name: '島（東岸の基地）',
+  get name() {
+    return t('defense.map.island');
+  },
   center: { x: 2500, z: 0 },
   facilities: {
     hq: { x: 2480, z: 0 },
@@ -47,9 +50,24 @@ export const DEFENSE_ISLAND: DefenseMapDef = {
     aaa2: { x: 2660, z: 200 },
   },
   approaches: [
-    { label: '北東', bearingDeg: 45 },
-    { label: '東', bearingDeg: 90 },
-    { label: '南東', bearingDeg: 135 },
+    {
+      get label() {
+        return t('defense.dir.ne');
+      },
+      bearingDeg: 45,
+    },
+    {
+      get label() {
+        return t('defense.dir.e');
+      },
+      bearingDeg: 90,
+    },
+    {
+      get label() {
+        return t('defense.dir.se');
+      },
+      bearingDeg: 135,
+    },
   ],
   start: { x: 1700, y: 700, z: 0, headingDeg: 90 },
 };
@@ -57,7 +75,9 @@ export const DEFENSE_ISLAND: DefenseMapDef = {
 /** 港湾都市: 基地は港（街の東の岸壁、建物のない所）。敵は湾（南西・南・南東）から */
 export const DEFENSE_HARBOR: DefenseMapDef = {
   mapId: 'harbor',
-  name: '港湾都市（港の基地）',
+  get name() {
+    return t('defense.map.harbor');
+  },
   center: { x: 1520, z: 1250 },
   facilities: {
     hq: { x: 1500, z: 1300 },
@@ -67,9 +87,24 @@ export const DEFENSE_HARBOR: DefenseMapDef = {
     aaa2: { x: 1700, z: 1400 },
   },
   approaches: [
-    { label: '南西', bearingDeg: 225 },
-    { label: '南', bearingDeg: 180 },
-    { label: '南東', bearingDeg: 135 },
+    {
+      get label() {
+        return t('defense.dir.sw');
+      },
+      bearingDeg: 225,
+    },
+    {
+      get label() {
+        return t('defense.dir.s');
+      },
+      bearingDeg: 180,
+    },
+    {
+      get label() {
+        return t('defense.dir.se');
+      },
+      bearingDeg: 135,
+    },
   ],
   start: { x: 1520, y: 700, z: 400, headingDeg: 180 },
 };

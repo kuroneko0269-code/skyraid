@@ -2,6 +2,7 @@
 // オンライン連携中はサーバーの表示名（profiles.display_name）も変える。オンライン連携は動的 import なので、
 // 読み込まれたときに setPilotRenameHook でつなぐ（ui/online-app.ts）
 import './save.css';
+import { t, tn } from '../core/i18n';
 import { SAVE_CONFIG } from '../data/save';
 import type { SaveStore } from '../progression/save-store';
 import { el } from './hud-dom';
@@ -24,9 +25,9 @@ export function createPilotRename(
   onRenamed: (name: string) => void,
 ): void {
   const box = el('div', 'save-settings pilot-rename', panel);
-  el('div', 'save-settings-heading', box, 'パイロット名');
+  el('div', 'save-settings-heading', box, t('pilot.name'));
   const current = el('div', 'pilot-rename-current', box);
-  const open = button(box, 'パイロット名を変更');
+  const open = button(box, t('pilot.rename'));
   const form = el('form', 'pilot-rename-form', box);
   form.hidden = true;
   const input = el('input', 'ui-field pilot-name-input', form);
@@ -34,19 +35,21 @@ export function createPilotRename(
   input.placeholder = SAVE_CONFIG.defaultPilotName;
   input.autocomplete = 'off';
   input.spellcheck = false;
-  input.setAttribute('aria-label', '新しいパイロット名');
+  input.setAttribute('aria-label', t('pilot.newName'));
   clipPilotNameInput(input);
   isolateKeys(input);
   el(
     'div',
     'save-settings-status',
     form,
-    `${SAVE_CONFIG.pilotNameMaxLength} 文字まで（空なら ${SAVE_CONFIG.defaultPilotName}）`,
+    tn('pilot.renameHint', SAVE_CONFIG.pilotNameMaxLength, {
+      default: SAVE_CONFIG.defaultPilotName,
+    }),
   );
   const row = el('div', 'save-settings-row', form);
-  const submit = button(row, '変更する');
+  const submit = button(row, t('pilot.confirmRename'));
   submit.type = 'submit';
-  const cancel = button(row, 'やめる');
+  const cancel = button(row, t('save.cancel'));
   const status = el('div', 'save-settings-status', box);
   status.hidden = true;
 
@@ -55,7 +58,9 @@ export function createPilotRename(
     status.hidden = text === '';
   };
   const showCurrent = (): void => {
-    current.textContent = `今の名前: ${save.pilotName ?? SAVE_CONFIG.defaultPilotName}`;
+    current.textContent = t('pilot.current', {
+      name: save.pilotName ?? SAVE_CONFIG.defaultPilotName,
+    });
   };
   const close = (): void => {
     form.hidden = true;
@@ -80,14 +85,14 @@ export function createPilotRename(
     close();
     showCurrent();
     onRenamed(name);
-    const done = `パイロット名を「${name}」に変更しました`;
+    const done = t('pilot.renamed', { name });
     say(done);
     const hook = renameHook;
     if (!hook) return;
     submit.disabled = true;
     void hook(name)
       .then((extra) => {
-        if (extra !== null) say(`${done}。${extra}`);
+        if (extra !== null) say(t('pilot.renamedWithExtra', { done, extra }));
       })
       .finally(() => {
         submit.disabled = false;

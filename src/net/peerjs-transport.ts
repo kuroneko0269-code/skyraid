@@ -25,7 +25,7 @@ interface PeerLink {
 export const openPeerTransport: TransportOpener = (localId) =>
   new Promise((resolve, reject) => {
     if (typeof RTCPeerConnection === 'undefined') {
-      reject(new TransportError('unsupported', 'WebRTC に対応していないブラウザです'));
+      reject(new TransportError('unsupported', 'WebRTC is not supported in this browser'));
       return;
     }
     const peer = new Peer(localId, { config: { iceServers: ICE_SERVERS } });
@@ -166,7 +166,7 @@ class PeerJsTransport implements Transport {
     const p = this.pending.get(id);
     if (p) {
       this.pending.delete(id);
-      p.reject(new TransportError('network', '接続が閉じられました'));
+      p.reject(new TransportError('network', 'connection closed'));
     }
     if (link.joined) this.leaves.emit(id);
   }

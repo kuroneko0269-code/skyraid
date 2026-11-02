@@ -3,11 +3,13 @@
 // タブは 表示 / 音 / 操作 / ゲーム / データ。部品（画質・HUD・音量など）は各モジュールが slot(...) に入れる。
 // ポーズメニューには「画質・音量・操作補助・HUD」の 4 つを貸し出す（lend / reclaim。同じ部品を DOM ごと移すので、表示が食い違わない）
 import './settings.css';
+import { t } from '../core/i18n';
 import { el } from './hud-dom';
 import { createButton, createScreen, setScreenShown } from './screen';
 import { Segmented } from './segmented';
 
 export const SETTINGS_SLOTS = [
+  'language',
   'quality',
   'hud',
   'display',
@@ -19,12 +21,17 @@ export const SETTINGS_SLOTS = [
 ] as const;
 export type SettingsSlot = (typeof SETTINGS_SLOTS)[number];
 
-const TABS: readonly { id: string; label: string; slots: readonly SettingsSlot[] }[] = [
-  { id: 'display', label: '表示', slots: ['quality', 'hud', 'display'] },
-  { id: 'sound', label: '音', slots: ['volume'] },
-  { id: 'controls', label: '操作', slots: ['assist', 'controls'] },
-  { id: 'game', label: 'ゲーム', slots: ['game'] },
-  { id: 'data', label: 'データ', slots: ['data'] },
+/** タブ。表示名は構築時に labelKey（settings.tab.<id>）で引く */
+const TABS: readonly { id: string; labelKey: string; slots: readonly SettingsSlot[] }[] = [
+  {
+    id: 'display',
+    labelKey: 'settings.tab.display',
+    slots: ['language', 'quality', 'hud', 'display'],
+  },
+  { id: 'sound', labelKey: 'settings.tab.sound', slots: ['volume'] },
+  { id: 'controls', labelKey: 'settings.tab.controls', slots: ['assist', 'controls'] },
+  { id: 'game', labelKey: 'settings.tab.game', slots: ['game'] },
+  { id: 'data', labelKey: 'settings.tab.data', slots: ['data'] },
 ];
 
 /** ポーズメニューに残す 4 つ（この順に並べる）。HUD は画質の右に詰める（8-1 の事前修正。音量は 2 列ぶち抜き） */
@@ -46,12 +53,17 @@ export class SettingsScreen {
     // 見出し・戻る・タブは上に固定し、内容だけスクロールする（7-4c。タブの位置が内容の高さで動かない）
     const top = el('div', 'menu-top', root);
     const header = el('div', 'menu-header', top);
-    this.back = createButton(header, 'ui-button is-ghost menu-back', '← 戻る', onBack);
-    el('h2', 'ui-heading menu-heading', header, '設定');
+    this.back = createButton(
+      header,
+      'ui-button is-ghost menu-back',
+      t('settings.back.default'),
+      onBack,
+    );
+    el('h2', 'ui-heading menu-heading', header, t('settings.title'));
     this.tabs = new Segmented(
       top,
       '',
-      TABS.map((t) => ({ value: t.id, label: t.label })),
+      TABS.map((tab) => ({ value: tab.id, label: t(tab.labelKey) })),
       TABS[0]?.id ?? 'display',
       (id) => {
         this.showTab(id);
@@ -85,7 +97,7 @@ export class SettingsScreen {
   }
 
   /** 設定画面を出す・隠す。backLabel は戻り先（「← ポーズへ」など） */
-  setShown(shown: boolean, backLabel = '← 戻る'): void {
+  setShown(shown: boolean, backLabel = t('settings.back.default')): void {
     if (shown) {
       this.reclaim();
       this.back.textContent = backLabel;

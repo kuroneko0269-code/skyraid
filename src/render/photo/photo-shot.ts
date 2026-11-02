@@ -62,7 +62,7 @@ function toPng(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob((b) => {
       if (b) resolve(b);
-      else reject(new Error('PNG を作れませんでした'));
+      else reject(new Error('Failed to create PNG'));
     }, 'image/png');
   });
 }

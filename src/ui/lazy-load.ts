@@ -1,5 +1,6 @@
 // 遅延読み込み（8-2）の表示: 読み込みが長いときの「読み込み中…」と、失敗したときのお知らせ（オフライン / 新しい版の公開直後で
 // 古いチャンクが無い）。失敗しても今の画面のまま（ゲームは続けられる）。読み込みの土台は core/lazy-chunk.ts
+import { t } from '../core/i18n';
 import { APP_SHELL_CONFIG } from '../data/app';
 import { loadWithStatus, type ChunkFailure } from '../core/lazy-chunk';
 import type { Toast, ToastOptions } from './toast';
@@ -23,8 +24,12 @@ function toast(text: string, opts: ToastOptions): Toast | null {
  * どちらも再読み込みを勧める（オフラインのまま再読み込みすると、SW が入っていなければページが開けないので、通信が戻ってから）
  */
 export const CHUNK_FAILURE_TEXT: Record<ChunkFailure, string> = {
-  offline: 'オフラインのため読み込めませんでした。通信できるところで再読み込みしてください',
-  stale: '読み込めませんでした。新しいバージョンが公開された可能性があります（再読み込みで最新にします）',
+  get offline() {
+    return t('lazy.offline');
+  },
+  get stale() {
+    return t('lazy.stale');
+  },
 };
 
 /** 読み込み中の表示と失敗のお知らせ付きで読む。失敗したら null */
@@ -38,7 +43,7 @@ export function loadChunk<T>(chunk: () => Promise<T>): Promise<T | null> {
     },
     online: () => navigator.onLine,
     slow: () => {
-      loading = toast('読み込み中…', { seconds: 0 });
+      loading = toast(t('lazy.loading'), { seconds: 0 });
     },
     done: () => {
       loading?.close();
@@ -49,13 +54,13 @@ export function loadChunk<T>(chunk: () => Promise<T>): Promise<T | null> {
         seconds: APP_SHELL_CONFIG.lazyErrorToastSeconds,
         actions: [
           {
-            label: '再読み込み',
+            label: t('lazy.reload'),
             kind: why === 'stale' ? 'primary' : 'ghost',
             onClick: () => {
               window.location.reload();
             },
           },
-          { label: '閉じる', kind: why === 'stale' ? 'ghost' : 'primary' },
+          { label: t('lazy.close'), kind: why === 'stale' ? 'ghost' : 'primary' },
         ],
       });
     },

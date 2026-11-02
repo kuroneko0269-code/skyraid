@@ -8,6 +8,7 @@ import type { CombatSystem } from '../../combat/combat-system';
 import type { GroundHeightFn, Rng } from '../../combat/gun';
 import { TEAM_BASE, TEAM_ENEMY, type CombatTarget } from '../../combat/target';
 import { EventBus } from '../../core/event-bus';
+import { t } from '../../core/i18n';
 import {
   CRUISE_CONFIG,
   DEFENSE_CONFIG,
@@ -115,7 +116,12 @@ export class DefenseRunner {
     this.fighterWave = world.enemies.map(() => 0);
     this.fighterBorn = world.enemies.map(() => 0);
     this.enemyTargets = [...world.enemies, ...props.bombers, ...props.cruiseMissiles];
-    this.approach = options.map.approaches[0] ?? { label: '東', bearingDeg: 90 };
+    this.approach = options.map.approaches[0] ?? {
+      get label() {
+        return t('defense.dir.e');
+      },
+      bearingDeg: 90,
+    };
     this.spawner = new DefenseSpawner(
       world,
       options.map,

@@ -1,5 +1,6 @@
 /* global document, localStorage, window */
 // 公開前の点検の共通部品（8-1）: ページの見張り（console のエラー・HTTP のエラー・CSP 違反・通信先）と画面の操作
+import { CONTEXT_LOCALE, L } from './audit-lang.js';
 
 export const VIEWPORT = { width: 844, height: 390 };
 
@@ -76,7 +77,7 @@ export async function toModeSelect(page, base) {
 }
 
 export const dialogButton = (page, label) =>
-  page.locator(`.mode-prompt:not([hidden]) .ui-button:text-is("${label}")`).first();
+  page.locator(`.mode-prompt:not([hidden]) .ui-button:text-is("${L(label)}")`).first();
 
 /** 点検用のページ（8-3: 互換性の点検。opts.init は init script、opts.viewport・opts.touch）*/
 export async function newPage(browser, opts = {}) {
@@ -85,6 +86,7 @@ export async function newPage(browser, opts = {}) {
     hasTouch: opts.touch ?? true,
     isMobile: false,
     deviceScaleFactor: 1,
+    locale: CONTEXT_LOCALE,
   });
   const log = await watch(context);
   if (opts.init) await context.addInitScript(opts.init, opts.arg);
@@ -98,4 +100,24 @@ export async function finish(r, page, log, context) {
   Object.assign(r, { errors: log.errors, csp: log.csp });
   await context.close();
   return r;
+}
+
+/** トーストの見本（更新の知らせと「ホーム画面に追加」の案内。開発サーバーの点検で撮る） */
+export async function showSampleToasts(page) {
+  await page.evaluate(
+    async ([update, now, close, install]) => {
+      const m = await import('/src/ui/toast.ts');
+      m.showToast(update, {
+        seconds: 0,
+        actions: [{ label: now, kind: 'primary' }, { label: close }],
+      });
+      m.showToast(install, { seconds: 0, actions: [{ label: close }] });
+    },
+    [
+      L('新しいバージョンがあります（次回の起動で更新）'),
+      L('今すぐ更新'),
+      L('閉じる'),
+      L('共有ボタン →「ホーム画面に追加」で全画面で遊べます'),
+    ],
+  );
 }

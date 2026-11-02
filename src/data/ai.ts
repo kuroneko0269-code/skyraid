@@ -1,22 +1,39 @@
 // 敵機 AI（2-3）の数値。ロジックは src/ai/、敵機の飛行パラメータは src/data/aircraft.ts の ENEMY_FIGHTER
 // 距離は m、時間は秒、角度は度。docs/spec.md「5. 戦闘」の「敵機AI」に各数値の意味を書いている
+import { t } from '../core/i18n';
 
 export const DIFFICULTIES = ['rookie', 'easy', 'normal', 'hard'] as const;
 export type Difficulty = (typeof DIFFICULTIES)[number];
 
 export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
-  rookie: '入門',
-  easy: 'やさしい',
-  normal: 'ふつう',
-  hard: 'むずかしい',
+  get rookie() {
+    return t('difficulty.rookie');
+  },
+  get easy() {
+    return t('difficulty.easy');
+  },
+  get normal() {
+    return t('difficulty.normal');
+  },
+  get hard() {
+    return t('difficulty.hard');
+  },
 };
 
 /** ミッション一覧に出す難易度の短い表記（4-12） */
 export const DIFFICULTY_SHORT_LABELS: Record<Difficulty, string> = {
-  rookie: '入門',
-  easy: '易',
-  normal: '普',
-  hard: '難',
+  get rookie() {
+    return t('difficulty.short.rookie');
+  },
+  get easy() {
+    return t('difficulty.short.easy');
+  },
+  get normal() {
+    return t('difficulty.short.normal');
+  },
+  get hard() {
+    return t('difficulty.short.hard');
+  },
 };
 
 /** ポーズメニューの設定「敵」「難易度」の保存先（localStorage） */

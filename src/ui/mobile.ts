@@ -1,5 +1,6 @@
 import './mobile.css';
 import { TOUCH_MODES, TOUCH_MODE_LABELS, type TouchMode } from '../data/touch';
+import { t } from '../core/i18n';
 import { isTouchMode } from '../core/touch-settings';
 import { installTapFocus } from './tap-focus';
 
@@ -11,7 +12,7 @@ export function createTouchModeSelect(
 ): HTMLSelectElement {
   const label = document.createElement('label');
   label.className = 'ui-toggle settings-item';
-  label.textContent = 'タッチ ';
+  label.textContent = `${t('touch.label')} `;
   const select = document.createElement('select');
   for (const mode of TOUCH_MODES) {
     const option = document.createElement('option');
@@ -84,7 +85,9 @@ export function createFullscreenButton(parent: HTMLElement): HTMLButtonElement |
   button.type = 'button';
   button.className = 'ui-toggle settings-item settings-button';
   const refresh = (): void => {
-    button.textContent = fullscreenElement(doc) ? '全画面解除' : '全画面';
+    button.textContent = fullscreenElement(doc)
+      ? t('mobile.exitFullscreen')
+      : t('mobile.fullscreen');
   };
   refresh();
   button.addEventListener('click', () => {
@@ -117,7 +120,7 @@ export function createFullscreenButton(parent: HTMLElement): HTMLButtonElement |
 export function createRotateHint(parent: HTMLElement): HTMLDivElement {
   const hint = document.createElement('div');
   hint.className = 'rotate-hint';
-  hint.textContent = '画面を横にしてください';
+  hint.textContent = t('mobile.rotate');
   parent.appendChild(hint);
   return hint;
 }

@@ -1,6 +1,7 @@
 // 設定の組み立て（main.ts から分けた。4-11 の事前修正）: タッチ・HUD・全画面・敵・操作補助・セーブデータ。
 // 7-D: 設定画面（settings-screen.ts）のタブごとの slot に入れる。画質・音量・操作・オンライン連携は各モジュールが入れる
 import type { AssistFlags } from '../core/assist-settings';
+import { t } from '../core/i18n';
 import type { Input } from '../core/input';
 import type { StorageLike } from '../core/settings';
 import type { FlightSession } from '../missions/flight-session';
@@ -51,7 +52,7 @@ export function createDisplaySettings(p: PauseSettingsParts): {
   // 7-5: 夜は HUD を少し暗くする（ui/weather-link.ts が毎フレーム読む）
   createToggleButton(
     p.settings.slot('display'),
-    '夜の HUD 減光',
+    t('settings.nightHudDim'),
     p.save.settings.nightHudDim,
     () => {
       const on = !p.save.settings.nightHudDim;

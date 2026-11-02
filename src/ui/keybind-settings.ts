@@ -7,24 +7,26 @@ import {
   keyLabel,
   type ControlSettings,
 } from '../core/control-settings';
+import { t } from '../core/i18n';
 import { CONTROL_LABELS, REMAPPABLE_ACTIONS, type RemappableAction } from '../data/controls';
 import type { Action } from '../data/keybinds';
 import { el } from './hud-dom';
 
-/** 警告に出すアクション名（割り当てを変えられないものも含む） */
-const OTHER_ACTION_NAMES: Partial<Record<Action, string>> = {
-  targetNext: 'ターゲット切替',
-  cameraToggle: 'カメラ切替',
-  rocket: 'ロケット',
-  bomb: '爆弾',
-  debugToggle: 'デバッグ表示',
-  hudToggle: 'HUD 表示',
+/** 警告に出すアクション名（割り当てを変えられないもの）の文言のキー */
+const OTHER_ACTION_KEYS: Partial<Record<Action, string>> = {
+  targetNext: 'controls.otherActions.targetNext',
+  cameraToggle: 'controls.otherActions.cameraToggle',
+  rocket: 'controls.otherActions.rocket',
+  bomb: 'controls.otherActions.bomb',
+  debugToggle: 'controls.otherActions.debugToggle',
+  hudToggle: 'controls.otherActions.hudToggle',
 };
 
 function actionName(a: Action): string {
-  return (
-    (CONTROL_LABELS.actions as Partial<Record<Action, string>>)[a] ?? OTHER_ACTION_NAMES[a] ?? a
-  );
+  const remappable = (CONTROL_LABELS.actions as Partial<Record<Action, string>>)[a];
+  if (remappable !== undefined) return remappable;
+  const key = OTHER_ACTION_KEYS[a];
+  return key ? t(key) : a;
 }
 
 export function createKeybindSettings(
@@ -59,14 +61,18 @@ export function createKeybindSettings(
       const codes = bindings[action];
       row.key.textContent =
         waiting === action
-          ? 'キーを押す…（Esc で取消）'
+          ? t('controls.pressKey')
           : codes.length > 0
             ? codes.map(keyLabel).join(' / ')
             : '—';
       row.key.classList.toggle('is-waiting', waiting === action);
       const others = conflictsOf(bindings, action);
       row.warn.hidden = others.length === 0;
-      row.warn.textContent = others.length ? `⚠ ${others.map(actionName).join('・')}と重複` : '';
+      row.warn.textContent = others.length
+        ? t('controls.conflict', {
+            names: others.map(actionName).join(t('controls.listSeparator')),
+          })
+        : '';
     }
   };
 
@@ -106,7 +112,7 @@ export function createKeybindSettings(
     });
     rows.set(action, { key, warn });
   }
-  const reset = el('button', 'ui-button is-ghost keybind-reset', list, '初期の割当に戻す');
+  const reset = el('button', 'ui-button is-ghost keybind-reset', list, t('controls.resetKeys'));
   reset.type = 'button';
   reset.addEventListener('click', () => {
     reset.blur();

@@ -54,8 +54,8 @@ function luminance(hex: number): number {
   );
 }
 
-const BLACK = SKIN_PALETTE.findIndex((c) => c.name === '黒');
-const WHITE = SKIN_PALETTE.findIndex((c) => c.name === '白');
+const BLACK = SKIN_PALETTE.findIndex((c) => c.id === 'black');
+const WHITE = SKIN_PALETTE.findIndex((c) => c.id === 'white');
 
 /**
  * 機体の初期の塗装: 単色で 4-3 の機体の色・アクセント色、マーキングは基本色が明るければ黒・暗ければ白。

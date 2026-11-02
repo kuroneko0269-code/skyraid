@@ -240,7 +240,7 @@ export function paintSkinPixels(
   out: Uint8Array = new Uint8Array(skinPixelCount()),
 ): Uint8Array {
   const def = findSkinPattern(paint.pattern) ?? findSkinPattern('solid');
-  if (!def) throw new Error('塗装パターンの定義がありません');
+  if (!def) throw new Error('Paint pattern definition not found');
   const hex = (i: number): number => SKIN_PALETTE[i]?.hex ?? 0x808080;
   const c = patternContext(def, hex(paint.base), hex(paint.accent), hex(paint.marking));
   const tones = toneMap(shape, c);

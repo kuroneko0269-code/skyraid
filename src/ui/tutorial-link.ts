@@ -2,7 +2,6 @@
 // フリーフライト / ミッションの初回のヒント。main から飛行の開始・ランナーの変化・描画フレームで呼ぶ
 import { buildKeyBindings, keyLabel } from '../core/control-settings';
 import type { Input } from '../core/input';
-import { detectLocale } from '../core/locale';
 import type { MissionRunner } from '../missions/runner';
 import type { SaveStore } from '../progression/save-store';
 import { bindTutorialReward, type TutorialReward } from '../progression/tutorial-reward';
@@ -26,10 +25,8 @@ export class TutorialLink {
     gameHud: Hud,
     onAbort: () => void,
   ) {
-    const locale = detectLocale(window.location.search, navigator.languages);
     this.hud = new TutorialHud(
       parent,
-      locale,
       // 指示の文のキー名は今の割当（4-11 の操作設定）
       (a) => {
         const code = buildKeyBindings(save.settings.controls.keys)[a][0];
@@ -40,7 +37,7 @@ export class TutorialLink {
       },
       onAbort,
     );
-    this.hints = new TouchHints(parent, gameHud.root, tutorialStrings(locale).hints);
+    this.hints = new TouchHints(parent, gameHud.root, tutorialStrings().hints);
   }
 
   /** このチュートリアルで払ったクレジット（リザルト。初回だけ 500） */

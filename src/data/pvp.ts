@@ -1,5 +1,6 @@
 // PvP の戦闘（5-3）の数値。仕組みは src/combat/pvp-arena.ts（ホストの判定）と src/net/pvp-mirror.ts（表示）。
 // 決定は docs/decisions.md
+import { t } from '../core/i18n';
 import { RAID_QUICK_PHRASES } from './raid';
 import { WORLD_CONFIG } from './terrain';
 
@@ -82,18 +83,31 @@ export const PVP_CONFIG = {
   },
 } as const;
 
+/** 定型文の表のキー（pvp.phrase.*。表示言語の文は表示するときに引く） */
+const PVP_PHRASE_KEYS = ['ready', 'wait', 'rematch', 'hello', 'nice', 'thanks'] as const;
+
+/** 要素を読むたびに get(i) を呼ぶ配列（表示言語の表は起動後に読み込むので、import の時点では文を作らない） */
+function lazyList(length: number, get: (i: number) => string): readonly string[] {
+  const list: string[] = [];
+  for (let i = 0; i < length; i++) {
+    Object.defineProperty(list, i, { get: () => get(i), enumerable: true });
+  }
+  return list;
+}
+
 /** ロビーの定型文（5-4。番号で送る） */
-export const PVP_QUICK_PHRASES = [
-  '準備OK',
-  'ちょっと待って',
-  'もう一戦',
-  'よろしく',
-  'ナイス！',
-  'ありがとう',
-] as const;
+export const PVP_QUICK_PHRASES: readonly string[] = lazyList(PVP_PHRASE_KEYS.length, (i) =>
+  t(`pvp.phrase.${PVP_PHRASE_KEYS[i] ?? ''}`),
+);
 
 /** 定型文の全体（6-6: 番号 6〜9 はレイドだけの定型文。レイドのときだけ出す） */
-export const QUICK_PHRASES: readonly string[] = [...PVP_QUICK_PHRASES, ...RAID_QUICK_PHRASES];
+export const QUICK_PHRASES: readonly string[] = lazyList(
+  PVP_QUICK_PHRASES.length + RAID_QUICK_PHRASES.length,
+  (i) =>
+    i < PVP_QUICK_PHRASES.length
+      ? (PVP_QUICK_PHRASES[i] ?? '')
+      : (RAID_QUICK_PHRASES[i - PVP_QUICK_PHRASES.length] ?? ''),
+);
 
 /** レイドの定型文の番号（QUICK_PHRASES の中） */
 export const RAID_PHRASE_BASE = PVP_QUICK_PHRASES.length;

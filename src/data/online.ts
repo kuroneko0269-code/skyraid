@@ -1,5 +1,6 @@
 // オンライン連携（7-4）の決めた数値。仕組みは src/online/、SQL は supabase/migrations/skyraid_0001_init.sql、
 // 設計は docs/supabase-design.md。SQL と同じ値を使うものは tests/online-sql.test.ts で突き合わせる
+import { t } from '../core/i18n';
 
 export const ONLINE_CONFIG = {
   /** Supabase のスキーマ（規約 1.1。アプリ名と同じ） */
@@ -42,9 +43,15 @@ export const RECORD_KINDS = ['race', 'raid', 'defense'] as const;
 export type RecordKind = (typeof RECORD_KINDS)[number];
 
 export const RECORD_KIND_LABELS: Readonly<Record<RecordKind, string>> = {
-  race: 'レース',
-  raid: 'レイド',
-  defense: '防衛戦',
+  get race() {
+    return t('ranking.kind.race');
+  },
+  get raid() {
+    return t('ranking.kind.raid');
+  },
+  get defense() {
+    return t('ranking.kind.defense');
+  },
 };
 
 /** records.client_version（記録の形を変えたら上げる） */

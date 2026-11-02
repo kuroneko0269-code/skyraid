@@ -4,14 +4,21 @@
 // 連続するリングの間の必要旋回率が全機体（未強化）の最大ピッチ角速度の 80% 以下。
 // ゴールドタイムは道筋を追うボット（Kestrel・未強化・スロットル全開・アフターバーナーはブーストだけ）のタイム ÷ 1.2 を
 // 0.5 秒に丸めた値（tests/race-bot.test.ts。ボットはランク B）。制限時間はゴールドタイムの約 3 倍
+import { t } from '../core/i18n';
 import type { CourseDef } from '../missions/race/types';
 
 /** 海岸周回: 島を半径 3300m で反時計回りに 1 周する低空（高度 70〜130m）の入門コース */
 export const COAST_COURSE: CourseDef = {
   id: 'coast',
-  name: '海岸周回',
-  note: '島の海岸線を低空で 1 周する',
-  level: '入門',
+  get name() {
+    return t('courses.coast.name');
+  },
+  get note() {
+    return t('courses.coast.note');
+  },
+  get level() {
+    return t('courses.level.beginner');
+  },
   mapId: 'island',
   weatherId: 'day-clear',
   start: { x: 0, y: 100, z: 3300, headingDeg: 90 },
@@ -39,9 +46,15 @@ export const COAST_COURSE: CourseDef = {
  */
 export const CANYON_COURSE: CourseDef = {
   id: 'canyon',
-  name: '渓谷スラローム',
-  note: '北の山腹を低く縫うスラローム',
-  level: '中級',
+  get name() {
+    return t('courses.canyon.name');
+  },
+  get note() {
+    return t('courses.canyon.note');
+  },
+  get level() {
+    return t('courses.level.intermediate');
+  },
   mapId: 'island',
   weatherId: 'day-clear',
   start: { x: -700, y: 150, z: -3600, headingDeg: 180 },
@@ -82,9 +95,15 @@ export const CANYON_COURSE: CourseDef = {
  */
 export const HARBOR_COURSE: CourseDef = {
   id: 'harbor-speed',
-  name: '港湾ハイスピード',
-  note: 'ビルの谷間を抜ける高速コース',
-  level: '上級',
+  get name() {
+    return t('courses.harborSpeed.name');
+  },
+  get note() {
+    return t('courses.harborSpeed.note');
+  },
+  get level() {
+    return t('courses.level.advanced');
+  },
   mapId: 'harbor',
   weatherId: 'day-clear',
   start: { x: 0, y: 90, z: 3600, headingDeg: 0 },
@@ -120,9 +139,15 @@ export const HARBOR_COURSE: CourseDef = {
  */
 export const ACRO_COURSE: CourseDef = {
   id: 'acro',
-  name: '夕空アクロバット',
-  note: '宙返りと反転を要求する縦のコース',
-  level: '上級',
+  get name() {
+    return t('courses.acro.name');
+  },
+  get note() {
+    return t('courses.acro.note');
+  },
+  get level() {
+    return t('courses.level.advanced');
+  },
   mapId: 'island',
   weatherId: 'evening-clear',
   start: { x: 4200, y: 350, z: 3200, headingDeg: 0 },

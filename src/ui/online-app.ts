@@ -1,6 +1,7 @@
 // オンライン連携（7-4）の組み立て。ui/online-link.ts が環境変数のあるときだけ動的 import で読み込む:
 // Supabase のクライアント・セーブの同期（保存イベント → 3 秒後に送信、起動時とログイン時に受け取り）・記録の送信・
 // 設定の「オンライン連携」・モード選択の「ランキング」・競合のダイアログ
+import { t } from '../core/i18n';
 import { getBrowserStorage } from '../core/settings';
 import type { ScreenState } from '../core/game-state';
 import { SAVE_CONFIG } from '../data/save';
@@ -101,11 +102,9 @@ export function startOnline(env: OnlineEnv, p: OnlineLinkParts): void {
   // 設定の「パイロット名を変更」（8-1 の事前修正）: 承認済みならサーバーの表示名も変える
   setPilotRenameHook((name) =>
     service.renameFromPilot(name).then((result) => {
-      if (result === 'saved') return 'サーバーの表示名も変更しました';
+      if (result === 'saved') return t('online.rename.saved');
       if (result === 'none') return null;
-      return service.status.enabled
-        ? 'サーバーの表示名は変更できませんでした（次にオンライン連携したときに変更します）'
-        : 'サーバーの表示名はオンライン連携を ON にしたときに変更します';
+      return service.status.enabled ? t('online.rename.failed') : t('online.rename.whenEnabled');
     }),
   );
 

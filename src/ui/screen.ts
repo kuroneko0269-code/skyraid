@@ -1,3 +1,4 @@
+import { t } from '../core/i18n';
 import './theme.css';
 import './screen.css';
 import { SCREEN_CONFIG } from '../data/screens';
@@ -81,7 +82,7 @@ export class LoadingScreen {
     this.root = createScreen(parent, 'loading-screen');
     const text = document.createElement('div');
     text.className = 'loading-text';
-    text.textContent = '読み込み中…';
+    text.textContent = t('title.loading');
     const track = document.createElement('div');
     track.className = 'loading-track';
     this.bar = document.createElement('div');

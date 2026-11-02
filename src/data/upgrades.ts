@@ -1,6 +1,8 @@
 // 強化の 4 系統（3-3）: 効果と価格。数値の掛け合わせは src/progression/loadout.ts、購入は src/progression/hangar.ts。
 // 強化は機体ごとに独立（セーブの aircraft.owned[機体 id]）
 
+import { t } from '../core/i18n';
+
 /** 強化の 4 系統（エンジン / 機体 / 武装 / 電子装備） */
 export const UPGRADE_KINDS = ['engine', 'airframe', 'weapons', 'avionics'] as const;
 export type UpgradeKind = (typeof UPGRADE_KINDS)[number];
@@ -27,8 +29,19 @@ export const UPGRADE_EFFECTS = {
 
 /** ハンガーに出す名前と効果の説明 */
 export const UPGRADE_INFO: Readonly<Record<UpgradeKind, { label: string; effect: string }>> = {
-  engine: { label: 'エンジン', effect: '最高速・加速・AB 持続' },
-  airframe: { label: '機体', effect: 'HP・旋回' },
-  weapons: { label: '武装', effect: '機銃ダメージ・ミサイル +1' },
-  avionics: { label: '電子装備', effect: 'ロック時間・索敵距離・フレア +1' },
+  engine: upgradeInfo('engine'),
+  airframe: upgradeInfo('airframe'),
+  weapons: upgradeInfo('weapons'),
+  avionics: upgradeInfo('avionics'),
 };
+
+function upgradeInfo(kind: UpgradeKind): { label: string; effect: string } {
+  return {
+    get label() {
+      return t(`upgrades.${kind}.label`);
+    },
+    get effect() {
+      return t(`upgrades.${kind}.effect`);
+    },
+  };
+}

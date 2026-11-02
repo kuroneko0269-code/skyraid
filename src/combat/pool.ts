@@ -32,7 +32,7 @@ export class Pool<T> {
   get(i: number): T {
     const item = this.items[i];
     if (item === undefined || i >= this.activeCount)
-      throw new RangeError(`Pool: ${i} は使用中でない`);
+      throw new RangeError(`Pool: ${i} is not in use`);
     return item;
   }
 

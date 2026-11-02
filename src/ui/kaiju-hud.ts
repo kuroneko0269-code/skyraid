@@ -1,6 +1,7 @@
 // 怪獣の HUD（6-2）: 画面上部に怪獣の全体 HP バーとフェーズ（最終フェーズは残り時間）、ロック中の部位名と部位 HP、
 // 攻撃の予兆の警告（攻撃名と残り秒）、ダウン、BREAK!、咆哮のスタン中のノイズ。値は描画フレームごとに update で渡す。
 // DOM は最初に作り、値が変わったときだけ書く
+import { t } from '../core/i18n';
 import './kaiju-hud.css';
 import { KAIJU_ATTACK_CONFIG, KAIJU_CONFIG } from '../data/kaiju';
 import type { KaijuBodyView, KaijuPartView } from '../entities/kaiju-display';
@@ -50,7 +51,7 @@ export class KaijuHud {
     this.root = root;
     const top = el('div', 'kaiju-top', root);
     const head = el('div', 'kaiju-head', top);
-    el('span', 'kaiju-name', head, `${KAIJU_CONFIG.name}  VORGAS`);
+    el('span', 'kaiju-name', head, t('kaiju.hud.name'));
     this.phase = el('span', 'kaiju-phase', head);
     const bar = el('div', 'kaiju-bar', top);
     this.fill = el('div', 'kaiju-bar-fill', bar);
@@ -96,7 +97,7 @@ export class KaijuHud {
     }
     const phase =
       b.finalRemaining !== null
-        ? `最終フェーズ  ${formatClock(b.finalRemaining)}`
+        ? t('kaiju.hud.finalPhase', { time: formatClock(b.finalRemaining) })
         : `PHASE ${b.phase}`;
     if (phase !== this.last.phase) {
       this.last.phase = phase;
@@ -128,7 +129,10 @@ export class KaijuHud {
     }
     const down =
       b.downTimer > 0
-        ? `DOWN  ${Math.ceil(b.downTimer)}  ダメージ ×${KAIJU_CONFIG.down.damageScale}`
+        ? t('kaiju.hud.down', {
+            seconds: Math.ceil(b.downTimer),
+            scale: KAIJU_CONFIG.down.damageScale,
+          })
         : '';
     if (down !== this.last.down) {
       this.last.down = down;
@@ -138,7 +142,7 @@ export class KaijuHud {
   }
 
   private setPart(p: KaijuPartView | null): void {
-    const name = p ? `${p.label}${p.broken ? '（破壊）' : ''}` : '';
+    const name = p ? (p.broken ? t('kaiju.hud.partBroken', { part: p.label }) : p.label) : '';
     if (name !== this.last.part) {
       this.last.part = name;
       this.partName.textContent = name;

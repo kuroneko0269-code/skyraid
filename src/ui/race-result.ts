@@ -1,5 +1,6 @@
 // リングレース（7-1）のリザルト: タイム（時計・未通過のペナルティ・細いリングのボーナス）、ランク、ベスト更新とゴースト、
 // 報酬（獲得 / 残高）、ベスト 5 の中の順位。「もう一度」は飛行へ直接、「コース一覧へ」
+import { t } from '../core/i18n';
 import './campaign.css';
 import './race.css';
 import type { RaceResult } from '../missions/race/runner';
@@ -33,11 +34,16 @@ export class RaceResultScreen {
     this.facts = el('div', 'campaign-facts', panel);
     this.extras = el('div', 'result-extras', panel);
     const buttons = el('div', 'campaign-buttons', panel);
-    createButton(buttons, 'ui-button is-ghost campaign-back', 'コース一覧へ', handlers.onList);
+    createButton(
+      buttons,
+      'ui-button is-ghost campaign-back',
+      t('race.result.toCourses'),
+      handlers.onList,
+    );
     this.retry = createButton(
       buttons,
       'ui-button is-primary campaign-go',
-      'もう一度',
+      t('campaign.result.retry'),
       handlers.onRetry,
     );
     this.root = root;
@@ -55,8 +61,9 @@ export class RaceResultScreen {
     this.time.textContent = formatRaceTime(r.time);
     this.badges.replaceChildren();
     if (out.newBest) el('span', '', this.badges, 'NEW RECORD');
-    if (out.newBest) el('span', '', this.badges, 'ゴーストを保存');
-    else if (out.place !== null) el('span', '', this.badges, `ベスト ${out.place} 位`);
+    if (out.newBest) el('span', '', this.badges, t('race.result.ghostSaved'));
+    else if (out.place !== null)
+      el('span', '', this.badges, t('race.result.place', { place: out.place }));
     const prev = out.previousRank;
     if (done && r.rank && prev && betterRank(r.rank, prev)) el('span', '', this.badges, 'RANK UP');
     this.rank.textContent = r.rank ?? '';
@@ -68,16 +75,36 @@ export class RaceResultScreen {
       el('span', 'campaign-fact-label', row, label);
       el('span', 'campaign-fact-value', row, value);
     };
-    fact('走行', formatRaceTime(r.rawSeconds));
-    fact('ペナルティ', r.missed > 0 ? `+${r.penaltySeconds} 秒（未通過 ${r.missed}）` : 'なし');
+    fact(t('race.result.run'), formatRaceTime(r.rawSeconds));
     fact(
-      'ボーナス',
-      r.thinPassed > 0 ? `−${r.bonusSeconds} 秒（細いリング ${r.thinPassed}）` : 'なし',
+      t('race.result.penalty'),
+      r.missed > 0
+        ? t('race.result.penaltyValue', { seconds: r.penaltySeconds, missed: r.missed })
+        : t('campaign.briefing.none'),
     );
-    fact('ゴールド', formatRaceTime(extras.gold));
+    fact(
+      t('race.result.bonus'),
+      r.thinPassed > 0
+        ? t('race.result.bonusValue', { seconds: r.bonusSeconds, thin: r.thinPassed })
+        : t('campaign.briefing.none'),
+    );
+    fact(t('race.result.gold'), formatRaceTime(extras.gold));
     const best = out.record.times[0];
-    if (best) fact('ベスト', `${formatRaceTime(best.time)}（${best.aircraftName}）`);
-    fact('報酬', `獲得 +${formatCredits(out.credits)} / 残高 ${formatCredits(extras.balance)}`);
+    if (best)
+      fact(
+        t('race.result.best'),
+        t('race.result.bestValue', {
+          time: formatRaceTime(best.time),
+          aircraft: best.aircraftName,
+        }),
+      );
+    fact(
+      t('campaign.reward'),
+      t('campaign.result.rewardValue', {
+        earned: formatCredits(out.credits),
+        balance: formatCredits(extras.balance),
+      }),
+    );
   }
 
   setShown(shown: boolean): void {

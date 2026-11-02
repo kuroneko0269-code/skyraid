@@ -37,8 +37,8 @@ describe('記録の値と日付', () => {
     expect(formatRecordValue('raid', 245000, {})).toBe('4:05.000');
   });
 
-  it('日付はローカルの YYYY-MM-DD。読めなければ空', () => {
-    expect(formatDate('2026-11-01T12:00:00')).toBe('2026-11-01');
+  it('日付はローカルの日付（今の言語の書式）。読めなければ空', () => {
+    expect(formatDate('2026-11-01T12:00:00')).toBe('2026/11/01');
     expect(formatDate('x')).toBe('');
   });
 });

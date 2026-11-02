@@ -1,13 +1,18 @@
 // 協力レイドの仕上げ（6-6）の数値: 復帰・難易度・報酬・ブリーフィング・レイドの定型文。
 // 報酬の式は src/progression/raid-reward.ts、難易度は src/entities/kaiju.ts（HP・最終フェーズ）と src/ai/kaiju-ai.ts（予兆）が読む
+import { t, tList } from '../core/i18n';
 
 /** レイドの難易度（ロビーのホスト設定・ソロの開始前に選ぶ） */
 export const RAID_DIFFICULTIES = ['normal', 'hard'] as const;
 export type RaidDifficulty = (typeof RAID_DIFFICULTIES)[number];
 
 export const RAID_DIFFICULTY_LABELS: Readonly<Record<RaidDifficulty, string>> = {
-  normal: '通常',
-  hard: '高難度',
+  get normal() {
+    return t('raid.difficulty.normal');
+  },
+  get hard() {
+    return t('raid.difficulty.hard');
+  },
 };
 
 export const RAID_RULES = {
@@ -33,14 +38,28 @@ export const RAID_RULES = {
 } as const;
 
 /** ブリーフィングの文（怪獣の弱点と協力のヒント） */
-export const RAID_BRIEFING = {
-  title: 'ブリーフィング：ヴォルガス',
-  lines: [
-    '結晶を壊すと熱線、尾は薙ぎ払い、頭は咆哮を封じる',
-    '脚を壊すと 15 秒ダウン（全部位のダメージ ×2）',
-    'ブレイクは 2 人で同じ部位を 3 秒以内に撃つ（その部位 ×3）',
-  ],
-} as const;
+export const RAID_BRIEFING: { readonly title: string; readonly lines: readonly string[] } = {
+  get title() {
+    return t('raid.briefing.title');
+  },
+  get lines() {
+    return tList('raid.briefing.lines');
+  },
+};
 
 /** レイドだけの定型文（PVP_QUICK_PHRASES の後ろに続く番号で送る。レイドのときだけ出す） */
-export const RAID_QUICK_PHRASES = ['頭を狙って', '脚を狙って', '結晶を狙って', '回避！'] as const;
+export const RAID_QUICK_PHRASES: readonly string[] = lazyList([
+  'raid.phrases.head',
+  'raid.phrases.legs',
+  'raid.phrases.crystal',
+  'raid.phrases.evade',
+]);
+
+/** 要素を読むたびに今の言語の文を返す配列（最上位で t() を呼ばないため） */
+function lazyList(keys: readonly string[]): readonly string[] {
+  const list: string[] = [];
+  keys.forEach((key, i) => {
+    Object.defineProperty(list, i, { get: () => t(key), enumerable: true });
+  });
+  return list;
+}

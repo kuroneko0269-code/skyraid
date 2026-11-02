@@ -1,6 +1,7 @@
 // フォトモード（7-A）の撮影ボタンの後: シャッター音・白いフラッシュ・保存（render/photo/photo-shot.ts）・お知らせ
 // （photo-link.ts から分けた）
 import type { GameAudio } from '../../audio/game-audio';
+import { t } from '../../core/i18n';
 import { PHOTO_UI, type PhotoResolution } from '../../data/photo';
 import { takePhoto } from '../../render/photo/photo-shot';
 import type { RenderPipeline } from '../../render/pipeline';
@@ -35,9 +36,10 @@ export class PhotoShutter {
     try {
       const result = await takePhoto(this.pipeline, { resolution, mobile, watermark });
       this.flashOnce();
-      if (result !== 'cancel') this.showToast(result === 'share' ? '共有しました' : '保存しました');
+      if (result !== 'cancel')
+        this.showToast(t(result === 'share' ? 'photo.toast.shared' : 'photo.toast.saved'));
     } catch {
-      this.showToast('保存できませんでした');
+      this.showToast(t('photo.toast.failed'));
     } finally {
       this.shooting = false;
     }

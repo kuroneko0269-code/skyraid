@@ -1,4 +1,5 @@
 // チュートリアル（4-11）: 定義・文・段階の遷移（ボットで通し）・練習（撃墜されない・墜落は上空へ）・初回だけの報酬
+import { useLocale } from './i18n-helpers';
 import { describe, expect, it } from 'vitest';
 import { LOCALES } from '../src/core/locale';
 import { ISLAND_MAP } from '../src/data/maps';
@@ -51,12 +52,13 @@ describe('チュートリアルの定義と文', () => {
 
   it('指示の文は日本語・英語の両方で、段階 × 入力系統（タッチ / キーボード / パッド）ごとにある。キーボードは今の割当のキー名', () => {
     for (const locale of LOCALES) {
-      const t = tutorialStrings(locale);
+      useLocale(locale);
+      const t = tutorialStrings();
       for (const k of ['title', 'prompt', 'start', 'later', 'abort', 'complete', 'safety'] as const)
         expect(t[k].length).toBeGreaterThan(0);
       for (const step of TUTORIAL_STEPS) {
         for (const device of ['touch', 'keyboard', 'gamepad'] as const) {
-          const text = tutorialStepText(step, device, locale, (a) => `<${a}>`);
+          const text = tutorialStepText(step, device, (a) => `<${a}>`);
           expect(text.length).toBeGreaterThan(10);
           // 置き換え忘れの {action} が残らない
           expect(text).not.toMatch(/\{[a-zA-Z]+\}/);
@@ -64,7 +66,8 @@ describe('チュートリアルの定義と文', () => {
       }
       expect(Object.keys(t.hints)).toEqual(TUTORIAL_CONFIG.hints.map((h) => h.id));
     }
-    const keys = tutorialStepText('rings', 'keyboard', 'ja', (a) => (a === 'pitchUp' ? 'K' : '?'));
+    useLocale('ja');
+    const keys = tutorialStepText('rings', 'keyboard', (a) => (a === 'pitchUp' ? 'K' : '?'));
     expect(keys).toContain('K で引く');
   });
 });

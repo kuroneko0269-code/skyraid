@@ -1,5 +1,6 @@
 // フォトモード（7-A）の数値: 軌道カメラの制限・操作の感度・プリセット角度・画面の調整の範囲・解像度・透かし。
 // ロジックは src/core/photo-orbit.ts / photo-grade.ts / photo-capture.ts（Three.js 非依存）
+import { t } from '../core/i18n';
 
 /** 軌道カメラ（機体中心）の制限と感度 */
 export const PHOTO_ORBIT = {
@@ -42,11 +43,33 @@ export interface PhotoPreset {
 
 /** プリセット角度 6 種（正面 / 真横 / 後方上 / 翼端 / 地上から見上げ / 俯瞰） */
 export const PHOTO_PRESETS: readonly PhotoPreset[] = [
-  { id: 'front', label: '正面', azimuth: 0, elevation: 6, distance: 24, fov: 45, pan: zero() },
-  { id: 'side', label: '真横', azimuth: 90, elevation: 0, distance: 32, fov: 40, pan: zero() },
+  {
+    id: 'front',
+    get label() {
+      return t('photo.presets.front');
+    },
+    azimuth: 0,
+    elevation: 6,
+    distance: 24,
+    fov: 45,
+    pan: zero(),
+  },
+  {
+    id: 'side',
+    get label() {
+      return t('photo.presets.side');
+    },
+    azimuth: 90,
+    elevation: 0,
+    distance: 32,
+    fov: 40,
+    pan: zero(),
+  },
   {
     id: 'rear-high',
-    label: '後方上',
+    get label() {
+      return t('photo.presets.rearHigh');
+    },
     azimuth: 180,
     elevation: 25,
     distance: 36,
@@ -56,7 +79,9 @@ export const PHOTO_PRESETS: readonly PhotoPreset[] = [
   // 右の翼端の外から、翼に沿って胴体と機首を見る（広角で近く）
   {
     id: 'wingtip',
-    label: '翼端',
+    get label() {
+      return t('photo.presets.wingtip');
+    },
     azimuth: 120,
     elevation: 4,
     distance: 10,
@@ -66,14 +91,26 @@ export const PHOTO_PRESETS: readonly PhotoPreset[] = [
   // 下から見上げる（地面が近いときはカメラを地面の上に止める）
   {
     id: 'low',
-    label: '見上げ',
+    get label() {
+      return t('photo.presets.low');
+    },
     azimuth: 30,
     elevation: -35,
     distance: 60,
     fov: 50,
     pan: zero(),
   },
-  { id: 'top', label: '俯瞰', azimuth: 180, elevation: 80, distance: 120, fov: 45, pan: zero() },
+  {
+    id: 'top',
+    get label() {
+      return t('photo.presets.top');
+    },
+    azimuth: 180,
+    elevation: 80,
+    distance: 120,
+    fov: 45,
+    pan: zero(),
+  },
 ];
 
 function zero(): { x: number; y: number; z: number } {
@@ -111,11 +148,21 @@ export const PHOTO_FILTERS = ['none', 'film', 'mono', 'sepia', 'punch'] as const
 export type PhotoFilter = (typeof PHOTO_FILTERS)[number];
 
 export const PHOTO_FILTER_LABELS: Readonly<Record<PhotoFilter, string>> = {
-  none: 'なし',
-  film: 'フィルム',
-  mono: 'モノクロ',
-  sepia: 'セピア',
-  punch: '高コントラスト',
+  get none() {
+    return t('photo.filters.none');
+  },
+  get film() {
+    return t('photo.filters.film');
+  },
+  get mono() {
+    return t('photo.filters.mono');
+  },
+  get sepia() {
+    return t('photo.filters.sepia');
+  },
+  get punch() {
+    return t('photo.filters.punch');
+  },
 };
 
 /** シェーダーに渡すフィルターの番号（PHOTO_FILTERS の順） */
@@ -136,8 +183,12 @@ export const PHOTO_RESOLUTIONS = ['screen', 'double', 'uhd'] as const;
 export type PhotoResolution = (typeof PHOTO_RESOLUTIONS)[number];
 
 export const PHOTO_RESOLUTION_LABELS: Readonly<Record<PhotoResolution, string>> = {
-  screen: '画面サイズ',
-  double: '2 倍',
+  get screen() {
+    return t('photo.resolution.screen');
+  },
+  get double() {
+    return t('photo.resolution.double');
+  },
   uhd: '4K',
 };
 
@@ -180,22 +231,54 @@ export const PHOTO_SHUTTER = {
 } as const;
 
 /** 画面の調整の名前（photo-grade の GradeKey） */
-export const PHOTO_GRADE_LABELS = {
-  exposure: '露出',
-  contrast: 'コントラスト',
-  saturation: '彩度',
-  vignette: 'ビネット',
-  grain: 'グレイン',
-  temperature: '色温度',
-} as const satisfies Readonly<Record<keyof typeof PHOTO_GRADE_RANGE, string>>;
+export const PHOTO_GRADE_LABELS: Readonly<Record<keyof typeof PHOTO_GRADE_RANGE, string>> = {
+  get exposure() {
+    return t('photo.grade.exposure');
+  },
+  get contrast() {
+    return t('photo.grade.contrast');
+  },
+  get saturation() {
+    return t('photo.grade.saturation');
+  },
+  get vignette() {
+    return t('photo.grade.vignette');
+  },
+  get grain() {
+    return t('photo.grade.grain');
+  },
+  get temperature() {
+    return t('photo.grade.temperature');
+  },
+};
 
 export type PhotoShowKind = 'hud' | 'touch' | 'aircraft' | 'enemies' | 'effects';
 
 /** 表示の切替（HUD・タッチ操作は入ったとき隠す、他は出す） */
 export const PHOTO_SHOW_ITEMS: readonly { kind: PhotoShowKind; label: string }[] = [
   { kind: 'hud', label: 'HUD' },
-  { kind: 'touch', label: 'タッチ操作' },
-  { kind: 'aircraft', label: '機体' },
-  { kind: 'enemies', label: '敵・怪獣' },
-  { kind: 'effects', label: 'エフェクト' },
+  {
+    kind: 'touch',
+    get label() {
+      return t('photo.show.touch');
+    },
+  },
+  {
+    kind: 'aircraft',
+    get label() {
+      return t('photo.show.aircraft');
+    },
+  },
+  {
+    kind: 'enemies',
+    get label() {
+      return t('photo.show.enemies');
+    },
+  },
+  {
+    kind: 'effects',
+    get label() {
+      return t('photo.show.effects');
+    },
+  },
 ];

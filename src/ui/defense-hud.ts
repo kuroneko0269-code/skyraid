@@ -4,6 +4,7 @@
 import './defense.css';
 import { DEFENSE_CONFIG, FACILITY_KINDS } from '../data/defense';
 import type { DefensePhase } from '../missions/defense/runner';
+import { t } from '../core/i18n';
 import { el } from './hud-dom';
 
 /** HUD に出す値（ソロはランナー、協力はホストの state の写し） */
@@ -35,11 +36,21 @@ export interface CruiseMarker {
 }
 
 const ICONS: Readonly<Record<(typeof FACILITY_KINDS)[number], string>> = {
-  hq: '司令部',
-  radar: 'レーダー',
-  fuel: '燃料',
-  aaa1: '対空1',
-  aaa2: '対空2',
+  get hq() {
+    return t('defense.icon.hq');
+  },
+  get radar() {
+    return t('defense.icon.radar');
+  },
+  get fuel() {
+    return t('defense.icon.fuel');
+  },
+  get aaa1() {
+    return t('defense.icon.aaa1');
+  },
+  get aaa2() {
+    return t('defense.icon.aaa2');
+  },
 };
 
 export class DefenseHud {
@@ -77,7 +88,7 @@ export class DefenseHud {
     this.hqText = el('span', 'defense-hq-value', hq);
     this.prep = el('div', 'defense-prep', top);
     this.prepText = el('span', 'defense-prep-text', this.prep);
-    this.skip = el('button', 'ui-button defense-skip', this.prep, 'スキップ (N)');
+    this.skip = el('button', 'ui-button defense-skip', this.prep, t('defense.hud.skip'));
     this.skip.type = 'button';
     this.skip.addEventListener('click', () => {
       this.onSkip();
@@ -87,7 +98,7 @@ export class DefenseHud {
       'div',
       'defense-supply',
       top,
-      `補給: 基地の上空を高度 ${sup.maxAgl}m 以下・速度 ${sup.maxSpeed} 以下で通過`,
+      t('defense.hud.supplyHint', { agl: sup.maxAgl, speed: sup.maxSpeed }),
     );
     // 左上の帯（左上のボタンの右・ゲージより上。7-C）: 施設の状態・次の波の予告
     const side = el('div', 'defense-side', root);
@@ -128,9 +139,9 @@ export class DefenseHud {
     this.last = key;
     const total = DEFENSE_CONFIG.waves;
     this.waveText.textContent = prep
-      ? `WAVE ${s.wave} / ${total}  準備中`
+      ? t('defense.hud.wavePrep', { wave: s.wave, total })
       : s.phase === 'wave'
-        ? `WAVE ${s.wave} / ${total}  残り ${s.remaining}`
+        ? t('defense.hud.waveRemaining', { wave: s.wave, total, remaining: s.remaining })
         : `WAVE ${Math.min(s.wave, total)} / ${total}`;
     const ratio = s.hqMaxHp > 0 ? Math.max(0, s.hqHp / s.hqMaxHp) : 0;
     this.hqFill.style.width = `${(ratio * 100).toFixed(1)}%`;
@@ -140,20 +151,20 @@ export class DefenseHud {
       icon.classList.toggle('is-lost', (s.aliveBits & (1 << i)) === 0);
     });
     this.prep.hidden = !prep;
-    this.prepText.textContent = `次の波まで ${left} 秒`;
+    this.prepText.textContent = t('defense.hud.nextWaveIn', { seconds: left });
     this.skip.disabled = s.skipped;
-    this.skip.textContent = s.skipped ? '待機中…' : 'スキップ (N)';
+    this.skip.textContent = s.skipped ? t('defense.hud.waiting') : t('defense.hud.skip');
     this.forecast.hidden = !prep;
     this.forecast.textContent = s.forecast
-      ? `次の波：${s.forecast}`
-      : '次の波：レーダー喪失のため不明';
+      ? t('defense.hud.forecast', { forecast: s.forecast })
+      : t('defense.hud.forecastUnknown');
     this.forecast.classList.toggle('is-unknown', s.forecast === null);
     this.supply.hidden = !prep;
     this.supply.classList.toggle('is-done', s.supplied);
-    if (s.supplied) this.supply.textContent = '補給済み';
+    if (s.supplied) this.supply.textContent = t('defense.hud.supplied');
     else {
       const c = DEFENSE_CONFIG.supply;
-      this.supply.textContent = `補給: 基地の上空を高度 ${c.maxAgl}m 以下・速度 ${c.maxSpeed} 以下で通過`;
+      this.supply.textContent = t('defense.hud.supplyHint', { agl: c.maxAgl, speed: c.maxSpeed });
     }
   }
 

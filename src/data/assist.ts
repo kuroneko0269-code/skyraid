@@ -1,6 +1,8 @@
 // 操作補助（4-12）の数値。実機のスマホで「敵を捉えられない」と評価されたので足した。飛行モデルの数値は変えず、入力・判定・カメラ・HUD で補う。
 // 角度は度、距離は m、時間は秒。ロジックは src/combat/aim-assist.ts・src/render/camera-rig.ts・src/ui/hud-feed.ts
 
+import { t } from '../core/i18n';
+
 /** ポーズメニューの設定「エイムアシスト」「ターゲットカメラ」「HUD 補助」の保存先（セーブの settings.assist に振り分ける） */
 export const ASSIST_SETTINGS_KEYS = {
   aim: 'skyraid.assist.aim',
@@ -14,9 +16,24 @@ export type AssistKind = keyof typeof ASSIST_SETTINGS_KEYS;
 export const ASSIST_SETTINGS: Readonly<
   Record<AssistKind, { readonly label: string; readonly defaultOn: boolean }>
 > = {
-  aim: { label: 'エイムアシスト', defaultOn: true },
-  camera: { label: 'ターゲットカメラ', defaultOn: true },
-  hud: { label: 'HUD 補助', defaultOn: true },
+  aim: {
+    get label() {
+      return t('assist.aim');
+    },
+    defaultOn: true,
+  },
+  camera: {
+    get label() {
+      return t('assist.camera');
+    },
+    defaultOn: true,
+  },
+  hud: {
+    get label() {
+      return t('assist.hud');
+    },
+    defaultOn: true,
+  },
 };
 
 /**

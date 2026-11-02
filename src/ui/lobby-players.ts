@@ -3,6 +3,7 @@ import { findAircraftModel } from '../data/aircraft';
 import { PVP_TEAM } from '../data/pvp';
 import { isReady } from '../net/lobby-rules';
 import type { PlayerInfo } from '../net/protocol';
+import { t } from '../core/i18n';
 import { el } from './hud-dom';
 import { playerColorCss, teamColorCss } from './lobby-colors';
 import type { LobbyRoomView } from './lobby-room';
@@ -26,12 +27,21 @@ export function renderLobbyPlayers(
     const who = el('span', 'lobby-who', li);
     el('span', 'lobby-name', who, p.name);
     el('span', 'lobby-craft', who, findAircraftModel(p.aircraftId)?.name ?? p.aircraftId);
-    const tags = [p.id === 0 ? 'ホスト' : '', p.id === v.localId ? 'あなた' : ''].filter(Boolean);
-    if (tags.length > 0) el('span', 'tag', li, tags.join('・'));
+    const tags = [
+      p.id === 0 ? t('lobby.player.host') : '',
+      p.id === v.localId ? t('lobby.player.you') : '',
+    ].filter(Boolean);
+    if (tags.length > 0) el('span', 'tag', li, tags.join(t('lobby.sep')));
     const bubble = bubbles.get(p.id);
     if (bubble && bubble.until > now) el('span', 'lobby-bubble', li, bubble.text);
     if (team) teamChip(li, p, v.isHost, onTeam);
-    const status = p.away ? '再接続中' : p.id === 0 ? 'HOST' : p.ready ? 'READY' : '準備中';
+    const status = p.away
+      ? t('lobby.player.reconnecting')
+      : p.id === 0
+        ? 'HOST'
+        : p.ready
+          ? 'READY'
+          : t('lobby.player.preparing');
     const s = el('span', 'lobby-status', li, status);
     s.classList.toggle('is-ready', isReady(p) && !p.away);
   }
@@ -45,7 +55,7 @@ function teamChip(
   onTeam: (playerId: number, team: number) => void,
 ): void {
   const name = PVP_TEAM.names[p.team === 1 ? 1 : 0];
-  const label = `チーム ${name}`;
+  const label = t('lobby.team', { team: name });
   const chip = isHost
     ? createButton(li, 'ui-button lobby-team', label, () => {
         onTeam(p.id, p.team === 1 ? 0 : 1);

@@ -2,6 +2,7 @@
 // 戦域の境界は水平の円（中心・半径）。出ると HUD に「RETURN TO BATTLEFIELD」と returnSeconds のカウントを出す。
 // マップごとに地形（シード・大きさ・海岸線の形）・街の有無・開始位置・怪獣の上陸地点を持つ。
 // フリーフライトと PvP は選べる（selectable）。キャンペーンの M1〜M5 は島、レイドは港湾都市に固定（ミッションの mapId）
+import { t } from '../core/i18n';
 import { CITY_CONFIG } from './city';
 import { TERRAIN_CONFIG, WORLD_CONFIG, type TerrainParams } from './terrain';
 import { HARBOR_TERRAIN } from './terrain-harbor';
@@ -64,7 +65,9 @@ export interface MapDef {
  */
 export const ISLAND_MAP: MapDef = {
   id: 'island',
-  name: '海岸と島',
+  get name() {
+    return t('maps.island');
+  },
   center: { x: 0, z: 0 },
   radius: 6000,
   returnSeconds: 10,
@@ -86,7 +89,9 @@ const city = CITY_CONFIG.rect;
  */
 export const HARBOR_MAP: MapDef = {
   id: 'harbor',
-  name: '港湾都市',
+  get name() {
+    return t('maps.harbor');
+  },
   center: { x: 0, z: 0 },
   radius: 6000,
   returnSeconds: 10,

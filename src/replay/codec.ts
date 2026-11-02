@@ -51,7 +51,7 @@ class ByteReader {
 
   byte(): number {
     const v = this.buf[this.pos++];
-    if (v === undefined) throw new Error('リプレイのデータが途中で切れている');
+    if (v === undefined) throw new Error('Replay data is truncated');
     return v;
   }
 
@@ -64,7 +64,7 @@ class ByteReader {
       if (b < 0x80) return n;
       mul *= 128;
     }
-    throw new Error('リプレイのデータが壊れている（整数）');
+    throw new Error('Replay data is corrupt (varint)');
   }
 
   zigzag(): number {
@@ -73,7 +73,7 @@ class ByteReader {
   }
 
   bytes(n: number): Uint8Array {
-    if (this.pos + n > this.buf.length) throw new Error('リプレイのデータが途中で切れている');
+    if (this.pos + n > this.buf.length) throw new Error('Replay data is truncated');
     const out = this.buf.subarray(this.pos, this.pos + n);
     this.pos += n;
     return out;
@@ -201,7 +201,7 @@ function decodeCommands(r: ByteReader): ReplayCommand[] {
       const enabled = r.byte() === 1;
       const difficulty = DIFFICULTIES[r.byte()] ?? 'normal';
       out.push({ step, kind: 'enemies', enabled, difficulty, count: r.varint() });
-    } else throw new Error('リプレイのデータが壊れている（コマンド）');
+    } else throw new Error('Replay data is corrupt (command)');
   }
   return out;
 }
@@ -231,9 +231,10 @@ export function decodeHeader(bytes: Uint8Array): ReplayHeader {
 
 function readStart(bytes: Uint8Array): { r: ByteReader; header: ReplayHeader } {
   const r = new ByteReader(bytes);
-  for (const b of MAGIC) if (r.byte() !== b) throw new Error('リプレイのファイルではない');
+  for (const b of MAGIC) if (r.byte() !== b) throw new Error('Not a replay file');
   const format = r.byte();
-  if (format > REPLAY_CONFIG.format) throw new Error('新しい版のリプレイ（読めない）');
+  if (format > REPLAY_CONFIG.format)
+    throw new Error('Replay from a newer format version (unsupported)');
   const text = new TextDecoder().decode(r.bytes(r.varint()));
   const header = parseHeader(JSON.parse(text) as unknown);
   return { r, header };
@@ -243,8 +244,7 @@ function readStart(bytes: Uint8Array): { r: ByteReader; header: ReplayHeader } {
 export function decodeReplay(bytes: Uint8Array): ReplayData {
   const { r, header } = readStart(bytes);
   const count = r.byte();
-  if (count !== FRAME_CHANNELS.length)
-    throw new Error('リプレイのデータが壊れている（チャンネル）');
+  if (count !== FRAME_CHANNELS.length) throw new Error('Replay data is corrupt (channel)');
   const channels: Int16Array[] = [];
   for (let i = 0; i < count; i++) channels.push(decodeChannel(r.bytes(r.varint()), header.steps));
   return { header, channels, commands: decodeCommands(r) };
@@ -252,7 +252,7 @@ export function decodeReplay(bytes: Uint8Array): ReplayData {
 
 /** ヘッダの形を確かめる（インポートしたファイルは信用しない） */
 function parseHeader(v: unknown): ReplayHeader {
-  if (typeof v !== 'object' || v === null) throw new Error('リプレイのヘッダが壊れている');
+  if (typeof v !== 'object' || v === null) throw new Error('Replay header is corrupt');
   const h = v as Partial<Record<keyof ReplayHeader, unknown>>;
   const str = (x: unknown): x is string => typeof x === 'string';
   const num = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
@@ -267,7 +267,7 @@ function parseHeader(v: unknown): ReplayHeader {
     typeof h.upgrades !== 'object' ||
     typeof h.enemies !== 'object'
   )
-    throw new Error('リプレイのヘッダが壊れている');
+    throw new Error('Replay header is corrupt');
   return v as ReplayHeader;
 }
 

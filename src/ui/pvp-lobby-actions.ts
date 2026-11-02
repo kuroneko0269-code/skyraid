@@ -1,5 +1,6 @@
 // ロビーの操作（5-4。pvp-link.ts から分けた）: 開始・準備・ハンガー（所持機体）・ルール・チーム・定型文・「もう一度」を、
 // ホストなら部屋を直接、クライアントならホストへのメッセージで変える。名簿の変化のお知らせ（切断・再接続・離脱）の文も作る
+import { t } from '../core/i18n';
 import { AIRCRAFT_MODELS } from '../data/aircraft';
 import { ClientRoom } from '../net/client-room';
 import { mapName, startBlock } from '../net/lobby-rules';
@@ -12,14 +13,30 @@ import type { LobbyHandlers, LobbyScreen } from './lobby';
 
 /** 参加の失敗の文 */
 export const JOIN_ERRORS: Record<JoinError, string> = {
-  'not-found': 'その部屋は見つかりません（コードを確かめてください）',
-  full: '満員です（最大 4 人）',
-  started: 'すでに始まっています',
-  version: 'ホストとバージョンが違います（両方とも再読み込みしてください）',
-  expired: '再接続の期限が過ぎました',
-  timeout: '応答がありません（時間切れ）',
-  network: '接続できませんでした',
-  unsupported: 'このブラウザは P2P 通信（WebRTC）に対応していません',
+  get 'not-found'() {
+    return t('net.joinError.notFound');
+  },
+  get full() {
+    return t('net.joinError.full');
+  },
+  get started() {
+    return t('net.joinError.started');
+  },
+  get version() {
+    return t('net.joinError.version');
+  },
+  get expired() {
+    return t('net.joinError.expired');
+  },
+  get timeout() {
+    return t('net.joinError.timeout');
+  },
+  get network() {
+    return t('net.joinError.network');
+  },
+  get unsupported() {
+    return t('net.joinError.unsupported');
+  },
 };
 
 export interface LobbyActionContext {
@@ -59,8 +76,8 @@ export function lobbyActions(ctx: LobbyActionContext): Actions {
       }));
       const note =
         (room?.settings.noUpgrades ?? true)
-          ? '所持している機体から選べます。強化はホストの設定で無効（全員 Lv 0）です'
-          : '所持している機体から選べます。強化はシングルプレイの値をそのまま使います';
+          ? t('lobby.hangar.noteNoUpgrades')
+          : t('lobby.hangar.noteUpgrades');
       ctx.lobby().openHangar(entries, note);
     },
     onAircraft: (id) => {
@@ -108,11 +125,12 @@ export function rosterNotices(
   for (const p of next) {
     const before = prev.get(p.id);
     if (p.id === localId || !before) continue;
-    if (p.away && !before.away) out.push(`${p.name} の接続が切れました（再接続を待っています）`);
-    else if (!p.away && before.away) out.push(`${p.name} が戻りました`);
+    if (p.away && !before.away) out.push(t('net.playerAway', { name: p.name }));
+    else if (!p.away && before.away) out.push(t('net.playerBack', { name: p.name }));
   }
   for (const [id, before] of prev) {
-    if (id !== localId && !next.some((p) => p.id === id)) out.push(`${before.name} が離脱しました`);
+    if (id !== localId && !next.some((p) => p.id === id))
+      out.push(t('net.playerLeft', { name: before.name }));
   }
   return out;
 }

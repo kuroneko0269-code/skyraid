@@ -5,6 +5,8 @@ import { APP_MANIFEST, BRAND_ASSETS } from './src/data/app.ts';
 import { addConnectSrc } from './src/online/csp.ts';
 import { readOnlineEnv } from './src/online/env.ts';
 import { appInfo } from './scripts/vite-app-info.ts';
+import { legacyCheck } from './scripts/vite-legacy-check.ts';
+import ja from './src/data/i18n/ja.json';
 import { chunkPlan } from './scripts/vite-chunks.ts';
 
 /**
@@ -47,6 +49,8 @@ export default defineConfig(({ mode }) => ({
     supabaseCsp(),
     // 7-D: 「情報」画面の版とライセンスの一覧（virtual:app-info）
     appInfo(root),
+    // 8-3 / 8-4: 古いブラウザの案内（dist/legacy-check.js。文言の表を埋め込む）と index.html の meta description
+    legacyCheck(root),
     // PWA（4-10）: manifest とビルド成果物をプリキャッシュする Service Worker。
     // prompt 型（skipWaiting しない）なので、更新は全部のタブを閉じた次の起動で入る。登録は src/ui/app-shell.ts
     VitePWA({
@@ -57,7 +61,8 @@ export default defineConfig(({ mode }) => ({
       manifest: {
         name: APP_MANIFEST.name,
         short_name: APP_MANIFEST.shortName,
-        description: APP_MANIFEST.description,
+        // 8-4: manifest の言語は ja のまま。説明文は文言の表（ja.json の app.description）
+        description: ja.app.description,
         lang: 'ja',
         display: 'standalone',
         orientation: 'landscape',
@@ -92,6 +97,7 @@ export default defineConfig(({ mode }) => ({
   ],
   test: {
     include: ['tests/**/*.test.ts'],
+    setupFiles: ['tests/i18n-setup.ts'],
     environment: 'node',
     // テーマのテスト（tests/theme.test.ts）が UI の CSS を ?raw で読むため、CSS を空にしない
     css: { include: [/src\/ui\/.+\.css/] },

@@ -2,21 +2,41 @@
 // 見た目だけで性能は変えない。塗装の型と直列化は src/progression/paint.ts、売り買いは src/progression/paintshop.ts、
 // テクスチャの生成は src/render/aircraft-model/skin-texture.ts
 
+import { t } from '../core/i18n';
+
+export interface SkinColorDef {
+  /** 文言のキー（skins.color.<id>）と判定に使う */
+  readonly id: string;
+  /** 表示名（今の言語） */
+  readonly name: string;
+  readonly hex: number;
+}
+
+function color(id: string, hex: number): SkinColorDef {
+  return {
+    id,
+    get name() {
+      return t(`skins.color.${id}`);
+    },
+    hex,
+  };
+}
+
 /** パレット（自由色はなし。組み合わせを簡単にするため 12 色から選ぶ）。先頭 8 色は 4 機種の元の色 */
-export const SKIN_PALETTE = [
-  { name: '灰青', hex: 0x9aa4ad },
-  { name: '朱', hex: 0xd04a2a },
-  { name: '銀灰', hex: 0xb7c3c9 },
-  { name: '青', hex: 0x2a8fd0 },
-  { name: 'オリーブ', hex: 0x6f7a5e },
-  { name: '金', hex: 0xd0a02a },
-  { name: 'ガンメタル', hex: 0x3d4450 },
-  { name: '白', hex: 0xe0e0e0 },
-  { name: '黒', hex: 0x1e2124 },
-  { name: '紺', hex: 0x2b3f6b },
-  { name: '砂', hex: 0xc4ad82 },
-  { name: '紫', hex: 0x6b4a9a },
-] as const;
+export const SKIN_PALETTE: readonly SkinColorDef[] = [
+  color('slateBlue', 0x9aa4ad),
+  color('vermilion', 0xd04a2a),
+  color('silver', 0xb7c3c9),
+  color('blue', 0x2a8fd0),
+  color('olive', 0x6f7a5e),
+  color('gold', 0xd0a02a),
+  color('gunmetal', 0x3d4450),
+  color('white', 0xe0e0e0),
+  color('black', 0x1e2124),
+  color('navy', 0x2b3f6b),
+  color('sand', 0xc4ad82),
+  color('purple', 0x6b4a9a),
+];
 
 export const SKIN_PATTERN_IDS = [
   'solid',
@@ -58,10 +78,21 @@ export interface SkinPatternDef {
  * - 金属地: 基本色の金属（粗さ 0.22）。パネルごとに少し明るさを変え、前後方向のヘアライン。塗り分けは単色と同じ
  */
 export const SKIN_PATTERNS: readonly SkinPatternDef[] = [
-  { id: 'solid', name: '単色', price: 0, unlock: null, tones: [], surface: null },
+  {
+    id: 'solid',
+    get name() {
+      return t('skins.pattern.solid');
+    },
+    price: 0,
+    unlock: null,
+    tones: [],
+    surface: null,
+  },
   {
     id: 'camoForest',
-    name: '森林迷彩',
+    get name() {
+      return t('skins.pattern.camoForest');
+    },
     price: 2000,
     unlock: null,
     tones: [0x56653a, 0x6e5b3e, 0x2c3324],
@@ -69,7 +100,9 @@ export const SKIN_PATTERNS: readonly SkinPatternDef[] = [
   },
   {
     id: 'camoDesert',
-    name: '砂漠迷彩',
+    get name() {
+      return t('skins.pattern.camoDesert');
+    },
     price: 2000,
     unlock: null,
     tones: [0xcdb383, 0xa07d50, 0xe3d3aa],
@@ -77,17 +110,39 @@ export const SKIN_PATTERNS: readonly SkinPatternDef[] = [
   },
   {
     id: 'camoOcean',
-    name: '海洋迷彩',
+    get name() {
+      return t('skins.pattern.camoOcean');
+    },
     price: 3000,
     unlock: { kind: 'pvpKills', count: 10 },
     tones: [0x56758f, 0x2f4762, 0x93a8b8],
     surface: null,
   },
-  { id: 'twoTone', name: '2 トーン', price: 1500, unlock: null, tones: [], surface: null },
-  { id: 'splitter', name: 'スプリッター', price: 2500, unlock: null, tones: [], surface: null },
+  {
+    id: 'twoTone',
+    get name() {
+      return t('skins.pattern.twoTone');
+    },
+    price: 1500,
+    unlock: null,
+    tones: [],
+    surface: null,
+  },
+  {
+    id: 'splitter',
+    get name() {
+      return t('skins.pattern.splitter');
+    },
+    price: 2500,
+    unlock: null,
+    tones: [],
+    surface: null,
+  },
   {
     id: 'stripe',
-    name: 'ストライプ',
+    get name() {
+      return t('skins.pattern.stripe');
+    },
     price: 3000,
     unlock: { kind: 'allRacesA' },
     tones: [],
@@ -95,7 +150,9 @@ export const SKIN_PATTERNS: readonly SkinPatternDef[] = [
   },
   {
     id: 'metal',
-    name: '金属地',
+    get name() {
+      return t('skins.pattern.metal');
+    },
     price: 4000,
     unlock: { kind: 'allMissionsS' },
     tones: [],
@@ -123,18 +180,28 @@ export interface DecalDef {
   readonly price: number;
 }
 
+function decal(id: DecalId, price: number): DecalDef {
+  return {
+    id,
+    get name() {
+      return t(`skins.decal.${id}`);
+    },
+    price,
+  };
+}
+
 /** デカール（手続き生成の図形。実在の軍のマーク・国旗・ブランドは入れない）。number は機体番号を大きく描く */
 export const DECALS: readonly DecalDef[] = [
-  { id: 'chevron', name: 'シェブロン', price: 500 },
-  { id: 'hexring', name: '六角環', price: 500 },
-  { id: 'diamonds', name: '三連ダイヤ', price: 500 },
-  { id: 'star', name: '星', price: 500 },
-  { id: 'bolt', name: '稲妻', price: 500 },
-  { id: 'bird', name: '燕', price: 500 },
-  { id: 'number', name: '数字', price: 500 },
-  { id: 'checker', name: 'チェッカー', price: 500 },
-  { id: 'claws', name: '爪痕', price: 500 },
-  { id: 'compass', name: '方位星', price: 500 },
+  decal('chevron', 500),
+  decal('hexring', 500),
+  decal('diamonds', 500),
+  decal('star', 500),
+  decal('bolt', 500),
+  decal('bird', 500),
+  decal('number', 500),
+  decal('checker', 500),
+  decal('claws', 500),
+  decal('compass', 500),
 ];
 
 /** デカールを貼る場所。wing = 主翼の上面（左右に対称）、fin = 垂直尾翼（両面。双垂直尾翼は 2 枚とも） */

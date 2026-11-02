@@ -1,6 +1,7 @@
 // リプレイの再生中の操作バー（7-B）: 画面の下に小さく（4-10 のデザインの部品）。再生 / 一時停止・10 秒戻る / 進む・速さ・
 // 時刻とシークバー・カメラ（追従 / 自由 / 敵視点 / シネマ）・敵視点の相手の切替・撮影（フォトモード）・UI を隠す・一覧へ。
 // キー: Space 再生 / 一時停止、← → 10 秒、↑ ↓ 速さ、C カメラ、H UI を隠す、P 撮影、Esc 一覧へ
+import { t } from '../core/i18n';
 import { REPLAY_CONFIG } from '../data/replay';
 import { formatClock } from '../replay/outcome';
 import {
@@ -42,19 +43,19 @@ export class ReplayBar {
     const row = el('div', 'replay-bar-row', root);
     createButton(row, 'ui-button replay-btn', '−10s', () => {
       h.skip(-REPLAY_CONFIG.skipSeconds);
-    }).title = '10 秒戻る（←）';
+    }).title = t('replay.bar.back10');
     this.play = createButton(
       row,
       'ui-button is-primary replay-btn replay-play',
       '❚❚',
       h.togglePause,
     );
-    this.play.title = '再生 / 一時停止（Space）';
+    this.play.title = t('replay.bar.playPause');
     createButton(row, 'ui-button replay-btn', '+10s', () => {
       h.skip(REPLAY_CONFIG.skipSeconds);
-    }).title = '10 秒進む（→）';
+    }).title = t('replay.bar.forward10');
     this.speed = el('select', 'ui-field replay-select', row);
-    this.speed.title = '速さ（↑ ↓）';
+    this.speed.title = t('replay.bar.speed');
     REPLAY_CONFIG.speeds.forEach((s, i) => {
       const o = el('option', '', this.speed, `×${String(s)}`);
       o.value = String(i);
@@ -71,7 +72,7 @@ export class ReplayBar {
     this.range.min = '0';
     this.range.max = '1000';
     this.range.value = '0';
-    this.range.setAttribute('aria-label', 'シーク');
+    this.range.setAttribute('aria-label', t('replay.bar.seek'));
     this.range.addEventListener('input', () => {
       this.dragging = true;
     });
@@ -82,7 +83,7 @@ export class ReplayBar {
     });
     const row3 = el('div', 'replay-bar-row', root);
     this.camera = el('select', 'ui-field replay-select', row3);
-    this.camera.title = 'カメラ（C）';
+    this.camera.title = t('replay.bar.camera');
     for (const m of REPLAY_CAMERAS) {
       const o = el('option', '', this.camera, REPLAY_CAMERA_LABELS[m]);
       o.value = m;
@@ -92,11 +93,18 @@ export class ReplayBar {
       if (m) h.setCamera(m);
       this.camera.blur();
     });
-    this.target = createButton(row3, 'ui-button replay-btn', '次の敵', h.nextTarget);
-    createButton(row3, 'ui-button replay-btn', '撮影', h.photo).title = 'フォトモード（P）';
-    createButton(row3, 'ui-button replay-btn', 'UI を隠す', h.hideUi).title = 'UI を隠す（H）';
-    createButton(row3, 'ui-button is-ghost replay-btn', '一覧へ', h.exit).title =
-      '一覧へ戻る（Esc）';
+    this.target = createButton(
+      row3,
+      'ui-button replay-btn',
+      t('replay.bar.nextTarget'),
+      h.nextTarget,
+    );
+    createButton(row3, 'ui-button replay-btn', t('replay.bar.photo'), h.photo).title =
+      t('replay.bar.photoHint');
+    createButton(row3, 'ui-button replay-btn', t('replay.bar.hideUi'), h.hideUi).title =
+      t('replay.bar.hideUiHint');
+    createButton(row3, 'ui-button is-ghost replay-btn', t('replay.bar.exit'), h.exit).title =
+      t('replay.bar.exitHint');
     this.root = root;
   }
 
@@ -124,6 +132,6 @@ export class ReplayBar {
   }
 
   setTargetLabel(text: string): void {
-    this.target.textContent = `次の敵（${text}）`;
+    this.target.textContent = t('replay.bar.nextTargetWith', { target: text });
   }
 }

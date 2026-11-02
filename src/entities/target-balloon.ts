@@ -115,7 +115,7 @@ export class TargetField {
     private readonly config: TargetConfig = TARGET_CONFIG,
   ) {
     if (config.spawnPoints.length <= config.count) {
-      throw new Error('出現地点は的の数より多くする（再出現で別の地点を選ぶため）');
+      throw new Error('spawnPoints must outnumber targets (respawns pick a different point)');
     }
     this.balloons = Array.from(
       { length: config.count },

@@ -4,6 +4,7 @@
 // チームの合計、リザルトのベストプレイヤー・最長連続撃墜。対戦の終わり（over）で over が立つ。
 // 6-6: レイドの部分（怪獣・役割分担の HUD・ブリーフィング・リザルト）は raid-flight.ts。名札の TARGET・復帰 5 秒の表示
 import type { Vec3 } from '../flight/math';
+import { tn } from '../core/i18n';
 import type { PerspectiveCamera } from 'three';
 import { createCombatInput, type CombatInput } from '../combat/combat-input';
 import { accuracy, bestPlayer, standings, teamTotals } from '../combat/pvp-rules';
@@ -220,9 +221,9 @@ export class PvpFlight {
     }
     if (cd <= 0 && remaining !== null) {
       const prev = this.lastRemaining;
-      for (const t of PVP_CONFIG.timeWarnings) {
-        if (prev !== null && prev > t && remaining <= t && remaining > 0) {
-          this.warning = `残り ${t} 秒`;
+      for (const sec of PVP_CONFIG.timeWarnings) {
+        if (prev !== null && prev > sec && remaining <= sec && remaining > 0) {
+          this.warning = tn('pvp.timeWarning', sec);
           this.warningUntil = now + PVP_CONFIG.timeWarningShowSeconds * 1000;
           d.sound('alert');
         }

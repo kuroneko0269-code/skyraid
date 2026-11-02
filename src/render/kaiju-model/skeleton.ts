@@ -64,7 +64,7 @@ export function createKaijuSkeleton(): KaijuSkeleton {
     if (pi >= 0) bones[pi]?.add(b);
   });
   const root = bones[0];
-  if (!root) throw new Error('骨がない');
+  if (!root) throw new Error('Missing root bone');
   root.updateMatrixWorld(true);
   const skeleton = new Skeleton(bones);
   return { root, bones, skeleton };

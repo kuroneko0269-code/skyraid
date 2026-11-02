@@ -1,13 +1,21 @@
 // タッチ操作（仮想コントローラー）の数値。DOM は src/ui/touch-controls.ts、ロジックは src/core/touch-stick.ts
 // 寸法はすべて CSS px。端からの余白には別途 safe-area（ノッチ）を足す
 
+import { t } from '../core/i18n';
+
 export const TOUCH_MODES = ['auto', 'on', 'off'] as const;
 export type TouchMode = (typeof TOUCH_MODES)[number];
 
 export const TOUCH_MODE_LABELS: Readonly<Record<TouchMode, string>> = {
-  auto: '自動',
-  on: '表示',
-  off: '非表示',
+  get auto() {
+    return t('touch.mode.auto');
+  },
+  get on() {
+    return t('touch.mode.on');
+  },
+  get off() {
+    return t('touch.mode.off');
+  },
 };
 
 export const TOUCH_CONFIG = {

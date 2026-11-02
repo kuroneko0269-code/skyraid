@@ -4,6 +4,7 @@ import './campaign.css';
 import './defense.css';
 import { DEFENSE_CONFIG } from '../data/defense';
 import type { DefenseRewardBreakdown, DefenseScore } from '../missions/defense/score';
+import { t } from '../core/i18n';
 import { el } from './hud-dom';
 import { formatCredits } from './mission-text';
 import { createButton, createScreen, setScreenShown } from './screen';
@@ -39,7 +40,7 @@ export class DefenseResultScreen {
     parent: HTMLElement,
     handlers: { onRetry: () => void; onList: () => void },
     /** 協力は「もう一度」を出さない（ロビーへ戻る） */
-    retryLabel = 'もう一度',
+    retryLabel = t('defense.result.retry'),
   ) {
     const root = createScreen(parent, 'campaign-screen result-screen defense-result-screen');
     const panel = el('div', 'ui-panel campaign-panel', root);
@@ -50,7 +51,12 @@ export class DefenseResultScreen {
     this.table = el('div', 'defense-result-table', panel);
     this.extras = el('div', 'result-extras', panel);
     const buttons = el('div', 'campaign-buttons', panel);
-    createButton(buttons, 'ui-button is-ghost campaign-back', 'モード選択へ', handlers.onList);
+    createButton(
+      buttons,
+      'ui-button is-ghost campaign-back',
+      t('defense.result.toModeSelect'),
+      handlers.onList,
+    );
     this.retry = createButton(
       buttons,
       'ui-button is-primary campaign-go',
@@ -63,31 +69,44 @@ export class DefenseResultScreen {
   show(s: DefenseScore, reward: DefenseRewardBreakdown, x: DefenseResultExtras): void {
     const ok = s.outcome === 'cleared';
     this.root.classList.toggle('is-success', ok);
-    this.info.textContent = `${x.mapName}・${x.hard ? '高難度' : '通常'}${x.pilotName ? `  /  PILOT ${x.pilotName}` : ''}`;
-    this.outcome.textContent = ok ? '防衛成功' : '基地陥落';
+    this.info.textContent = `${t('defense.result.info', { map: x.mapName, difficulty: x.hard ? t('defense.difficulty.hard') : t('defense.difficulty.normal') })}${x.pilotName ? `  /  PILOT ${x.pilotName}` : ''}`;
+    this.outcome.textContent = ok ? t('defense.outcome.cleared') : t('defense.outcome.fallen');
     this.facts.replaceChildren();
     const fact = (label: string, value: string): void => {
       const row = el('div', 'campaign-fact', this.facts);
       el('span', 'campaign-fact-label', row, label);
       el('span', 'campaign-fact-value', row, value);
     };
-    fact('クリアした波', `${s.wavesCleared} / ${DEFENSE_CONFIG.waves}`);
-    fact('撃墜', String(s.kills));
-    fact('司令部', `${Math.ceil(Math.max(0, s.hqHp))} / ${s.hqMaxHp}`);
-    fact('残った施設', `${s.facilitiesAlive} / ${s.facilitiesTotal}`);
+    fact(t('defense.result.wavesCleared'), `${s.wavesCleared} / ${DEFENSE_CONFIG.waves}`);
+    fact(t('defense.result.kills'), String(s.kills));
+    fact(t('defense.result.hq'), `${Math.ceil(Math.max(0, s.hqHp))} / ${s.hqMaxHp}`);
+    fact(t('defense.result.facilities'), `${s.facilitiesAlive} / ${s.facilitiesTotal}`);
     const r = DEFENSE_CONFIG.reward;
-    const parts = [`波 ${s.wavesCleared} × ${r.perWave}`];
-    if (reward.fullClear > 0) parts.push(`完全クリア +${formatCredits(reward.fullClear)}`);
-    if (reward.facilities > 0) parts.push(`施設全残存 +${formatCredits(reward.facilities)}`);
-    fact('内訳', parts.join('・'));
-    fact('報酬', `獲得 +${formatCredits(reward.total)} / 残高 ${formatCredits(x.balance)}`);
+    const parts = [t('defense.result.wavePart', { waves: s.wavesCleared, per: r.perWave })];
+    if (reward.fullClear > 0)
+      parts.push(t('defense.result.fullClear', { credits: formatCredits(reward.fullClear) }));
+    if (reward.facilities > 0)
+      parts.push(t('defense.result.allFacilities', { credits: formatCredits(reward.facilities) }));
+    fact(t('defense.result.breakdown'), parts.join(t('defense.result.sep')));
+    fact(
+      t('defense.result.reward'),
+      t('defense.result.rewardValue', {
+        earned: formatCredits(reward.total),
+        balance: formatCredits(x.balance),
+      }),
+    );
     this.table.replaceChildren();
     this.table.hidden = x.players.length === 0;
     for (const p of x.players) {
       const row = el('div', 'campaign-fact defense-result-row', this.table);
       row.classList.toggle('is-self', p.self);
       el('span', 'campaign-fact-label', row, `${p.mvp ? '★ MVP ' : ''}${p.name}`);
-      el('span', 'campaign-fact-value', row, `撃墜 ${p.kills}・被撃墜 ${p.deaths}`);
+      el(
+        'span',
+        'campaign-fact-value',
+        row,
+        t('defense.result.playerStats', { kills: p.kills, deaths: p.deaths }),
+      );
     }
   }
 

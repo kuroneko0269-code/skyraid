@@ -1,5 +1,6 @@
 // 怪獣「ヴォルガス（Vorgas）」（6-1 / 6-2）の数値。ロジックは src/entities/kaiju.ts（部位 HP・ダウン・ブレイク・フェーズ）と
 // src/ai/kaiju-ai.ts（上陸 → 歩行 → 攻撃選択 → 予兆 → 攻撃）、形は src/render/kaiju-model/。決定は docs/decisions.md の 6-1。
+import { t } from '../core/i18n';
 import { CITY_CONFIG } from './city';
 import { HARBOR_MAP } from './maps';
 
@@ -24,7 +25,9 @@ export interface KaijuPartSpec {
 }
 
 export const KAIJU_CONFIG = {
-  name: 'ヴォルガス',
+  get name() {
+    return t('kaiju.name');
+  },
   /** 全高（首の付け根の結晶の先まで。6-1b で背中の棘をやめ、見た目の最も高い所は約 145m） */
   height: 150,
   /**
@@ -46,12 +49,47 @@ export const KAIJU_CONFIG = {
    */
   partyDamageScale: [3.8, 1.75, 1.25, 1],
   parts: {
-    head: { label: '頭', hpShare: 0.1, center: { x: 0, y: 100, z: -62 }, radius: 20 },
+    head: {
+      get label() {
+        return t('kaiju.parts.head');
+      },
+      hpShare: 0.1,
+      center: { x: 0, y: 100, z: -62 },
+      radius: 20,
+    },
     // 6-1b: 結晶を肩・首の付け根へ移したので、判定の球も (0, 108, −4) → (0, 100, −30) へ（半径は同じ）
-    crystal: { label: '結晶', hpShare: 0.14, center: { x: 0, y: 100, z: -30 }, radius: 38 },
-    leftLeg: { label: '左脚', hpShare: 0.1, center: { x: -18, y: 32, z: 4 }, radius: 19 },
-    rightLeg: { label: '右脚', hpShare: 0.1, center: { x: 18, y: 32, z: 4 }, radius: 19 },
-    tail: { label: '尾', hpShare: 0.1, center: { x: 0, y: 26, z: 82 }, radius: 26 },
+    crystal: {
+      get label() {
+        return t('kaiju.parts.crystal');
+      },
+      hpShare: 0.14,
+      center: { x: 0, y: 100, z: -30 },
+      radius: 38,
+    },
+    leftLeg: {
+      get label() {
+        return t('kaiju.parts.leftLeg');
+      },
+      hpShare: 0.1,
+      center: { x: -18, y: 32, z: 4 },
+      radius: 19,
+    },
+    rightLeg: {
+      get label() {
+        return t('kaiju.parts.rightLeg');
+      },
+      hpShare: 0.1,
+      center: { x: 18, y: 32, z: 4 },
+      radius: 19,
+    },
+    tail: {
+      get label() {
+        return t('kaiju.parts.tail');
+      },
+      hpShare: 0.1,
+      center: { x: 0, y: 26, z: 82 },
+      radius: 26,
+    },
   } satisfies Record<KaijuPartId, KaijuPartSpec>,
   /** 見た目の半径（破片・爆発の大きさ） */
   visualRadius: 60,
@@ -95,7 +133,9 @@ export const KAIJU_ATTACK_CONFIG = {
   /** 狙う相手を探す距離（水平） */
   aggroRange: 3000,
   sweep: {
-    label: '薙ぎ払い',
+    get label() {
+      return t('kaiju.attacks.sweep');
+    },
     windup: 1.5,
     active: 1.2,
     recover: 1.0,
@@ -108,7 +148,9 @@ export const KAIJU_ATTACK_CONFIG = {
     pickAltitude: 240,
   },
   roar: {
-    label: '咆哮',
+    get label() {
+      return t('kaiju.attacks.roar');
+    },
     windup: 2.0,
     active: 1.2,
     recover: 1.0,
@@ -120,7 +162,9 @@ export const KAIJU_ATTACK_CONFIG = {
     pickRange: 800,
   },
   beam: {
-    label: '熱線',
+    get label() {
+      return t('kaiju.attacks.beam');
+    },
     windup: 2.5,
     active: 3.0,
     recover: 1.5,
@@ -135,7 +179,9 @@ export const KAIJU_ATTACK_CONFIG = {
     pickMaxRange: 2400,
   },
   throw: {
-    label: '投擲',
+    get label() {
+      return t('kaiju.attacks.throw');
+    },
     windup: 1.2,
     active: 0.5,
     recover: 1.0,

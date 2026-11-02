@@ -1,6 +1,7 @@
 // リングレース（7-1）の HUD: 上中央に現在タイム・リングの数・ゴーストとの差、チェックポイントのスプリット（±）と
 // タイムの加減（未通過 +5・細い −2）を数秒、画面中央にカウントダウン（3・2・1・GO）とゴール。
 // 次のリングへの矢印と距離はミッションの HUD の印（render/mission-link.ts）が出す。値が変わったときだけ DOM を書く
+import { t } from '../core/i18n';
 import './race.css';
 import { RACE_CONFIG } from '../data/race';
 import type { RaceRunner } from '../missions/race/runner';
@@ -58,11 +59,14 @@ export class RaceHud {
       }),
       bus.on('race:miss', ({ rings }) => {
         const penalty = rings.length * RACE_CONFIG.missPenaltySeconds;
-        this.showFlash(`リング未通過 +${penalty.toFixed(0)}秒`, 'is-bad');
+        this.showFlash(t('race.hud.missed', { seconds: penalty.toFixed(0) }), 'is-bad');
       }),
       bus.on('race:ring', ({ ring }) => {
         if (ring.kind === 'thin')
-          this.showFlash(`細いリング −${RACE_CONFIG.thinBonusSeconds}秒`, 'is-good');
+          this.showFlash(
+            t('race.hud.thinBonus', { seconds: RACE_CONFIG.thinBonusSeconds }),
+            'is-good',
+          );
         else if (ring.kind === 'boost') this.showFlash('BOOST', 'is-boost');
       }),
       bus.on('race:split', ({ time, delta }) => {
