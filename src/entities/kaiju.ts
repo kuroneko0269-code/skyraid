@@ -6,7 +6,7 @@
 // - 人数スケール: 全体 HP = 基礎 × (0.55 + 0.45 × 人数)
 // 動き（歩く・向きを変える）と攻撃の段階は AI（src/ai/kaiju-ai.ts）が決めて、ここに書き込む
 import { KAIJU_CONFIG, KAIJU_PARTS, type KaijuAttack, type KaijuPartId } from '../data/kaiju';
-import { RAID_RULES } from '../data/raid';
+import { RAID_RULES, raidTuning } from '../data/raid';
 import { clamp, copyVec3, vec3, type Vec3 } from '../flight/math';
 import type { GroundHeightFn } from './aircraft';
 import { KaijuPart, type KaijuPartOwner } from './kaiju-part';
@@ -191,8 +191,9 @@ export class Kaiju implements KaijuPartOwner, KaijuPoseInput {
     this.registerHit(part, attacker);
     let dmg = amount;
     dmg *= config.partyDamageScale[this.players - 1] ?? 1;
-    if (this.raid) dmg /= RAID_RULES.tuning.toughness;
-    if (this.downTimer > 0) dmg *= config.down.damageScale;
+    if (this.raid) dmg /= raidTuning(this.hard).toughness;
+    if (this.downTimer > 0)
+      dmg *= this.raid ? raidTuning(this.hard).downDamageScale : config.down.damageScale;
     if (part.breakTimer > 0) dmg *= config.break.damageScale;
     this.flashTimer = config.hitFlashSeconds;
     if (part.partHp > 0) {

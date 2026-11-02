@@ -33,6 +33,8 @@ export interface Unit {
   difficulty: Difficulty;
   /** 味方の輸送機を優先して狙うか（M3 の敵機。2-5） */
   preferAllies: boolean;
+  /** 出現のときの最大 HP の倍率（8-6b。M1 の敵は 0.6。フリーフライトは 1） */
+  hpScale: number;
   /** preferAllies の機体が、近づいたプレイヤー機を相手にしているか */
   playerAggro: boolean;
   /** ロックの候補（狙う相手 1 つだけ。使い回す） */
@@ -73,6 +75,7 @@ export function createUnit(
     controls: { pitch: 0, roll: 0, yaw: 0, throttle: 0, afterburner: false, throttleTarget: 0 },
     difficulty,
     preferAllies: false,
+    hpScale: 1,
     playerAggro: false,
     lockTargets: [],
     self,

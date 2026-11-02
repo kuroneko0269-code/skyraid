@@ -45,6 +45,8 @@ export interface MissionEvents extends Record<string, unknown> {
   'objective:complete': { readonly index: number; readonly id: string };
   /** 戦域の境界の外に出た・戻った・カウントの整数が変わった */
   'boundary:change': { readonly outside: boolean; readonly secondsLeft: number };
+  /** ミサイルを補充した（8-6b。M1 の撃ち尽くしたとき） */
+  'mission:resupply': { readonly missiles: number };
   /** 成功 / 失敗が決まった */
   'mission:end': { readonly result: MissionResult };
   /** 中断した */

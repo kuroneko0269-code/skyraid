@@ -12,6 +12,11 @@ import type { PlayerView } from '../render/player-view';
 import type { MissionHud } from './mission-hud';
 import type { Screens } from './screens';
 import type { TutorialLink } from './tutorial-link';
+import { t } from '../core/i18n';
+import { showToast } from './toast';
+
+/** ミサイルの補充のお知らせを出す秒数（8-6b） */
+const RESUPPLY_TOAST_SECONDS = 3;
 
 export interface MissionWiringParts {
   readonly session: FlightSession;
@@ -44,6 +49,10 @@ export function linkMissionEvents(p: MissionWiringParts): void {
       inTutorial ? screens.tutorialText.abortMenu : undefined,
     );
     p.tutorial.attach(runner, inTutorial);
+    // 8-6b: M1 のミサイルの補充を上のお知らせに
+    runner?.bus.on('mission:resupply', () => {
+      showToast(t('hud.missileResupply'), { seconds: RESUPPLY_TOAST_SECONDS });
+    });
     // 成功の記録と報酬をセーブへ（3-2）。チュートリアルの報酬は初回だけ（TutorialLink）
     // 7-B: 再生中は記録・報酬を入れない
     if (runner && !inTutorial && !replaying) {

@@ -5,7 +5,8 @@
 // - viewport: canvas が画面の端まで（844×390）。iOS のように window.innerWidth / innerHeight が古い値でも、縦 → 横に
 //   向きを変えた後も、描画バッファの縦横比が canvas と同じ
 // - members: メンバー管理の行の高さが自分の行（ボタンなし）とほかの人の行でそろう
-// - nozzle: 戦闘機 4 機種の排気口の拡大（細かさ 高 / 低 × 影あり / なし）を PNG に（黒い輪が無いことを目で見る）
+// - nozzle: 戦闘機 4 機種の排気と噴流（画質 3 × アフターバーナーの有無、横と斜め後ろ）を PNG に。噴流の後ろの黒い画素と
+//   HalfFloat の描画先の NaN を数える（8-6b。scripts/ui-audit-device-nozzle.js）
 // 使い方: `node scripts/ui-audit-device.js <出力先>`。結果は <出力先>/device.json と PNG
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';

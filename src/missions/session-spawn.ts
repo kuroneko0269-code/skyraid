@@ -23,7 +23,13 @@ export function spawnInSession(def: SpawnDef, s: SpawnParts): void {
         const at = def.positions[i % def.positions.length];
         if (!at) break;
         const preferAllies = def.attack === 'transport';
-        const index = s.squadron.deploy(at, def.patrol, def.difficulty, preferAllies);
+        const index = s.squadron.deploy(
+          at,
+          def.patrol,
+          def.difficulty,
+          preferAllies,
+          def.hpScale ?? 1,
+        );
         if (index >= 0) s.destroyed.setEnemyGroup(index, def.group);
       }
       break;

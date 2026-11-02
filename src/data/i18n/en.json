@@ -52,7 +52,7 @@
       "briefing": [
         "The giant monster Vorgas is coming ashore from the sea southeast of the island.",
         "Glowing shoulder crystals mean a heat beam; a raised tail means a sweep. Read the tells and dodge.",
-        "Break a leg to knock it down and double all damage.",
+        "Break a leg to knock it down: it stops and can't attack for a while.",
         "Below 40% health it enters the final phase. Defeat it within 3 minutes or it reaches the city."
       ]
     }
@@ -361,7 +361,7 @@
       "title": "Briefing: Vorgas",
       "lines": [
         "Break the crystal to stop the Heat Beam, the tail for Sweep, the head for Roar",
-        "Break a leg to down it for 15 s (×2 damage to all parts)",
+        "Break a leg to down it for 15 s (it stops and can't attack)",
         "Break: 2 players hit the same part within 3 s (×3 to that part)"
       ],
       "skip": "Skip",
@@ -423,6 +423,7 @@
     }
   },
   "hud": {
+    "missileResupply": "Missiles resupplied",
     "timeLeft": "{time} left",
     "shotDown": "SHOT DOWN",
     "respawnIn": "Respawn in {seconds} s"
@@ -1007,7 +1008,7 @@
     "signIn": "Sign In",
     "reenterEmail": "Change Email",
     "recheck": "Recheck",
-    "nameHint": "Pilot name (also shown in rankings and member management)",
+    "nameHint": "This name is shown in rankings and the member list",
     "signOut": "Sign Out",
     "checkEmail": "Check your email address",
     "sending": "Sending…",

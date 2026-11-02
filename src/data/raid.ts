@@ -35,12 +35,17 @@ export const RAID_RULES = {
   },
   /**
    * 8-6: レイド（ソロ・協力。M5 の遭遇は変えない）の強さ。人数によらず同じ倍率（協力も人数に応じて同じ割合で上がる）。
+   * 8-6b で通常と高難度に分けた（8-6 の値は通常には厳しすぎたので、高難度だけに残す）。
    * - toughness: 怪獣が受けるダメージを割る（全体 HP と部位 HP を ×toughness にしたのと同じ。協力の通信は HP を u16 で
    *   送り、4 人・高難度で 65,535 を超えるので、HP の数値は変えずにダメージの側で効かせる）
    * - attackInterval: 攻撃の間隔（KAIJU_ATTACK_CONFIG.intervalSeconds）の倍率。attackDamage: 攻撃のダメージの倍率
-   * 値は tests/kaiju-raid-bots.ts の熟練ボット（慣れた人。8-6 の前は 1 人で約 1.1 分）で決めた（docs/decisions.md の 8-6）
+   * - downDamageScale: ダウン中のダメージの倍率（KAIJU_CONFIG.down.damageScale の代わり。8-6b）
+   * 値は tests/kaiju-raid-bots.ts の熟練・平均的なボットで決めた（docs/decisions.md の 8-6 / 8-6b）
    */
-  tuning: { toughness: 2.3, attackInterval: 0.85, attackDamage: 1.15 },
+  tuning: {
+    normal: { toughness: 1.35, attackInterval: 1, attackDamage: 1, downDamageScale: 1 },
+    hard: { toughness: 2.3, attackInterval: 0.85, attackDamage: 1.15, downDamageScale: 2 },
+  },
   /** 協力の開始前のブリーフィング（カウントダウンの前。2 回目以降は全員がスキップを押すと早く終わる） */
   briefingSeconds: 5,
 } as const;
@@ -70,4 +75,9 @@ function lazyList(keys: readonly string[]): readonly string[] {
     Object.defineProperty(list, i, { get: () => t(key), enumerable: true });
   });
   return list;
+}
+
+/** レイドの強さ（8-6b: 難易度ごと。RAID_RULES.tuning） */
+export function raidTuning(hard: boolean): (typeof RAID_RULES.tuning)[RaidDifficulty] {
+  return RAID_RULES.tuning[hard ? 'hard' : 'normal'];
 }

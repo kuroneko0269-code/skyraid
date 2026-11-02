@@ -21,39 +21,46 @@ function median(values: number[]): number {
   return v.length % 2 ? (v[m] ?? 0) : ((v[m - 1] ?? 0) + (v[m] ?? 0)) / 2;
 }
 
-describe('ボット（8-6: 慣れた人で 3〜5 分・初見は失敗する）', () => {
-  it('熟練 1 人: すべて倒せる。中央値は 3〜5 分、各シードは 2.5〜5.5 分', () => {
-    const times: number[] = [];
-    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
-      const r = runRaidBots({ players: 1, seed, skill: 'skilled' });
-      expect([seed, r.killed]).toEqual([seed, true]);
-      expect(r.seconds).toBeGreaterThanOrEqual(2.5 * 60);
-      expect(r.seconds).toBeLessThanOrEqual(5.5 * 60);
+describe('ボット（8-6b: 通常は慣れた人で 2.5〜3.5 分・平均的な人も大半はクリア、高難度は 8-6 のまま）', () => {
+  const times = (
+    players: number,
+    seeds: readonly number[],
+    o: { skill?: 'skilled'; hard?: boolean },
+  ) => seeds.map((seed) => runRaidBots({ players, seed, maxSeconds: 1200, ...o }));
+
+  it('通常・熟練 1 人: すべて倒せる。中央値は 2.5〜3.5 分、各シードは 1.5〜4 分', () => {
+    const rs = times(1, [1, 2, 3, 4, 5, 6, 7, 8], { skill: 'skilled' });
+    for (const r of rs) {
+      expect(r.killed).toBe(true);
+      expect(r.seconds).toBeGreaterThanOrEqual(1.5 * 60);
+      expect(r.seconds).toBeLessThanOrEqual(4 * 60);
       expect(r.breaks).toBe(0);
-      times.push(r.seconds);
     }
-    const m = median(times);
-    expect(m).toBeGreaterThanOrEqual(3 * 60);
-    expect(m).toBeLessThanOrEqual(5 * 60);
+    const m = median(rs.map((r) => r.seconds));
+    expect(m).toBeGreaterThanOrEqual(2.5 * 60);
+    expect(m).toBeLessThanOrEqual(3.5 * 60);
   }, 60000);
 
-  it('熟練 4 人: 4〜7 分で倒せる（人数に応じて同じ割合で上がる）。ブレイクも起きる', () => {
-    for (const seed of [1, 2, 3, 4, 5]) {
-      const r = runRaidBots({ players: 4, seed, skill: 'skilled' });
-      expect([seed, r.killed]).toEqual([seed, true]);
-      expect(r.seconds).toBeGreaterThanOrEqual(4 * 60);
-      expect(r.seconds).toBeLessThanOrEqual(7 * 60);
+  it('通常・熟練 4 人: 2.5〜4.5 分で倒せる（人数に応じて同じ割合）。ブレイクも起きる', () => {
+    for (const r of times(4, [1, 2, 3, 4, 5], { skill: 'skilled' })) {
+      expect(r.killed).toBe(true);
+      expect(r.seconds).toBeGreaterThanOrEqual(2.5 * 60);
+      expect(r.seconds).toBeLessThanOrEqual(4.5 * 60);
       expect(r.breaks).toBeGreaterThan(0);
     }
   }, 60000);
 
-  it('平均的な 1 人（初見に近い腕前）: 半分以上は失敗する', () => {
-    let fails = 0;
-    const seeds = [1, 2, 3, 4, 5, 6];
-    for (const seed of seeds) {
-      const r = runRaidBots({ players: 1, seed, maxSeconds: 1200 });
-      if (!r.killed) fails++;
-    }
-    expect(fails).toBeGreaterThanOrEqual(seeds.length / 2);
+  it('通常・平均的な 1 人（初見に近い腕前）: 8 回のうち失敗は 3 回以下、クリアは 12 分以内', () => {
+    const rs = times(1, [1, 2, 3, 4, 5, 6, 7, 8], {});
+    expect(rs.filter((r) => !r.killed).length).toBeLessThanOrEqual(3);
+    for (const r of rs) if (r.killed) expect(r.seconds).toBeLessThanOrEqual(12 * 60);
+  }, 120000);
+
+  it('高難度・熟練 1 人: すべて倒せる。中央値は 4〜6 分（8-6 の数値のまま）', () => {
+    const rs = times(1, [1, 2, 3, 4, 5, 6, 7, 8], { skill: 'skilled', hard: true });
+    for (const r of rs) expect(r.killed).toBe(true);
+    const m = median(rs.map((r) => r.seconds));
+    expect(m).toBeGreaterThanOrEqual(4 * 60);
+    expect(m).toBeLessThanOrEqual(6 * 60);
   }, 60000);
 });
