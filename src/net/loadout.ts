@@ -11,7 +11,7 @@ function clampLevel(n: number): number {
 
 export function netLoadout(aircraftId: string, u: Readonly<UpgradeLevelsMsg> | undefined): Loadout {
   const model = findAircraftModel(aircraftId) ?? AIRCRAFT_MODELS[0];
-  if (!model) throw new Error('機体の定義がありません');
+  if (!model) throw new Error('no aircraft definitions');
   return resolveLoadout(model, {
     engine: clampLevel(u?.engine ?? 0),
     airframe: clampLevel(u?.airframe ?? 0),

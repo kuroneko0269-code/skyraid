@@ -6,6 +6,7 @@ import { RAID_PHRASE_BASE } from '../data/pvp';
 import { RAID_QUICK_PHRASES } from '../data/raid';
 import type { NetStats, RemoteSample } from '../net/net-game';
 import type { PlayerInfo } from '../net/protocol';
+import { t } from '../core/i18n';
 import { el } from './hud-dom';
 import { playerColorCss, sideColorCss } from './lobby-colors';
 import { createButton } from './screen';
@@ -48,12 +49,7 @@ export class PvpHud {
     this.menu.hidden = true;
     const box = el('div', 'ui-dialog pvp-menu-box', this.menu);
     el('h3', 'ui-heading', box, 'PvP');
-    this.menuText = el(
-      'p',
-      'briefing-text',
-      box,
-      '対戦中は一時停止できません（機体は飛び続けます）',
-    );
+    this.menuText = el('p', 'briefing-text', box, t('pvp.menu.noPause'));
     // 6-6: レイドの定型文（飛行中のメニューから送る。レイドのときだけ出す）
     this.raidChat = el('div', 'lobby-chat pvp-menu-chat', box);
     RAID_QUICK_PHRASES.forEach((text, i) => {
@@ -65,8 +61,18 @@ export class PvpHud {
     this.raidChat.hidden = true;
     const buttons = el('div', 'campaign-buttons', box);
     // 押せないように見えないよう、灰色の is-ghost ではなく赤（確認なしで 1 回で抜ける。再接続はロビーから）
-    createButton(buttons, 'ui-button is-danger campaign-back', '退出する', handlers.onLeave);
-    createButton(buttons, 'ui-button is-primary campaign-go', '続ける', handlers.onContinue);
+    createButton(
+      buttons,
+      'ui-button is-danger campaign-back',
+      t('pvp.menu.leave'),
+      handlers.onLeave,
+    );
+    createButton(
+      buttons,
+      'ui-button is-primary campaign-go',
+      t('pvp.menu.continue'),
+      handlers.onContinue,
+    );
     this.toast = el('div', 'ui-toast pvp-toast', parent);
     this.toast.setAttribute('role', 'status');
     this.toast.hidden = true;
@@ -85,9 +91,7 @@ export class PvpHud {
   /** レイドの飛行か（6-6: メニューに定型文を出す） */
   setRaid(raid: boolean): void {
     this.raidChat.hidden = !raid;
-    this.menuText.textContent = raid
-      ? '飛行中は一時停止できません。定型文を全員に送れます'
-      : '対戦中は一時停止できません（機体は飛び続けます）';
+    this.menuText.textContent = raid ? t('pvp.menu.noPauseRaid') : t('pvp.menu.noPause');
   }
 
   /** 数秒だけお知らせを出す */
@@ -176,18 +180,18 @@ export class PvpHud {
     this.debugTimer = NET_CONFIG.debugRefreshSeconds;
     const rtt = stats.rttMs === null ? '--' : `${Math.round(stats.rttMs)}ms`;
     const lines = [
-      `NET ${stats.role}  id ${localId}  ${players}人`,
+      `NET ${stats.role}  id ${localId}  ${players} players`,
       `RTT ${rtt}  state ${stats.stateRate}/s`,
     ];
     if (stats.role === 'client') {
       lines.push(
-        `補間遅延 ${Math.round(stats.interpDelayMs)}ms  余裕 ${Math.round(stats.bufferMarginMs)}ms`,
-        `外挿 ${stats.extrapolating}機  自機の補正 ${stats.corrections}回`,
+        `interp ${Math.round(stats.interpDelayMs)}ms  margin ${Math.round(stats.bufferMarginMs)}ms`,
+        `extrap ${stats.extrapolating}  self corrections ${stats.corrections}`,
       );
     } else {
       lines.push(
-        `入力の溜め ${stats.inputBacklog}  推測 ${stats.inputGuessed}  溜め直し ${stats.inputResyncs}`,
-        `遅延補償の巻き戻し ${Math.round(stats.rewindMs)}ms`,
+        `input backlog ${stats.inputBacklog}  guessed ${stats.inputGuessed}  resyncs ${stats.inputResyncs}`,
+        `lag comp rewind ${Math.round(stats.rewindMs)}ms`,
       );
     }
     this.debug.textContent = lines.join('\n');

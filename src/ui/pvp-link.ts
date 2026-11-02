@@ -4,6 +4,7 @@
 // 5-3: 撃ち合い（1 回の対戦は pvp-flight.ts）、ロビーのルール設定、対戦の終わり → ロビーのリザルト →「もう一度」。
 // 5-4: 準備・ハンガー・共有・定型文・チーム（ロビーの操作は pvp-lobby-actions.ts）、全員の「もう一度」でロビーへ、
 // 切断と再接続のお知らせ、強化の無効を反映した装備
+import { t } from '../core/i18n';
 import type { GameSettings } from '../net/protocol';
 import type { PerspectiveCamera, Scene } from 'three';
 import type { GameState } from '../core/game-state';
@@ -194,7 +195,7 @@ export class PvpLink {
 
   private async create(): Promise<void> {
     const attempt = ++this.attempt;
-    this.lobby.showConnecting('部屋を作っています…');
+    this.lobby.showConnecting(t('lobby.status.creating'));
     try {
       const settings = this.preset;
       const room = await HostRoom.create({ open: this.open, profile: this.profile(), settings });
@@ -204,19 +205,18 @@ export class PvpLink {
       }
       this.attach(room);
     } catch {
-      if (attempt === this.attempt)
-        this.lobby.showMenu('部屋を作れませんでした（ネットワークを確かめてください）');
+      if (attempt === this.attempt) this.lobby.showMenu(t('lobby.status.createFailed'));
     }
   }
 
   private async join(input: string): Promise<void> {
     const code = normalizeRoomCode(input);
     if (!code) {
-      this.lobby.showMenu('部屋コードは 6 文字です（0・O・1・I は使いません）');
+      this.lobby.showMenu(t('lobby.status.badCode'));
       return;
     }
     const attempt = ++this.attempt;
-    this.lobby.showConnecting(`${code} に接続中…`);
+    this.lobby.showConnecting(t('lobby.status.joining', { code }));
     try {
       const room = await ClientRoom.join(code, { open: this.open, profile: this.profile() });
       if (attempt !== this.attempt) {
@@ -253,7 +253,7 @@ export class PvpLink {
     if (room instanceof ClientRoom) {
       room.onReconnect((reconnecting) => {
         if (reconnecting && this.deps.game.state === 'lobby')
-          this.lobby.showConnecting('接続が途切れました。再接続しています…');
+          this.lobby.showConnecting(t('net.reconnecting'));
       });
     }
     this.timer = window.setInterval(() => {
@@ -342,11 +342,7 @@ export class PvpLink {
     this.endFlight();
     const game = this.deps.game;
     if (reason !== 'left') {
-      this.hud.notify(
-        reason === 'host-left'
-          ? 'ホストが切断しました'
-          : '接続が切れました（再接続できませんでした）',
-      );
+      this.hud.notify(reason === 'host-left' ? t('net.hostLeft') : t('net.lost'));
       if (game.state === 'flight' || game.state === 'lobby') game.transition('mode_select');
       this.lobby.showMenu();
       return;

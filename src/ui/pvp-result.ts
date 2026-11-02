@@ -7,6 +7,7 @@ import { renderRaidResult } from './raid-result';
 import type { DefenseSummary } from '../net/defense-result';
 import { DEFENSE_CONFIG } from '../data/defense';
 import { formatCredits } from './mission-text';
+import { t, tn } from '../core/i18n';
 import { el } from './hud-dom';
 import { playerColorCss, teamColorCss } from './lobby-colors';
 
@@ -42,30 +43,42 @@ export interface ResultView {
 }
 
 const REASON_TEXT: Readonly<Record<ResultView['reason'], string>> = {
-  score: '撃墜数に到達',
-  time: '時間切れ',
-  raidClear: '全員で怪獣を倒した（報酬は全員同じ）',
-  raidFail: '怪獣が街に到達した（全員に 300 CR）',
-  defenseClear: '全 10 波から基地を守り切った（報酬は全員同じ）',
-  defenseFail: '司令部が破壊された（クリアした波 × 300 CR）',
+  get score() {
+    return t('pvp.reason.score');
+  },
+  get time() {
+    return t('pvp.reason.time');
+  },
+  get raidClear() {
+    return t('pvp.reason.raidClear');
+  },
+  get raidFail() {
+    return t('pvp.reason.raidFail');
+  },
+  get defenseClear() {
+    return t('pvp.reason.defenseClear');
+  },
+  get defenseFail() {
+    return t('pvp.reason.defenseFail');
+  },
 };
 
 function title(r: Readonly<ResultView>): string {
-  if (r.reason === 'raidClear') return 'ヴォルガス撃破';
-  if (r.reason === 'raidFail') return '作戦失敗';
-  if (r.reason === 'defenseClear') return '防衛成功';
-  if (r.reason === 'defenseFail') return '基地陥落';
-  const t = r.teamTotals;
-  if (t) {
-    if (t[0] === t[1]) return '引き分け';
-    const winner = t[0] > t[1] ? 0 : 1;
+  if (r.reason === 'raidClear') return t('pvp.title.raidClear');
+  if (r.reason === 'raidFail') return t('pvp.title.raidFail');
+  if (r.reason === 'defenseClear') return t('defense.outcome.cleared');
+  if (r.reason === 'defenseFail') return t('defense.outcome.fallen');
+  const totals = r.teamTotals;
+  if (totals) {
+    if (totals[0] === totals[1]) return t('pvp.title.draw');
+    const winner = totals[0] > totals[1] ? 0 : 1;
     const mine = r.rows.find((x) => x.id === r.localId)?.team;
-    return mine === winner ? '勝利' : '敗北';
+    return mine === winner ? t('pvp.title.win') : t('pvp.title.lose');
   }
   // 全員が 1 位なら引き分け、自分が 1 位（同率を含む）なら勝利
   const draw = r.rows.length > 1 && r.rows.every((x) => x.rank === 1);
   const won = r.rows.some((x) => x.rank === 1 && x.id === r.localId);
-  return draw ? '引き分け' : won ? '勝利' : '終了';
+  return draw ? t('pvp.title.draw') : won ? t('pvp.title.win') : t('pvp.title.over');
 }
 
 export function renderResult(parent: HTMLElement, r: Readonly<ResultView>): void {
@@ -80,17 +93,17 @@ export function renderResult(parent: HTMLElement, r: Readonly<ResultView>): void
   }
   if (r.defense) renderDefenseResult(parent, r.defense, r.rows);
   if (r.protectedBuildings != null) {
-    el('p', 'briefing-text', parent, `守れた建物 ${r.protectedBuildings}%`);
+    el('p', 'briefing-text', parent, t('pvp.result.protected', { percent: r.protectedBuildings }));
   }
-  const t = r.teamTotals;
-  if (t) {
+  const totals = r.teamTotals;
+  if (totals) {
     const line = el('div', 'pvp-result-teams', parent);
     [0, 1].forEach((team) => {
       const s = el(
         'span',
         'pvp-result-team',
         line,
-        `チーム ${PVP_TEAM.names[team] ?? ''}  ${t[team] ?? 0}`,
+        t('pvp.result.team', { team: PVP_TEAM.names[team] ?? '', score: totals[team] ?? 0 }),
       );
       s.style.color = teamColorCss(team);
       if (team === 0) el('span', 'pvp-feed-verb', line, ' − ');
@@ -101,11 +114,12 @@ export function renderResult(parent: HTMLElement, r: Readonly<ResultView>): void
     el('span', 'campaign-fact-label', best, 'BEST PLAYER');
     const name = el('span', 'pvp-result-best-name', best, r.best.name);
     name.style.color = playerColorCss(r.best.id);
-    el('span', 'pvp-result-best-kills', best, `${r.best.kills} 撃墜`);
+    el('span', 'pvp-result-best-kills', best, tn('pvp.result.kills', r.best.kills));
   }
   const table = el('table', 'pvp-result-table', parent);
   const head = el('tr', '', el('thead', '', table));
-  for (const h of ['順位', 'パイロット', '撃墜', '被撃墜', '命中率', '連続']) el('th', '', head, h);
+  for (const h of ['rank', 'pilot', 'kills', 'deaths', 'accuracy', 'streak'])
+    el('th', '', head, t(`pvp.table.${h}`));
   const body = el('tbody', '', table);
   for (const row of r.rows) {
     const tr = el('tr', row.id === r.localId ? 'is-you' : '', body);
@@ -134,14 +148,20 @@ function renderDefenseResult(
     el('span', 'campaign-fact-label', row, label);
     el('span', 'campaign-fact-value', row, value);
   };
-  fact('マップ', `${d.mapName}・${d.hard ? '高難度' : '通常'}`);
-  fact('クリアした波', `${s.wavesCleared} / ${DEFENSE_CONFIG.waves}`);
-  fact('撃墜（全員）', String(s.kills));
-  fact('司令部', `${Math.ceil(Math.max(0, s.hqHp))} / ${s.hqMaxHp}`);
-  fact('残った施設', `${s.facilitiesAlive} / ${s.facilitiesTotal}`);
-  fact('報酬（全員）', `+${formatCredits(d.credits)}`);
+  fact(
+    t('pvp.result.map'),
+    t('defense.result.info', {
+      map: d.mapName,
+      difficulty: d.hard ? t('defense.difficulty.hard') : t('defense.difficulty.normal'),
+    }),
+  );
+  fact(t('defense.result.wavesCleared'), `${s.wavesCleared} / ${DEFENSE_CONFIG.waves}`);
+  fact(t('pvp.result.killsAll'), String(s.kills));
+  fact(t('defense.result.hq'), `${Math.ceil(Math.max(0, s.hqHp))} / ${s.hqMaxHp}`);
+  fact(t('defense.result.facilities'), `${s.facilitiesAlive} / ${s.facilitiesTotal}`);
+  fact(t('pvp.result.rewardAll'), `+${formatCredits(d.credits)}`);
   const mvp = rows.find((x) => x.id === d.mvp);
-  fact('MVP', mvp ? `${mvp.name}（${mvp.kills} 撃墜）` : 'なし');
+  fact('MVP', mvp ? tn('pvp.result.mvp', mvp.kills, { name: mvp.name }) : t('pvp.result.none'));
 }
 
 /** 「もう一度」の待ち: 押した人に ✓、全員そろうとロビーへ */
@@ -152,17 +172,12 @@ export function renderAgain(
 ): void {
   parent.replaceChildren();
   const pressed = players.filter((p) => p.again).length;
-  el(
-    'p',
-    'briefing-text',
-    parent,
-    `全員が「もう一度」を押すとロビーへ戻ります（${pressed} / ${players.length}）`,
-  );
+  el('p', 'briefing-text', parent, t('pvp.result.againWait', { pressed, total: players.length }));
   const list = el('div', 'pvp-again', parent);
   for (const p of players) {
     const chip = el('span', p.again ? 'pvp-again-chip is-done' : 'pvp-again-chip', list);
     const mark = el('span', 'pvp-again-mark', chip, p.again ? '✓' : '…');
     mark.style.color = p.again ? playerColorCss(p.id) : '';
-    el('span', '', chip, p.id === localId ? `${p.name}（あなた）` : p.name);
+    el('span', '', chip, p.id === localId ? t('pvp.result.you', { name: p.name }) : p.name);
   }
 }

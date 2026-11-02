@@ -1,0 +1,284 @@
+{
+  "defense": {
+    "icon": {
+      "hq": "司令部",
+      "radar": "レーダー",
+      "fuel": "燃料",
+      "aaa1": "対空1",
+      "aaa2": "対空2"
+    },
+    "hud": {
+      "skip": "スキップ (N)",
+      "supplyHint": "補給: 基地の上空を高度 {agl}m 以下・速度 {speed} 以下で通過",
+      "wavePrep": "WAVE {wave} / {total}  準備中",
+      "waveRemaining": "WAVE {wave} / {total}  残り {remaining}",
+      "nextWaveIn": "次の波まで {seconds} 秒",
+      "waiting": "待機中…",
+      "forecast": "次の波：{forecast}",
+      "forecastUnknown": "次の波：レーダー喪失のため不明",
+      "supplied": "補給済み"
+    },
+    "lost": {
+      "hq": "司令部が破壊された",
+      "radar": "レーダー喪失 — 敵の予告が出なくなる",
+      "fuel": "燃料タンク喪失 — 補給が半分になる",
+      "aaa1": "対空砲 1 喪失 — 支援が減る",
+      "aaa2": "対空砲 2 喪失 — 支援が減る"
+    },
+    "abort": "防衛戦を中断",
+    "flash": {
+      "incoming": "敵襲",
+      "clearSub": "補給して次の波に備えよ",
+      "facilityLost": "施設喪失",
+      "supplied": "補給完了",
+      "suppliedHalf": "燃料タンク喪失のため半分"
+    },
+    "outcome": {
+      "cleared": "防衛成功",
+      "fallen": "基地陥落"
+    },
+    "difficulty": {
+      "normal": "通常",
+      "hard": "高難度"
+    },
+    "result": {
+      "retry": "もう一度",
+      "toModeSelect": "モード選択へ",
+      "info": "{map}・{difficulty}",
+      "wavesCleared": "クリアした波",
+      "kills": "撃墜",
+      "hq": "司令部",
+      "facilities": "残った施設",
+      "wavePart": "波 {waves} × {per}",
+      "fullClear": "完全クリア +{credits}",
+      "allFacilities": "施設全残存 +{credits}",
+      "breakdown": "内訳",
+      "sep": "・",
+      "reward": "報酬",
+      "rewardValue": "獲得 +{earned} / 残高 {balance}",
+      "playerStats": "撃墜 {kills}・被撃墜 {deaths}"
+    },
+    "map": {
+      "island": "島（東岸の基地）",
+      "harbor": "港湾都市（港の基地）"
+    },
+    "dir": {
+      "ne": "北東",
+      "e": "東",
+      "se": "南東",
+      "sw": "南西",
+      "s": "南"
+    },
+    "forecast": {
+      "text": "{direction}から {list}",
+      "sep": "・",
+      "bomber": {
+        "other": "爆撃機 {count}"
+      },
+      "fighter": {
+        "other": "戦闘機 {count}"
+      },
+      "cruise": {
+        "other": "巡航ミサイル {count}"
+      }
+    }
+  },
+  "pvp": {
+    "table": {
+      "rank": "順位",
+      "pilot": "パイロット",
+      "kills": "撃墜",
+      "deaths": "被撃墜",
+      "accuracy": "命中率",
+      "streak": "連続"
+    },
+    "board": {
+      "remaining": "残り {time}"
+    },
+    "feed": {
+      "kill": "{killer} が {victim} を撃墜",
+      "crash": "{victim} が墜落"
+    },
+    "timeWarning": {
+      "other": "残り {count} 秒"
+    },
+    "menu": {
+      "noPause": "対戦中は一時停止できません（機体は飛び続けます）",
+      "noPauseRaid": "飛行中は一時停止できません。定型文を全員に送れます",
+      "leave": "退出する",
+      "continue": "続ける"
+    },
+    "phrase": {
+      "ready": "準備OK",
+      "wait": "ちょっと待って",
+      "rematch": "もう一戦",
+      "hello": "よろしく",
+      "nice": "ナイス！",
+      "thanks": "ありがとう"
+    },
+    "downed": {
+      "title": "撃墜されました",
+      "respawnIn": "復帰まで",
+      "by": "{killer} に撃墜された",
+      "crashed": "墜落"
+    },
+    "status": {
+      "invulnerable": "無敵 {seconds}",
+      "boosted": "初心者保護 HP+50%・MSL+2",
+      "sep": "　"
+    },
+    "reason": {
+      "score": "撃墜数に到達",
+      "time": "時間切れ",
+      "raidClear": "全員で怪獣を倒した（報酬は全員同じ）",
+      "raidFail": "怪獣が街に到達した（全員に 300 CR）",
+      "defenseClear": "全 10 波から基地を守り切った（報酬は全員同じ）",
+      "defenseFail": "司令部が破壊された（クリアした波 × 300 CR）"
+    },
+    "title": {
+      "raidClear": "ヴォルガス撃破",
+      "raidFail": "作戦失敗",
+      "draw": "引き分け",
+      "win": "勝利",
+      "lose": "敗北",
+      "over": "終了"
+    },
+    "result": {
+      "protected": "守れた建物 {percent}%",
+      "team": "チーム {team}  {score}",
+      "kills": {
+        "other": "{count} 撃墜"
+      },
+      "map": "マップ",
+      "killsAll": "撃墜（全員）",
+      "rewardAll": "報酬（全員）",
+      "mvp": {
+        "other": "{name}（{count} 撃墜）"
+      },
+      "none": "なし",
+      "againWait": "全員が「もう一度」を押すとロビーへ戻ります（{pressed} / {total}）",
+      "you": "{name}（あなた）"
+    }
+  },
+  "lobby": {
+    "status": {
+      "creating": "部屋を作っています…",
+      "createFailed": "部屋を作れませんでした（ネットワークを確かめてください）",
+      "badCode": "部屋コードは 6 文字です（0・O・1・I は使いません）",
+      "joining": "{code} に接続中…",
+      "connecting": "接続中…"
+    },
+    "menu": {
+      "create": "部屋を作る",
+      "code": "部屋コード",
+      "join": "コードで参加",
+      "back": "← モード選択へ",
+      "cancel": "取り消し"
+    },
+    "leave": "退出",
+    "again": "もう一度",
+    "againWaiting": "ほかの人を待っています",
+    "close": "閉じる",
+    "mode": {
+      "ffa": "個人戦",
+      "team": "チーム戦（2 対 2）",
+      "raid": "レイド（協力・怪獣）",
+      "defense": "防衛戦（協力・基地）"
+    },
+    "hangar": {
+      "title": "機体を選ぶ",
+      "selected": "選択中",
+      "stat": {
+        "speed": "速度",
+        "turn": "旋回",
+        "durability": "耐久",
+        "payload": "搭載"
+      },
+      "statValue": "{label} ×{value}",
+      "noteNoUpgrades": "所持している機体から選べます。強化はホストの設定で無効（全員 Lv 0）です",
+      "noteUpgrades": "所持している機体から選べます。強化はシングルプレイの値をそのまま使います"
+    },
+    "player": {
+      "host": "ホスト",
+      "you": "あなた",
+      "reconnecting": "再接続中",
+      "preparing": "準備中"
+    },
+    "sep": "・",
+    "team": "チーム {team}",
+    "minutes": {
+      "other": "{count} 分"
+    },
+    "kills": {
+      "other": "{count} 機"
+    },
+    "block": {
+      "players": "ほかのプレイヤーに部屋コードを伝えてください",
+      "ready": "全員の「準備OK」を待っています",
+      "away": "再接続を待っています",
+      "teams": "両方のチームに 1 人以上入れてください"
+    },
+    "rule": {
+      "map": "マップ",
+      "weather": "天候",
+      "rules": "ルール",
+      "options": "補正",
+      "score": "撃墜数",
+      "time": "制限時間",
+      "mode": "モード",
+      "difficulty": "難易度",
+      "noUpgrades": "強化を無効にする",
+      "rookie": "初心者保護"
+    },
+    "autoTeams": "チームを自動で分ける",
+    "hangarButton": "ハンガー",
+    "ready": "準備OK",
+    "unready": "準備を取り消す",
+    "start": "開始",
+    "rules": {
+      "raid": "レイド（協力）・ヴォルガス撃破・{difficulty}",
+      "defense": "防衛戦（協力）・全 10 波・{difficulty}",
+      "versus": "{mode}・撃墜 {score} 機・{time}",
+      "ffa": "個人戦",
+      "team": "チーム戦"
+    },
+    "options": "強化 {upgrades}・初心者保護 {rookie}",
+    "upgradesOff": "無効",
+    "upgradesOn": "有効",
+    "wait": {
+      "allReady": "全員の準備ができました。「開始」で 3 秒後に始まります",
+      "host": "ホストの開始を待っています",
+      "pick": "機体を選んで「準備OK」を押してください"
+    },
+    "share": {
+      "share": "共有",
+      "copy": "コピー",
+      "codeCopied": "コードをコピーしました",
+      "qrNote": "スマホのカメラで読むと、この部屋に参加できます",
+      "invite": "SkyRaid の対戦に参加（部屋コード {code}）",
+      "linkCopied": "リンクをコピーしました",
+      "copyFailed": "コピーできませんでした: {text}",
+      "qrLabel": "参加用 URL の QR コード: {url}",
+      "qrFailed": "QR コードを作れませんでした"
+    }
+  },
+  "net": {
+    "reconnecting": "接続が途切れました。再接続しています…",
+    "reconnectingLeft": "接続が途切れました。再接続しています…（残り {seconds} 秒）",
+    "hostLeft": "ホストが切断しました",
+    "lost": "接続が切れました（再接続できませんでした）",
+    "playerAway": "{name} の接続が切れました（再接続を待っています）",
+    "playerBack": "{name} が戻りました",
+    "playerLeft": "{name} が離脱しました",
+    "joinError": {
+      "notFound": "その部屋は見つかりません（コードを確かめてください）",
+      "full": "満員です（最大 4 人）",
+      "started": "すでに始まっています",
+      "version": "ホストとバージョンが違います（両方とも再読み込みしてください）",
+      "expired": "再接続の期限が過ぎました",
+      "timeout": "応答がありません（時間切れ）",
+      "network": "接続できませんでした",
+      "unsupported": "このブラウザは P2P 通信（WebRTC）に対応していません"
+    }
+  }
+}

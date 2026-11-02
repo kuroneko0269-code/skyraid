@@ -1,0 +1,292 @@
+{
+  "defense": {
+    "icon": {
+      "hq": "HQ",
+      "radar": "Radar",
+      "fuel": "Fuel",
+      "aaa1": "AA 1",
+      "aaa2": "AA 2"
+    },
+    "hud": {
+      "skip": "Skip (N)",
+      "supplyHint": "Resupply: fly over the base below {agl}m AGL and under speed {speed}",
+      "wavePrep": "WAVE {wave} / {total}  PREP",
+      "waveRemaining": "WAVE {wave} / {total}  LEFT {remaining}",
+      "nextWaveIn": "Next wave in {seconds}s",
+      "waiting": "Waiting…",
+      "forecast": "Next wave: {forecast}",
+      "forecastUnknown": "Next wave: unknown (radar lost)",
+      "supplied": "Resupplied"
+    },
+    "lost": {
+      "hq": "HQ destroyed",
+      "radar": "Radar lost — no more wave forecasts",
+      "fuel": "Fuel tank lost — resupply halved",
+      "aaa1": "AA gun 1 lost — less support",
+      "aaa2": "AA gun 2 lost — less support"
+    },
+    "abort": "Abort Defense",
+    "flash": {
+      "incoming": "Incoming!",
+      "clearSub": "Resupply and prepare for the next wave",
+      "facilityLost": "FACILITY LOST",
+      "supplied": "RESUPPLIED",
+      "suppliedHalf": "Half only (fuel tank lost)"
+    },
+    "outcome": {
+      "cleared": "Base Defended",
+      "fallen": "Base Fallen"
+    },
+    "difficulty": {
+      "normal": "Normal",
+      "hard": "Hard"
+    },
+    "result": {
+      "retry": "Retry",
+      "toModeSelect": "Modes",
+      "info": "{map} · {difficulty}",
+      "wavesCleared": "Waves cleared",
+      "kills": "Kills",
+      "hq": "HQ",
+      "facilities": "Facilities left",
+      "wavePart": "Waves {waves} × {per}",
+      "fullClear": "Full clear +{credits}",
+      "allFacilities": "All facilities intact +{credits}",
+      "breakdown": "Breakdown",
+      "sep": " · ",
+      "reward": "Reward",
+      "rewardValue": "Earned +{earned} / Balance {balance}",
+      "playerStats": "Kills {kills} · Shot down {deaths}"
+    },
+    "map": {
+      "island": "Island (East Shore Base)",
+      "harbor": "Harbor City (Port Base)"
+    },
+    "dir": {
+      "ne": "NE",
+      "e": "E",
+      "se": "SE",
+      "sw": "SW",
+      "s": "S"
+    },
+    "forecast": {
+      "text": "From {direction}: {list}",
+      "sep": ", ",
+      "bomber": {
+        "one": "{count} bomber",
+        "other": "{count} bombers"
+      },
+      "fighter": {
+        "one": "{count} fighter",
+        "other": "{count} fighters"
+      },
+      "cruise": {
+        "one": "{count} cruise missile",
+        "other": "{count} cruise missiles"
+      }
+    }
+  },
+  "pvp": {
+    "table": {
+      "rank": "#",
+      "pilot": "Pilot",
+      "kills": "Kills",
+      "deaths": "Deaths",
+      "accuracy": "Acc.",
+      "streak": "Streak"
+    },
+    "board": {
+      "remaining": "{time} left"
+    },
+    "feed": {
+      "kill": "{killer} shot down {victim}",
+      "crash": "{victim} crashed"
+    },
+    "timeWarning": {
+      "one": "{count} second left",
+      "other": "{count} seconds left"
+    },
+    "menu": {
+      "noPause": "Can't pause during a match (your plane keeps flying)",
+      "noPauseRaid": "Can't pause in flight. You can send quick messages to everyone",
+      "leave": "Leave",
+      "continue": "Resume"
+    },
+    "phrase": {
+      "ready": "Ready",
+      "wait": "Wait",
+      "rematch": "Rematch",
+      "hello": "GL HF",
+      "nice": "Nice!",
+      "thanks": "Thanks"
+    },
+    "downed": {
+      "title": "Shot Down",
+      "respawnIn": "Respawn in",
+      "by": "Shot down by {killer}",
+      "crashed": "Crashed"
+    },
+    "status": {
+      "invulnerable": "Invulnerable {seconds}",
+      "boosted": "Rookie boost HP+50% · MSL+2",
+      "sep": "  ·  "
+    },
+    "reason": {
+      "score": "Kill limit reached",
+      "time": "Time's up",
+      "raidClear": "The team defeated the kaiju (everyone gets the same reward)",
+      "raidFail": "The kaiju reached the city (300 CR each)",
+      "defenseClear": "Held the base through all 10 waves (everyone gets the same reward)",
+      "defenseFail": "HQ destroyed (waves cleared × 300 CR)"
+    },
+    "title": {
+      "raidClear": "Vorgas Defeated",
+      "raidFail": "Mission Failed",
+      "draw": "Draw",
+      "win": "Victory",
+      "lose": "Defeat",
+      "over": "Match Over"
+    },
+    "result": {
+      "protected": "Buildings saved {percent}%",
+      "team": "Team {team}  {score}",
+      "kills": {
+        "one": "{count} kill",
+        "other": "{count} kills"
+      },
+      "map": "Map",
+      "killsAll": "Kills (team)",
+      "rewardAll": "Reward (each)",
+      "mvp": {
+        "one": "{name} ({count} kill)",
+        "other": "{name} ({count} kills)"
+      },
+      "none": "None",
+      "againWait": "Back to the lobby once everyone presses \"Again\" ({pressed} / {total})",
+      "you": "{name} (you)"
+    }
+  },
+  "lobby": {
+    "status": {
+      "creating": "Creating room…",
+      "createFailed": "Couldn't create a room (check your network)",
+      "badCode": "Room codes are 6 characters (no 0, O, 1 or I)",
+      "joining": "Connecting to {code}…",
+      "connecting": "Connecting…"
+    },
+    "menu": {
+      "create": "Create Room",
+      "code": "Room code",
+      "join": "Join",
+      "back": "← Modes",
+      "cancel": "Cancel"
+    },
+    "leave": "Leave",
+    "again": "Again",
+    "againWaiting": "Waiting for others",
+    "close": "Close",
+    "mode": {
+      "ffa": "Free-for-All",
+      "team": "Team (2v2)",
+      "raid": "Raid (Co-op Kaiju)",
+      "defense": "Defense (Co-op Base)"
+    },
+    "hangar": {
+      "title": "Choose Aircraft",
+      "selected": "Selected",
+      "stat": {
+        "speed": "SPD",
+        "turn": "TRN",
+        "durability": "DUR",
+        "payload": "PAY"
+      },
+      "statValue": "{label} ×{value}",
+      "noteNoUpgrades": "Pick from your owned aircraft. The host has disabled upgrades (everyone at Lv 0)",
+      "noteUpgrades": "Pick from your owned aircraft. Your single-player upgrades apply"
+    },
+    "player": {
+      "host": "Host",
+      "you": "You",
+      "reconnecting": "RECONNECTING",
+      "preparing": "NOT READY"
+    },
+    "sep": " · ",
+    "team": "Team {team}",
+    "minutes": {
+      "one": "{count} min",
+      "other": "{count} min"
+    },
+    "kills": {
+      "one": "{count} kill",
+      "other": "{count} kills"
+    },
+    "block": {
+      "players": "Share the room code with other players",
+      "ready": "Waiting for everyone to be ready",
+      "away": "Waiting for reconnection",
+      "teams": "Each team needs at least 1 player"
+    },
+    "rule": {
+      "map": "Map",
+      "weather": "Weather",
+      "rules": "Rules",
+      "options": "Handicaps",
+      "score": "Kill limit",
+      "time": "Time limit",
+      "mode": "Mode",
+      "difficulty": "Difficulty",
+      "noUpgrades": "No upgrades",
+      "rookie": "Rookie boost"
+    },
+    "autoTeams": "Auto-assign teams",
+    "hangarButton": "Hangar",
+    "ready": "Ready",
+    "unready": "Not Ready",
+    "start": "Start",
+    "rules": {
+      "raid": "Raid (co-op) · Defeat Vorgas · {difficulty}",
+      "defense": "Defense (co-op) · 10 waves · {difficulty}",
+      "versus": "{mode} · {score} kills · {time}",
+      "ffa": "Free-for-All",
+      "team": "Team"
+    },
+    "options": "Upgrades {upgrades} · Rookie boost {rookie}",
+    "upgradesOff": "OFF",
+    "upgradesOn": "ON",
+    "wait": {
+      "allReady": "Everyone is ready. Press \"Start\" to begin in 3 seconds",
+      "host": "Waiting for the host to start",
+      "pick": "Choose an aircraft and press \"Ready\""
+    },
+    "share": {
+      "share": "Share",
+      "copy": "Copy",
+      "codeCopied": "Code copied",
+      "qrNote": "Scan with a phone camera to join this room",
+      "invite": "Join my SkyRaid match (room code {code})",
+      "linkCopied": "Link copied",
+      "copyFailed": "Couldn't copy: {text}",
+      "qrLabel": "QR code for the join URL: {url}",
+      "qrFailed": "Couldn't create the QR code"
+    }
+  },
+  "net": {
+    "reconnecting": "Connection lost. Reconnecting…",
+    "reconnectingLeft": "Connection lost. Reconnecting… ({seconds}s left)",
+    "hostLeft": "The host disconnected",
+    "lost": "Disconnected (could not reconnect)",
+    "playerAway": "{name} disconnected (waiting to reconnect)",
+    "playerBack": "{name} is back",
+    "playerLeft": "{name} left",
+    "joinError": {
+      "notFound": "Room not found (check the code)",
+      "full": "Room is full (max 4 players)",
+      "started": "The match has already started",
+      "version": "Version mismatch with the host (both players should reload)",
+      "expired": "Reconnect window expired",
+      "timeout": "No response (timed out)",
+      "network": "Couldn't connect",
+      "unsupported": "This browser doesn't support P2P (WebRTC)"
+    }
+  }
+}

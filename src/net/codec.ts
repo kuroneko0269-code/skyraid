@@ -154,7 +154,7 @@ export class ByteReader {
 
   str(): string {
     const n = this.u8();
-    if (n > this.remaining) throw new RangeError('文字列が途中で切れている');
+    if (n > this.remaining) throw new RangeError('string is truncated');
     const bytes = new Uint8Array(this.view.buffer, this.view.byteOffset + this.offset, n);
     this.offset += n;
     return decoder.decode(bytes);

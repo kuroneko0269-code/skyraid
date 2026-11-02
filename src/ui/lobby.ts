@@ -6,6 +6,7 @@ import { NET_CONFIG } from '../data/net';
 import { initialSettings, type DefensePreset } from '../net/lobby-rules';
 import type { GameSettings, PlayerInfo } from '../net/protocol';
 import { renderAgain, renderResult, type ResultView } from './pvp-result';
+import { t } from '../core/i18n';
 import { el } from './hud-dom';
 import { LobbyHangar, type LobbyHangarEntry } from './lobby-hangar';
 import { LobbyRoom, type LobbyRoomHandlers, type LobbyRoomView } from './lobby-room';
@@ -48,10 +49,7 @@ export class LobbyScreen {
   private readonly title: HTMLHeadingElement;
   private readonly note: HTMLParagraphElement;
 
-  constructor(
-    parent: HTMLElement,
-    handlers: LobbyHandlers,
-  ) {
+  constructor(parent: HTMLElement, handlers: LobbyHandlers) {
     const root = createScreen(parent, 'campaign-screen lobby-screen');
     const panel = el('div', 'ui-panel campaign-panel lobby-panel', root);
     this.panel = panel;
@@ -65,20 +63,25 @@ export class LobbyScreen {
     this.createButton = createButton(
       this.menu,
       'ui-button is-primary lobby-wide',
-      '部屋を作る',
+      t('lobby.menu.create'),
       handlers.onCreate,
     );
     const form = el('form', 'lobby-join', this.menu);
     this.codeInput = el('input', 'ui-field lobby-code-input', form);
     this.codeInput.type = 'text';
-    this.codeInput.placeholder = '部屋コード';
+    this.codeInput.placeholder = t('lobby.menu.code');
     this.codeInput.autocomplete = 'off';
     this.codeInput.spellcheck = false;
     this.codeInput.maxLength = NET_CONFIG.room.codeLength + 2;
     this.codeInput.setAttribute('autocapitalize', 'characters');
-    this.codeInput.setAttribute('aria-label', '部屋コード');
+    this.codeInput.setAttribute('aria-label', t('lobby.menu.code'));
     isolateKeys(this.codeInput);
-    const join = createButton(form, 'ui-button lobby-join-button', 'コードで参加', () => undefined);
+    const join = createButton(
+      form,
+      'ui-button lobby-join-button',
+      t('lobby.menu.join'),
+      () => undefined,
+    );
     join.type = 'submit';
     form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -88,13 +91,23 @@ export class LobbyScreen {
     this.error = el('p', 'lobby-error', this.menu);
     this.error.setAttribute('role', 'alert');
     const back = el('div', 'campaign-buttons', this.menu);
-    createButton(back, 'ui-button is-ghost campaign-back', '← モード選択へ', handlers.onBack);
+    createButton(back, 'ui-button is-ghost campaign-back', t('lobby.menu.back'), handlers.onBack);
 
     // 接続中
     this.connecting = el('div', 'lobby-view', panel);
-    this.connectingText = el('p', 'briefing-text lobby-connecting', this.connecting, '接続中…');
+    this.connectingText = el(
+      'p',
+      'briefing-text lobby-connecting',
+      this.connecting,
+      t('lobby.status.connecting'),
+    );
     const cancel = el('div', 'campaign-buttons', this.connecting);
-    createButton(cancel, 'ui-button is-ghost campaign-back', '取り消し', handlers.onLeave);
+    createButton(
+      cancel,
+      'ui-button is-ghost campaign-back',
+      t('lobby.menu.cancel'),
+      handlers.onLeave,
+    );
 
     // ロビー（5-4 で lobby-room.ts に分けた）
     this.room = new LobbyRoom(panel, root, handlers);
@@ -105,12 +118,17 @@ export class LobbyScreen {
     this.resultBody = el('div', 'lobby-result', this.result);
     this.againBody = el('div', 'lobby-again', this.result);
     const again = el('div', 'campaign-buttons', this.result);
-    createButton(again, 'ui-button is-ghost campaign-back', '退出', handlers.onLeave);
-    this.againButton = createButton(again, 'ui-button is-primary campaign-go', 'もう一度', () => {
-      this.againButton.disabled = true;
-      this.againButton.textContent = 'ほかの人を待っています';
-      handlers.onAgain();
-    });
+    createButton(again, 'ui-button is-ghost campaign-back', t('lobby.leave'), handlers.onLeave);
+    this.againButton = createButton(
+      again,
+      'ui-button is-primary campaign-go',
+      t('lobby.again'),
+      () => {
+        this.againButton.disabled = true;
+        this.againButton.textContent = t('lobby.againWaiting');
+        handlers.onAgain();
+      },
+    );
     this.root = root;
     this.show('menu');
   }
@@ -119,7 +137,7 @@ export class LobbyScreen {
   showResult(r: Readonly<ResultView>, players: readonly Readonly<PlayerInfo>[]): void {
     renderResult(this.resultBody, r);
     this.againButton.disabled = false;
-    this.againButton.textContent = 'もう一度';
+    this.againButton.textContent = t('lobby.again');
     this.updateAgain(players, r.localId);
     this.hangar.close();
     this.show('result');

@@ -41,7 +41,7 @@ export function readPaint(r: ByteReader): Paint {
   const p = decodePaint(b);
   if (p) return p;
   const shape = AIRCRAFT_MODELS[0]?.shape;
-  if (!shape) throw new Error('機体の定義がありません');
+  if (!shape) throw new Error('no aircraft definitions');
   return defaultPaint(shape, 0);
 }
 

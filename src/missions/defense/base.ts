@@ -46,7 +46,7 @@ export class DefenseBase {
 
   get hq(): GroundTarget {
     const g = this.sites[0];
-    if (!g) throw new Error('司令部がない');
+    if (!g) throw new Error('defense base has no HQ');
     return g;
   }
 

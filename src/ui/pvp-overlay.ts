@@ -1,6 +1,7 @@
 // PvP の飛行中の大きな表示（5-4）: 開始前のカウントダウン（3・2・1・GO）、残り時間の警告（30 秒・10 秒）、
 // 撃墜されたときの画面（撃墜した相手の名前・復帰までのカウント）、復帰後の無敵と初心者保護の表示、再接続中の表示。
 // 描画フレームごとに update を呼び、文字が変わったときだけ書き換える。文字は textContent だけで入れる
+import { t } from '../core/i18n';
 import { el } from './hud-dom';
 
 export interface OverlayState {
@@ -26,6 +27,7 @@ export class PvpOverlay {
   private readonly warning: HTMLDivElement;
   private readonly downed: HTMLDivElement;
   private readonly downedBy: HTMLDivElement;
+  private readonly downedPre: HTMLSpanElement;
   private readonly downedKiller: HTMLSpanElement;
   private readonly downedVerb: HTMLSpanElement;
   private readonly downedCount: HTMLDivElement;
@@ -40,12 +42,13 @@ export class PvpOverlay {
     this.warning = el('div', 'pvp-warning', this.root);
     this.warning.setAttribute('role', 'alert');
     this.downed = el('div', 'ui-dialog pvp-downed', this.root);
-    el('div', 'pvp-downed-title', this.downed, '撃墜されました');
+    el('div', 'pvp-downed-title', this.downed, t('pvp.downed.title'));
     this.downedBy = el('div', 'pvp-downed-by', this.downed);
+    this.downedPre = el('span', '', this.downedBy);
     this.downedKiller = el('span', 'pvp-downed-killer', this.downedBy);
     this.downedVerb = el('span', '', this.downedBy);
     this.downedCount = el('div', 'pvp-downed-count', this.downed);
-    el('div', 'pvp-downed-label', this.downed, '復帰まで');
+    el('div', 'pvp-downed-label', this.downed, t('pvp.downed.respawnIn'));
     this.status = el('div', 'pvp-status', this.root);
     this.reconnect = el('div', 'ui-dialog pvp-reconnect', this.root);
     this.reconnect.setAttribute('role', 'status');
@@ -70,22 +73,23 @@ export class PvpOverlay {
     if (d) {
       this.text(this.downedKiller, 'killer', d.killer ?? '');
       this.downedKiller.style.color = d.color;
-      this.text(this.downedVerb, 'verb', d.killer === null ? '墜落' : ' に撃墜された');
+      // 「{killer} に撃墜された」の {killer} の前後（語順は言語で違う）
+      const [pre = '', post = ''] =
+        d.killer === null ? ['', t('pvp.downed.crashed')] : t('pvp.downed.by').split('{killer}');
+      this.text(this.downedPre, 'pre', pre);
+      this.text(this.downedVerb, 'verb', post);
       this.text(this.downedCount, 'downCount', String(Math.max(0, Math.ceil(d.remaining - 1e-6))));
     }
     const parts: string[] = [];
-    if (s.invulnerable > 0 && !d) parts.push(`無敵 ${s.invulnerable.toFixed(1)}`);
-    if (s.boosted && !d) parts.push('初心者保護 HP+50%・MSL+2');
-    this.text(this.status, 'status', parts.join('　'));
+    if (s.invulnerable > 0 && !d)
+      parts.push(t('pvp.status.invulnerable', { seconds: s.invulnerable.toFixed(1) }));
+    if (s.boosted && !d) parts.push(t('pvp.status.boosted'));
+    this.text(this.status, 'status', parts.join(t('pvp.status.sep')));
     this.status.classList.toggle('is-invulnerable', s.invulnerable > 0);
     const r = s.reconnect;
     this.reconnect.hidden = r === null;
     if (r !== null)
-      this.text(
-        this.reconnect,
-        'reconnect',
-        `接続が途切れました。再接続しています…（残り ${Math.ceil(r)} 秒）`,
-      );
+      this.text(this.reconnect, 'reconnect', t('net.reconnectingLeft', { seconds: Math.ceil(r) }));
   }
 
   /** 変わったときだけ書き換える。空なら隠す */
@@ -93,7 +97,12 @@ export class PvpOverlay {
     if (this.last.get(key) === value) return;
     this.last.set(key, value);
     e.textContent = value;
-    if (e !== this.downedKiller && e !== this.downedVerb && e !== this.downedCount)
+    if (
+      e !== this.downedPre &&
+      e !== this.downedKiller &&
+      e !== this.downedVerb &&
+      e !== this.downedCount
+    )
       e.hidden = value === '';
   }
 }

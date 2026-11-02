@@ -4,6 +4,7 @@ import './pvp.css';
 import { standings } from '../combat/pvp-rules';
 import type { FeedItem } from '../net/pvp-mirror';
 import type { PlayerInfo, ScoreMsg } from '../net/protocol';
+import { t } from '../core/i18n';
 import { el } from './hud-dom';
 import { playerColorCss } from './lobby-colors';
 
@@ -37,7 +38,7 @@ export class PvpBoard {
     this.boardTime = el('span', 'pvp-board-time', head);
     const table = el('table', 'pvp-result-table', this.board);
     const tr = el('tr', '', el('thead', '', table));
-    for (const h of ['順位', 'パイロット', '撃墜', '被撃墜']) el('th', '', tr, h);
+    for (const h of ['rank', 'pilot', 'kills', 'deaths']) el('th', '', tr, t(`pvp.table.${h}`));
     this.rows = el('tbody', '', table);
     this.hide();
   }
@@ -69,7 +70,7 @@ export class PvpBoard {
     if (c !== this.lastClock) {
       this.lastClock = c;
       this.clockText.data = c;
-      this.boardTime.textContent = c === '' ? '' : `残り ${c}`;
+      this.boardTime.textContent = c === '' ? '' : t('pvp.board.remaining', { time: c });
     }
     if (teamScore !== this.lastTeam) {
       this.lastTeam = teamScore;
@@ -88,14 +89,12 @@ export class PvpBoard {
     this.feed.replaceChildren();
     for (const i of items) {
       const line = el('div', 'pvp-feed-item', this.feed);
-      if (i.killer !== null) {
-        this.name(line, i.killer, players);
-        el('span', 'pvp-feed-verb', line, ' が ');
-        this.name(line, i.victim, players);
-        el('span', 'pvp-feed-verb', line, ' を撃墜');
-      } else {
-        this.name(line, i.victim, players);
-        el('span', 'pvp-feed-verb', line, ' が墜落');
+      // 語順は言語で違うので、文の中の {killer} {victim} の位置に名前（色付き）を入れる
+      const template = i.killer !== null ? t('pvp.feed.kill') : t('pvp.feed.crash');
+      for (const part of template.split(/(\{killer\}|\{victim\})/)) {
+        if (part === '{killer}' && i.killer !== null) this.name(line, i.killer, players);
+        else if (part === '{victim}') this.name(line, i.victim, players);
+        else if (part !== '') el('span', 'pvp-feed-verb', line, part);
       }
     }
     this.feed.hidden = items.length === 0;
