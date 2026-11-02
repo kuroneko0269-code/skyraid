@@ -155,6 +155,42 @@ export function isShortStandalone(s: ViewportSample): boolean {
 
 let nudges = 0;
 
+/**
+ * 8-6f: 測り直させる間（viewport-fit の切り替え）の画面のチラつきを隠す黒い幕（index.html の .viewport-cover）。
+ * 起動時に描かれる高さが足りないときだけ出し、直ったら・試みが尽きたら・時間切れで外す
+ */
+let cover: HTMLElement | null = null;
+/** 幕の時間切れ（試みのたびに延ばす。起動が重くて試みが遅れても、途中で外さない） */
+let coverTimer = 0;
+
+function extendCover(): void {
+  if (!cover) return;
+  window.clearTimeout(coverTimer);
+  coverTimer = window.setTimeout(hideCover, VIEWPORT_CONFIG.nudge.coverMaxMs);
+}
+
+function showCover(): void {
+  if (cover) return;
+  cover = document.createElement('div');
+  cover.className = 'viewport-cover';
+  cover.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(cover);
+  note('cover on');
+  extendCover();
+}
+
+function hideCover(): void {
+  const c = cover;
+  if (!c) return;
+  cover = null;
+  window.clearTimeout(coverTimer);
+  note('cover off');
+  c.classList.add('is-hiding');
+  setTimeout(() => {
+    c.remove();
+  }, VIEWPORT_CONFIG.nudge.coverFadeMs);
+}
+
 function note(text: string): void {
   fitHistory.push(`${(performance.now() / 1000).toFixed(2)}s ${text}`);
   if (fitHistory.length > 10) fitHistory.shift();
@@ -163,15 +199,23 @@ function note(text: string): void {
 
 /**
  * 8-6e の試み: viewport の meta の viewport-fit を一度 auto にして cover に戻し、iOS に安全領域と表示の大きさを測り直させる。
- * isShortStandalone のときだけ、最大 VIEWPORT_CONFIG.nudge.maxTries 回。結果は ?debug=viewport の記録に出す
+ * isShortStandalone のときだけ、最大 VIEWPORT_CONFIG.nudge.maxTries 回。結果は ?debug=viewport の記録に出す。
+ * 8-6f: 試みは順番に（前の試みの測り直しが終わってから、atMs の間隔をあけて次へ）。実機では 2 回目で直った
  */
 function nudgeViewport(): void {
-  const { maxTries, restoreMs, checkMs } = VIEWPORT_CONFIG.nudge;
-  if (nudges >= maxTries || !isShortStandalone(sampleViewport())) return;
+  const { atMs, maxTries, restoreMs, checkMs } = VIEWPORT_CONFIG.nudge;
   const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
-  if (!meta?.content.includes('viewport-fit=cover')) return;
+  if (
+    nudges >= maxTries ||
+    !isShortStandalone(sampleViewport()) ||
+    !meta?.content.includes('viewport-fit=cover')
+  ) {
+    hideCover();
+    return;
+  }
   nudges++;
   const n = nudges;
+  extendCover();
   const original = meta.content;
   note(`nudge#${n} viewport-fit=auto (inner ${window.innerWidth}x${window.innerHeight})`);
   meta.content = original.replace('viewport-fit=cover', 'viewport-fit=auto');
@@ -180,6 +224,10 @@ function nudgeViewport(): void {
     setTimeout(() => {
       fitRoot();
       note(`nudge#${n} after: inner ${window.innerWidth}x${window.innerHeight}`);
+      const next = atMs[n];
+      const prev = atMs[n - 1] ?? 0;
+      if (next === undefined || !isShortStandalone(sampleViewport())) hideCover();
+      else setTimeout(nudgeViewport, Math.max(0, next - prev - restoreMs - checkMs));
     }, checkMs);
   }, restoreMs);
 }
@@ -197,7 +245,9 @@ export function installViewportFit(): void {
   };
   // 起動から数秒の間（iOS は横向きの起動で、しばらくしてから値が正しくなることがある）。8-6e: 描かれる高さが足りなければ測り直させる
   for (const ms of VIEWPORT_CONFIG.startupRecheckMs) setTimeout(now, ms);
-  for (const ms of VIEWPORT_CONFIG.nudge.atMs) setTimeout(nudgeViewport, ms);
+  // 8-6f: 描かれる高さが足りないまま起動したら、測り直させる間は黒い幕で隠す（切り替えのチラつきを見せない）
+  if (isShortStandalone(sampleViewport())) showCover();
+  setTimeout(nudgeViewport, VIEWPORT_CONFIG.nudge.atMs[0]);
   window.addEventListener('load', later);
   window.addEventListener('resize', later);
   window.addEventListener('orientationchange', later);
