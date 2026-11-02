@@ -7,7 +7,8 @@ import type { RaceSoundKind } from '../data/race';
 import { HUD_CONFIG } from '../data/hud';
 import type { FlightSession } from '../missions/flight-session';
 import type { FxEvents } from '../render/fx/fx-events';
-import { BgmPlayer } from './bgm';
+import { BGM_FILES } from 'virtual:app-info';
+import { BgmPlayer, fetchAudio } from './bgm';
 import type { AudioEngine } from './engine';
 import {
   bgmTrackFor,
@@ -71,7 +72,8 @@ export class GameAudio {
     baseUrl: string,
   ) {
     this.shots = new OneShots(engine, this.listener);
-    this.bgm = new BgmPlayer(engine, baseUrl);
+    // ビルド時に public/audio/bgm/ にあった曲だけを読みに行く（8-1）
+    this.bgm = new BgmPlayer(engine, baseUrl, fetchAudio, (path) => BGM_FILES.includes(path));
     this.kaijuWatch = new KaijuSoundWatch(this.shots.kaiju);
     engine.onReady(() => {
       this.loops = new FlightLoops(engine);

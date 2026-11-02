@@ -12,7 +12,7 @@ import type { MissionEvents, MissionOutcome, MissionResult, ObjectiveResult } fr
 import type { FailCondition, MissionDef, SpawnDef } from './types';
 import type { MissionWorld } from './world';
 
-export type { MissionEvents, MissionResult, MissionOutcome, ObjectiveResult } from './events';
+export type { MissionEvents, MissionResult, MissionOutcome } from './events';
 
 export type MissionStatus = 'running' | 'success' | 'failed' | 'aborted';
 

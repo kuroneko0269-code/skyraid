@@ -1,7 +1,7 @@
 {
   "name": "skyraid",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.8.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "check": "tsc --noEmit && eslint .",
     "test": "vitest run",
+    "bench": "node scripts/bench.js",
+    "unused": "knip",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -24,6 +26,7 @@
     "eslint-config-prettier": "^10.1.8",
     "fake-indexeddb": "^6.2.7",
     "jsqr": "^1.4.0",
+    "knip": "^6.44.1",
     "prettier": "^3.9.10",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",

@@ -8,14 +8,7 @@ import {
   type ChunkGeometry,
   type ChunkRect,
 } from './terrain-geometry';
-import {
-  createHeightField,
-  defaultHeightField,
-  getGroundHeight,
-  getHeight,
-  type HeightField,
-  type TerrainConfig,
-} from './terrain-height';
+import { defaultHeightField, type HeightField, type TerrainConfig } from './terrain-height';
 import {
   CHUNK_EDGES,
   LOD_HIDDEN,
@@ -37,9 +30,6 @@ import {
 import type { ForestMaskSpec } from './terrain-gen/forest';
 import type { Texture } from 'three';
 import type { CloudUniforms } from './cloud-field';
-
-// 高さ関数は Three.js に依存しない terrain-height.ts にある。ここからも使えるようにする
-export { createHeightField, getGroundHeight, getHeight };
 
 /** チャンクの中の LOD を選ぶ単位（4-7）。段ごとの頂点は必要になったときに作り、今と直前の段だけ残す */
 interface Block {

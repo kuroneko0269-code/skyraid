@@ -90,6 +90,19 @@ export function collectLicenses(root: string): LicenseEntry[] {
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/**
+ * public/ の下のフォルダにあるファイル（8-1: BGM の受け口。無いファイルを読みに行って console に 404 を出さないよう、
+ * ビルド時にあるものだけを渡す）。開発サーバーでは起動時の中身（足したら再起動）
+ */
+export function listPublic(root: string, dir: string): string[] {
+  const path = `${root}/public/${dir}`;
+  if (!existsSync(path)) return [];
+  return readdirSync(path)
+    .filter((f) => !f.startsWith('.'))
+    .map((f) => `${dir}/${f}`)
+    .sort();
+}
+
 export function appInfo(root: string): Plugin {
   return {
     name: 'skyraid-app-info',
@@ -102,6 +115,7 @@ export function appInfo(root: string): Plugin {
       return [
         `export const APP_VERSION = ${JSON.stringify(version)};`,
         `export const LICENSES = ${JSON.stringify(collectLicenses(root))};`,
+        `export const BGM_FILES = ${JSON.stringify(listPublic(root, 'audio/bgm'))};`,
       ].join('\n');
     },
   };

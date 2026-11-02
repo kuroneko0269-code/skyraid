@@ -63,16 +63,6 @@ export const SPAWN_ORIENTATION: Readonly<Quat> = headingQuat(
   NET_CONFIG.spawn.headingDeg,
 );
 
-/** レイドの開始の姿勢（6-4: 湾側 = 怪獣の方） */
-export const RAID_SPAWN_ORIENTATION: Readonly<Quat> = headingQuat(
-  { x: 0, y: 0, z: 0, w: 1 },
-  RAID_CONFIG.start.headingDeg,
-);
-
-export function spawnOrientation(raid: boolean): Readonly<Quat> {
-  return raid ? RAID_SPAWN_ORIENTATION : SPAWN_ORIENTATION;
-}
-
 /** 他機 1 機の描画用の値（描画フレームごとに書き換える入れ物） */
 export interface RemoteSample {
   id: number;

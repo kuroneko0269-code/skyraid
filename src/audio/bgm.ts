@@ -33,6 +33,8 @@ export class BgmPlayer {
     private readonly engine: AudioEngine,
     private readonly baseUrl: string,
     private readonly load: BgmFetch = fetchAudio,
+    /** その曲のファイルがあるか（8-1: 無いファイルは読みに行かない。console に 404 を出さない）。既定はすべて読みに行く */
+    private readonly available: (path: string) => boolean = () => true,
   ) {
     engine.onReady(() => {
       for (const track of Object.keys(BGM_CONFIG.tracks) as BgmTrack[]) void this.loadTrack(track);
@@ -55,6 +57,7 @@ export class BgmPlayer {
     const ctx = this.engine.ctx;
     if (!ctx || this.buffers.has(track)) return;
     this.buffers.set(track, null);
+    if (!this.available(BGM_CONFIG.tracks[track])) return;
     const data = await this.load(`${this.baseUrl}${BGM_CONFIG.tracks[track]}`);
     if (!data) return;
     try {

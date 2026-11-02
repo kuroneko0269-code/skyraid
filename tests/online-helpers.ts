@@ -43,6 +43,8 @@ export class MockBackend implements OnlineBackend {
   /** 次の insertRecord を失敗させる（先頭から 1 つずつ使う） */
   recordFailures: OnlineErrorKind[] = [];
   saveFailure: OnlineErrorKind | null = null;
+  /** 表示名の保存を失敗させる（8-1 の事前修正） */
+  nameFailure: OnlineErrorKind | null = null;
   private clock = 0;
   private authListener: ((u: OnlineUser | null) => void) | null = null;
   readonly calls = {
@@ -53,6 +55,7 @@ export class MockBackend implements OnlineBackend {
     deleteSave: 0,
     refresh: 0,
     requestJoin: 0,
+    saveDisplayName: 0,
   };
   /** join_requests（user_id → 表示名・状態）。7-4b */
   joins = new Map<string, { name: string; status: JoinStatus }>();
@@ -152,6 +155,8 @@ export class MockBackend implements OnlineBackend {
     return Promise.resolve(this.user ? (this.names.get(this.user.id) ?? null) : null);
   }
   saveDisplayName(name: string): Promise<void> {
+    this.calls.saveDisplayName++;
+    if (this.nameFailure) return Promise.reject(new OnlineError(this.nameFailure, 'x'));
     if (this.user) this.names.set(this.user.id, name);
     return Promise.resolve();
   }

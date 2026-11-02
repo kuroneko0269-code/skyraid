@@ -1,5 +1,5 @@
 // スキン・デカール（7-3）: 価格と解放条件・セーブ v7 → v8・塗装の直列化（16 バイト以内）・全パターン × 4 機種のテクスチャ
-// 生成（例外なし・50ms 以内）・性能に影響しないこと（loadout が塗装で変わらない）・機体の塗装の UV
+// 生成（例外なし。時間の計測は 8-1 で `npm run bench`（scripts/bench-skins.ts）に移した）・性能に影響しないこと（loadout が塗装で変わらない）・機体の塗装の UV
 import { describe, expect, it } from 'vitest';
 import { AIRCRAFT_MODELS } from '../src/data/aircraft';
 import { COURSES } from '../src/data/courses';
@@ -238,30 +238,17 @@ describe('7-3 塗装の直列化', () => {
 });
 
 describe('7-3 テクスチャの生成', () => {
-  it('全パターン × 4 機種（デカールあり）が例外なく作れて、作り直し 1 回 50ms 以内', () => {
+  it('全パターン × 4 機種（デカールあり）が例外なく作れて、不透明に塗りつぶされる（時間は npm run bench）', () => {
     const out = new Uint8Array(skinPixelCount());
-    // JIT の温め（最初の 1 回はコンパイルを含む）。測る生成は形 × パターンの地図のキャッシュに当たらない
-    for (const pattern of SKIN_PATTERN_IDS)
-      paintSkinPixels(kestrel.shape, fancyPaint(pattern, 'star'), out);
-    let worst = 0;
     for (const m of AIRCRAFT_MODELS) {
       for (const [i, pattern] of SKIN_PATTERN_IDS.entries()) {
         const decal = DECAL_IDS[i % DECAL_IDS.length] ?? null;
         const p = { ...fancyPaint(pattern, decal), number: (i * 13) % 100 };
-        // 毎回キャッシュなしで作り直し、3 回の最短を取る（並列に走るほかのテストの影響を除く）
-        let best = Infinity;
-        for (let k = 0; k < 3; k++) {
-          clearSkinCache();
-          const t = performance.now();
-          paintSkinPixels(m.shape, p, out);
-          best = Math.min(best, performance.now() - t);
-        }
-        worst = Math.max(worst, best);
-        // 不透明・塗りつぶされている
+        clearSkinCache();
+        paintSkinPixels(m.shape, p, out);
         for (let i = 0; i * 4 < out.length; i += 1021) expect(out[i * 4 + 3]).toBe(255);
       }
     }
-    expect(worst).toBeLessThan(SKIN_CONFIG.maxGenerateMs);
   });
 
   it('同じ塗装なら同じ画素（決定的）。色・デカール・番号を変えると画素が変わる', () => {

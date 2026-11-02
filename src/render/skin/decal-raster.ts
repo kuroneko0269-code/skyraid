@@ -71,24 +71,6 @@ function span(
   if (i1 < width) data[row + i1] = (data[row + i1] ?? 0) + (hi - i1) * weight;
 }
 
-/**
- * マスクの被覆率（双線形）。gx・gy は図形の座標（高さ 1、y が上）。外は 0
- */
-export function sampleMask(m: DecalMask, gx: number, gy: number): number {
-  const px = (gx + m.aspect / 2) * m.height - 0.5;
-  const py = (0.5 - gy) * m.height - 0.5;
-  if (px < -1 || py < -1 || px > m.width || py > m.height) return 0;
-  const x0 = Math.floor(px);
-  const y0 = Math.floor(py);
-  const fx = px - x0;
-  const fy = py - y0;
-  const at = (x: number, y: number): number =>
-    x < 0 || y < 0 || x >= m.width || y >= m.height ? 0 : (m.data[y * m.width + x] ?? 0);
-  const top = at(x0, y0) * (1 - fx) + at(x0 + 1, y0) * fx;
-  const bottom = at(x0, y0 + 1) * (1 - fx) + at(x0 + 1, y0 + 1) * fx;
-  return Math.min(1, top * (1 - fy) + bottom * fy);
-}
-
 const cache = new Map<string, DecalMask>();
 
 /** キャッシュつきのマスク（key は図形を決める文字列: デカールの id・機体番号） */

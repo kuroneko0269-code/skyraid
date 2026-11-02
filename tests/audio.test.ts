@@ -1,3 +1,5 @@
+import { BGM_FILES } from 'virtual:app-info';
+import { listPublic } from '../scripts/vite-app-info';
 import { describe, expect, it } from 'vitest';
 import {
   AUDIO_CONFIG,
@@ -284,5 +286,28 @@ describe('BGM の受け口', () => {
     bgm.play('title');
     bgm.play('flight');
     bgm.play(null);
+  });
+
+  it('ビルド時に無かった曲は読みに行かない（8-1: console に 404 を出さない）', async () => {
+    const { engine } = readyEngine();
+    const asked: string[] = [];
+    const bgm = new BgmPlayer(
+      engine,
+      '/',
+      (url) => {
+        asked.push(url);
+        return Promise.resolve(new ArrayBuffer(8));
+      },
+      (path) => path === 'audio/bgm/result.mp3',
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    expect(asked).toEqual(['/audio/bgm/result.mp3']);
+    expect(bgm.has('title')).toBe(false);
+    expect(bgm.has('result')).toBe(true);
+  });
+
+  it('BGM_FILES は public/audio/bgm/ の中身（今は空）', () => {
+    expect(BGM_FILES).toEqual(listPublic('.', 'audio/bgm'));
+    expect(listPublic('.', 'brand')).toContain('brand/logo.png');
   });
 });

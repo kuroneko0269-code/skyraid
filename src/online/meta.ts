@@ -22,6 +22,11 @@ export interface OnlineMeta {
    * 1 回だけ受け取る（初期化したばかりのローカルでサーバーを上書きしないため）。受け取るかサーバーに無いと分かったら下ろす
    */
   preferServer: boolean;
+  /**
+   * 送れていないパイロット名の変更（8-1 の事前修正）: 設定の「パイロット名を変更」でサーバーの表示名を変えられなかった
+   * （通信の失敗・オンライン連携 OFF）とき、そのユーザーが次に連携したときに送る
+   */
+  pendingName: { user: string; name: string } | null;
 }
 
 export function createMeta(): OnlineMeta {
@@ -33,6 +38,7 @@ export function createMeta(): OnlineMeta {
     localUpdatedAt: null,
     queue: [],
     preferServer: false,
+    pendingName: null,
   };
 }
 
@@ -63,6 +69,14 @@ function parseRecord(v: unknown): RecordInput | null {
   return checkRecord(rec) === null ? rec : null;
 }
 
+function parsePendingName(v: unknown): OnlineMeta['pendingName'] {
+  if (typeof v !== 'object' || v === null) return null;
+  const o: Record<string, unknown> = { ...v };
+  const user = str(o.user);
+  const name = str(o.name);
+  return user !== null && name !== null && name !== '' ? { user, name } : null;
+}
+
 /** 読む。無い・壊れている・アクセスできないときは初期値 */
 export function loadMeta(storage: StorageLike | null): OnlineMeta {
   const meta = createMeta();
@@ -83,6 +97,7 @@ export function loadMeta(storage: StorageLike | null): OnlineMeta {
     if (typeof o.localDirty === 'boolean') meta.localDirty = o.localDirty;
     meta.localUpdatedAt = str(o.localUpdatedAt);
     if (typeof o.preferServer === 'boolean') meta.preferServer = o.preferServer;
+    meta.pendingName = parsePendingName(o.pendingName);
     if (Array.isArray(o.queue)) {
       meta.queue = o.queue
         .map(parseRecord)

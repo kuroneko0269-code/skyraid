@@ -22,6 +22,9 @@ npm run dev     # 開発サーバー
 npm run build   # 本番ビルド（push 前に必ず通す）
 npm run check   # tsc --noEmit && eslint .
 npm test        # vitest
+npm run bench   # 時間の計測（テストには時間の判定を入れず、ここで測る。8-1）
+npm run unused  # 使われていないコード・依存の検出（knip。8-1）
+node scripts/ui-audit.js <出力先> --release  # 公開前の点検（build の後。docs/release-checklist.md）
 npm run format  # prettier --write .（整形。*.md は対象外）
 ```
 
@@ -84,6 +87,13 @@ tests/               vitest
 10. ブランチ名: `feat/<topic>` `fix/<topic>`。クラウドセッションが自動で付ける `claude/<auto>` も可
 11. 不明点は推測で進めず、選択肢を挙げて質問する
 12. main に squash マージして push した後、作業ブランチを main に揃える force push は行わない（権限で拒否される。作業ブランチは squash 前のままで良い）
+
+## 更新履歴
+
+- 遊ぶ人に見える変更（機能・画面・文言・数値の変更、不具合の修正）は、タスクごとに `docs/changelog.md` の今の版の項に「- 」で追記する（アプリの「情報 → 更新履歴」に出る）。内部だけの変更（リファクタ・テスト・ドキュメント）は書かない
+- 書式は「## 版（日付）」の見出しと「- 」の箇条書きだけ（`src/core/changelog.ts` が読む）。新しい版は上に足す
+- 版はフェーズの番号（0.N.0 = フェーズ N）。新しいフェーズの最初のタスクで `package.json` の version を上げ、新しい項を作る（`npm version 0.N.0 --no-git-tag-version`）
+- 1 つの版は 3〜5 行を目安に、細かい修正はまとめる
 
 ## やってはいけないこと
 

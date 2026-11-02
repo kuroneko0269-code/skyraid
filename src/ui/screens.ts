@@ -354,7 +354,7 @@ export class Screens {
     this.modeSelect.setShown(state === 'mode_select');
     this.missionSelect.setShown(state === 'mission_select');
     this.briefing.setShown(state === 'briefing');
-    // ポーズには設定画面の 4 つ（画質・音量・操作補助・HUD）を貸す（7-D）
+    // ポーズには設定画面の 4 つ（画質・HUD・音量・操作補助）を貸す（7-D。8-1 の事前修正で HUD を画質の右へ）
     if (state === 'pause') this.settings.lend(this.pause.quick);
     this.pause.setShown(state === 'pause');
     this.result.setShown(state === 'result' && !this.inRace() && !this.inDefense());

@@ -9,17 +9,6 @@ import { SKIN_TEXTURE } from '../../data/skin-texture';
 const H = SKIN_TEXTURE.height;
 const R = SKIN_TEXTURE.rows;
 
-export type SkinRegion =
-  | 'fuselage'
-  | 'wingRightTop'
-  | 'wingRightBottom'
-  | 'wingLeftBottom'
-  | 'wingLeftTop'
-  | 'fin'
-  | 'stabTop'
-  | 'stabBottom'
-  | 'clean';
-
 /** 胴体の (前後 s, 周 t) → uv1 */
 export function fuselageSkinUv(s: number, t: number): [number, number] {
   return [s, (R.fuselage[0] + t * (R.fuselage[1] - R.fuselage[0])) / H];

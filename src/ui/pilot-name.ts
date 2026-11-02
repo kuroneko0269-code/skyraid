@@ -31,16 +31,7 @@ export class PilotNameScreen {
     this.input.autocomplete = 'off';
     this.input.spellcheck = false;
     this.input.setAttribute('aria-label', 'パイロット名');
-    // maxLength は UTF-16 単位なので、絵文字などで数え方がずれないよう input で切る。
-    // 日本語の変換中に切ると変換が壊れるので、変換中は確定（compositionend）を待つ
-    const clip = (): void => {
-      const cut = truncateChars(this.input.value, SAVE_CONFIG.pilotNameMaxLength);
-      if (cut !== this.input.value) this.input.value = cut;
-    };
-    this.input.addEventListener('input', (e) => {
-      if (!(e instanceof InputEvent && e.isComposing)) clip();
-    });
-    this.input.addEventListener('compositionend', clip);
+    clipPilotNameInput(this.input);
     isolateKeys(this.input);
     const buttons = el('div', 'campaign-buttons', form);
     const submit = createButton(
@@ -62,6 +53,22 @@ export class PilotNameScreen {
     setScreenShown(this.root, shown);
     if (shown) this.input.focus({ preventScroll: true });
   }
+}
+
+/**
+ * パイロット名の入力欄を 8 文字（見た目の文字）で切る（初回の入力と設定の「パイロット名を変更」で共通。8-1）。
+ * maxLength は UTF-16 単位なので、絵文字などで数え方がずれないよう input で切る。
+ * 日本語の変換中に切ると変換が壊れるので、変換中は確定（compositionend）を待つ
+ */
+export function clipPilotNameInput(input: HTMLInputElement): void {
+  const clip = (): void => {
+    const cut = truncateChars(input.value, SAVE_CONFIG.pilotNameMaxLength);
+    if (cut !== input.value) input.value = cut;
+  };
+  input.addEventListener('input', (e) => {
+    if (!(e instanceof InputEvent && e.isComposing)) clip();
+  });
+  input.addEventListener('compositionend', clip);
 }
 
 /**

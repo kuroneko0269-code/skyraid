@@ -48,6 +48,9 @@ export function createAppControls(p: AppControlParts) {
     missionHud,
     modeSelect: screens.modeSelect,
     inFlight: () => game.state === 'flight' || (game.state === 'photo' && p.photoTouch()),
+    onPilotRenamed: (name: string) => {
+      screens.title.setPilotName(name);
+    },
   };
   const { touch, hudToggle } = createDisplaySettings(settingsParts);
 

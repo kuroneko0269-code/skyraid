@@ -13,6 +13,7 @@ import { createHudToggle, type HudToggle } from './hud-toggle';
 import type { MissionHud } from './mission-hud';
 import { createFullscreenButton, createToggleButton } from './mobile';
 import type { ModeSelectScreen } from './mode-select';
+import { createPilotRename } from './pilot-rename';
 import { createSaveSettings } from './save-settings';
 import type { SettingsScreen } from './settings-screen';
 import { createTouchLink, type TouchLink } from './touch-link';
@@ -28,6 +29,8 @@ export interface PauseSettingsParts {
   readonly modeSelect: ModeSelectScreen;
   /** 飛行中か（タッチ操作は飛行中だけ出す） */
   readonly inFlight: () => boolean;
+  /** 設定でパイロット名を変えた（タイトルの表示を直す。8-1 の事前修正） */
+  readonly onPilotRenamed: (name: string) => void;
 }
 
 /** タッチ・HUD・全画面の設定を置く（飛行のセッションを作る前に呼ぶ） */
@@ -79,6 +82,8 @@ export function createGameSettings(
   });
   // 操作補助（4-12）: エイムアシスト（タッチ・パッドだけ）・ターゲットカメラ・HUD 補助。ポーズメニューの設定で OFF にできる
   const assistFlags = createAssistSettings(p.settings.slot('assist'), p.storage);
+  // データの先頭: パイロット名の変更（8-1 の事前修正）
+  createPilotRename(p.settings.slot('data'), p.save, p.onPilotRenamed);
   // 設定の最下部: セーブデータのコピー / 復元 / 削除。復元・削除の後は読み込み直して新しいセーブで始める
   createSaveSettings(p.settings.slot('data'), p.save);
   return assistFlags;

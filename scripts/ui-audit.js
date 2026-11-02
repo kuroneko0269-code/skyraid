@@ -15,6 +15,7 @@
 //   band     固定部分（見出し・戻る・タブ。.menu-top）の高さが画面の 30% を超える（7-4c）
 //   tabsMoved タブの位置がタブの切り替え・内容のスクロールで動いた（7-4c）
 // 画面遷移のチェック: 設定画面の「戻る」で開いた元（タイトル / モード選択 / ポーズ）に戻るか
+// 8-1: `--release` を付けると公開前の点検（scripts/ui-audit-release.js。本番ビルド dist を _headers 付きで配信して全モード）
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
@@ -22,13 +23,18 @@ import { createRequire } from 'node:module';
 const { chromium } = createRequire(import.meta.url)('playwright');
 
 const out = process.argv[2] ?? 'ui-audit';
-const base = process.argv[3] ?? 'http://localhost:5173/';
+const base = process.argv.slice(3).find((a) => !a.startsWith('--')) ?? 'http://localhost:5173/';
 const SIZES = [
   { name: 'phone-se', width: 568, height: 320, touch: true },
   { name: 'phone', width: 844, height: 390, touch: true },
   { name: 'pc', width: 1920, height: 1080, touch: false },
 ];
 mkdirSync(out, { recursive: true });
+if (process.argv.includes('--release')) {
+  const { runReleaseAudit } = await import('./ui-audit-release.js');
+  await runReleaseAudit(chromium, out);
+  process.exit(0);
+}
 
 /** ページの中で動かす点検（visible な screen の中の要素） */
 function inspect(rootSelector) {

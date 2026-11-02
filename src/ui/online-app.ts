@@ -16,6 +16,7 @@ import { createMemberSettings } from './member-settings';
 import { createOnlineSettings } from './online-settings';
 import { RankingScreen } from './ranking-screen';
 import { showToast } from './save-link';
+import { setPilotRenameHook } from './pilot-rename';
 import { setServerBackupOption } from './save-settings';
 import { setScreenShown } from './screen';
 import { askSaveChoice } from './sync-dialog';
@@ -96,6 +97,17 @@ export function startOnline(env: OnlineEnv, p: OnlineLinkParts): void {
       service.sync.preferServerOnce();
     },
   });
+
+  // 設定の「パイロット名を変更」（8-1 の事前修正）: 承認済みならサーバーの表示名も変える
+  setPilotRenameHook((name) =>
+    service.renameFromPilot(name).then((result) => {
+      if (result === 'saved') return 'サーバーの表示名も変更しました';
+      if (result === 'none') return null;
+      return service.status.enabled
+        ? 'サーバーの表示名は変更できませんでした（次にオンライン連携したときに変更します）'
+        : 'サーバーの表示名はオンライン連携を ON にしたときに変更します';
+    }),
+  );
 
   // ランキング: モード選択の上に重ねる
   const ranking = new RankingScreen(

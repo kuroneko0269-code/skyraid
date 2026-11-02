@@ -15,7 +15,6 @@ import {
   applyFrame,
   captureFrame,
   simHash,
-  simRoots,
   simSkip,
   startFromHeader,
   stepWorld,
@@ -174,5 +173,3 @@ export function replay(
   while (player.step());
   return { player, hashes };
 }
-
-export { simRoots };

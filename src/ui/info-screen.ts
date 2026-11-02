@@ -5,6 +5,7 @@ import { APP_VERSION, LICENSES } from 'virtual:app-info';
 import changelogText from '../../docs/changelog.md?raw';
 import { parseChangelog } from '../core/changelog';
 import { APP_MANIFEST } from '../data/app';
+import { DATA_POLICY } from '../data/data-policy';
 import type { GameState } from '../core/game-state';
 import { el } from './hud-dom';
 import type { ModeSelectScreen } from './mode-select';
@@ -26,24 +27,6 @@ const EXTRA_LICENSES = [
     url: 'https://fonts.google.com/specimen/Rajdhani',
   },
 ] as const;
-
-/** データの扱い（セーブはブラウザ内、オンライン連携は任意） */
-const DATA_POLICY: readonly (readonly [string, string])[] = [
-  [
-    'セーブはこのブラウザの中',
-    '進み具合・クレジット・機体・設定はこのブラウザの localStorage に、リプレイは IndexedDB に保存します。外部のサーバーには送りません。ブラウザのデータを消すと消えるので、設定の「データ」→「セーブデータ」でコピーを取れます。',
-  ],
-  [
-    'オンライン連携は任意',
-    '設定の「データ」→「オンライン連携」でログインしたときだけ、メールアドレス（ログイン用）・表示名・セーブのバックアップ・レース / レイド / 防衛戦の記録をサーバー（Supabase）に送ります。連携を OFF にすると送信と同期を止めます。',
-  ],
-  [
-    'マルチプレイ',
-    'PvP・協力プレイは端末どうしの直接通信（WebRTC / PeerJS）でゲームの状態をやり取りします。接続の仲介に PeerJS の公開サーバー（0.peerjs.com）を使います。',
-  ],
-  ['フォント', '見出しのフォント（Rajdhani）を Google Fonts から読み込みます。'],
-  ['広告・解析', '広告・アクセス解析は使っていません。'],
-];
 
 export class InfoScreen {
   readonly root: HTMLDivElement;

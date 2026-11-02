@@ -66,8 +66,3 @@ export class SkyEnvironment {
     this.pending = null;
   }
 }
-
-/** 起動時に 1 回焼く（4-10 事前修正からの入口） */
-export function createSkyEnvironment(renderer: WebGLRenderer, atmosphere: Atmosphere): Texture {
-  return new SkyEnvironment(renderer, atmosphere).bake();
-}

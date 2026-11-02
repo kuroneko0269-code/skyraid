@@ -25,9 +25,6 @@ export interface GameSettings {
   weather: string;
 }
 
-/** チームなし（個人戦） */
-export const NO_TEAM = 255;
-
 export interface PlayerInfo {
   /** 0〜3。ホストは 0。色もこれで決まる */
   id: number;

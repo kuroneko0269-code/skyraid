@@ -514,3 +514,13 @@
 - 原因: 本番の Auth で新規登録が無効のため `/auth/v1/otp` が 422（`signup_disabled` / `otp_disabled`）を返し、クライアントがそれを `denied`（「権限がありません。管理者に承認を依頼してください」）に分類していた。ログインできていないので申請も入らない。あわせて、申請の insert の失敗を `JoinTracker` が握りつぶしていたため、他の原因があっても見えなかった
 - SQL（0002 の grant・RLS の with check・force RLS・表示名の check）は手元の Postgres 16 で Supabase のロールを模して確かめ、問題が無かったので 0003 は作らない（`supabase/tests/run.sh` で再現できる）
 - 失敗の種類に `signup` を足し、`denied` の文言を「権限エラー」に変えて承認待ちの案内と区別した。新規登録の設定はプロジェクト共通（規約 3.3）なので変えず、持ち主がダッシュボードでユーザーを作る手順を README に書いた
+
+## 8-1 公開チェック（2026-11-02）
+
+| 日付 | 判断 | 理由 |
+| --- | --- | --- |
+| 2026-11-02 | 8-1: 事前修正: 設定 → データの「パイロット名を変更」でサーバーの表示名（profiles.display_name）を変えられなかった（通信の失敗・オンライン連携 OFF）ときは、ローカルのパイロット名は変えたまま（戻さない）で「サーバーの表示名は次にオンライン連携したときに変更します」と出し、端末の `skyraid.online` の `pendingName`（ユーザー id と名前）に覚えて、そのユーザーが次に連携したとき（起動・ログイン・ON に戻す）に送る。送る前に「表示名を保存」で手で決めたら覚えた変更は捨てる。承認待ち・未連携ではサーバーに触らない（承認後の初回はパイロット名でプロフィールを作るので同じ名前になる） | 推奨案として採用。代替案は (B) サーバーが失敗したらローカルも元に戻す（オフラインで名前を変えられなくなる）・(C) ローカルだけ変えて案内だけ出す（ランキングの名前が古いまま残りやすい）。パイロット名はセーブの値でローカルが正という 7-4 の方針に合わせた。表示名の処理は 300 行の目安のため `online/profile-name.ts` に分けた |
+| 2026-11-02 | 8-1: BGM の受け口（4-4）は 3 曲とも無いので、起動のたびに 404 を 3 回読みに行き console に「Failed to load resource」が 3 件出ていた。ビルド時に `public/audio/bgm/` にあるファイルを `virtual:app-info` の `BGM_FILES` で渡し、あるものだけを読みに行く（聞こえる音は変わらない。開発サーバーでは曲を足したら再起動） | 公開チェックの「console エラー 0」。Cloudflare Pages は無いファイルに index.html（200）を返すことがあり本番では出ないこともあるが、通信自体が無駄なので止めた |
+| 2026-11-02 | 8-1: 公開前の点検は `scripts/ui-audit.js --release`（`ui-audit-release.js`・`ui-audit-modes.js`・`audit-helpers.js`・`serve-dist.js`）。本番ビルドの `dist` を `dist/_headers` のヘッダー付きで配信する小さなサーバーで CSP も Cloudflare と同じにする。Google Fonts はクラウドから外へ出られないので空の CSS を返す（CSP の判定は通信の前なので影響しない）。PvP は `?net=local` で部屋まで作る | 指示（ui-audit.js の拡張）。300 行の目安で 4 ファイルに分けた |
+| 2026-11-02 | 8-1: 不要物の検出は knip（devDependency）。`knip.json` で scripts/ の node で動かすファイルと `tests/state-dump.ts`（ハッシュが合わないときの調査用）を入口にし、同じファイルの中で使っている export は数えない（`ignoreExportsUsedInFile`）。削除は参照が 1 つも無いものと、使われていない再エクスポートだけ。`KAIJU_ATTACK_TIMINGS`（型の確認用）は `@public` で残す。`npm run unused` | 指示。使われていない依存パッケージ・CSS クラス・CSS ファイル・i18n のキーは 0 件（CSS は `is-${kind}`・`title-frame-${part}` の動的なクラスを確認） |
+| 2026-11-02 | 8-1: スキンの生成時間の計測は `npm run bench`（`scripts/bench.js` が Vite の `runnerImport` で `scripts/bench-skins.ts` を読む。追加パッケージなし） | 指示。テストに時間の判定があると並列の混み具合で落ちる |
