@@ -100,5 +100,5 @@
 - [x] 8-6c 追加修正（協力レイドの人数の補正（2〜4 人の部位ダメージ倍率）・M2 初陣の難易度（easy × 3・HP ×0.6・30 秒間隔）・レイドのブリーフィングのダウンの文を難易度ごとに） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/0f25e1d13ee984a5bdf55486d0fe9880c1ae7bc2
 - [x] 8-6d 実機確認の修正 その 2（横向きの起動の黒い余白（ルート要素の大きさ・?debug=viewport）・ダイアログのフォント・キャンペーン共通のミサイルの補充・パイロット名の変更を 1 か所に・メンバー管理の 1 人 1 行の表・横スクロールの点検） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/77a4aef9a28338d34b80803f1b56508e939affbf
 - [x] 8-6e 横向きの起動の黒い余白（実機の ?debug=viewport の値から: 描かれる大きさに合わせる・viewport-fit の切り替えで測り直させる試み） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/286b8ebe03bc4f35b5001ab4403cb59a13046402
-- [ ] 8-6f 測り直しの間のチラつき（viewport-fit の切り替えの間は黒い幕で隠す・試みを順番に）
+- [x] 8-6f 測り直しの間のチラつき（viewport-fit の切り替えの間は黒い幕で隠す・試みを順番に） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/01da045e025656f85eea209b2b94a3a1c990aac4
 - [ ] 8-7 v1.0.0 公開
