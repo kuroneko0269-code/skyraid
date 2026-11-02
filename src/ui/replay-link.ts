@@ -4,6 +4,7 @@
 // 8-2: 一覧・再生の操作・書き出し / 読み込みは別のチャンク（replay-ui.ts）にし、一覧を開くときに読む（loadUi）。
 // 読めなければ（オフライン・古いチャンク）お知らせを出してモード選択へ戻る
 import type { GameState } from '../core/game-state';
+import { t } from '../core/i18n';
 import { REPLAY_CONFIG } from '../data/replay';
 import type { DefenseRunner } from '../missions/defense/runner';
 import type { GamePlay } from '../missions/game-play';
@@ -96,8 +97,8 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
           const r = await s.save(e.id, name);
           say(
             r === 'full'
-              ? `保存は ${String(REPLAY_CONFIG.savedMax)} 本までです。不要なものを削除してください`
-              : '保存しました',
+              ? t('replay.msg.fullDelete', { max: REPLAY_CONFIG.savedMax })
+              : t('replay.msg.saved'),
           );
         });
       },
@@ -115,8 +116,8 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
         });
       },
       onDelete: (e) => {
-        if (!window.confirm(`「${e.kind === 'saved' ? e.name : e.header.title}」を削除しますか？`))
-          return;
+        const name = e.kind === 'saved' ? e.name : replayTitle(e.header);
+        if (!window.confirm(t('replay.msg.confirmDelete', { name }))) return;
         void withStore((s) => s.remove(e.id));
       },
       onImport: () => {
@@ -129,13 +130,13 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
   const withStore = async (fn: (s: ReplayStore) => Promise<unknown>): Promise<void> => {
     const s = await storeReady;
     if (!s) {
-      say('このブラウザではリプレイを保存できません（IndexedDB が使えません）');
+      say(t('replay.msg.noStorage'));
       return;
     }
     try {
       await fn(s);
     } catch {
-      say('保存の操作に失敗しました');
+      say(t('replay.msg.opFailed'));
     }
     await refresh();
   };
@@ -145,7 +146,7 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
     if (!list) return;
     if (!s) {
       list.update([], { savedCount: 0, savedBytes: 0, autoCount: 0, autoBytes: 0 });
-      say('このブラウザではリプレイを保存できません（IndexedDB が使えません）');
+      say(t('replay.msg.noStorage'));
       return;
     }
     list.update(await s.list(), await s.usage());
@@ -158,7 +159,7 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
     try {
       hub.pending = decodeReplay(r.bytes);
     } catch {
-      say('このリプレイは壊れていて再生できません');
+      say(t('replay.msg.corrupt'));
       return;
     }
     game.transition('flight');
@@ -174,11 +175,13 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
       await withStore(async (s) => {
         const r = await s.importSaved(header, f.bytes, f.name);
         say(
-          r === 'full' ? `保存は ${String(REPLAY_CONFIG.savedMax)} 本までです` : '読み込みました',
+          r === 'full'
+            ? t('replay.msg.full', { max: REPLAY_CONFIG.savedMax })
+            : t('replay.msg.imported'),
         );
       });
     } catch {
-      say('リプレイのファイルとして読めませんでした');
+      say(t('replay.msg.badFile'));
     }
   };
 
@@ -206,13 +209,12 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
     (parent) =>
       new ReplaySaveBox(parent, async (name) => {
         const [s, id] = await Promise.all([storeReady, lastAuto]);
-        if (!s || id === null) return '保存できませんでした';
+        if (!s || id === null) return t('replay.msg.saveFailed');
         const r = await s.save(id, name);
-        if (r === 'full')
-          return `保存は ${String(REPLAY_CONFIG.savedMax)} 本までです（一覧で削除できます）`;
-        if (r === 'missing') return '記録が見つかりませんでした';
+        if (r === 'full') return t('replay.msg.fullList', { max: REPLAY_CONFIG.savedMax });
+        if (r === 'missing') return t('replay.msg.notFound');
         const u = await s.usage();
-        return `保存しました（${String(u.savedCount)} / ${String(REPLAY_CONFIG.savedMax)}）`;
+        return t('replay.msg.savedCount', { count: u.savedCount, max: REPLAY_CONFIG.savedMax });
       }),
   );
 

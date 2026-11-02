@@ -1,0 +1,175 @@
+{
+  "replay": {
+    "modes": {
+      "free": "フリーフライト",
+      "mission": "キャンペーン",
+      "raid": "ソロレイド",
+      "race": "リングレース",
+      "defense": "防衛戦"
+    },
+    "camera": {
+      "follow": "追従",
+      "free": "自由",
+      "enemy": "敵視点",
+      "cinema": "シネマ",
+      "noTarget": "敵なし"
+    },
+    "title": {
+      "raidNormal": "ヴォルガス",
+      "raidHard": "ヴォルガス（高難度）",
+      "race": "リングレース",
+      "defenseHard": "{map}・高難度"
+    },
+    "outcome": {
+      "aborted": "中断",
+      "success": "成功 {rank}",
+      "failed": "失敗",
+      "defended": "防衛成功",
+      "fallen": {
+        "other": "陥落（{count} 波）"
+      },
+      "abortedWaves": {
+        "other": "中断（{count} 波）"
+      },
+      "kills": {
+        "other": "撃墜 {count}"
+      }
+    },
+    "bar": {
+      "back10": "10 秒戻る（←）",
+      "playPause": "再生 / 一時停止（Space）",
+      "forward10": "10 秒進む（→）",
+      "speed": "速さ（↑ ↓）",
+      "seek": "シーク",
+      "camera": "カメラ（C）",
+      "nextTarget": "次の敵",
+      "nextTargetWith": "次の敵（{target}）",
+      "photo": "撮影",
+      "photoHint": "フォトモード（P）",
+      "hideUi": "UI を隠す",
+      "hideUiHint": "UI を隠す（H）",
+      "exit": "一覧へ",
+      "exitHint": "一覧へ戻る（Esc）"
+    },
+    "status": {
+      "startMismatch": "記録の始まりが今の版と違います",
+      "seeking": "計算中…",
+      "ended": "終了"
+    },
+    "save": {
+      "open": "リプレイを保存",
+      "nameLabel": "リプレイの名前",
+      "save": "保存"
+    },
+    "msg": {
+      "fullDelete": "保存は {max} 本までです。不要なものを削除してください",
+      "saved": "保存しました",
+      "confirmDelete": "「{name}」を削除しますか？",
+      "noStorage": "このブラウザではリプレイを保存できません（IndexedDB が使えません）",
+      "opFailed": "保存の操作に失敗しました",
+      "corrupt": "このリプレイは壊れていて再生できません",
+      "full": "保存は {max} 本までです",
+      "imported": "読み込みました",
+      "badFile": "リプレイのファイルとして読めませんでした",
+      "saveFailed": "保存できませんでした",
+      "fullList": "保存は {max} 本までです（一覧で削除できます）",
+      "notFound": "記録が見つかりませんでした",
+      "savedCount": "保存しました（{count} / {max}）"
+    },
+    "list": {
+      "heading": "リプレイ",
+      "back": "← モード選択",
+      "import": "ファイルを読み込む",
+      "usage": "保存 {saved} / {savedMax}（{savedSize}）・自動 {auto} / {autoMax}（{autoSize}）",
+      "empty": "まだリプレイがありません。シングルプレイで飛ぶと直近 10 本が自動で残ります。",
+      "kindSaved": "保存",
+      "kindAuto": "自動",
+      "factMode": "モード",
+      "modeValue": "{mode}・{title}",
+      "factDate": "日付",
+      "factLength": "時間",
+      "factResult": "結果",
+      "factAircraft": "機体",
+      "factPilot": "パイロット",
+      "factSize": "大きさ",
+      "oldVersion": "古い版の記録です。今の版では同じように再現できないことがあります。",
+      "play": "再生",
+      "saveAs": "名前を付けて保存",
+      "rename": "名前を変更",
+      "export": "書き出す",
+      "delete": "削除"
+    }
+  },
+  "photo": {
+    "presets": {
+      "front": "正面",
+      "side": "真横",
+      "rearHigh": "後方上",
+      "wingtip": "翼端",
+      "low": "見上げ",
+      "top": "俯瞰"
+    },
+    "filters": {
+      "none": "なし",
+      "film": "フィルム",
+      "mono": "モノクロ",
+      "sepia": "セピア",
+      "punch": "高コントラスト"
+    },
+    "resolution": {
+      "screen": "画面サイズ",
+      "double": "2 倍"
+    },
+    "grade": {
+      "exposure": "露出",
+      "contrast": "コントラスト",
+      "saturation": "彩度",
+      "vignette": "ビネット",
+      "grain": "グレイン",
+      "temperature": "色温度"
+    },
+    "show": {
+      "touch": "タッチ操作",
+      "aircraft": "機体",
+      "enemies": "敵・怪獣",
+      "effects": "エフェクト"
+    },
+    "tabs": {
+      "camera": "カメラ",
+      "grade": "画面",
+      "show": "表示",
+      "weather": "天候",
+      "shot": "撮影"
+    },
+    "camera": {
+      "angle": "角度",
+      "reset": "リセット",
+      "fov": "画角",
+      "roll": "ロール",
+      "focus": "フォーカス",
+      "distance": "距離",
+      "blur": "ボケ",
+      "blurNote": "ボケは画質「高」のみ"
+    },
+    "gradeTab": {
+      "filter": "フィルター",
+      "reset": "リセット",
+      "note": "露出以外は画質「中」以上"
+    },
+    "toolbar": {
+      "hideUi": "UI を隠す",
+      "close": "閉じる ✕",
+      "shutter": "撮影",
+      "step": "コマ送り ▶|",
+      "weatherRestore": "元に戻す",
+      "hour": "時刻",
+      "watermark": "透かし",
+      "shoot": "撮影"
+    },
+    "toast": {
+      "shared": "共有しました",
+      "saved": "保存しました",
+      "failed": "保存できませんでした"
+    }
+  }
+}

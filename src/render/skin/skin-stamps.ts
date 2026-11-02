@@ -145,7 +145,7 @@ export function finChordOf(col: number): number {
 export function finSectionAt(rows: readonly WingSection[], h: number): WingSection {
   const i = Math.min(rows.length - 1, Math.max(0, Math.floor(h * rows.length)));
   const s = rows[i];
-  if (!s) throw new Error('垂直尾翼の断面がありません');
+  if (!s) throw new Error('Missing vertical tail section');
   return s;
 }
 

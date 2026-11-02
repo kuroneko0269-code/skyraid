@@ -45,7 +45,7 @@ export class GameLoop {
 
   constructor(options: LoopOptions = {}) {
     const hz = options.updateHz ?? LOOP_CONFIG.updateHz;
-    if (hz <= 0) throw new Error('updateHz は正の値にする');
+    if (hz <= 0) throw new Error('updateHz must be positive');
     this.stepSeconds = 1 / hz;
     this.maxFrameSeconds = options.maxFrameSeconds ?? LOOP_CONFIG.maxFrameSeconds;
   }

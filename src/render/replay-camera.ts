@@ -2,6 +2,7 @@
 // 敵視点（選んだ敵機・爆撃機・怪獣の後ろから自機を見る）/ シネマ（自機の行く先に置いた固定カメラを数秒ごとに切り替える）
 import { Vector3, type Object3D, type PerspectiveCamera } from 'three';
 import type { CombatTarget } from '../combat/target';
+import { t } from '../core/i18n';
 import {
   createOrbit,
   headingFrom,
@@ -20,10 +21,18 @@ export const REPLAY_CAMERAS = ['follow', 'free', 'enemy', 'cinema'] as const;
 export type ReplayCameraMode = (typeof REPLAY_CAMERAS)[number];
 
 export const REPLAY_CAMERA_LABELS: Readonly<Record<ReplayCameraMode, string>> = {
-  follow: '追従',
-  free: '自由',
-  enemy: '敵視点',
-  cinema: 'シネマ',
+  get follow() {
+    return t('replay.camera.follow');
+  },
+  get free() {
+    return t('replay.camera.free');
+  },
+  get enemy() {
+    return t('replay.camera.enemy');
+  },
+  get cinema() {
+    return t('replay.camera.cinema');
+  },
 };
 
 /** 敵視点で選べる相手（出ている敵機・爆撃機・巡航ミサイル・怪獣の最も高い部位） */
@@ -72,7 +81,7 @@ export class ReplayCameras implements CameraOverride {
   /** 敵視点の相手を次へ（なければ何もしない）。今の相手の名前の代わりに「n / 全体」を返す */
   nextTarget(): string {
     const list = viewTargets(this.session, this.targets);
-    if (list.length === 0) return '敵なし';
+    if (list.length === 0) return t('replay.camera.noTarget');
     this.targetIndex = (this.targetIndex + 1) % list.length;
     return `${String(this.targetIndex + 1)} / ${String(list.length)}`;
   }

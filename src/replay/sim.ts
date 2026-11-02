@@ -58,7 +58,7 @@ export function missionFor(
 
 export function loadoutFor(s: Pick<ReplayStart, 'aircraftId' | 'upgrades'>): Loadout {
   const model = findAircraftModel(s.aircraftId) ?? AIRCRAFT_MODELS[0];
-  if (!model) throw new Error('機体の定義がない');
+  if (!model) throw new Error('Aircraft definition not found');
   return resolveLoadout(model, s.upgrades);
 }
 
@@ -80,7 +80,7 @@ export function startFromHeader(w: SimWorld, s: ReplayStart): void {
   switch (s.mode) {
     case 'race': {
       const course = findCourse(s.courseId ?? '');
-      if (!course) throw new Error(`コース ${s.courseId ?? ''} がない`);
+      if (!course) throw new Error(`Course not found: ${s.courseId ?? ''}`);
       const ref = s.raceReference;
       play.startRace(course, ref ? { ringTimes: ref } : null);
       break;
@@ -91,7 +91,7 @@ export function startFromHeader(w: SimWorld, s: ReplayStart): void {
     case 'mission':
     case 'raid': {
       const def = missionFor(s);
-      if (!def) throw new Error(`ミッション ${s.missionId ?? ''} がない`);
+      if (!def) throw new Error(`Mission not found: ${s.missionId ?? ''}`);
       play.startMission(def);
       break;
     }

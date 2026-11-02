@@ -4,6 +4,7 @@ import type { GameAudio } from '../audio/game-audio';
 import type { CommonKeys } from '../core/common-keys';
 import type { GameState } from '../core/game-state';
 import type { GamepadInput } from '../core/gamepad';
+import { t } from '../core/i18n';
 import type { Input } from '../core/input';
 import type { GameLoop } from '../core/loop';
 import { REPLAY_CONFIG } from '../data/replay';
@@ -108,7 +109,7 @@ export class ReplayPlayback {
     this.player = player;
     this.paused = false;
     this.speedIndex = NORMAL_SPEED;
-    this.status = player.startMatches ? '' : '記録の始まりが今の版と違います';
+    this.status = player.startMatches ? '' : t('replay.status.startMismatch');
     p.weather.set(data.header.weatherId, true);
     p.weather.setTimeFlow(false);
     p.cameras.setMode('follow');
@@ -183,7 +184,11 @@ export class ReplayPlayback {
       paused: this.paused || pl.ended,
       speedIndex: this.speedIndex,
       camera: p.cameras.mode,
-      status: pl.seeking ? '計算中…' : pl.ended ? '終了' : this.status,
+      status: pl.seeking
+        ? t('replay.status.seeking')
+        : pl.ended
+          ? t('replay.status.ended')
+          : this.status,
     });
   }
 

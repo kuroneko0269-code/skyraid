@@ -1,6 +1,7 @@
 // フォトモード（7-A）の UI: 画面下の横スクロールのツールバー（カメラ / 画面 / 表示 / 天候 / 撮影）と、
 // その上に開くパネル、右下の撮影ボタン、右上の「UI を隠す」「閉じる」。スマホ横画面で右手の親指で届く配置
 import './photo-mode.css';
+import { t } from '../../core/i18n';
 import { formatHour } from '../../core/photo-format';
 import {
   PHOTO_RESOLUTION_LABELS,
@@ -37,11 +38,36 @@ export interface PhotoToolbarHandlers extends CameraTabHandlers, GradeTabHandler
 }
 
 const TABS = [
-  { value: 'camera', label: 'カメラ' },
-  { value: 'grade', label: '画面' },
-  { value: 'show', label: '表示' },
-  { value: 'weather', label: '天候' },
-  { value: 'shot', label: '撮影' },
+  {
+    value: 'camera',
+    get label() {
+      return t('photo.tabs.camera');
+    },
+  },
+  {
+    value: 'grade',
+    get label() {
+      return t('photo.tabs.grade');
+    },
+  },
+  {
+    value: 'show',
+    get label() {
+      return t('photo.tabs.show');
+    },
+  },
+  {
+    value: 'weather',
+    get label() {
+      return t('photo.tabs.weather');
+    },
+  },
+  {
+    value: 'shot',
+    get label() {
+      return t('photo.tabs.shot');
+    },
+  },
 ] as const;
 type TabId = (typeof TABS)[number]['value'];
 
@@ -74,13 +100,13 @@ export class PhotoToolbar {
     const top = document.createElement('div');
     top.className = 'photo-top';
     root.appendChild(top);
-    createChip(top, 'UI を隠す', h.hideUi);
-    createChip(top, '閉じる ✕', h.close).classList.add('is-danger');
+    createChip(top, t('photo.toolbar.hideUi'), h.hideUi);
+    createChip(top, t('photo.toolbar.close'), h.close).classList.add('is-danger');
 
     const shutter = document.createElement('button');
     shutter.type = 'button';
     shutter.className = 'photo-shutter';
-    shutter.setAttribute('aria-label', '撮影');
+    shutter.setAttribute('aria-label', t('photo.toolbar.shutter'));
     shutter.addEventListener('click', h.shoot);
     root.appendChild(shutter);
 
@@ -115,7 +141,7 @@ export class PhotoToolbar {
         }),
       );
     }
-    createChip(show, 'コマ送り ▶|', h.step);
+    createChip(show, t('photo.toolbar.step'), h.step);
 
     // 天候: 7-5 のプリセット・元に戻す・時刻
     const wp = panel('weather');
@@ -126,10 +152,17 @@ export class PhotoToolbar {
       null,
       h.weather,
     );
-    createChip(presetsRow, '元に戻す', h.weatherRestore);
+    createChip(presetsRow, t('photo.toolbar.weatherRestore'), h.weatherRestore);
     this.hour = createSlider(
       createRow(wp),
-      { label: '時刻', min: 0, max: 24, step: 0.25, value: 12, format: formatHour },
+      {
+        label: t('photo.toolbar.hour'),
+        min: 0,
+        max: 24,
+        step: 0.25,
+        value: 12,
+        format: formatHour,
+      },
       h.hour,
     );
 
@@ -141,8 +174,8 @@ export class PhotoToolbar {
       'screen',
       h.resolution,
     );
-    this.watermark = createToggle(shot, '透かし', true, h.watermark);
-    createChip(shot, '撮影', h.shoot).classList.add('is-primary');
+    this.watermark = createToggle(shot, t('photo.toolbar.watermark'), true, h.watermark);
+    createChip(shot, t('photo.toolbar.shoot'), h.shoot).classList.add('is-primary');
     this.setTab(this.open);
   }
 

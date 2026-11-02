@@ -193,6 +193,6 @@ function hinges(shape: Readonly<AircraftShape>): Hinge[] {
   const f1 = finSection(shape, r1);
   for (const side of [-1, 1])
     out.push(line(at(f0, s.rudderChord, side), at(f1, s.rudderChord, side)));
-  if (out.length !== SURFACE_COUNT) throw new Error('操舵面の数が合いません');
+  if (out.length !== SURFACE_COUNT) throw new Error('Control surface count mismatch');
   return out;
 }

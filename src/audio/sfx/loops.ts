@@ -54,7 +54,7 @@ export class FlightLoops {
   constructor(private readonly engine: AudioEngine) {
     const ctx = engine.ctx;
     const bus = engine.sfx;
-    if (!ctx || !bus || !engine.noise) throw new Error('AudioEngine が使えるようになってから作る');
+    if (!ctx || !bus || !engine.noise) throw new Error('Create only after AudioEngine is ready');
     const gain = (to: AudioNode): GainNode => {
       const g = ctx.createGain();
       g.gain.value = 0;

@@ -38,7 +38,7 @@ export class KeyframeStore {
   /** i 番のキーフレームの状態に戻す */
   restore(i: number): void {
     const f = this.frames[i];
-    if (!f) throw new Error(`キーフレーム ${String(i)} がない`);
+    if (!f) throw new Error(`Missing keyframe ${String(i)}`);
     const b = i - (i % this.baseEvery);
     if (b !== i) this.frames[b]?.restore();
     f.restore();

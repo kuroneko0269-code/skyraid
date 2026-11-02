@@ -1,6 +1,7 @@
 // フォトモード（7-A）のツールバーの「カメラ」「画面」のパネルの中身（photo-toolbar.ts から分けた）
 import type { GradeKey, GradeSettings } from '../../core/photo-grade';
 import { GRADE_KEYS } from '../../core/photo-grade';
+import { t } from '../../core/i18n';
 import { focusFromSlider, focusToSlider } from '../../core/photo-format';
 import {
   PHOTO_FILTER_LABELS,
@@ -46,22 +47,40 @@ export class CameraTab {
   private readonly note: HTMLParagraphElement;
 
   constructor(panel: HTMLElement, h: CameraTabHandlers) {
-    const presets = createRow(panel, '角度');
+    const presets = createRow(panel, t('photo.camera.angle'));
     for (const p of PHOTO_PRESETS) {
       createChip(presets, p.label, () => {
         h.preset(p.id);
       });
     }
-    createChip(presets, 'リセット', h.cameraReset);
+    createChip(presets, t('photo.camera.reset'), h.cameraReset);
     const lens = createRow(panel);
     const o = PHOTO_ORBIT;
-    const fov = { label: '画角', min: o.minFov, max: o.maxFov, step: 1, value: o.initial.fov };
+    const fov = {
+      label: t('photo.camera.fov'),
+      min: o.minFov,
+      max: o.maxFov,
+      step: 1,
+      value: o.initial.fov,
+    };
     this.fov = createSlider(lens, { ...fov, format: degrees }, h.fov);
-    const roll = { label: 'ロール', min: -o.maxRoll, max: o.maxRoll, step: 1, value: 0 };
+    const roll = {
+      label: t('photo.camera.roll'),
+      min: -o.maxRoll,
+      max: o.maxRoll,
+      step: 1,
+      value: 0,
+    };
     this.roll = createSlider(lens, { ...roll, format: degrees }, h.roll);
-    const focus = createRow(panel, 'フォーカス');
+    const focus = createRow(panel, t('photo.camera.focus'));
     this.focusAuto = createToggle(focus, 'AF', true, h.focusAuto);
-    const distance = { label: '距離', min: 0, max: 1000, step: 1, value: focusToSlider(30) };
+    const distance = {
+      label: t('photo.camera.distance'),
+      min: 0,
+      max: 1000,
+      step: 1,
+      value: focusToSlider(30),
+    };
     const meters = (v: number): string => `${Math.round(focusFromSlider(v))}m`;
     this.focusDistance = createSlider(focus, { ...distance, format: meters }, (v) => {
       // 距離を動かしたら AF を切る
@@ -69,9 +88,15 @@ export class CameraTab {
       h.focusAuto(false);
       h.focusDistance(focusFromSlider(v));
     });
-    const blur = { label: 'ボケ', min: 0, max: 1, step: 0.05, value: PHOTO_FOCUS.defaultBlur };
+    const blur = {
+      label: t('photo.camera.blur'),
+      min: 0,
+      max: 1,
+      step: 0.05,
+      value: PHOTO_FOCUS.defaultBlur,
+    };
     this.blur = createSlider(focus, { ...blur, format: (v) => v.toFixed(2) }, h.blur);
-    this.note = createNote(panel, 'ボケは画質「高」のみ');
+    this.note = createNote(panel, t('photo.camera.blurNote'));
   }
 
   /** カメラの値を UI に合わせる（プリセット・リセットの後） */
@@ -121,11 +146,11 @@ export class GradeTab {
       });
       this.sliders.set(key, slider);
     }
-    const filters = createRow(panel, 'フィルター');
+    const filters = createRow(panel, t('photo.gradeTab.filter'));
     const items = PHOTO_FILTERS.map((f) => ({ value: f, label: PHOTO_FILTER_LABELS[f] }));
     this.filter = createChoice(filters, items, 'none', h.filter);
-    createChip(filters, 'リセット', h.gradeReset);
-    this.note = createNote(panel, '露出以外は画質「中」以上');
+    createChip(filters, t('photo.gradeTab.reset'), h.gradeReset);
+    this.note = createNote(panel, t('photo.gradeTab.note'));
   }
 
   sync(g: Readonly<GradeSettings>, available: boolean): void {

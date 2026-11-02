@@ -1,4 +1,5 @@
 // リプレイの一覧に出す題と結果（7-B。Three.js・DOM 非依存）
+import { t, tn } from '../core/i18n';
 import { findCourse } from '../data/courses';
 import { findDefenseMap } from '../data/defense';
 import { findMap } from '../data/maps';
@@ -13,11 +14,13 @@ export function replayTitle(s: ReplayStart): string {
     case 'mission':
       return missionStrings(s.missionId ?? '').title;
     case 'raid':
-      return s.raidDifficulty === 'hard' ? 'ヴォルガス（高難度）' : 'ヴォルガス';
+      return t(s.raidDifficulty === 'hard' ? 'replay.title.raidHard' : 'replay.title.raidNormal');
     case 'race':
-      return findCourse(s.courseId ?? '')?.name ?? 'リングレース';
-    case 'defense':
-      return `${findDefenseMap(s.mapId).name}${s.defenseDifficulty === 'hard' ? '・高難度' : ''}`;
+      return findCourse(s.courseId ?? '')?.name ?? t('replay.title.race');
+    case 'defense': {
+      const map = findDefenseMap(s.mapId).name;
+      return s.defenseDifficulty === 'hard' ? t('replay.title.defenseHard', { map }) : map;
+    }
     default:
       return findMap(s.mapId).name;
   }
@@ -50,25 +53,27 @@ export function replayOutcome(
     case 'mission':
     case 'raid': {
       const r = play.runner?.result;
-      if (!r || r.outcome === 'aborted') return { label: '中断', success: false };
-      if (r.outcome === 'success') return { label: `成功 ${r.rank ?? ''}`.trim(), success: true };
-      return { label: '失敗', success: false };
+      if (!r || r.outcome === 'aborted')
+        return { label: t('replay.outcome.aborted'), success: false };
+      if (r.outcome === 'success')
+        return { label: t('replay.outcome.success', { rank: r.rank ?? '' }).trim(), success: true };
+      return { label: t('replay.outcome.failed'), success: false };
     }
     case 'race': {
       const r = play.race?.result;
-      if (!r) return { label: '中断', success: false };
+      if (!r) return { label: t('replay.outcome.aborted'), success: false };
       if (r.outcome === 'timeout') return { label: 'TIME OVER', success: false };
       return { label: `${formatRaceTime(r.time)} ${r.rank ?? ''}`.trim(), success: true };
     }
     case 'defense': {
       const d = play.defense ?? lastDefense;
-      if (!d) return { label: '中断', success: false };
-      if (d.phase === 'cleared') return { label: '防衛成功', success: true };
+      if (!d) return { label: t('replay.outcome.aborted'), success: false };
+      if (d.phase === 'cleared') return { label: t('replay.outcome.defended'), success: true };
       if (d.phase === 'failed')
-        return { label: `陥落（${String(d.wavesCleared)} 波）`, success: false };
-      return { label: `中断（${String(d.wavesCleared)} 波）`, success: false };
+        return { label: tn('replay.outcome.fallen', d.wavesCleared), success: false };
+      return { label: tn('replay.outcome.abortedWaves', d.wavesCleared), success: false };
     }
     default:
-      return { label: `撃墜 ${String(kills)}`, success: true };
+      return { label: tn('replay.outcome.kills', kills), success: true };
   }
 }

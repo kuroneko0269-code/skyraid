@@ -68,7 +68,7 @@ export class SfxKit {
   ): OscillatorNode {
     const ctx = this.engine.ctx;
     const pool = this.engine.voices;
-    if (!ctx || !pool) throw new Error('AudioEngine が使えるようになってから鳴らす');
+    if (!ctx || !pool) throw new Error('Play only after AudioEngine is ready');
     const o = ctx.createOscillator();
     o.type = type;
     o.frequency.setValueAtTime(freq, t);
@@ -94,7 +94,7 @@ export class SfxKit {
     hold = 0,
   ): Layer {
     const ctx = this.engine.ctx;
-    if (!ctx) throw new Error('AudioEngine が使えるようになってから鳴らす');
+    if (!ctx) throw new Error('Play only after AudioEngine is ready');
     const filter = ctx.createBiquadFilter();
     filter.type = type;
     filter.frequency.setValueAtTime(freq, t);

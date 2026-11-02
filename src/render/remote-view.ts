@@ -15,7 +15,7 @@ import { AircraftObject } from './aircraft-model/aircraft-object';
 
 export function modelOf(aircraftId: string): AircraftModel {
   const m = findAircraftModel(aircraftId) ?? AIRCRAFT_MODELS[0];
-  if (!m) throw new Error('機体の定義がありません');
+  if (!m) throw new Error('Aircraft definition not found');
   return m;
 }
 

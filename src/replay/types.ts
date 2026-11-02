@@ -1,4 +1,5 @@
 // リプレイ（7-B）の型（Three.js・DOM 非依存）: 記録の初期状態（ヘッダ）・1 ステップの入力（フレーム）・外部の操作（コマンド）
+import { t } from '../core/i18n';
 import type { Difficulty } from '../data/ai';
 import type { DefenseDifficulty } from '../data/defense';
 import type { RaidDifficulty } from '../data/raid';
@@ -9,11 +10,21 @@ export const REPLAY_MODES = ['free', 'mission', 'raid', 'race', 'defense'] as co
 export type ReplayMode = (typeof REPLAY_MODES)[number];
 
 export const REPLAY_MODE_LABELS: Readonly<Record<ReplayMode, string>> = {
-  free: 'フリーフライト',
-  mission: 'キャンペーン',
-  raid: 'ソロレイド',
-  race: 'リングレース',
-  defense: '防衛戦',
+  get free() {
+    return t('replay.modes.free');
+  },
+  get mission() {
+    return t('replay.modes.mission');
+  },
+  get raid() {
+    return t('replay.modes.raid');
+  },
+  get race() {
+    return t('replay.modes.race');
+  },
+  get defense() {
+    return t('replay.modes.defense');
+  },
 };
 
 /** 再生で同じ世界を作り直すための初期状態 */

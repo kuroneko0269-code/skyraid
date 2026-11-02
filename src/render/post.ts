@@ -230,6 +230,6 @@ export class PostEffects {
 /** ShaderPass の uniform（ShaderPass は定義を複製するので、パスの側から取る） */
 function uniform(pass: ShaderPass, name: string): { value: unknown } {
   const u = pass.uniforms[name];
-  if (!u) throw new Error(`uniform ${name} がない`);
+  if (!u) throw new Error(`Missing uniform ${name}`);
   return u;
 }
