@@ -1,9 +1,10 @@
 // 起動できないときの案内画面（8-3）: WebGL が無い / WebGL 2 が無い / 起動中の例外。真っ黒のままにしない。
-// 見た目は index.html の <style> の .compat-notice（アプリの CSS が読めない古いブラウザでも同じ。public/legacy-check.js も使う）
+// 見た目は index.html の <style> の .compat-notice（アプリの CSS が読めない古いブラウザでも同じ。src/legacy/legacy-check.js も使う）
+import { t } from '../core/i18n';
 import {
   COMPAT_NOTICE,
   MIN_ENVIRONMENT,
-  MIN_ENVIRONMENT_NOTE,
+  minEnvironmentNote,
   type CompatProblem,
 } from '../data/compat';
 
@@ -52,12 +53,12 @@ export function showCompatNotice(parent: HTMLElement, problem: CompatProblem, de
   add('div', 'compat-notice-app', box, 'SkyRaid: Titan Skies');
   add('h1', 'compat-notice-title', box, text.title);
   add('p', 'compat-notice-text', box, text.body);
-  add('h2', 'compat-notice-sub', box, '動作環境');
+  add('h2', 'compat-notice-sub', box, t('compat.environment'));
   const list = add('ul', 'compat-notice-list', box);
   for (const m of MIN_ENVIRONMENT) add('li', '', list, `${m.platform}: ${m.browser}`);
-  add('p', 'compat-notice-note', box, MIN_ENVIRONMENT_NOTE);
+  add('p', 'compat-notice-note', box, minEnvironmentNote());
   if (detail) add('p', 'compat-notice-detail', box, detail);
-  const reload = add('button', 'compat-notice-button', box, '再読み込み');
+  const reload = add('button', 'compat-notice-button', box, t('compat.reload'));
   reload.type = 'button';
   reload.addEventListener('click', () => {
     location.reload();

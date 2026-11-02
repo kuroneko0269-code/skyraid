@@ -2,12 +2,13 @@
 // 表示名、オンライン連携の ON/OFF（OFF は送信・同期・ランキングを止める。ログインは保持）、ログアウト。
 // 環境変数が無いとき（オフライン）はこのセクション自体を作らない（ui/online-link.ts）
 import './online.css';
+import { t } from '../core/i18n';
 import { errorMessage, joinFailureText } from '../online/messages';
 import { isEmail } from '../online/format';
 import {
   CODE_FAILURE_TEXT,
-  CODE_PLACEHOLDER,
   checkCode,
+  codePlaceholder,
   codeFailure,
   sanitizeCodeInput,
 } from '../online/otp';
@@ -17,28 +18,17 @@ import { isolateKeys } from './pilot-name';
 import { createToggleButton } from './mobile';
 import { isStandaloneDisplay } from './standalone';
 
-const SPAM_HINT = 'メールが届かない場合は迷惑メールフォルダを確認してください';
-const STANDALONE_HINT =
-  'ホーム画面のアプリではメールのリンクは使えません。コードを入力してください';
-
-const STATE_LABELS = {
-  signedOut: '未連携',
-  pending: '承認待ち',
-  linked: '連携中',
-  error: 'エラー',
-} as const;
-
-const PENDING_PREFIX = '【承認待ち】';
-
 /** 承認待ちの案内（7-4b: 申請は自動で送り、承認されれば 5 分以内に自動で連携中になる） */
 function pendingText(s: OnlineStatus): string {
-  const who = `ログイン中: ${s.email ?? ''}`;
-  if (s.join === 'rejected')
-    return `${PENDING_PREFIX}管理者に承認されませんでした。必要なら管理者に連絡してください（${who}）`;
+  const email = s.email ?? '';
+  if (s.join === 'rejected') return t('online.pending.rejected', { email });
   // 申請が送れていない（7-4d）: 承認待ちの案内の代わりに失敗の種類を出す（管理者の一覧に載っていないため）
   if (s.joinError)
-    return `${PENDING_PREFIX}${joinFailureText(s.joinError.kind, s.joinError.detail)}（${who}）`;
-  return `${PENDING_PREFIX}管理者が承認すると遊べます。承認されると自動で「連携中」に変わります（${who}）`;
+    return t('online.pending.joinError', {
+      reason: joinFailureText(s.joinError.kind, s.joinError.detail),
+      email,
+    });
+  return t('online.pending.waiting', { email });
 }
 
 function button(parent: HTMLElement, label: string): HTMLButtonElement {
@@ -65,32 +55,34 @@ export function createOnlineSettings(
   const box = document.createElement('div');
   box.className = 'save-settings online-settings';
   panel.insertBefore(box, before);
-  el('div', 'save-settings-heading', box, 'オンライン連携');
+  el('div', 'save-settings-heading', box, t('online.heading'));
   const state = el('div', 'online-state', box);
   const note = el('div', 'save-settings-status online-note', box);
 
   // 未連携: メール → コード
   const signIn = el('div', 'online-form', box);
-  const email = field(signIn, 'email', 'メールアドレス');
+  const email = field(signIn, 'email', t('online.emailPlaceholder'));
   email.autocomplete = 'email';
   const sendRow = el('div', 'save-settings-row', signIn);
-  const send = button(sendRow, 'コードを送る');
+  const send = button(sendRow, t('online.sendCode'));
   const codeRow = el('div', 'online-form', box);
-  const code = field(codeRow, 'text', CODE_PLACEHOLDER);
+  const placeholder = codePlaceholder();
+  const code = field(codeRow, 'text', placeholder);
   code.inputMode = 'numeric';
   code.autocomplete = 'one-time-code';
   code.pattern = '[0-9]*';
-  code.setAttribute('aria-label', CODE_PLACEHOLDER);
+  code.setAttribute('aria-label', placeholder);
   // 失敗はコード欄のすぐ下に出す（7-4c: 上の案内は背の低い画面だとスクロールの外で見えなかった）
   const codeError = el('div', 'online-code-error', codeRow);
   codeError.setAttribute('role', 'alert');
   codeError.hidden = true;
   const verifyRow = el('div', 'save-settings-row', codeRow);
-  const verify = button(verifyRow, 'ログイン');
-  const resend = button(verifyRow, 'メールを入れ直す');
+  const verify = button(verifyRow, t('online.signIn'));
+  const resend = button(verifyRow, t('online.reenterEmail'));
   // ホーム画面のアプリ（PWA）ではメールのリンクが Safari で開き、別の保存領域になる → コード入力が唯一の経路
-  if (isStandaloneDisplay()) el('div', 'online-hint is-strong', codeRow, STANDALONE_HINT);
-  el('div', 'online-hint', codeRow, SPAM_HINT);
+  if (isStandaloneDisplay())
+    el('div', 'online-hint is-strong', codeRow, t('online.standaloneHint'));
+  el('div', 'online-hint', codeRow, t('online.spamHint'));
 
   const showCodeError = (text: string): void => {
     codeError.textContent = text;
@@ -112,33 +104,38 @@ export function createOnlineSettings(
 
   // 承認待ち: 案内・再確認
   const pendingRow = el('div', 'save-settings-row', box);
-  const recheck = button(pendingRow, '承認を再確認');
+  const recheck = button(pendingRow, t('online.recheck'));
 
   // 連携中: 表示名
   const nameRow = el('div', 'online-form', box);
-  const name = field(nameRow, 'text', '表示名（1〜16 文字。ランキングに出ます）');
+  const name = field(nameRow, 'text', t('online.namePlaceholder'));
   name.maxLength = 32;
   const nameButtons = el('div', 'save-settings-row', nameRow);
-  const saveName = button(nameButtons, '表示名を保存');
+  const saveName = button(nameButtons, t('online.saveName'));
 
-  const toggle = createToggleButton(box, 'オンライン連携', service.status.enabled, () => {
+  const toggle = createToggleButton(box, t('online.toggle'), service.status.enabled, () => {
     service.setEnabled(!service.status.enabled);
     return service.status.enabled;
   });
-  const signOut = button(box, 'ログアウト');
+  const signOut = button(box, t('online.signOut'));
 
   let codeSentTo: string | null = null;
   let codeSentAt = 0;
-  let message = '';
-  const say = (text: string): void => {
-    message = text;
+  // 今の案内が承認待ちの案内か（承認待ちを抜けたら消す）
+  let pendingShown = false;
+  const say = (text: string, pending = false): void => {
+    pendingShown = pending;
     note.textContent = text;
     note.hidden = text === '';
   };
 
   const render = (s: OnlineStatus): void => {
     const signedIn = s.state === 'pending' || s.state === 'linked' || s.userId !== null;
-    state.textContent = `状態: ${STATE_LABELS[s.state]}${s.state === 'linked' && !s.enabled ? '（OFF: 送信・同期・ランキングを停止中）' : ''}`;
+    const label = t(`online.state.${s.state}`);
+    state.textContent =
+      s.state === 'linked' && !s.enabled
+        ? t('online.statusOff', { state: label })
+        : t('online.status', { state: label });
     state.dataset.state = s.state;
     signIn.hidden = signedIn || codeSentTo !== null;
     codeRow.hidden = signedIn || codeSentTo === null;
@@ -147,19 +144,19 @@ export function createOnlineSettings(
     toggle.button.hidden = !signedIn;
     toggle.sync(s.enabled);
     signOut.hidden = !signedIn;
-    if (s.state === 'pending') say(pendingText(s));
+    if (s.state === 'pending') say(pendingText(s), true);
     else if (s.state === 'error') say(errorMessage(s.error ?? 'unknown'));
-    else if (message.startsWith(PENDING_PREFIX)) say('');
+    else if (pendingShown) say('');
   };
 
   send.addEventListener('click', () => {
     const v = email.value.trim();
     if (!isEmail(v)) {
-      say('メールアドレスを確かめてください');
+      say(t('online.checkEmail'));
       return;
     }
     send.disabled = true;
-    say('送信中…');
+    say(t('online.sending'));
     service
       .sendCode(v)
       .then(
@@ -170,8 +167,8 @@ export function createOnlineSettings(
           showCodeError('');
           say(
             isStandaloneDisplay()
-              ? `${v} にコードを送りました。メールのコードを入力してください`
-              : `${v} にコードを送りました。メールのコードを入力してください（メールのリンクを開いても連携できます）`,
+              ? t('online.codeSent', { email: v })
+              : t('online.codeSentLink', { email: v }),
           );
           render(service.status);
           code.focus({ preventScroll: true });
@@ -195,7 +192,7 @@ export function createOnlineSettings(
     code.value = checked.code;
     verify.disabled = true;
     showCodeError('');
-    say('確認中…');
+    say(t('online.verifying'));
     service
       .verifyCode(codeSentTo, checked.code)
       .then(
@@ -225,7 +222,8 @@ export function createOnlineSettings(
     recheck.disabled = true;
     void service.recheck().finally(() => {
       recheck.disabled = false;
-      if (service.status.state === 'pending') say(`${pendingText(service.status)}（まだです）`);
+      if (service.status.state === 'pending')
+        say(t('online.pending.notYet', { text: pendingText(service.status) }), true);
     });
   });
 
@@ -235,10 +233,10 @@ export function createOnlineSettings(
       .setDisplayName(name.value)
       .then(
         (clean) => {
-          if (clean === null) say('表示名は 1〜16 文字で入力してください');
+          if (clean === null) say(t('online.nameInvalid'));
           else {
             name.value = clean;
-            say('表示名を保存しました');
+            say(t('online.nameSaved'));
           }
         },
         (e: unknown) => {
@@ -252,7 +250,7 @@ export function createOnlineSettings(
 
   signOut.addEventListener('click', () => {
     void service.signOut().catch(() => undefined);
-    say('ログアウトしました（このページのセーブはそのまま残ります）');
+    say(t('online.signedOut'));
   });
 
   service.onStatus((s) => {

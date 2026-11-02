@@ -1,18 +1,20 @@
 // 情報画面の「データの扱い」の文面（7-D。8-1 で見直し: オンライン連携で送る個人の情報はメールと表示名だけ・P2P は相手に IP が見える）
+// 文面は文言の表（dataPolicy.*。8-4）。表は起動後に読むので、各行の見出しと本文は読むときに引く
+import { t } from '../core/i18n';
+
+/** 見出しと本文の組。要素を読んだときに表から引く（分割代入・map でもそのまま使える） */
+function entry(id: string): readonly [string, string] {
+  const pair: [string, string] = ['', ''];
+  Object.defineProperty(pair, 0, { get: () => t(`dataPolicy.${id}.title`), enumerable: true });
+  Object.defineProperty(pair, 1, { get: () => t(`dataPolicy.${id}.body`), enumerable: true });
+  return pair;
+}
+
 /** データの扱い（セーブはブラウザ内、オンライン連携は任意でメールと表示名だけ、P2P は相手に IP が見える。8-1 で見直し） */
 export const DATA_POLICY: readonly (readonly [string, string])[] = [
-  [
-    'セーブはこのブラウザの中',
-    '進み具合・クレジット・機体・設定はこのブラウザの localStorage に、リプレイは IndexedDB に保存します。オンライン連携をしなければ外部のサーバーには送りません。ブラウザのデータを消すと消えるので、設定の「データ」→「セーブデータ」でコピーを取れます。',
-  ],
-  [
-    'オンライン連携は任意',
-    '設定の「データ」→「オンライン連携」でログインしたときだけサーバー（Supabase）を使います。あなたについての情報はメールアドレス（ログインにだけ使い、ほかの人には見えません）と表示名（ランキングに出ます）だけです。ほかに送るのはセーブのバックアップとレース / レイド / 防衛戦の記録です。連携を OFF にすると送信と同期を止めます。',
-  ],
-  [
-    'マルチプレイ（P2P）',
-    'PvP・協力プレイは端末どうしの直接通信（WebRTC / PeerJS）でゲームの状態をやり取りします。直接つながるため、同じ部屋の相手にはあなたの IP アドレス（おおよその地域や回線の会社が分かることがあります）が見えます。部屋コードは知っている人とだけ共有してください。接続の仲介に PeerJS の公開サーバー（0.peerjs.com）を使います。',
-  ],
-  ['フォント', '見出しのフォント（Rajdhani）を Google Fonts から読み込みます。'],
-  ['広告・解析', '広告・アクセス解析は使っていません。'],
+  entry('save'),
+  entry('online'),
+  entry('p2p'),
+  entry('fonts'),
+  entry('ads'),
 ];

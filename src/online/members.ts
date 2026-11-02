@@ -1,5 +1,7 @@
 // メンバー承認のアプリ内管理（7-4b、DOM・Supabase 非依存）: owner の判定・参加の申請の状態・一覧の整形。
 // SQL は supabase/migrations/skyraid_0002_members.sql（approve_member / revoke_member / list_members / join_requests）
+import { compareText } from '../core/format';
+import { t } from '../core/i18n';
 import { OnlineError } from './backend';
 import { formatDateTime } from './format';
 
@@ -107,8 +109,6 @@ export interface MemberLists {
   readonly approved: readonly MemberLine[];
 }
 
-const UNNAMED = '（名前なし）';
-
 function time(iso: string | null): number {
   const t = iso === null ? NaN : Date.parse(iso);
   return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
@@ -118,7 +118,7 @@ function time(iso: string | null): number {
 export function memberLists(rows: readonly MemberRow[], selfId: string | null): MemberLists {
   const line = (r: MemberRow): MemberLine => ({
     userId: r.userId,
-    name: r.displayName ?? UNNAMED,
+    name: r.displayName ?? t('online.unnamed'),
     requested: r.requestedAt === null ? '—' : formatDateTime(r.requestedAt),
     self: r.userId === selfId,
   });
@@ -132,7 +132,7 @@ export function memberLists(rows: readonly MemberRow[], selfId: string | null): 
     .sort(
       (a, b) =>
         Number(b.self) - Number(a.self) ||
-        a.name.localeCompare(b.name, 'ja') ||
+        compareText(a.name, b.name) ||
         a.userId.localeCompare(b.userId),
     );
   return { pending, approved };

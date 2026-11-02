@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#050a12" />
     <title>SkyRaid: Titan Skies</title>
-    <meta name="description" content="ブラウザで動く 3D フライトシューティング" />
+    <meta name="description" content="__APP_DESCRIPTION__" />
     <!-- ブランド素材（public/brand/。README の「ブランド素材の差し替え」） -->
     <link rel="icon" href="/brand/favicon.ico" sizes="any" />
     <link rel="icon" href="/brand/icon-192.png" type="image/png" sizes="192x192" />
@@ -52,7 +52,7 @@
       canvas {
         display: block;
       }
-      /* 起動できないときの案内（8-3。src/ui/compat-notice.ts と public/legacy-check.js）。アプリの CSS が読めなくても出す */
+      /* 起動できないときの案内（8-3。src/ui/compat-notice.ts と src/legacy/legacy-check.js）。アプリの CSS が読めなくても出す */
       .compat-notice {
         position: fixed;
         inset: 0;
@@ -116,7 +116,7 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
-    <!-- 8-3: モジュールの構文を読めない古いブラウザで真っ黒にしない（ES5 の小さなスクリプト。public/legacy-check.js） -->
-    <script src="/legacy-check.js" defer></script>
+    <!-- 8-3: モジュールの構文を読めない古いブラウザで真っ黒にしない（ES5 の小さなスクリプト。src/legacy/legacy-check.js をビルド時に文言を埋め込んで出す: scripts/vite-legacy-check.ts。vite-ignore は Vite に束ねさせない印で、出力では消える） -->
+    <script src="/legacy-check.js" defer vite-ignore></script>
   </body>
 </html>

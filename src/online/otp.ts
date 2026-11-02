@@ -1,5 +1,6 @@
 // メールのコードでのログイン（7-4c、DOM・Supabase 非依存）: 入力の整え・桁数の検証・失敗の種類と画面に出す一言。
 // Supabase のメール OTP は設定で桁数が変わる（今のプロジェクトは 8 桁）ので 4〜10 桁を受け付ける
+import { t } from '../core/i18n';
 import { ONLINE_CONFIG } from '../data/online';
 import { errorKind } from './backend';
 
@@ -30,13 +31,27 @@ export type CodeFailure =
   'empty' | 'short' | 'mismatch' | 'expired' | 'attempts' | 'network' | 'unknown';
 
 export const CODE_FAILURE_TEXT: Readonly<Record<CodeFailure, string>> = {
-  empty: 'コードを入力してください',
-  short: `コードの桁が足りません（${String(minLength)}〜${String(maxLength)} 桁）`,
-  mismatch: 'コードが違います。メールのコードを確かめてください',
-  expired: 'コードの期限が切れました。コードを送り直してください',
-  attempts: '試した回数が多すぎます。少し待ってからもう一度',
-  network: 'サーバーにつながりません。通信を確かめてください',
-  unknown: 'ログインできませんでした。少し待ってからもう一度',
+  get empty() {
+    return t('online.code.empty');
+  },
+  get short() {
+    return t('online.code.short', { min: minLength, max: maxLength });
+  },
+  get mismatch() {
+    return t('online.code.mismatch');
+  },
+  get expired() {
+    return t('online.code.expired');
+  },
+  get attempts() {
+    return t('online.code.attempts');
+  },
+  get network() {
+    return t('online.code.network');
+  },
+  get unknown() {
+    return t('online.code.unknown');
+  },
 };
 
 /**
@@ -58,5 +73,7 @@ export function codeFailure(e: unknown, elapsedMs: number): CodeFailure {
   }
 }
 
-/** 入力欄の案内（桁数は書かない。プロジェクトの設定で変わるため） */
-export const CODE_PLACEHOLDER = 'メールに届いたコードを入力';
+/** 入力欄の案内（桁数は書かない。プロジェクトの設定で変わるため）。表を読んだ後に呼ぶ */
+export function codePlaceholder(): string {
+  return t('online.code.placeholder');
+}

@@ -222,7 +222,7 @@ describe('一覧の整形', () => {
     const lists = memberLists(ROWS, 'u0');
     expect(lists.pending.map((l) => l.userId)).toEqual(['u4', 'u3']);
     expect(lists.pending[0]?.name).toBe('（名前なし）');
-    expect(lists.pending[1]?.requested).toMatch(/^2026-11-01 \d\d:00$/);
+    expect(lists.pending[1]?.requested).toMatch(/^2026\/11\/01 \d\d:00$/);
     expect(lists.approved.map((l) => l.userId)).toEqual(['u0', 'u6', 'u5']);
     expect(lists.approved[0]).toMatchObject({ self: true, requested: '—' });
     expect(lists.approved.filter((l) => l.self)).toHaveLength(1);

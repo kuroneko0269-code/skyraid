@@ -5,8 +5,9 @@ import { APP_VERSION } from 'virtual:app-info';
 import { LICENSES } from 'virtual:app-licenses';
 import changelogText from '../../docs/changelog.md?raw';
 import { parseChangelog } from '../core/changelog';
+import { t } from '../core/i18n';
 import { APP_MANIFEST } from '../data/app';
-import { MIN_ENVIRONMENT, MIN_ENVIRONMENT_NOTE } from '../data/compat';
+import { MIN_ENVIRONMENT, minEnvironmentNote } from '../data/compat';
 import { DATA_POLICY } from '../data/data-policy';
 import type { GameState } from '../core/game-state';
 import { el } from './hud-dom';
@@ -14,17 +15,14 @@ import type { ModeSelectScreen } from './mode-select';
 import { createButton, createScreen, setScreenShown } from './screen';
 import { Segmented } from './segmented';
 
-const TABS = [
-  { value: 'version', label: '版' },
-  { value: 'changes', label: '更新履歴' },
-  { value: 'licenses', label: 'ライセンス' },
-  { value: 'data', label: 'データの扱い' },
-] as const;
+const TAB_IDS = ['version', 'changes', 'licenses', 'data'] as const;
 
 /** npm 以外で使っているもの（Google Fonts から読む見出しのフォント） */
 const EXTRA_LICENSES = [
   {
-    name: 'Rajdhani（Google Fonts）',
+    get name() {
+      return t('info.fontName');
+    },
     license: 'SIL Open Font License 1.1',
     url: 'https://fonts.google.com/specimen/Rajdhani',
   },
@@ -46,14 +44,14 @@ export class InfoScreen {
     // 見出し・戻る・タブは上に固定し、内容だけスクロールする（7-4c）
     const top = el('div', 'menu-top', root);
     const header = el('div', 'menu-header', top);
-    createButton(header, 'ui-button is-ghost menu-back', '← モード選択へ', () => {
+    createButton(header, 'ui-button is-ghost menu-back', t('info.back'), () => {
       this.close();
     });
-    el('h2', 'ui-heading menu-heading', header, '情報');
+    el('h2', 'ui-heading menu-heading', header, t('info.title'));
     this.tabs = new Segmented(
       top,
       '',
-      TABS,
+      TAB_IDS.map((id) => ({ value: id, label: t(`info.tab.${id}`) })),
       'version',
       (v) => {
         this.showTab(v);
@@ -62,9 +60,9 @@ export class InfoScreen {
     );
     this.scroller = el('div', 'menu-scroll', root);
     const body = el('div', 'ui-panel info-body', this.scroller);
-    for (const t of TABS) {
+    for (const id of TAB_IDS) {
       const panel = el('div', 'info-tab', body);
-      this.panels.set(t.value, panel);
+      this.panels.set(id, panel);
     }
     this.buildVersion(this.panel('version'));
     this.buildChanges(this.panel('changes'));
@@ -113,14 +111,14 @@ export class InfoScreen {
 
   private buildVersion(p: HTMLElement): void {
     el('div', 'info-app-name', p, APP_MANIFEST.name);
-    el('div', 'info-version', p, `バージョン ${APP_VERSION}`);
-    el('p', 'info-text', p, APP_MANIFEST.description);
-    el('p', 'info-text', p, '更新は自動で届き、次に起動したときに入ります。');
+    el('div', 'info-version', p, t('info.version', { version: APP_VERSION }));
+    el('p', 'info-text', p, t('app.description'));
+    el('p', 'info-text', p, t('info.autoUpdate'));
     // 8-3: 最低動作環境（docs/compat.md）
-    el('h3', 'info-subheading', p, '動作環境');
+    el('h3', 'info-subheading', p, t('info.environment'));
     const list = el('ul', 'info-list', p);
     for (const m of MIN_ENVIRONMENT) el('li', '', list, `${m.platform}: ${m.browser}`);
-    el('p', 'info-text', p, MIN_ENVIRONMENT_NOTE);
+    el('p', 'info-text', p, minEnvironmentNote());
   }
 
   private buildChanges(p: HTMLElement): void {
@@ -132,15 +130,15 @@ export class InfoScreen {
   }
 
   private buildLicenses(p: HTMLElement): void {
-    el(
-      'p',
-      'info-text',
-      p,
-      'このゲームは次のオープンソースのライブラリ・素材を使っています（ビルド時に集計）。',
-    );
+    el('p', 'info-text', p, t('info.licensesIntro'));
     for (const lib of LICENSES) {
       const d = el('details', 'info-license', p);
-      el('summary', '', d, `${lib.name} ${lib.version} — ${lib.license || '不明'}`);
+      el(
+        'summary',
+        '',
+        d,
+        `${lib.name} ${lib.version} — ${lib.license || t('info.unknownLicense')}`,
+      );
       if (lib.url) el('div', 'info-license-url', d, lib.url);
       if (lib.text) el('pre', 'info-license-text', d, lib.text);
     }

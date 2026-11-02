@@ -118,12 +118,1285 @@
       "kicker": "CO-OP DEFENSE",
       "title": "Co-op Defense",
       "note": "Defend the base from 10 waves with 2–{max} players"
+    },
+    "status": {
+      "creating": "Creating room…",
+      "createFailed": "Couldn't create a room (check your network)",
+      "badCode": "Room codes are 6 characters (no 0, O, 1 or I)",
+      "joining": "Connecting to {code}…",
+      "connecting": "Connecting…"
+    },
+    "menu": {
+      "create": "Create Room",
+      "code": "Room code",
+      "join": "Join",
+      "back": "← Modes",
+      "cancel": "Cancel"
+    },
+    "leave": "Leave",
+    "again": "Again",
+    "againWaiting": "Waiting for others",
+    "close": "Close",
+    "mode": {
+      "ffa": "Free-for-All",
+      "team": "Team (2v2)",
+      "raid": "Raid (Co-op Kaiju)",
+      "defense": "Defense (Co-op Base)"
+    },
+    "hangar": {
+      "title": "Choose Aircraft",
+      "selected": "Selected",
+      "stat": {
+        "speed": "SPD",
+        "turn": "TRN",
+        "durability": "DUR",
+        "payload": "PAY"
+      },
+      "statValue": "{label} ×{value}",
+      "noteNoUpgrades": "Pick from your owned aircraft. The host has disabled upgrades (everyone at Lv 0)",
+      "noteUpgrades": "Pick from your owned aircraft. Your single-player upgrades apply"
+    },
+    "player": {
+      "host": "Host",
+      "you": "You",
+      "reconnecting": "RECONNECTING",
+      "preparing": "NOT READY"
+    },
+    "sep": " · ",
+    "team": "Team {team}",
+    "minutes": {
+      "one": "{count} min",
+      "other": "{count} min"
+    },
+    "kills": {
+      "one": "{count} kill",
+      "other": "{count} kills"
+    },
+    "block": {
+      "players": "Share the room code with other players",
+      "ready": "Waiting for everyone to be ready",
+      "away": "Waiting for reconnection",
+      "teams": "Each team needs at least 1 player"
+    },
+    "rule": {
+      "map": "Map",
+      "weather": "Weather",
+      "rules": "Rules",
+      "options": "Handicaps",
+      "score": "Kill limit",
+      "time": "Time limit",
+      "mode": "Mode",
+      "difficulty": "Difficulty",
+      "noUpgrades": "No upgrades",
+      "rookie": "Rookie boost"
+    },
+    "autoTeams": "Auto-assign teams",
+    "hangarButton": "Hangar",
+    "ready": "Ready",
+    "unready": "Not Ready",
+    "start": "Start",
+    "rules": {
+      "raid": "Raid (co-op) · Defeat Vorgas · {difficulty}",
+      "defense": "Defense (co-op) · 10 waves · {difficulty}",
+      "versus": "{mode} · {score} kills · {time}",
+      "ffa": "Free-for-All",
+      "team": "Team"
+    },
+    "options": "Upgrades {upgrades} · Rookie boost {rookie}",
+    "upgradesOff": "OFF",
+    "upgradesOn": "ON",
+    "wait": {
+      "allReady": "Everyone is ready. Press \"Start\" to begin in 3 seconds",
+      "host": "Waiting for the host to start",
+      "pick": "Choose an aircraft and press \"Ready\""
+    },
+    "share": {
+      "share": "Share",
+      "copy": "Copy",
+      "codeCopied": "Code copied",
+      "qrNote": "Scan with a phone camera to join this room",
+      "invite": "Join my SkyRaid match (room code {code})",
+      "linkCopied": "Link copied",
+      "copyFailed": "Couldn't copy: {text}",
+      "qrLabel": "QR code for the join URL: {url}",
+      "qrFailed": "Couldn't create the QR code"
     }
   },
   "common": {
     "waves": {
       "one": "{count} wave",
       "other": "{count} waves"
+    }
+  },
+  "difficulty": {
+    "rookie": "Rookie",
+    "easy": "Easy",
+    "normal": "Normal",
+    "hard": "Hard",
+    "short": {
+      "rookie": "Rookie",
+      "easy": "Easy",
+      "normal": "Norm",
+      "hard": "Hard"
+    },
+    "range": "{from}–{to}"
+  },
+  "aircraft": {
+    "role": {
+      "kestrel": "All-rounder",
+      "swift": "Light & fast",
+      "bastion": "Heavy & tough",
+      "vector": "High performance"
+    }
+  },
+  "courses": {
+    "coast": {
+      "name": "Coastal Circuit",
+      "note": "One low lap around the island's coastline"
+    },
+    "canyon": {
+      "name": "Canyon Slalom",
+      "note": "A low slalom threading the northern slopes"
+    },
+    "harborSpeed": {
+      "name": "Harbor Sprint",
+      "note": "A high-speed run between the towers"
+    },
+    "acro": {
+      "name": "Sunset Aerobatics",
+      "note": "A vertical course of loops and rolls"
+    },
+    "level": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    }
+  },
+  "kaiju": {
+    "name": "Vorgas",
+    "parts": {
+      "head": "Head",
+      "crystal": "Crystal",
+      "leftLeg": "Left Leg",
+      "rightLeg": "Right Leg",
+      "tail": "Tail"
+    },
+    "attacks": {
+      "sweep": "Sweep",
+      "roar": "Roar",
+      "beam": "Heat Beam",
+      "throw": "Hurl"
+    },
+    "hud": {
+      "name": "VORGAS",
+      "finalPhase": "FINAL PHASE  {time}",
+      "down": "DOWN  {seconds}  DAMAGE ×{scale}",
+      "partBroken": "{part} (broken)",
+      "targeted": "TARGET  The kaiju is targeting you"
+    }
+  },
+  "maps": {
+    "island": "Coast & Island",
+    "harbor": "Harbor City"
+  },
+  "objectives": {
+    "vorgasDefeat": "Defeat Vorgas",
+    "label": {
+      "kill": "Enemy kills",
+      "survive": "Survive",
+      "rings": "Rings",
+      "escort": "Escort",
+      "destroy": "Targets destroyed",
+      "kaiju": "Repel kaiju",
+      "speed": "Speed"
+    },
+    "killTarget": {
+      "target": "Target kills",
+      "drone": "Drone kills",
+      "groundTarget": "Ground target kills",
+      "any": "Kills"
+    },
+    "fail": {
+      "playerDown": "Shot down",
+      "escortLost": "Escort lost",
+      "timeUp": "Time up",
+      "kaijuReachedCity": "The kaiju reached the city",
+      "outOfBounds": "Left the combat area"
+    },
+    "progressSeconds": "{label} {current} / {target} s",
+    "summarySeconds": "{label} {seconds} s"
+  },
+  "quality": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "downgraded": "Graphics quality lowered"
+  },
+  "weather": {
+    "time": {
+      "dawn": "Dawn",
+      "day": "Day",
+      "evening": "Dusk",
+      "night": "Night"
+    },
+    "sky": {
+      "clear": "Clear",
+      "overcast": "Cloudy",
+      "fog": "Fog",
+      "rain": "Rain"
+    },
+    "wind": {
+      "weak": "Light wind",
+      "strong": "Strong wind"
+    },
+    "label": "{time} · {sky} · {wind}"
+  },
+  "raid": {
+    "difficulty": {
+      "normal": "Normal",
+      "hard": "Hard"
+    },
+    "briefing": {
+      "title": "Briefing: Vorgas",
+      "lines": [
+        "Break the crystal to stop the Heat Beam, the tail for Sweep, the head for Roar",
+        "Break a leg to down it for 15 s (×2 damage to all parts)",
+        "Break: 2 players hit the same part within 3 s (×3 to that part)"
+      ],
+      "skip": "Skip",
+      "waitingSkip": "Waiting for everyone to skip"
+    },
+    "phrases": {
+      "head": "Hit the head",
+      "legs": "Hit the legs",
+      "crystal": "Hit the crystal",
+      "evade": "Evade!"
+    },
+    "result": {
+      "difficulty": "Difficulty",
+      "clearTime": "Clear time",
+      "elapsed": "Elapsed",
+      "rewardAll": "Reward (all)",
+      "damage": "Damage {damage}",
+      "pilot": "Pilot",
+      "total": "Total",
+      "breaks": "Breaks",
+      "respawns": "Respawns"
+    }
+  },
+  "progress": {
+    "campaign": "{cleared}/{total} cleared",
+    "separator": " · ",
+    "defense": "Best: Wave {waves}",
+    "raid": "Best {time}"
+  },
+  "campaign": {
+    "heading": "Campaign",
+    "balance": "Balance",
+    "backToModes": "← Modes",
+    "backToMissions": "← Missions",
+    "required": "Required",
+    "optional": "Optional",
+    "reward": "Reward",
+    "unlockAfter": "Clear {mission} to unlock",
+    "locked": "Locked",
+    "briefing": {
+      "objectives": "Objectives",
+      "changeAircraft": "Aircraft",
+      "launch": "Launch",
+      "withPrevious": "+ ",
+      "timeLimit": "Time limit",
+      "none": "None",
+      "weather": "Weather",
+      "rewardValue": "{credits} (S ×{scale})",
+      "aircraft": "Aircraft"
+    },
+    "result": {
+      "newGear": "New gear is available in the Hangar",
+      "toMissions": "Missions",
+      "retry": "Retry",
+      "time": "Time",
+      "hitsTaken": "Hits taken",
+      "protectedBuildings": "Buildings saved",
+      "rewardValue": "Earned +{earned} / Balance {balance}"
+    }
+  },
+  "hud": {
+    "timeLeft": "{time} left",
+    "shotDown": "SHOT DOWN",
+    "respawnIn": "Respawn in {seconds} s"
+  },
+  "title": {
+    "prompt": "Tap / Enter to start",
+    "settings": "Settings",
+    "loading": "Loading…"
+  },
+  "pause": {
+    "heading": "Paused",
+    "resume": "Resume",
+    "photoMode": "Photo Mode",
+    "allSettings": "All Settings",
+    "abortMission": "Abort Mission",
+    "toTitle": "Title"
+  },
+  "race": {
+    "hud": {
+      "missed": "MISSED RING +{seconds}s",
+      "thinBonus": "THIN RING −{seconds}s"
+    },
+    "abort": "Abort Race",
+    "result": {
+      "toCourses": "Courses",
+      "ghostSaved": "Ghost saved",
+      "place": "Best #{place}",
+      "run": "Run",
+      "penalty": "Penalty",
+      "penaltyValue": "+{seconds} s ({missed} missed)",
+      "bonus": "Bonus",
+      "bonusValue": "−{seconds} s ({thin} thin rings)",
+      "gold": "Gold",
+      "best": "Best",
+      "bestValue": "{time} ({aircraft})"
+    },
+    "kind": {
+      "normal": "Normal",
+      "boost": "Boost (free AB for {seconds} s)",
+      "thin": "Thin (−{seconds} s)",
+      "checkpoint": "Checkpoint (can't skip)"
+    },
+    "select": {
+      "heading": "Ring Race",
+      "bestTimes": "Top {count}",
+      "start": "Start",
+      "notRun": "Not run",
+      "map": "Map",
+      "rings": "Rings",
+      "ringCount": {
+        "one": "{count} ring",
+        "other": "{count} rings"
+      },
+      "bestRank": "Best rank",
+      "ghost": "Ghost",
+      "ghostValue": "Yes ({time})",
+      "noRecords": "No records yet"
+    }
+  },
+  "modes": {
+    "heading": "Select Mode",
+    "backToTitle": "← Title",
+    "play": "PLAY",
+    "manage": "MANAGE",
+    "players": {
+      "solo": "Solo",
+      "versus": "2–4 players",
+      "party": "1–4 players"
+    },
+    "campaign": {
+      "label": "Campaign",
+      "note": "Clear missions in order"
+    },
+    "free": {
+      "label": "Free Flight",
+      "noteOn": "Dogfight enemies or fly freely",
+      "noteOff": "Fly freely with no enemies"
+    },
+    "race": {
+      "label": "Ring Race",
+      "note": "Time attack through the rings"
+    },
+    "pvp": {
+      "label": "PvP",
+      "note": "Battle in the same sky"
+    },
+    "raid": {
+      "label": "Raid",
+      "note": "Take down the giant kaiju Vorgas"
+    },
+    "defense": {
+      "label": "Defense",
+      "note": "Defend the base from 10 waves"
+    },
+    "hangar": {
+      "label": "Hangar"
+    },
+    "replay": {
+      "label": "Replays"
+    },
+    "ranking": {
+      "label": "Rankings"
+    },
+    "settings": {
+      "label": "Settings"
+    },
+    "info": {
+      "label": "About"
+    },
+    "dialog": {
+      "back": "Back",
+      "map": "Map",
+      "weather": "Weather",
+      "time": "Time",
+      "timeFixed": "Fixed",
+      "timeFlow": "Flowing",
+      "launch": "Launch",
+      "coop": "Co-op 2–4",
+      "solo": "Solo"
+    },
+    "raidDialog": {
+      "title": "Raid: Vorgas",
+      "body": "Solo: pick a difficulty and launch right away (Hard: HP ×1.4, shorter tells, 3.5-min final phase, reward ×1.8). For 2–4 players, create a room or join with a room code (everyone on one team; the host picks the difficulty).",
+      "difficulty": "Difficulty (Solo)"
+    },
+    "defenseDialog": {
+      "body": "Defend the base HQ from all 10 waves. Between waves, pass low and slow over the base (below 300 m, speed under 150) to resupply. Hard: enemies ×1.3, HQ HP 1500. For 2–4 players, create a room or join with a room code (everyone on one team).",
+      "difficulty": "Difficulty"
+    }
+  },
+  "language": {
+    "label": "Language",
+    "inFlight": "Can't switch during a flight. Change it from the menu"
+  },
+  "skins": {
+    "color": {
+      "slateBlue": "Slate",
+      "vermilion": "Vermilion",
+      "silver": "Silver",
+      "blue": "Blue",
+      "olive": "Olive",
+      "gold": "Gold",
+      "gunmetal": "Gunmetal",
+      "white": "White",
+      "black": "Black",
+      "navy": "Navy",
+      "sand": "Sand",
+      "purple": "Purple"
+    },
+    "pattern": {
+      "solid": "Solid",
+      "camoForest": "Forest Camo",
+      "camoDesert": "Desert Camo",
+      "camoOcean": "Ocean Camo",
+      "twoTone": "Two-Tone",
+      "splitter": "Splinter",
+      "stripe": "Stripes",
+      "metal": "Bare Metal"
+    },
+    "decal": {
+      "chevron": "Chevron",
+      "hexring": "Hex Ring",
+      "diamonds": "Triple Diamond",
+      "star": "Star",
+      "bolt": "Bolt",
+      "bird": "Swallow",
+      "number": "Number",
+      "checker": "Checker",
+      "claws": "Claws",
+      "compass": "Compass Star"
+    },
+    "unlock": {
+      "allMissionsS": "Unlock: S rank on all missions",
+      "pvpKills": {
+        "one": "Unlock: {count} PvP kill ({have}/{count})",
+        "other": "Unlock: {count} PvP kills ({have}/{count})"
+      },
+      "allRacesA": "Unlock: A rank or better on all 4 race courses"
+    }
+  },
+  "upgrades": {
+    "engine": {
+      "label": "Engine",
+      "effect": "Top speed, accel, AB time"
+    },
+    "airframe": {
+      "label": "Airframe",
+      "effect": "HP, turn rate"
+    },
+    "weapons": {
+      "label": "Weapons",
+      "effect": "Gun damage, missiles +1"
+    },
+    "avionics": {
+      "label": "Avionics",
+      "effect": "Lock time, radar range, flares +1"
+    }
+  },
+  "touch": {
+    "mode": {
+      "auto": "Auto",
+      "on": "Show",
+      "off": "Hide"
+    },
+    "label": "Touch"
+  },
+  "assist": {
+    "aim": "Aim Assist",
+    "camera": "Target Camera",
+    "hud": "HUD Assist"
+  },
+  "save": {
+    "resetNotice": "Save data was reset",
+    "close": "Close",
+    "heading": "Save Data",
+    "copy": "Copy save data",
+    "paste": "Paste & restore",
+    "restore": "Restore",
+    "cancel": "Cancel",
+    "delete": "Delete save data",
+    "deleteWarning": "All progress, credits and settings will be erased. This cannot be undone.",
+    "deleteServerToo": "Also delete the server backup",
+    "serverDeleted": "The server backup will also be deleted",
+    "serverKept": "The server backup will be kept (the server save loads on the next sync)",
+    "serverKeptOffline": "The server backup will be kept (the server save loads on the next sync). It can only be deleted while online sync is on",
+    "confirmDelete": "Delete",
+    "copyFailed": "Couldn't copy. Select the text below and copy it manually",
+    "copied": "Copied. On your new device, paste it into \"Paste & restore\"",
+    "pasteHint": "Paste the copied text and press \"Restore\" (your current data will be overwritten)",
+    "restored": "Restored",
+    "restoreFailed": "Couldn't load it. Make sure the whole text was pasted",
+    "deletingServer": "Deleting server backup…",
+    "deleteServerFailed": "Couldn't delete the server backup (your save data was not deleted): {error}"
+  },
+  "controls": {
+    "sensitivity": "Stick sensitivity",
+    "deadzone": "Dead zone (touch)",
+    "invertPitch": "Invert pitch",
+    "autoLevel": "Auto-level",
+    "swapSides": "Swap sides (touch)",
+    "vibration": "Vibration",
+    "vibrationUnsupported": "Vibration (Android only; not supported here)",
+    "buttonSize": "Button size",
+    "keys": "Key Bindings",
+    "buttonSizes": {
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large"
+    },
+    "actions": {
+      "pitchDown": "Pitch down",
+      "pitchUp": "Pitch up",
+      "rollLeft": "Roll left",
+      "rollRight": "Roll right",
+      "yawLeft": "Yaw left",
+      "yawRight": "Yaw right",
+      "throttleUp": "Throttle +",
+      "throttleDown": "Throttle −",
+      "fire": "Gun",
+      "missile": "Missile",
+      "afterburner": "Afterburner",
+      "flare": "Flare"
+    },
+    "heading": "Controls",
+    "keyName": {
+      "shiftRight": "R-Shift",
+      "controlRight": "R-Ctrl",
+      "altRight": "R-Alt"
+    },
+    "otherActions": {
+      "targetNext": "Next target",
+      "cameraToggle": "Switch camera",
+      "rocket": "Rockets",
+      "bomb": "Bomb",
+      "debugToggle": "Debug overlay",
+      "hudToggle": "Toggle HUD"
+    },
+    "pressKey": "Press a key… (Esc to cancel)",
+    "conflict": "⚠ Conflicts with {names}",
+    "listSeparator": ", ",
+    "resetKeys": "Reset to defaults"
+  },
+  "settings": {
+    "enemies": "Enemies",
+    "difficulty": "Difficulty",
+    "quality": "Quality",
+    "nightHudDim": "Dim HUD at night",
+    "back": {
+      "title": "← Title",
+      "modeSelect": "← Select Mode",
+      "pause": "← Pause",
+      "default": "← Back"
+    },
+    "volume": {
+      "master": "Master",
+      "sfx": "Effects",
+      "bgm": "Music",
+      "aria": "{name} volume"
+    },
+    "title": "Settings",
+    "tab": {
+      "display": "Display",
+      "sound": "Sound",
+      "controls": "Controls",
+      "game": "Game",
+      "data": "Data"
+    }
+  },
+  "mobile": {
+    "exitFullscreen": "Exit Full",
+    "fullscreen": "Fullscreen",
+    "rotate": "Please rotate to landscape"
+  },
+  "pilot": {
+    "name": "Pilot Name",
+    "registerHint": {
+      "one": "Up to {count} character. Shown on the results and title screens (blank = {default})",
+      "other": "Up to {count} characters. Shown on the results and title screens (blank = {default})"
+    },
+    "submit": "OK",
+    "rename": "Change pilot name",
+    "newName": "New pilot name",
+    "renameHint": {
+      "one": "Up to {count} character (blank = {default})",
+      "other": "Up to {count} characters (blank = {default})"
+    },
+    "confirmRename": "Change",
+    "current": "Current name: {name}",
+    "renamed": "Pilot name changed to \"{name}\"",
+    "renamedWithExtra": "{done}. {extra}"
+  },
+  "hangar": {
+    "back": "← Back",
+    "tab": {
+      "perf": "Stats",
+      "paint": "Paint"
+    },
+    "upgradesHeading": "Upgrades (this aircraft only)",
+    "confirmBuy": "Buy {name} for {price}?",
+    "bought": "Purchased {name}",
+    "confirmUpgrade": "Upgrade for {price}?",
+    "balance": "Balance {credits}",
+    "selected": "Active",
+    "owned": "Owned",
+    "payload": "Missiles {missiles} / Rockets {rockets} / Bombs {bombs} / Flares {flares}",
+    "buy": "Buy {price}",
+    "locked": "Locked",
+    "stat": {
+      "speed": "Speed",
+      "turn": "Turn",
+      "durability": "Armor",
+      "payload": "Payload"
+    },
+    "upgrade": "Upgrade {price}",
+    "cancel": "Cancel",
+    "confirm": "Buy"
+  },
+  "paint": {
+    "slot": {
+      "wing": "Wing",
+      "fin": "Tail Fin"
+    },
+    "patterns": "Patterns (unlocked for all aircraft)",
+    "color": {
+      "base": "Base",
+      "accent": "Accent",
+      "marking": "Marking"
+    },
+    "decals": "Decals (500 CR, all aircraft)",
+    "none": "None",
+    "slider": {
+      "x": "Position (X)",
+      "y": "Position (Y)",
+      "size": "Size",
+      "rotation": "Rotation"
+    },
+    "number": "Tail Number",
+    "random": "Random",
+    "bought": "Purchased {name}",
+    "owned": "Owned",
+    "locked": "Locked",
+    "buy": "Buy {name} {price}",
+    "trialNotice": "Unowned items are preview only (buy them to save)"
+  },
+  "replay": {
+    "modes": {
+      "free": "Free Flight",
+      "mission": "Campaign",
+      "raid": "Solo Raid",
+      "race": "Ring Race",
+      "defense": "Defense"
+    },
+    "camera": {
+      "follow": "Follow",
+      "free": "Free",
+      "enemy": "Enemy View",
+      "cinema": "Cinema",
+      "noTarget": "No enemies"
+    },
+    "title": {
+      "raidNormal": "Vorgas",
+      "raidHard": "Vorgas (Hard)",
+      "race": "Ring Race",
+      "defenseHard": "{map} · Hard"
+    },
+    "outcome": {
+      "aborted": "Aborted",
+      "success": "Success {rank}",
+      "failed": "Failed",
+      "defended": "Defended",
+      "fallen": {
+        "one": "Fallen ({count} wave)",
+        "other": "Fallen ({count} waves)"
+      },
+      "abortedWaves": {
+        "one": "Aborted ({count} wave)",
+        "other": "Aborted ({count} waves)"
+      },
+      "kills": {
+        "one": "{count} kill",
+        "other": "{count} kills"
+      }
+    },
+    "bar": {
+      "back10": "Back 10s (←)",
+      "playPause": "Play / Pause (Space)",
+      "forward10": "Forward 10s (→)",
+      "speed": "Speed (↑ ↓)",
+      "seek": "Seek",
+      "camera": "Camera (C)",
+      "nextTarget": "Next Foe",
+      "nextTargetWith": "Next Foe ({target})",
+      "photo": "Photo",
+      "photoHint": "Photo Mode (P)",
+      "hideUi": "Hide UI",
+      "hideUiHint": "Hide UI (H)",
+      "exit": "Back",
+      "exitHint": "Back to List (Esc)"
+    },
+    "status": {
+      "startMismatch": "Start differs from this version",
+      "seeking": "Computing…",
+      "ended": "End"
+    },
+    "save": {
+      "open": "Save Replay",
+      "nameLabel": "Replay name",
+      "save": "Save"
+    },
+    "msg": {
+      "fullDelete": "You can save up to {max} replays. Delete ones you don't need.",
+      "saved": "Saved",
+      "confirmDelete": "Delete “{name}”?",
+      "noStorage": "Replays can't be saved in this browser (IndexedDB unavailable)",
+      "opFailed": "Storage operation failed",
+      "corrupt": "This replay is corrupt and can't be played",
+      "full": "You can save up to {max} replays",
+      "imported": "Imported",
+      "badFile": "Couldn't read this as a replay file",
+      "saveFailed": "Couldn't save",
+      "fullList": "You can save up to {max} replays (delete some in the list)",
+      "notFound": "Recording not found",
+      "savedCount": "Saved ({count} / {max})"
+    },
+    "list": {
+      "heading": "Replays",
+      "back": "← Select Mode",
+      "import": "Import File",
+      "usage": "Saved {saved} / {savedMax} ({savedSize}) · Auto {auto} / {autoMax} ({autoSize})",
+      "empty": "No replays yet. Your last 10 single-player flights are kept automatically.",
+      "kindSaved": "Saved",
+      "kindAuto": "Auto",
+      "factMode": "Mode",
+      "modeValue": "{mode} · {title}",
+      "factDate": "Date",
+      "factLength": "Length",
+      "factResult": "Result",
+      "factAircraft": "Aircraft",
+      "factPilot": "Pilot",
+      "factSize": "Size",
+      "oldVersion": "Recorded on an older version. It may not play back the same way.",
+      "play": "Play",
+      "saveAs": "Save As",
+      "rename": "Rename",
+      "export": "Export",
+      "delete": "Delete"
+    }
+  },
+  "photo": {
+    "presets": {
+      "front": "Front",
+      "side": "Side",
+      "rearHigh": "High Rear",
+      "wingtip": "Wingtip",
+      "low": "Low",
+      "top": "Top"
+    },
+    "filters": {
+      "none": "None",
+      "film": "Film",
+      "mono": "Mono",
+      "sepia": "Sepia",
+      "punch": "Punch"
+    },
+    "resolution": {
+      "screen": "Screen",
+      "double": "2×"
+    },
+    "grade": {
+      "exposure": "Exposure",
+      "contrast": "Contrast",
+      "saturation": "Saturation",
+      "vignette": "Vignette",
+      "grain": "Grain",
+      "temperature": "Temp"
+    },
+    "show": {
+      "touch": "Touch",
+      "aircraft": "Aircraft",
+      "enemies": "Enemies",
+      "effects": "Effects"
+    },
+    "tabs": {
+      "camera": "Camera",
+      "grade": "Grade",
+      "show": "Show",
+      "weather": "Weather",
+      "shot": "Shot"
+    },
+    "camera": {
+      "angle": "Angle",
+      "reset": "Reset",
+      "fov": "FOV",
+      "roll": "Roll",
+      "focus": "Focus",
+      "distance": "Distance",
+      "blur": "Blur",
+      "blurNote": "Blur needs High quality"
+    },
+    "gradeTab": {
+      "filter": "Filter",
+      "reset": "Reset",
+      "note": "All but exposure need Medium quality or higher"
+    },
+    "toolbar": {
+      "hideUi": "Hide UI",
+      "close": "Close ✕",
+      "shutter": "Take photo",
+      "step": "Step ▶|",
+      "weatherRestore": "Restore",
+      "hour": "Time",
+      "watermark": "Watermark",
+      "shoot": "Shoot"
+    },
+    "toast": {
+      "shared": "Shared",
+      "saved": "Saved",
+      "failed": "Couldn't save"
+    }
+  },
+  "online": {
+    "heading": "Online Link",
+    "toggle": "Online Link",
+    "spamHint": "No email? Check your spam folder",
+    "standaloneHint": "Email links don't work in the home screen app. Enter the code instead",
+    "state": {
+      "signedOut": "Not linked",
+      "pending": "Pending approval",
+      "linked": "Linked",
+      "error": "Error"
+    },
+    "status": "Status: {state}",
+    "statusOff": "Status: {state} (OFF: uploads, sync and rankings paused)",
+    "pending": {
+      "rejected": "[Pending] Your request was not approved. Contact the admin if needed (signed in as {email})",
+      "joinError": "[Pending] {reason} (signed in as {email})",
+      "waiting": "[Pending] You can play once the admin approves you. The status switches to \"Linked\" automatically (signed in as {email})",
+      "notYet": "{text} (not yet)"
+    },
+    "emailPlaceholder": "Email address",
+    "sendCode": "Send Code",
+    "signIn": "Sign In",
+    "reenterEmail": "Change Email",
+    "recheck": "Recheck",
+    "namePlaceholder": "Display name (1-16 chars, shown in rankings)",
+    "saveName": "Save Name",
+    "signOut": "Sign Out",
+    "checkEmail": "Check your email address",
+    "sending": "Sending…",
+    "codeSent": "Code sent to {email}. Enter the code from the email",
+    "codeSentLink": "Code sent to {email}. Enter the code from the email (or open the link in the email)",
+    "verifying": "Verifying…",
+    "nameInvalid": "Display name must be 1-16 characters",
+    "nameSaved": "Display name saved",
+    "signedOut": "Signed out (your save on this page is kept)",
+    "rename": {
+      "saved": "Server display name updated too",
+      "failed": "Couldn't update the server display name (will retry next time you're online)",
+      "whenEnabled": "The server display name will update when Online Link is ON"
+    },
+    "unnamed": "(no name)",
+    "error": {
+      "network": "Can't reach the server. Check your connection (you can keep playing)",
+      "auth": "Your session expired. Please sign in again",
+      "denied": "The server denied the request (permission error). Contact the admin if it continues after signing in again",
+      "signup": "This email can't be registered. Contact the admin",
+      "invalid": "The server rejected the data",
+      "rate": "Too many requests. Wait a moment and try again",
+      "conflict": "The server data changed first",
+      "code": "Wrong or expired code. Please send a new code",
+      "unknown": "Something went wrong. Wait a moment and try again"
+    },
+    "reason": {
+      "network": "network error",
+      "auth": "not signed in",
+      "denied": "denied by server (permissions/RLS)",
+      "signup": "email not allowed",
+      "invalid": "data rejected",
+      "rate": "too many requests",
+      "conflict": "conflict",
+      "code": "wrong code",
+      "unknown": "unknown error"
+    },
+    "reasonDetail": "{reason} / {detail}",
+    "joinFailure": "Couldn't send your request (reason: {reason}). Tap \"Recheck\" to resend",
+    "code": {
+      "placeholder": "Enter the code from the email",
+      "empty": "Enter the code",
+      "short": "Code is too short ({min}-{max} digits)",
+      "mismatch": "Wrong code. Check the code in the email",
+      "expired": "The code has expired. Send a new code",
+      "attempts": "Too many attempts. Wait a moment and try again",
+      "network": "Can't reach the server. Check your connection",
+      "unknown": "Couldn't sign in. Wait a moment and try again"
+    }
+  },
+  "ranking": {
+    "title": "Rankings",
+    "kind": {
+      "race": "Race",
+      "raid": "Raid",
+      "defense": "Defense"
+    },
+    "course": "Course",
+    "aircraft": "Aircraft",
+    "difficulty": "Difficulty",
+    "map": "Map",
+    "note": "Member rankings (updated every 5 min). P2P co-op runs are unranked",
+    "back": "← Modes",
+    "loading": "Loading…",
+    "empty": "No records yet",
+    "defenseValue": {
+      "one": "{count} wave · HQ {hq}%",
+      "other": "{count} waves · HQ {hq}%"
+    },
+    "selfPlace": {
+      "one": "Your rank: #{place} of {count} pilot",
+      "other": "Your rank: #{place} of {count} pilots"
+    },
+    "selfNone": "No record of yours yet (shown when you reach the top 100)"
+  },
+  "sync": {
+    "title": "Which Save Do You Want?",
+    "text": "Your save changed both on this device and on the server since the last sync. Choose one. The other will be overwritten.",
+    "local": "This device",
+    "server": "Server",
+    "newer": "{title} (newer)",
+    "pilot": "Pilot: {name}",
+    "updated": "Updated: {time}",
+    "later": "Later",
+    "useLocal": "This Device",
+    "useServer": "Server Save",
+    "pilotUnset": "(not set)",
+    "cleared": "Cleared: {count}",
+    "unknownTime": "Unknown",
+    "event": {
+      "pulled": "Loaded your save from the server",
+      "tooNew": "The server save is from a newer version. Reload the page to update the app",
+      "tooLarge": "Save is too large to back up (256KB max)",
+      "failed": "Couldn't sync your save. Will retry on the next save or launch",
+      "later": "Save sync postponed. We'll ask again next launch"
+    }
+  },
+  "members": {
+    "heading": "Members",
+    "done": {
+      "approve": "Approved (their screen switches to \"Linked\" within 5 min)",
+      "reject": "Rejected",
+      "revoke": "Revoked (they may keep access for up to 1 hour until their login token refreshes)"
+    },
+    "result": "{name}: {text}",
+    "confirmTitle": "Revoke {name}'s approval?",
+    "confirmText": "They will lose access to cloud saves and rankings (the save on their device stays). Re-approving requires SQL on the dashboard.",
+    "cancel": "Cancel",
+    "confirmRevoke": "Revoke",
+    "reload": "Refresh",
+    "self": "{name} (you)",
+    "action": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "revoke": "Revoke"
+    },
+    "pending": "Pending ({count})",
+    "approved": "Approved ({count})",
+    "empty": "None",
+    "loading": "Loading…"
+  },
+  "info": {
+    "title": "About",
+    "back": "← Modes",
+    "tab": {
+      "version": "Version",
+      "changes": "Changelog",
+      "licenses": "Licenses",
+      "data": "Privacy"
+    },
+    "version": "Version {version}",
+    "autoUpdate": "Updates download automatically and apply the next time you launch.",
+    "environment": "Requirements",
+    "licensesIntro": "This game uses the following open source libraries and assets (collected at build time).",
+    "unknownLicense": "Unknown",
+    "fontName": "Rajdhani (Google Fonts)"
+  },
+  "dataPolicy": {
+    "save": {
+      "title": "Saves Stay in This Browser",
+      "body": "Progress, credits, aircraft and settings are stored in this browser's localStorage, and replays in IndexedDB. Nothing is sent to external servers unless you use Online Link. Clearing browser data deletes them, so you can make a copy under Settings → \"Data\" → \"Save Data\"."
+    },
+    "online": {
+      "title": "Online Link Is Optional",
+      "body": "A server (Supabase) is used only when you sign in under Settings → \"Data\" → \"Online Link\". The only information about you is your email address (used only to sign in, never shown to others) and your display name (shown in rankings). Other than that, we send save backups and race / raid / defense records. Turning the link OFF stops uploads and sync."
+    },
+    "p2p": {
+      "title": "Multiplayer (P2P)",
+      "body": "PvP and co-op exchange game state by direct device-to-device connection (WebRTC / PeerJS). Because you connect directly, other players in the same room can see your IP address (which may reveal your rough location or internet provider). Share room codes only with people you know. The public PeerJS server (0.peerjs.com) is used to set up connections."
+    },
+    "fonts": {
+      "title": "Fonts",
+      "body": "The heading font (Rajdhani) is loaded from Google Fonts."
+    },
+    "ads": {
+      "title": "Ads & Analytics",
+      "body": "No ads or analytics are used."
+    }
+  },
+  "compat": {
+    "env": {
+      "ios": "Safari on iOS / iPadOS 16.4+",
+      "android": "Chrome 105+",
+      "pcPlatform": "Desktop",
+      "pc": "Chrome / Edge 105+, Safari 16.4+, Firefox 121+"
+    },
+    "note": "WebGL 2 required (turn ON hardware acceleration in your browser). Recommended: laptop integrated GPU or better, or a phone from 2020 or later",
+    "environment": "Requirements",
+    "reload": "Reload",
+    "noWebgl": {
+      "title": "3D Graphics (WebGL) Unavailable",
+      "body": "WebGL is disabled in this browser or device, so SkyRaid can't start. Turn ON hardware acceleration (GPU) in your browser settings, or update your browser, then reload."
+    },
+    "noWebgl2": {
+      "title": "WebGL 2 Not Supported",
+      "body": "This browser doesn't support WebGL 2, so SkyRaid can't start. Update your browser (iOS on iPhone / iPad), or open it in one of the browsers below."
+    },
+    "startFailed": {
+      "title": "Couldn't Start",
+      "body": "An error occurred while starting in this browser. Update your browser and reload, or open it in one of the browsers below."
+    },
+    "legacy": {
+      "title": "This Browser Is Too Old to Run the Game",
+      "body": "Update your browser (iOS on iPhone / iPad), or open it in one of the browsers below."
+    },
+    "contextLost": "Couldn't restore the display. Please reload",
+    "storage": "Data can't be saved here (private browsing, low storage, etc.). You can play, but progress and settings are lost when you close"
+  },
+  "context": {
+    "reload": "Reload",
+    "close": "Close"
+  },
+  "shell": {
+    "update": "A new version is available (applies next launch)",
+    "updateNow": "Update",
+    "close": "Close",
+    "installHint": "Tap Share → \"Add to Home Screen\" to play full screen"
+  },
+  "lazy": {
+    "offline": "Couldn't load while offline. Reload once you're connected",
+    "stale": "Couldn't load. A new version may have been released (reload to update)",
+    "loading": "Loading…",
+    "reload": "Reload",
+    "close": "Close"
+  },
+  "defense": {
+    "icon": {
+      "hq": "HQ",
+      "radar": "Radar",
+      "fuel": "Fuel",
+      "aaa1": "AA 1",
+      "aaa2": "AA 2"
+    },
+    "hud": {
+      "skip": "Skip (N)",
+      "supplyHint": "Resupply: fly over the base below {agl}m AGL and under speed {speed}",
+      "wavePrep": "WAVE {wave} / {total}  PREP",
+      "waveRemaining": "WAVE {wave} / {total}  LEFT {remaining}",
+      "nextWaveIn": "Next wave in {seconds}s",
+      "waiting": "Waiting…",
+      "forecast": "Next wave: {forecast}",
+      "forecastUnknown": "Next wave: unknown (radar lost)",
+      "supplied": "Resupplied"
+    },
+    "lost": {
+      "hq": "HQ destroyed",
+      "radar": "Radar lost — no more wave forecasts",
+      "fuel": "Fuel tank lost — resupply halved",
+      "aaa1": "AA gun 1 lost — less support",
+      "aaa2": "AA gun 2 lost — less support"
+    },
+    "abort": "Abort Defense",
+    "flash": {
+      "incoming": "Incoming!",
+      "clearSub": "Resupply and prepare for the next wave",
+      "facilityLost": "FACILITY LOST",
+      "supplied": "RESUPPLIED",
+      "suppliedHalf": "Half only (fuel tank lost)"
+    },
+    "outcome": {
+      "cleared": "Base Defended",
+      "fallen": "Base Fallen"
+    },
+    "difficulty": {
+      "normal": "Normal",
+      "hard": "Hard"
+    },
+    "result": {
+      "retry": "Retry",
+      "toModeSelect": "Modes",
+      "info": "{map} · {difficulty}",
+      "wavesCleared": "Waves cleared",
+      "kills": "Kills",
+      "hq": "HQ",
+      "facilities": "Facilities left",
+      "wavePart": "Waves {waves} × {per}",
+      "fullClear": "Full clear +{credits}",
+      "allFacilities": "All facilities intact +{credits}",
+      "breakdown": "Breakdown",
+      "sep": " · ",
+      "reward": "Reward",
+      "rewardValue": "Earned +{earned} / Balance {balance}",
+      "playerStats": "Kills {kills} · Shot down {deaths}"
+    },
+    "map": {
+      "island": "Island (East Shore Base)",
+      "harbor": "Harbor City (Port Base)"
+    },
+    "dir": {
+      "ne": "NE",
+      "e": "E",
+      "se": "SE",
+      "sw": "SW",
+      "s": "S"
+    },
+    "forecast": {
+      "text": "From {direction}: {list}",
+      "sep": ", ",
+      "bomber": {
+        "one": "{count} bomber",
+        "other": "{count} bombers"
+      },
+      "fighter": {
+        "one": "{count} fighter",
+        "other": "{count} fighters"
+      },
+      "cruise": {
+        "one": "{count} cruise missile",
+        "other": "{count} cruise missiles"
+      }
+    }
+  },
+  "pvp": {
+    "table": {
+      "rank": "#",
+      "pilot": "Pilot",
+      "kills": "Kills",
+      "deaths": "Deaths",
+      "accuracy": "Acc.",
+      "streak": "Streak"
+    },
+    "board": {
+      "remaining": "{time} left"
+    },
+    "feed": {
+      "kill": "{killer} shot down {victim}",
+      "crash": "{victim} crashed"
+    },
+    "timeWarning": {
+      "one": "{count} second left",
+      "other": "{count} seconds left"
+    },
+    "menu": {
+      "noPause": "Can't pause during a match (your plane keeps flying)",
+      "noPauseRaid": "Can't pause in flight. You can send quick messages to everyone",
+      "leave": "Leave",
+      "continue": "Resume"
+    },
+    "phrase": {
+      "ready": "Ready",
+      "wait": "Wait",
+      "rematch": "Rematch",
+      "hello": "GL HF",
+      "nice": "Nice!",
+      "thanks": "Thanks"
+    },
+    "downed": {
+      "title": "Shot Down",
+      "respawnIn": "Respawn in",
+      "by": "Shot down by {killer}",
+      "crashed": "Crashed"
+    },
+    "status": {
+      "invulnerable": "Invulnerable {seconds}",
+      "boosted": "Rookie boost HP+50% · MSL+2",
+      "sep": "  ·  "
+    },
+    "reason": {
+      "score": "Kill limit reached",
+      "time": "Time's up",
+      "raidClear": "The team defeated the kaiju (everyone gets the same reward)",
+      "raidFail": "The kaiju reached the city (300 CR each)",
+      "defenseClear": "Held the base through all 10 waves (everyone gets the same reward)",
+      "defenseFail": "HQ destroyed (waves cleared × 300 CR)"
+    },
+    "title": {
+      "raidClear": "Vorgas Defeated",
+      "raidFail": "Mission Failed",
+      "draw": "Draw",
+      "win": "Victory",
+      "lose": "Defeat",
+      "over": "Match Over"
+    },
+    "result": {
+      "protected": "Buildings saved {percent}%",
+      "team": "Team {team}  {score}",
+      "kills": {
+        "one": "{count} kill",
+        "other": "{count} kills"
+      },
+      "map": "Map",
+      "killsAll": "Kills (team)",
+      "rewardAll": "Reward (each)",
+      "mvp": {
+        "one": "{name} ({count} kill)",
+        "other": "{name} ({count} kills)"
+      },
+      "none": "None",
+      "againWait": "Back to the lobby once everyone presses \"Again\" ({pressed} / {total})",
+      "you": "{name} (you)"
+    }
+  },
+  "net": {
+    "reconnecting": "Connection lost. Reconnecting…",
+    "reconnectingLeft": "Connection lost. Reconnecting… ({seconds}s left)",
+    "hostLeft": "The host disconnected",
+    "lost": "Disconnected (could not reconnect)",
+    "playerAway": "{name} disconnected (waiting to reconnect)",
+    "playerBack": "{name} is back",
+    "playerLeft": "{name} left",
+    "joinError": {
+      "notFound": "Room not found (check the code)",
+      "full": "Room is full (max 4 players)",
+      "started": "The match has already started",
+      "version": "Version mismatch with the host (both players should reload)",
+      "expired": "Reconnect window expired",
+      "timeout": "No response (timed out)",
+      "network": "Couldn't connect",
+      "unsupported": "This browser doesn't support P2P (WebRTC)"
     }
   }
 }

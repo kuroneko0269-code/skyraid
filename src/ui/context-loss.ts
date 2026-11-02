@@ -2,6 +2,7 @@
 // 失ったら飛行中はポーズにする（描けない間に墜落しないように）。three は喪失中の描画を飛ばし、戻ると GPU の資源を作り直す。
 // 1 回だけ焼いて使う資源（空の環境マップ）は scene.ts が復帰のイベントで焼き直す。
 // 一定時間で戻らなければ「再読み込み」のお知らせを出す
+import { t } from '../core/i18n';
 import { COMPAT_CONFIG } from '../data/compat';
 import { showToast, type Toast } from './toast';
 
@@ -24,13 +25,13 @@ export function linkContextLoss(canvas: HTMLCanvasElement, hooks: ContextLossHoo
         seconds: 0,
         actions: [
           {
-            label: '再読み込み',
+            label: t('context.reload'),
             kind: 'primary',
             onClick: () => {
               location.reload();
             },
           },
-          { label: '閉じる' },
+          { label: t('context.close') },
         ],
       });
     }, COMPAT_CONFIG.contextRestoreTimeoutMs);

@@ -118,11 +118,1267 @@
       "kicker": "CO-OP DEFENSE",
       "title": "協力防衛戦",
       "note": "2〜{max} 人で基地を 10 波の敵から守る"
+    },
+    "status": {
+      "creating": "部屋を作っています…",
+      "createFailed": "部屋を作れませんでした（ネットワークを確かめてください）",
+      "badCode": "部屋コードは 6 文字です（0・O・1・I は使いません）",
+      "joining": "{code} に接続中…",
+      "connecting": "接続中…"
+    },
+    "menu": {
+      "create": "部屋を作る",
+      "code": "部屋コード",
+      "join": "コードで参加",
+      "back": "← モード選択へ",
+      "cancel": "取り消し"
+    },
+    "leave": "退出",
+    "again": "もう一度",
+    "againWaiting": "ほかの人を待っています",
+    "close": "閉じる",
+    "mode": {
+      "ffa": "個人戦",
+      "team": "チーム戦（2 対 2）",
+      "raid": "レイド（協力・怪獣）",
+      "defense": "防衛戦（協力・基地）"
+    },
+    "hangar": {
+      "title": "機体を選ぶ",
+      "selected": "選択中",
+      "stat": {
+        "speed": "速度",
+        "turn": "旋回",
+        "durability": "耐久",
+        "payload": "搭載"
+      },
+      "statValue": "{label} ×{value}",
+      "noteNoUpgrades": "所持している機体から選べます。強化はホストの設定で無効（全員 Lv 0）です",
+      "noteUpgrades": "所持している機体から選べます。強化はシングルプレイの値をそのまま使います"
+    },
+    "player": {
+      "host": "ホスト",
+      "you": "あなた",
+      "reconnecting": "再接続中",
+      "preparing": "準備中"
+    },
+    "sep": "・",
+    "team": "チーム {team}",
+    "minutes": {
+      "other": "{count} 分"
+    },
+    "kills": {
+      "other": "{count} 機"
+    },
+    "block": {
+      "players": "ほかのプレイヤーに部屋コードを伝えてください",
+      "ready": "全員の「準備OK」を待っています",
+      "away": "再接続を待っています",
+      "teams": "両方のチームに 1 人以上入れてください"
+    },
+    "rule": {
+      "map": "マップ",
+      "weather": "天候",
+      "rules": "ルール",
+      "options": "補正",
+      "score": "撃墜数",
+      "time": "制限時間",
+      "mode": "モード",
+      "difficulty": "難易度",
+      "noUpgrades": "強化を無効にする",
+      "rookie": "初心者保護"
+    },
+    "autoTeams": "チームを自動で分ける",
+    "hangarButton": "ハンガー",
+    "ready": "準備OK",
+    "unready": "準備を取り消す",
+    "start": "開始",
+    "rules": {
+      "raid": "レイド（協力）・ヴォルガス撃破・{difficulty}",
+      "defense": "防衛戦（協力）・全 10 波・{difficulty}",
+      "versus": "{mode}・撃墜 {score} 機・{time}",
+      "ffa": "個人戦",
+      "team": "チーム戦"
+    },
+    "options": "強化 {upgrades}・初心者保護 {rookie}",
+    "upgradesOff": "無効",
+    "upgradesOn": "有効",
+    "wait": {
+      "allReady": "全員の準備ができました。「開始」で 3 秒後に始まります",
+      "host": "ホストの開始を待っています",
+      "pick": "機体を選んで「準備OK」を押してください"
+    },
+    "share": {
+      "share": "共有",
+      "copy": "コピー",
+      "codeCopied": "コードをコピーしました",
+      "qrNote": "スマホのカメラで読むと、この部屋に参加できます",
+      "invite": "SkyRaid の対戦に参加（部屋コード {code}）",
+      "linkCopied": "リンクをコピーしました",
+      "copyFailed": "コピーできませんでした: {text}",
+      "qrLabel": "参加用 URL の QR コード: {url}",
+      "qrFailed": "QR コードを作れませんでした"
     }
   },
   "common": {
     "waves": {
       "other": "{count} 波"
+    }
+  },
+  "difficulty": {
+    "rookie": "入門",
+    "easy": "やさしい",
+    "normal": "ふつう",
+    "hard": "むずかしい",
+    "short": {
+      "rookie": "入門",
+      "easy": "易",
+      "normal": "普",
+      "hard": "難"
+    },
+    "range": "{from}〜{to}"
+  },
+  "aircraft": {
+    "role": {
+      "kestrel": "バランス型",
+      "swift": "軽量・高速",
+      "bastion": "重武装・高耐久",
+      "vector": "高性能"
+    }
+  },
+  "courses": {
+    "coast": {
+      "name": "海岸周回",
+      "note": "島の海岸線を低空で 1 周する"
+    },
+    "canyon": {
+      "name": "渓谷スラローム",
+      "note": "北の山腹を低く縫うスラローム"
+    },
+    "harborSpeed": {
+      "name": "港湾ハイスピード",
+      "note": "ビルの谷間を抜ける高速コース"
+    },
+    "acro": {
+      "name": "夕空アクロバット",
+      "note": "宙返りと反転を要求する縦のコース"
+    },
+    "level": {
+      "beginner": "入門",
+      "intermediate": "中級",
+      "advanced": "上級"
+    }
+  },
+  "kaiju": {
+    "name": "ヴォルガス",
+    "parts": {
+      "head": "頭",
+      "crystal": "結晶",
+      "leftLeg": "左脚",
+      "rightLeg": "右脚",
+      "tail": "尾"
+    },
+    "attacks": {
+      "sweep": "薙ぎ払い",
+      "roar": "咆哮",
+      "beam": "熱線",
+      "throw": "投擲"
+    },
+    "hud": {
+      "name": "ヴォルガス  VORGAS",
+      "finalPhase": "最終フェーズ  {time}",
+      "down": "DOWN  {seconds}  ダメージ ×{scale}",
+      "partBroken": "{part}（破壊）",
+      "targeted": "TARGET  怪獣があなたを狙っています"
+    }
+  },
+  "maps": {
+    "island": "海岸と島",
+    "harbor": "港湾都市"
+  },
+  "objectives": {
+    "vorgasDefeat": "ヴォルガス撃破",
+    "label": {
+      "kill": "敵機撃墜",
+      "survive": "生存",
+      "rings": "リング通過",
+      "escort": "護衛",
+      "destroy": "目標破壊",
+      "kaiju": "怪獣撃退",
+      "speed": "速度"
+    },
+    "killTarget": {
+      "target": "的撃墜",
+      "drone": "ドローン撃墜",
+      "groundTarget": "地上目標撃墜",
+      "any": "目標撃墜"
+    },
+    "fail": {
+      "playerDown": "撃墜された",
+      "escortLost": "護衛対象を失った",
+      "timeUp": "時間切れ",
+      "kaijuReachedCity": "怪獣が街に到達した",
+      "outOfBounds": "戦域を離脱した"
+    },
+    "progressSeconds": "{label} {current} / {target} 秒",
+    "summarySeconds": "{label} {seconds} 秒"
+  },
+  "quality": {
+    "low": "低",
+    "medium": "中",
+    "high": "高",
+    "downgraded": "画質を下げました"
+  },
+  "weather": {
+    "time": {
+      "dawn": "早朝",
+      "day": "昼",
+      "evening": "夕方",
+      "night": "夜"
+    },
+    "sky": {
+      "clear": "快晴",
+      "overcast": "曇り",
+      "fog": "霧",
+      "rain": "雨"
+    },
+    "wind": {
+      "weak": "弱風",
+      "strong": "強風"
+    },
+    "label": "{time}・{sky}・{wind}"
+  },
+  "raid": {
+    "difficulty": {
+      "normal": "通常",
+      "hard": "高難度"
+    },
+    "briefing": {
+      "title": "ブリーフィング：ヴォルガス",
+      "lines": [
+        "結晶を壊すと熱線、尾は薙ぎ払い、頭は咆哮を封じる",
+        "脚を壊すと 15 秒ダウン（全部位のダメージ ×2）",
+        "ブレイクは 2 人で同じ部位を 3 秒以内に撃つ（その部位 ×3）"
+      ],
+      "skip": "スキップ",
+      "waitingSkip": "全員のスキップを待っています"
+    },
+    "phrases": {
+      "head": "頭を狙って",
+      "legs": "脚を狙って",
+      "crystal": "結晶を狙って",
+      "evade": "回避！"
+    },
+    "result": {
+      "difficulty": "難易度",
+      "clearTime": "クリア時間",
+      "elapsed": "経過時間",
+      "rewardAll": "報酬（全員）",
+      "damage": "与ダメージ {damage}",
+      "pilot": "パイロット",
+      "total": "合計",
+      "breaks": "ブレイク",
+      "respawns": "復帰"
+    }
+  },
+  "progress": {
+    "campaign": "{cleared}/{total} クリア",
+    "separator": "・",
+    "defense": "最高 {waves} 波",
+    "raid": "最速 {time}"
+  },
+  "campaign": {
+    "heading": "キャンペーン",
+    "balance": "残高",
+    "backToModes": "← モード選択",
+    "backToMissions": "← ミッション一覧",
+    "required": "必須",
+    "optional": "任意",
+    "reward": "報酬",
+    "unlockAfter": "{mission} クリアで解放",
+    "locked": "未解放",
+    "briefing": {
+      "objectives": "目標",
+      "changeAircraft": "機体変更",
+      "launch": "出撃",
+      "withPrevious": "＋ ",
+      "timeLimit": "制限時間",
+      "none": "なし",
+      "weather": "天候",
+      "rewardValue": "{credits}（S ×{scale}）",
+      "aircraft": "機体"
+    },
+    "result": {
+      "newGear": "ハンガーで新しい装備が買えます",
+      "toMissions": "ミッション一覧へ",
+      "retry": "もう一度",
+      "time": "時間",
+      "hitsTaken": "被弾",
+      "protectedBuildings": "守れた建物",
+      "rewardValue": "獲得 +{earned} / 残高 {balance}"
+    }
+  },
+  "hud": {
+    "timeLeft": "残り {time}",
+    "shotDown": "撃墜された",
+    "respawnIn": "{seconds} 秒後に復帰"
+  },
+  "title": {
+    "prompt": "タップ / Enter で開始",
+    "settings": "設定",
+    "loading": "読み込み中…"
+  },
+  "pause": {
+    "heading": "ポーズ",
+    "resume": "再開",
+    "photoMode": "フォトモード",
+    "allSettings": "すべての設定",
+    "abortMission": "ミッションを中断",
+    "toTitle": "タイトルへ"
+  },
+  "race": {
+    "hud": {
+      "missed": "リング未通過 +{seconds}秒",
+      "thinBonus": "細いリング −{seconds}秒"
+    },
+    "abort": "レースを中断",
+    "result": {
+      "toCourses": "コース一覧へ",
+      "ghostSaved": "ゴーストを保存",
+      "place": "ベスト {place} 位",
+      "run": "走行",
+      "penalty": "ペナルティ",
+      "penaltyValue": "+{seconds} 秒（未通過 {missed}）",
+      "bonus": "ボーナス",
+      "bonusValue": "−{seconds} 秒（細いリング {thin}）",
+      "gold": "ゴールド",
+      "best": "ベスト",
+      "bestValue": "{time}（{aircraft}）"
+    },
+    "kind": {
+      "normal": "通常",
+      "boost": "ブースト（AB {seconds} 秒無料）",
+      "thin": "細い（−{seconds} 秒）",
+      "checkpoint": "チェックポイント（飛ばせない）"
+    },
+    "select": {
+      "heading": "リングレース",
+      "bestTimes": "ベスト {count}",
+      "start": "スタート",
+      "notRun": "未走行",
+      "map": "マップ",
+      "rings": "リング",
+      "ringCount": {
+        "other": "{count} 個"
+      },
+      "bestRank": "最高ランク",
+      "ghost": "ゴースト",
+      "ghostValue": "あり（{time}）",
+      "noRecords": "まだ記録がありません"
+    }
+  },
+  "modes": {
+    "heading": "モード選択",
+    "backToTitle": "← タイトルへ",
+    "play": "遊ぶ",
+    "manage": "管理",
+    "players": {
+      "solo": "ソロ",
+      "versus": "2〜4 人",
+      "party": "1〜4 人"
+    },
+    "campaign": {
+      "label": "キャンペーン",
+      "note": "ミッションを順にクリア"
+    },
+    "free": {
+      "label": "フリーフライト",
+      "noteOn": "敵機と空戦・自由に飛ぶ",
+      "noteOff": "敵なしで自由に飛ぶ"
+    },
+    "race": {
+      "label": "リングレース",
+      "note": "リングを抜けるタイムアタック"
+    },
+    "pvp": {
+      "label": "PvP",
+      "note": "同じ空で撃ち合う"
+    },
+    "raid": {
+      "label": "レイド",
+      "note": "巨大怪獣ヴォルガスを撃破"
+    },
+    "defense": {
+      "label": "防衛戦",
+      "note": "基地を 10 波の敵から守る"
+    },
+    "hangar": {
+      "label": "ハンガー"
+    },
+    "replay": {
+      "label": "リプレイ"
+    },
+    "ranking": {
+      "label": "ランキング"
+    },
+    "settings": {
+      "label": "設定"
+    },
+    "info": {
+      "label": "情報"
+    },
+    "dialog": {
+      "back": "戻る",
+      "map": "マップ",
+      "weather": "天候",
+      "time": "時間",
+      "timeFixed": "止める",
+      "timeFlow": "流れる",
+      "launch": "出撃",
+      "coop": "協力 2〜4人",
+      "solo": "ソロで出撃"
+    },
+    "raidDialog": {
+      "title": "レイド：ヴォルガス",
+      "body": "1 人は難易度を選んですぐ出撃（高難度は HP ×1.4・予兆が短い・最終フェーズ 3.5 分・報酬 ×1.8）。2〜4 人は部屋を作るか、部屋コードで参加します（全員が同じチーム。難易度はホストが選ぶ）。",
+      "difficulty": "難易度（ソロ）"
+    },
+    "defenseDialog": {
+      "body": "基地の司令部を全 10 波の敵から守ります。波の間に基地の上を低く遅く（高度 300m 以下・速度 150 以下）通ると補給。高難度は敵 ×1.3・司令部 HP 1500。2〜4 人は部屋を作るか、部屋コードで参加します（全員が同じチーム）。",
+      "difficulty": "難易度"
+    }
+  },
+  "language": {
+    "label": "言語",
+    "inFlight": "飛行中は切り替えられません。メニューから切り替えてください"
+  },
+  "skins": {
+    "color": {
+      "slateBlue": "灰青",
+      "vermilion": "朱",
+      "silver": "銀灰",
+      "blue": "青",
+      "olive": "オリーブ",
+      "gold": "金",
+      "gunmetal": "ガンメタル",
+      "white": "白",
+      "black": "黒",
+      "navy": "紺",
+      "sand": "砂",
+      "purple": "紫"
+    },
+    "pattern": {
+      "solid": "単色",
+      "camoForest": "森林迷彩",
+      "camoDesert": "砂漠迷彩",
+      "camoOcean": "海洋迷彩",
+      "twoTone": "2 トーン",
+      "splitter": "スプリッター",
+      "stripe": "ストライプ",
+      "metal": "金属地"
+    },
+    "decal": {
+      "chevron": "シェブロン",
+      "hexring": "六角環",
+      "diamonds": "三連ダイヤ",
+      "star": "星",
+      "bolt": "稲妻",
+      "bird": "燕",
+      "number": "数字",
+      "checker": "チェッカー",
+      "claws": "爪痕",
+      "compass": "方位星"
+    },
+    "unlock": {
+      "allMissionsS": "全ミッション S で解放",
+      "pvpKills": {
+        "other": "PvP で {count} 撃墜で解放（{have}/{count}）"
+      },
+      "allRacesA": "レース 4 コース全部 A 以上で解放"
+    }
+  },
+  "upgrades": {
+    "engine": {
+      "label": "エンジン",
+      "effect": "最高速・加速・AB 持続"
+    },
+    "airframe": {
+      "label": "機体",
+      "effect": "HP・旋回"
+    },
+    "weapons": {
+      "label": "武装",
+      "effect": "機銃ダメージ・ミサイル +1"
+    },
+    "avionics": {
+      "label": "電子装備",
+      "effect": "ロック時間・索敵距離・フレア +1"
+    }
+  },
+  "touch": {
+    "mode": {
+      "auto": "自動",
+      "on": "表示",
+      "off": "非表示"
+    },
+    "label": "タッチ"
+  },
+  "assist": {
+    "aim": "エイムアシスト",
+    "camera": "ターゲットカメラ",
+    "hud": "HUD 補助"
+  },
+  "save": {
+    "resetNotice": "セーブデータを初期化しました",
+    "close": "閉じる",
+    "heading": "セーブデータ",
+    "copy": "セーブデータをコピー",
+    "paste": "貼り付けて復元",
+    "restore": "復元する",
+    "cancel": "やめる",
+    "delete": "セーブデータを削除",
+    "deleteWarning": "進み具合・クレジット・設定がすべて消えます。元に戻せません",
+    "deleteServerToo": "サーバーのバックアップも削除する",
+    "serverDeleted": "サーバーのバックアップも消えます",
+    "serverKept": "サーバーのバックアップは残ります（次の同期でサーバーのセーブを読み込みます）",
+    "serverKeptOffline": "サーバーのバックアップは残ります（次の同期でサーバーのセーブを読み込みます）。削除はオンライン連携中のときだけ選べます",
+    "confirmDelete": "削除する",
+    "copyFailed": "コピーできませんでした。下の文字列を選んでコピーしてください",
+    "copied": "コピーしました。新しい端末で「貼り付けて復元」に貼り付けてください",
+    "pasteHint": "コピーした文字列を貼り付けて「復元する」を押してください（今のデータは上書きされます）",
+    "restored": "復元しました",
+    "restoreFailed": "読み込めませんでした。文字列がすべて貼り付けられているか確かめてください",
+    "deletingServer": "サーバーのバックアップを削除中…",
+    "deleteServerFailed": "サーバーのバックアップを削除できませんでした（セーブデータは消していません）: {error}"
+  },
+  "controls": {
+    "sensitivity": "スティック感度",
+    "deadzone": "デッドゾーン（タッチ）",
+    "invertPitch": "ピッチ反転",
+    "autoLevel": "オートレベル",
+    "swapSides": "左右入替（タッチ）",
+    "vibration": "振動",
+    "vibrationUnsupported": "振動（Android のみ。この端末は非対応）",
+    "buttonSize": "ボタンの大きさ",
+    "keys": "キー割当",
+    "buttonSizes": {
+      "small": "小",
+      "medium": "中",
+      "large": "大"
+    },
+    "actions": {
+      "pitchDown": "機首下げ",
+      "pitchUp": "機首上げ",
+      "rollLeft": "左ロール",
+      "rollRight": "右ロール",
+      "yawLeft": "左ヨー",
+      "yawRight": "右ヨー",
+      "throttleUp": "スロットル +",
+      "throttleDown": "スロットル −",
+      "fire": "機銃",
+      "missile": "ミサイル",
+      "afterburner": "アフターバーナー",
+      "flare": "フレア"
+    },
+    "heading": "操作",
+    "keyName": {
+      "shiftRight": "右Shift",
+      "controlRight": "右Ctrl",
+      "altRight": "右Alt"
+    },
+    "otherActions": {
+      "targetNext": "ターゲット切替",
+      "cameraToggle": "カメラ切替",
+      "rocket": "ロケット",
+      "bomb": "爆弾",
+      "debugToggle": "デバッグ表示",
+      "hudToggle": "HUD 表示"
+    },
+    "pressKey": "キーを押す…（Esc で取消）",
+    "conflict": "⚠ {names}と重複",
+    "listSeparator": "・",
+    "resetKeys": "初期の割当に戻す"
+  },
+  "settings": {
+    "enemies": "敵",
+    "difficulty": "難易度",
+    "quality": "画質",
+    "nightHudDim": "夜の HUD 減光",
+    "back": {
+      "title": "← タイトルへ",
+      "modeSelect": "← モード選択へ",
+      "pause": "← ポーズへ",
+      "default": "← 戻る"
+    },
+    "volume": {
+      "master": "マスター",
+      "sfx": "効果音",
+      "bgm": "BGM",
+      "aria": "{name}の音量"
+    },
+    "title": "設定",
+    "tab": {
+      "display": "表示",
+      "sound": "音",
+      "controls": "操作",
+      "game": "ゲーム",
+      "data": "データ"
+    }
+  },
+  "mobile": {
+    "exitFullscreen": "全画面解除",
+    "fullscreen": "全画面",
+    "rotate": "画面を横にしてください"
+  },
+  "pilot": {
+    "name": "パイロット名",
+    "registerHint": {
+      "other": "{count} 文字まで。リザルトとタイトルに表示します（空なら {default}）"
+    },
+    "submit": "決定",
+    "rename": "パイロット名を変更",
+    "newName": "新しいパイロット名",
+    "renameHint": {
+      "other": "{count} 文字まで（空なら {default}）"
+    },
+    "confirmRename": "変更する",
+    "current": "今の名前: {name}",
+    "renamed": "パイロット名を「{name}」に変更しました",
+    "renamedWithExtra": "{done}。{extra}"
+  },
+  "hangar": {
+    "back": "← 戻る",
+    "tab": {
+      "perf": "性能",
+      "paint": "塗装"
+    },
+    "upgradesHeading": "強化（この機体だけ）",
+    "confirmBuy": "{name} を {price} で購入しますか？",
+    "bought": "{name} を購入しました",
+    "confirmUpgrade": "{price} で強化しますか？",
+    "balance": "残高 {credits}",
+    "selected": "出撃機",
+    "owned": "所持",
+    "payload": "ミサイル {missiles} / ロケット {rockets} / 爆弾 {bombs} / フレア {flares}",
+    "buy": "購入する {price}",
+    "locked": "未解放",
+    "stat": {
+      "speed": "速度",
+      "turn": "旋回",
+      "durability": "耐久",
+      "payload": "積載"
+    },
+    "upgrade": "強化する {price}",
+    "cancel": "やめる",
+    "confirm": "購入する"
+  },
+  "paint": {
+    "slot": {
+      "wing": "主翼",
+      "fin": "垂直尾翼"
+    },
+    "patterns": "パターン（全機体共通で解放）",
+    "color": {
+      "base": "基本色",
+      "accent": "アクセント",
+      "marking": "マーキング"
+    },
+    "decals": "デカール（500 CR・全機体共通）",
+    "none": "なし",
+    "slider": {
+      "x": "位置（横）",
+      "y": "位置（縦）",
+      "size": "大きさ",
+      "rotation": "回転"
+    },
+    "number": "機体番号",
+    "random": "ランダム",
+    "bought": "{name} を購入しました",
+    "owned": "所持",
+    "locked": "未解放",
+    "buy": "{name} を購入 {price}",
+    "trialNotice": "未購入のものは試し塗りだけです（購入すると保存されます）"
+  },
+  "replay": {
+    "modes": {
+      "free": "フリーフライト",
+      "mission": "キャンペーン",
+      "raid": "ソロレイド",
+      "race": "リングレース",
+      "defense": "防衛戦"
+    },
+    "camera": {
+      "follow": "追従",
+      "free": "自由",
+      "enemy": "敵視点",
+      "cinema": "シネマ",
+      "noTarget": "敵なし"
+    },
+    "title": {
+      "raidNormal": "ヴォルガス",
+      "raidHard": "ヴォルガス（高難度）",
+      "race": "リングレース",
+      "defenseHard": "{map}・高難度"
+    },
+    "outcome": {
+      "aborted": "中断",
+      "success": "成功 {rank}",
+      "failed": "失敗",
+      "defended": "防衛成功",
+      "fallen": {
+        "other": "陥落（{count} 波）"
+      },
+      "abortedWaves": {
+        "other": "中断（{count} 波）"
+      },
+      "kills": {
+        "other": "撃墜 {count}"
+      }
+    },
+    "bar": {
+      "back10": "10 秒戻る（←）",
+      "playPause": "再生 / 一時停止（Space）",
+      "forward10": "10 秒進む（→）",
+      "speed": "速さ（↑ ↓）",
+      "seek": "シーク",
+      "camera": "カメラ（C）",
+      "nextTarget": "次の敵",
+      "nextTargetWith": "次の敵（{target}）",
+      "photo": "撮影",
+      "photoHint": "フォトモード（P）",
+      "hideUi": "UI を隠す",
+      "hideUiHint": "UI を隠す（H）",
+      "exit": "一覧へ",
+      "exitHint": "一覧へ戻る（Esc）"
+    },
+    "status": {
+      "startMismatch": "記録の始まりが今の版と違います",
+      "seeking": "計算中…",
+      "ended": "終了"
+    },
+    "save": {
+      "open": "リプレイを保存",
+      "nameLabel": "リプレイの名前",
+      "save": "保存"
+    },
+    "msg": {
+      "fullDelete": "保存は {max} 本までです。不要なものを削除してください",
+      "saved": "保存しました",
+      "confirmDelete": "「{name}」を削除しますか？",
+      "noStorage": "このブラウザではリプレイを保存できません（IndexedDB が使えません）",
+      "opFailed": "保存の操作に失敗しました",
+      "corrupt": "このリプレイは壊れていて再生できません",
+      "full": "保存は {max} 本までです",
+      "imported": "読み込みました",
+      "badFile": "リプレイのファイルとして読めませんでした",
+      "saveFailed": "保存できませんでした",
+      "fullList": "保存は {max} 本までです（一覧で削除できます）",
+      "notFound": "記録が見つかりませんでした",
+      "savedCount": "保存しました（{count} / {max}）"
+    },
+    "list": {
+      "heading": "リプレイ",
+      "back": "← モード選択",
+      "import": "ファイルを読み込む",
+      "usage": "保存 {saved} / {savedMax}（{savedSize}）・自動 {auto} / {autoMax}（{autoSize}）",
+      "empty": "まだリプレイがありません。シングルプレイで飛ぶと直近 10 本が自動で残ります。",
+      "kindSaved": "保存",
+      "kindAuto": "自動",
+      "factMode": "モード",
+      "modeValue": "{mode}・{title}",
+      "factDate": "日付",
+      "factLength": "時間",
+      "factResult": "結果",
+      "factAircraft": "機体",
+      "factPilot": "パイロット",
+      "factSize": "大きさ",
+      "oldVersion": "古い版の記録です。今の版では同じように再現できないことがあります。",
+      "play": "再生",
+      "saveAs": "名前を付けて保存",
+      "rename": "名前を変更",
+      "export": "書き出す",
+      "delete": "削除"
+    }
+  },
+  "photo": {
+    "presets": {
+      "front": "正面",
+      "side": "真横",
+      "rearHigh": "後方上",
+      "wingtip": "翼端",
+      "low": "見上げ",
+      "top": "俯瞰"
+    },
+    "filters": {
+      "none": "なし",
+      "film": "フィルム",
+      "mono": "モノクロ",
+      "sepia": "セピア",
+      "punch": "高コントラスト"
+    },
+    "resolution": {
+      "screen": "画面サイズ",
+      "double": "2 倍"
+    },
+    "grade": {
+      "exposure": "露出",
+      "contrast": "コントラスト",
+      "saturation": "彩度",
+      "vignette": "ビネット",
+      "grain": "グレイン",
+      "temperature": "色温度"
+    },
+    "show": {
+      "touch": "タッチ操作",
+      "aircraft": "機体",
+      "enemies": "敵・怪獣",
+      "effects": "エフェクト"
+    },
+    "tabs": {
+      "camera": "カメラ",
+      "grade": "画面",
+      "show": "表示",
+      "weather": "天候",
+      "shot": "撮影"
+    },
+    "camera": {
+      "angle": "角度",
+      "reset": "リセット",
+      "fov": "画角",
+      "roll": "ロール",
+      "focus": "フォーカス",
+      "distance": "距離",
+      "blur": "ボケ",
+      "blurNote": "ボケは画質「高」のみ"
+    },
+    "gradeTab": {
+      "filter": "フィルター",
+      "reset": "リセット",
+      "note": "露出以外は画質「中」以上"
+    },
+    "toolbar": {
+      "hideUi": "UI を隠す",
+      "close": "閉じる ✕",
+      "shutter": "撮影",
+      "step": "コマ送り ▶|",
+      "weatherRestore": "元に戻す",
+      "hour": "時刻",
+      "watermark": "透かし",
+      "shoot": "撮影"
+    },
+    "toast": {
+      "shared": "共有しました",
+      "saved": "保存しました",
+      "failed": "保存できませんでした"
+    }
+  },
+  "online": {
+    "heading": "オンライン連携",
+    "toggle": "オンライン連携",
+    "spamHint": "メールが届かない場合は迷惑メールフォルダを確認してください",
+    "standaloneHint": "ホーム画面のアプリではメールのリンクは使えません。コードを入力してください",
+    "state": {
+      "signedOut": "未連携",
+      "pending": "承認待ち",
+      "linked": "連携中",
+      "error": "エラー"
+    },
+    "status": "状態: {state}",
+    "statusOff": "状態: {state}（OFF: 送信・同期・ランキングを停止中）",
+    "pending": {
+      "rejected": "【承認待ち】管理者に承認されませんでした。必要なら管理者に連絡してください（ログイン中: {email}）",
+      "joinError": "【承認待ち】{reason}（ログイン中: {email}）",
+      "waiting": "【承認待ち】管理者が承認すると遊べます。承認されると自動で「連携中」に変わります（ログイン中: {email}）",
+      "notYet": "{text}（まだです）"
+    },
+    "emailPlaceholder": "メールアドレス",
+    "sendCode": "コードを送る",
+    "signIn": "ログイン",
+    "reenterEmail": "メールを入れ直す",
+    "recheck": "承認を再確認",
+    "namePlaceholder": "表示名（1〜16 文字。ランキングに出ます）",
+    "saveName": "表示名を保存",
+    "signOut": "ログアウト",
+    "checkEmail": "メールアドレスを確かめてください",
+    "sending": "送信中…",
+    "codeSent": "{email} にコードを送りました。メールのコードを入力してください",
+    "codeSentLink": "{email} にコードを送りました。メールのコードを入力してください（メールのリンクを開いても連携できます）",
+    "verifying": "確認中…",
+    "nameInvalid": "表示名は 1〜16 文字で入力してください",
+    "nameSaved": "表示名を保存しました",
+    "signedOut": "ログアウトしました（このページのセーブはそのまま残ります）",
+    "rename": {
+      "saved": "サーバーの表示名も変更しました",
+      "failed": "サーバーの表示名は変更できませんでした（次にオンライン連携したときに変更します）",
+      "whenEnabled": "サーバーの表示名はオンライン連携を ON にしたときに変更します"
+    },
+    "unnamed": "（名前なし）",
+    "error": {
+      "network": "サーバーにつながりません。通信を確かめてください（ゲームはこのまま遊べます）",
+      "auth": "ログインが切れました。もう一度ログインしてください",
+      "denied": "サーバーに操作を拒否されました（権限エラー）。ログインし直しても続くときは管理者に連絡してください",
+      "signup": "このメールは登録できません。管理者に連絡してください",
+      "invalid": "送った内容がサーバーに受け付けられませんでした",
+      "rate": "短い間に送りすぎました。少し待ってからもう一度",
+      "conflict": "サーバーのデータが先に変わっていました",
+      "code": "コードが違うか、期限が切れています。もう一度コードを送ってください",
+      "unknown": "うまくいきませんでした。少し待ってからもう一度"
+    },
+    "reason": {
+      "network": "通信エラー",
+      "auth": "ログインが確立していない",
+      "denied": "サーバーが拒否（権限・RLS）",
+      "signup": "登録できないメール",
+      "invalid": "内容が受け付けられない",
+      "rate": "送りすぎ",
+      "conflict": "競合",
+      "code": "コードの誤り",
+      "unknown": "不明なエラー"
+    },
+    "reasonDetail": "{reason} / {detail}",
+    "joinFailure": "申請の送信に失敗しました（理由: {reason}）。「承認を再確認」で送り直します",
+    "code": {
+      "placeholder": "メールに届いたコードを入力",
+      "empty": "コードを入力してください",
+      "short": "コードの桁が足りません（{min}〜{max} 桁）",
+      "mismatch": "コードが違います。メールのコードを確かめてください",
+      "expired": "コードの期限が切れました。コードを送り直してください",
+      "attempts": "試した回数が多すぎます。少し待ってからもう一度",
+      "network": "サーバーにつながりません。通信を確かめてください",
+      "unknown": "ログインできませんでした。少し待ってからもう一度"
+    }
+  },
+  "ranking": {
+    "title": "ランキング",
+    "kind": {
+      "race": "レース",
+      "raid": "レイド",
+      "defense": "防衛戦"
+    },
+    "course": "コース",
+    "aircraft": "機体",
+    "difficulty": "難易度",
+    "map": "マップ",
+    "note": "メンバー内のランキング（5 分ごとに更新）。P2P の協力は対象外の参考記録です",
+    "back": "← モード選択",
+    "loading": "読み込み中…",
+    "empty": "まだ記録がありません",
+    "defenseValue": {
+      "other": "{count} 波・司令部 {hq}%"
+    },
+    "selfPlace": {
+      "other": "あなたの順位: {place} 位 / {count} 人"
+    },
+    "selfNone": "あなたの記録はまだありません（上位 100 位以内に入ると表示）"
+  },
+  "sync": {
+    "title": "どちらのセーブを使いますか？",
+    "text": "この端末とサーバーの両方で、前回の同期の後にセーブが変わっています。使う方を選んでください。選ばなかった方は上書きされます。",
+    "local": "この端末",
+    "server": "サーバー",
+    "newer": "{title}（新しい）",
+    "pilot": "パイロット: {name}",
+    "updated": "更新: {time}",
+    "later": "あとで",
+    "useLocal": "この端末のセーブ",
+    "useServer": "サーバーのセーブ",
+    "pilotUnset": "（未設定）",
+    "cleared": "クリア {count} 件",
+    "unknownTime": "不明",
+    "event": {
+      "pulled": "サーバーのセーブを読み込みました",
+      "tooNew": "サーバーのセーブが新しい版です。ページを読み込み直してアプリを更新してください",
+      "tooLarge": "セーブが大きすぎてバックアップできません（256KB まで）",
+      "failed": "セーブを同期できませんでした。次の保存か起動のときにもう一度試します",
+      "later": "セーブの同期を保留しました。次の起動のときにもう一度聞きます"
+    }
+  },
+  "members": {
+    "heading": "メンバー管理",
+    "done": {
+      "approve": "承認しました（相手の画面は 5 分以内に自動で「連携中」に変わります）",
+      "reject": "却下しました",
+      "revoke": "取り消しました（相手のログインのトークンが更新されるまで、最大 1 時間は使えることがあります）"
+    },
+    "result": "{name}: {text}",
+    "confirmTitle": "{name} の承認を取り消しますか？",
+    "confirmText": "取り消すと、この人はクラウドセーブとランキングを使えなくなります（相手の端末のセーブは残ります）。もう一度承認するにはダッシュボードの SQL が要ります。",
+    "cancel": "やめる",
+    "confirmRevoke": "取り消す",
+    "reload": "一覧を更新",
+    "self": "{name}（あなた）",
+    "action": {
+      "approve": "承認",
+      "reject": "却下",
+      "revoke": "取り消し"
+    },
+    "pending": "承認待ち（{count}）",
+    "approved": "承認済み（{count}）",
+    "empty": "ありません",
+    "loading": "読み込み中…"
+  },
+  "info": {
+    "title": "情報",
+    "back": "← モード選択へ",
+    "tab": {
+      "version": "版",
+      "changes": "更新履歴",
+      "licenses": "ライセンス",
+      "data": "データの扱い"
+    },
+    "version": "バージョン {version}",
+    "autoUpdate": "更新は自動で届き、次に起動したときに入ります。",
+    "environment": "動作環境",
+    "licensesIntro": "このゲームは次のオープンソースのライブラリ・素材を使っています（ビルド時に集計）。",
+    "unknownLicense": "不明",
+    "fontName": "Rajdhani（Google Fonts）"
+  },
+  "dataPolicy": {
+    "save": {
+      "title": "セーブはこのブラウザの中",
+      "body": "進み具合・クレジット・機体・設定はこのブラウザの localStorage に、リプレイは IndexedDB に保存します。オンライン連携をしなければ外部のサーバーには送りません。ブラウザのデータを消すと消えるので、設定の「データ」→「セーブデータ」でコピーを取れます。"
+    },
+    "online": {
+      "title": "オンライン連携は任意",
+      "body": "設定の「データ」→「オンライン連携」でログインしたときだけサーバー（Supabase）を使います。あなたについての情報はメールアドレス（ログインにだけ使い、ほかの人には見えません）と表示名（ランキングに出ます）だけです。ほかに送るのはセーブのバックアップとレース / レイド / 防衛戦の記録です。連携を OFF にすると送信と同期を止めます。"
+    },
+    "p2p": {
+      "title": "マルチプレイ（P2P）",
+      "body": "PvP・協力プレイは端末どうしの直接通信（WebRTC / PeerJS）でゲームの状態をやり取りします。直接つながるため、同じ部屋の相手にはあなたの IP アドレス（おおよその地域や回線の会社が分かることがあります）が見えます。部屋コードは知っている人とだけ共有してください。接続の仲介に PeerJS の公開サーバー（0.peerjs.com）を使います。"
+    },
+    "fonts": {
+      "title": "フォント",
+      "body": "見出しのフォント（Rajdhani）を Google Fonts から読み込みます。"
+    },
+    "ads": {
+      "title": "広告・解析",
+      "body": "広告・アクセス解析は使っていません。"
+    }
+  },
+  "compat": {
+    "env": {
+      "ios": "iOS / iPadOS 16.4 以降の Safari",
+      "android": "Chrome 105 以降",
+      "pcPlatform": "パソコン",
+      "pc": "Chrome / Edge 105 以降・Safari 16.4 以降・Firefox 121 以降"
+    },
+    "note": "WebGL 2 が使えること（ブラウザのハードウェア アクセラレーションを ON）。推奨はノートパソコンの内蔵 GPU 以上・2020 年以降のスマホ",
+    "environment": "動作環境",
+    "reload": "再読み込み",
+    "noWebgl": {
+      "title": "3D の描画（WebGL）が使えません",
+      "body": "このブラウザ・端末では WebGL が無効になっているため、SkyRaid を起動できません。ブラウザの設定でハードウェア アクセラレーション（GPU）を ON にするか、ブラウザを最新にしてから再読み込みしてください。"
+    },
+    "noWebgl2": {
+      "title": "WebGL 2 に対応していません",
+      "body": "このブラウザは WebGL 2 に対応していないため、SkyRaid を起動できません。ブラウザ（iPhone / iPad は iOS）を最新にするか、下の環境のブラウザで開いてください。"
+    },
+    "startFailed": {
+      "title": "起動できませんでした",
+      "body": "このブラウザでは起動中にエラーが起きました。ブラウザを最新にしてから再読み込みするか、下の環境のブラウザで開いてください。"
+    },
+    "legacy": {
+      "title": "このブラウザは古いため起動できません",
+      "body": "ブラウザ（iPhone / iPad は iOS）を最新にするか、下の環境のブラウザで開いてください。"
+    },
+    "contextLost": "画面の描画を復帰できませんでした。再読み込みしてください",
+    "storage": "この環境ではデータを保存できません（プライベートブラウズ・容量不足など）。遊べますが、進み具合・設定は閉じると消えます"
+  },
+  "context": {
+    "reload": "再読み込み",
+    "close": "閉じる"
+  },
+  "shell": {
+    "update": "新しいバージョンがあります（次回の起動で更新）",
+    "updateNow": "今すぐ更新",
+    "close": "閉じる",
+    "installHint": "共有ボタン →「ホーム画面に追加」で全画面で遊べます"
+  },
+  "lazy": {
+    "offline": "オフラインのため読み込めませんでした。通信できるところで再読み込みしてください",
+    "stale": "読み込めませんでした。新しいバージョンが公開された可能性があります（再読み込みで最新にします）",
+    "loading": "読み込み中…",
+    "reload": "再読み込み",
+    "close": "閉じる"
+  },
+  "defense": {
+    "icon": {
+      "hq": "司令部",
+      "radar": "レーダー",
+      "fuel": "燃料",
+      "aaa1": "対空1",
+      "aaa2": "対空2"
+    },
+    "hud": {
+      "skip": "スキップ (N)",
+      "supplyHint": "補給: 基地の上空を高度 {agl}m 以下・速度 {speed} 以下で通過",
+      "wavePrep": "WAVE {wave} / {total}  準備中",
+      "waveRemaining": "WAVE {wave} / {total}  残り {remaining}",
+      "nextWaveIn": "次の波まで {seconds} 秒",
+      "waiting": "待機中…",
+      "forecast": "次の波：{forecast}",
+      "forecastUnknown": "次の波：レーダー喪失のため不明",
+      "supplied": "補給済み"
+    },
+    "lost": {
+      "hq": "司令部が破壊された",
+      "radar": "レーダー喪失 — 敵の予告が出なくなる",
+      "fuel": "燃料タンク喪失 — 補給が半分になる",
+      "aaa1": "対空砲 1 喪失 — 支援が減る",
+      "aaa2": "対空砲 2 喪失 — 支援が減る"
+    },
+    "abort": "防衛戦を中断",
+    "flash": {
+      "incoming": "敵襲",
+      "clearSub": "補給して次の波に備えよ",
+      "facilityLost": "施設喪失",
+      "supplied": "補給完了",
+      "suppliedHalf": "燃料タンク喪失のため半分"
+    },
+    "outcome": {
+      "cleared": "防衛成功",
+      "fallen": "基地陥落"
+    },
+    "difficulty": {
+      "normal": "通常",
+      "hard": "高難度"
+    },
+    "result": {
+      "retry": "もう一度",
+      "toModeSelect": "モード選択へ",
+      "info": "{map}・{difficulty}",
+      "wavesCleared": "クリアした波",
+      "kills": "撃墜",
+      "hq": "司令部",
+      "facilities": "残った施設",
+      "wavePart": "波 {waves} × {per}",
+      "fullClear": "完全クリア +{credits}",
+      "allFacilities": "施設全残存 +{credits}",
+      "breakdown": "内訳",
+      "sep": "・",
+      "reward": "報酬",
+      "rewardValue": "獲得 +{earned} / 残高 {balance}",
+      "playerStats": "撃墜 {kills}・被撃墜 {deaths}"
+    },
+    "map": {
+      "island": "島（東岸の基地）",
+      "harbor": "港湾都市（港の基地）"
+    },
+    "dir": {
+      "ne": "北東",
+      "e": "東",
+      "se": "南東",
+      "sw": "南西",
+      "s": "南"
+    },
+    "forecast": {
+      "text": "{direction}から {list}",
+      "sep": "・",
+      "bomber": {
+        "other": "爆撃機 {count}"
+      },
+      "fighter": {
+        "other": "戦闘機 {count}"
+      },
+      "cruise": {
+        "other": "巡航ミサイル {count}"
+      }
+    }
+  },
+  "pvp": {
+    "table": {
+      "rank": "順位",
+      "pilot": "パイロット",
+      "kills": "撃墜",
+      "deaths": "被撃墜",
+      "accuracy": "命中率",
+      "streak": "連続"
+    },
+    "board": {
+      "remaining": "残り {time}"
+    },
+    "feed": {
+      "kill": "{killer} が {victim} を撃墜",
+      "crash": "{victim} が墜落"
+    },
+    "timeWarning": {
+      "other": "残り {count} 秒"
+    },
+    "menu": {
+      "noPause": "対戦中は一時停止できません（機体は飛び続けます）",
+      "noPauseRaid": "飛行中は一時停止できません。定型文を全員に送れます",
+      "leave": "退出する",
+      "continue": "続ける"
+    },
+    "phrase": {
+      "ready": "準備OK",
+      "wait": "ちょっと待って",
+      "rematch": "もう一戦",
+      "hello": "よろしく",
+      "nice": "ナイス！",
+      "thanks": "ありがとう"
+    },
+    "downed": {
+      "title": "撃墜されました",
+      "respawnIn": "復帰まで",
+      "by": "{killer} に撃墜された",
+      "crashed": "墜落"
+    },
+    "status": {
+      "invulnerable": "無敵 {seconds}",
+      "boosted": "初心者保護 HP+50%・MSL+2",
+      "sep": "　"
+    },
+    "reason": {
+      "score": "撃墜数に到達",
+      "time": "時間切れ",
+      "raidClear": "全員で怪獣を倒した（報酬は全員同じ）",
+      "raidFail": "怪獣が街に到達した（全員に 300 CR）",
+      "defenseClear": "全 10 波から基地を守り切った（報酬は全員同じ）",
+      "defenseFail": "司令部が破壊された（クリアした波 × 300 CR）"
+    },
+    "title": {
+      "raidClear": "ヴォルガス撃破",
+      "raidFail": "作戦失敗",
+      "draw": "引き分け",
+      "win": "勝利",
+      "lose": "敗北",
+      "over": "終了"
+    },
+    "result": {
+      "protected": "守れた建物 {percent}%",
+      "team": "チーム {team}  {score}",
+      "kills": {
+        "other": "{count} 撃墜"
+      },
+      "map": "マップ",
+      "killsAll": "撃墜（全員）",
+      "rewardAll": "報酬（全員）",
+      "mvp": {
+        "other": "{name}（{count} 撃墜）"
+      },
+      "none": "なし",
+      "againWait": "全員が「もう一度」を押すとロビーへ戻ります（{pressed} / {total}）",
+      "you": "{name}（あなた）"
+    }
+  },
+  "net": {
+    "reconnecting": "接続が途切れました。再接続しています…",
+    "reconnectingLeft": "接続が途切れました。再接続しています…（残り {seconds} 秒）",
+    "hostLeft": "ホストが切断しました",
+    "lost": "接続が切れました（再接続できませんでした）",
+    "playerAway": "{name} の接続が切れました（再接続を待っています）",
+    "playerBack": "{name} が戻りました",
+    "playerLeft": "{name} が離脱しました",
+    "joinError": {
+      "notFound": "その部屋は見つかりません（コードを確かめてください）",
+      "full": "満員です（最大 4 人）",
+      "started": "すでに始まっています",
+      "version": "ホストとバージョンが違います（両方とも再読み込みしてください）",
+      "expired": "再接続の期限が過ぎました",
+      "timeout": "応答がありません（時間切れ）",
+      "network": "接続できませんでした",
+      "unsupported": "このブラウザは P2P 通信（WebRTC）に対応していません"
     }
   }
 }

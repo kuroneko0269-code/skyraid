@@ -1,3 +1,4 @@
+import { t } from '../core/i18n';
 import { APP_SHELL_CONFIG } from '../data/app';
 import { checkInstallHint } from '../core/install-hint';
 import { SKIP_WAITING_MESSAGE, watchForUpdate, type WorkerLike } from '../core/sw-update';
@@ -35,12 +36,12 @@ function registerServiceWorker(parent: HTMLElement): void {
 
 /** 更新は次回の起動で入る。「今すぐ更新」で待機中の SW に切り替えて読み込み直す */
 function showUpdateToast(parent: HTMLElement, worker: WorkerLike): void {
-  showToast('新しいバージョンがあります（次回の起動で更新）', {
+  showToast(t('shell.update'), {
     parent,
     seconds: APP_SHELL_CONFIG.updateToastSeconds,
     actions: [
       {
-        label: '今すぐ更新',
+        label: t('shell.updateNow'),
         kind: 'primary',
         onClick: () => {
           navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -49,7 +50,7 @@ function showUpdateToast(parent: HTMLElement, worker: WorkerLike): void {
           worker.postMessage(SKIP_WAITING_MESSAGE);
         },
       },
-      { label: '閉じる' },
+      { label: t('shell.close') },
     ],
   });
 }
@@ -67,9 +68,9 @@ function showInstallHint(parent: HTMLElement): void {
     standalone: isStandaloneDisplay(),
   };
   if (!checkInstallHint(env, storage)) return;
-  showToast('共有ボタン →「ホーム画面に追加」で全画面で遊べます', {
+  showToast(t('shell.installHint'), {
     parent,
     seconds: APP_SHELL_CONFIG.installHint.toastSeconds,
-    actions: [{ label: '閉じる' }],
+    actions: [{ label: t('shell.close') }],
   });
 }
