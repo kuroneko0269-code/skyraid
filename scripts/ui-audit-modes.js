@@ -38,7 +38,7 @@ const MODES = [
     go: async (p) => {
       await p.click('.mode-card[data-mode="race"]');
       await p.locator('.race-course').first().click();
-      await p.locator(`.ui-button.is-primary:text-is("${L('スタート')}")`).click();
+      await p.locator(`.ui-button.is-primary:text-is("${L('スタート')}"):visible`).click();
     },
   },
   {

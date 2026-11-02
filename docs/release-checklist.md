@@ -13,6 +13,7 @@ npm run unused                                 # 使われていないコード�
 npm run perf                                   # チャンク一覧・起動時間・Lighthouse（8-2。docs/perf.md）
 node scripts/ui-audit.js <出力先> --release [--browser all]  # 本番ビルド（dist）を _headers 付きで配信して点検（Playwright。8-3: エンジンの選択と互換性）
 npm run dev & node scripts/ui-audit.js <出力先> # 3 サイズの UI の点検（開発サーバー）
+# 8-4: どちらも --lang en で英語の画面を点検する（既定は日本語）
 ```
 
 `--release` は `.env` が無い（環境変数なし）状態でビルドした `dist` に対して走らせる。結果は `<出力先>/release.json` と各画面の PNG。
@@ -30,7 +31,7 @@ npm run dev & node scripts/ui-audit.js <出力先> # 3 サイズの UI の点検
 | 7 | PWA: オフライン起動 | `--release`: Service Worker がページを制御した後にオフラインにして読み直し → タイトル → フリーフライトまで | ✅ |
 | 8 | 環境変数なしのビルドでオンライン機能が隠れる | `--release`: 「ランキング」のタイル・設定の「オンライン連携」が無い、`dist/_headers` の connect-src に Supabase が無い、ページから Supabase・online-app への通信 0 件 | ✅ |
 | 9 | 情報画面 | `--release`: 版 0.8.0、更新履歴 0.8.0〜0.1.0、ライセンス 21 件（three・peerjs・@supabase/supabase-js・workbox・Rajdhani を含む。本文 20 件）が本番ビルドで生成されている。データの扱い（セーブはブラウザ内・オンライン連携は任意でメールと表示名だけ・P2P は相手に IP が見える） | ✅ |
-| 10 | UI の 3 サイズ | `scripts/ui-audit.js`（568×320・844×390・1920×1080） | ✅ 折り返し・はみ出し・重なり 0。568×320 のモード選択のカードの説明が「…」で切れる警告は 7-D からのもの |
+| 10 | UI の 3 サイズ | `scripts/ui-audit.js`（568×320・844×390・1920×1080） | ✅ 折り返し・はみ出し・重なり 0。568×320 のモード選択のカードの説明が「…」で切れる警告は 7-D からのもの。8-4: 英語（`--lang en`）でも同じ（同じ 4 枚の「…」の警告だけ） |
 | 11 | 依存の脆弱性 | `npm audit --omit=dev` | ✅ 配信する依存は 0 件（開発用の eslint・workbox-build に moderate 21 件。配信物には入らない） |
 | 12 | 時間の計測 | `npm run bench` | ✅ スキンの生成 最大 約 40ms（上限 50ms） |
 | 13 | 容量（8-2） | `npm run build` の 500KB 超の警告・`npm run perf` | ✅ 警告なし（最大 `three-webgl` 371KB）。タイトルまでの JS・CSS は gzip 393KB（8-1 は 412KB） |
