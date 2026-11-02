@@ -51,5 +51,7 @@ export function watchViewport(
   window.addEventListener('orientationchange', later);
   window.addEventListener('pageshow', later);
   window.visualViewport?.addEventListener('resize', later);
-  screen.orientation.addEventListener('change', later);
+  // 向きの API が無い環境（古いブラウザ・8-3 の compat）では resize と orientationchange だけ
+  const orientation: unknown = Reflect.get(screen, 'orientation');
+  if (orientation instanceof EventTarget) orientation.addEventListener('change', later);
 }
