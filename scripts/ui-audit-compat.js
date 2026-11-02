@@ -11,6 +11,7 @@
 //   noDeviceApi  全画面・画面の向きの固定・振動が無い（iOS Safari）→ 全画面のボタンが無く、振動は無効表示
 //   portrait     縦向きのスマホ（タッチ・幅 600px 以下）→ どの画面でも「画面を横にしてください」
 //   gamepad      ゲームパッドの接続 → 切断で入力が離れる（例外なし）
+import { AUDIT_LANG, L } from './audit-lang.js';
 import {
   VIEWPORT,
   dialogButton,
@@ -76,7 +77,7 @@ async function auditLegacy(browser, base, out) {
   const text = await noticeShown(page);
   r.steps.push(text ? `案内画面: ${text.replace(/\s+/g, ' ').slice(0, 60)}` : '案内画面が出ない ⚠');
   await page.screenshot({ path: `${out}/compat-legacy.png` });
-  r.ok = text.includes('古い');
+  r.ok = AUDIT_LANG === 'en' ? /too old/i.test(text) : text.includes('古い');
   // 構文エラーそのもの（想定どおり）は数えない
   log.errors = log.errors.filter((e) => !/SyntaxError|Unexpected token|unexpected token/i.test(e));
   return finish(r, page, log, context);
@@ -181,7 +182,7 @@ async function auditStorage(browser, base, out, kind) {
   await shown(page, '.title-screen');
   const toast = async () =>
     page
-      .locator('.app-toast', { hasText: '保存できません' })
+      .locator('.app-toast', { hasText: L('保存できません') })
       .first()
       .waitFor({ timeout: 8000 })
       .then(
@@ -196,7 +197,7 @@ async function auditStorage(browser, base, out, kind) {
   await shown(page, '.mode-select-screen');
   const told = await toast();
   await page.screenshot({ path: `${out}/compat-storage-${kind}.png` });
-  const count = await page.locator('.app-toast', { hasText: '保存できません' }).count();
+  const count = await page.locator('.app-toast', { hasText: L('保存できません') }).count();
   await page.keyboard.press('Escape');
   await page.click('.mode-tile[data-mode="replay"]');
   const replay = await page

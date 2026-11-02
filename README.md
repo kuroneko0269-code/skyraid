@@ -1,6 +1,12 @@
 # SkyRaid: Titan Skies
 
-ブラウザで動く3Dフライトシューティング。
+> **English:** SkyRaid: Titan Skies is a 3D arcade flight shooter that runs in your browser — no install needed.
+> Fly the campaign and ring races, battle friends in 2–4 player PvP, or team up (1–4 players) to defend your base
+> and take down the giant monster Vorgas. Works on PCs and phones (touch, keyboard and gamepad). The game is available in
+> English and Japanese: it follows your browser's language on first launch, and you can switch in
+> Settings → Display → Language. Requires a browser with WebGL 2 (iOS 16.4+, Chrome/Edge 105+, Safari 16.4+, Firefox 121+).
+
+ブラウザで動く3Dフライトシューティング。表示は日本語と英語（初回はブラウザの言語。設定 → 表示 → 言語で切り替え）。
 
 ```
 npm ci

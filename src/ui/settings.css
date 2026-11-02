@@ -67,3 +67,14 @@
     padding: var(--ui-space-2) var(--ui-space-3);
   }
 }
+
+/* 言語の切り替え（8-4）: 表示タブの先頭に 2 列ぶち抜きで置く */
+.language-settings {
+  grid-column: 1 / -1;
+}
+
+.settings-note {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--ui-text-dim);
+}

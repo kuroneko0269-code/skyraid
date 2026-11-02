@@ -10,6 +10,7 @@
 //   offline  環境変数なしのビルドでオンライン機能が隠れる（設定の「オンライン連携」・「ランキング」が無く、Supabase に通信しない）
 // Google Fonts はクラウドの環境から外へ出られないので、空の CSS を返す（CSP の判定はブラウザが先に行うので影響しない）。
 // 結果は <出力先>/release.json と各 PNG
+import { AUDIT_LANG, CONTEXT_LOCALE, L } from './audit-lang.js';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -29,7 +30,11 @@ import { serveDist } from './serve-dist.js';
 
 /** 初回起動（ストレージが空）: タイトル → パイロット名 → モード選択にチュートリアルの案内 */
 async function auditFirstRun(browser, base, out) {
-  const context = await browser.newContext({ viewport: VIEWPORT, hasTouch: true });
+  const context = await browser.newContext({
+    viewport: VIEWPORT,
+    hasTouch: true,
+    locale: CONTEXT_LOCALE,
+  });
   const log = await watch(context);
   const page = await context.newPage();
   const r = { ok: false, steps: [] };
@@ -52,7 +57,7 @@ async function auditFirstRun(browser, base, out) {
   await shown(page, '.mode-select-screen');
   const prompt = await page
     .locator('.mode-prompt:not([hidden])')
-    .filter({ hasText: 'チュートリアル' })
+    .filter({ hasText: L('チュートリアル') })
     .first()
     .isVisible();
   r.steps.push(prompt ? 'チュートリアルの案内が出る' : 'チュートリアルの案内が出ない');
@@ -75,7 +80,11 @@ async function auditFirstRun(browser, base, out) {
 
 /** PWA: manifest・アイコン・SW の登録・オフラインでの起動 */
 async function auditPwa(browser, base, out) {
-  const context = await browser.newContext({ viewport: VIEWPORT, hasTouch: true });
+  const context = await browser.newContext({
+    viewport: VIEWPORT,
+    hasTouch: true,
+    locale: CONTEXT_LOCALE,
+  });
   const log = await watch(context);
   const page = await context.newPage();
   const r = { ok: false, steps: [] };
@@ -169,7 +178,11 @@ async function auditPwa(browser, base, out) {
 
 /** 情報画面（本番ビルド）: 版・更新履歴・ライセンス一覧（ビルド時に生成）・データの扱い */
 async function auditInfo(browser, base, out) {
-  const context = await browser.newContext({ viewport: VIEWPORT, hasTouch: true });
+  const context = await browser.newContext({
+    viewport: VIEWPORT,
+    hasTouch: true,
+    locale: CONTEXT_LOCALE,
+  });
   const log = await watch(context);
   const page = await context.newPage();
   await page.goto(base);
@@ -189,16 +202,17 @@ async function auditInfo(browser, base, out) {
       ),
     };
   });
-  await page.click('.info-tabs .ui-seg-item:text-is("ライセンス")');
+  await page.click(`.info-tabs .ui-seg-item:text-is("${L('ライセンス', 'info.')}")`);
   await page.screenshot({ path: `${out}/release-info-licenses.png` });
-  await page.click('.info-tabs .ui-seg-item:text-is("データの扱い")');
+  await page.click(`.info-tabs .ui-seg-item:text-is("${L('データの扱い', 'info.')}")`);
   await page.screenshot({ path: `${out}/release-info-data.png` });
   const need = ['three', 'peerjs', '@supabase/supabase-js', 'workbox-precaching', 'Rajdhani'];
   const missing = need.filter((n) => !info.licenses.some((l) => l.startsWith(n)));
   const dataOk =
     info.data.includes('localStorage') &&
-    /メールアドレス[^。]*と表示名[^。]*だけ/.test(info.data) &&
-    /IP アドレス/.test(info.data);
+    (AUDIT_LANG === 'en'
+      ? /email address[^.]*display name/i.test(info.data) && /IP address/.test(info.data)
+      : /メールアドレス[^。]*と表示名[^。]*だけ/.test(info.data) && /IP アドレス/.test(info.data));
   const r = {
     ok: info.version.includes('0.8.0') && missing.length === 0 && info.withText > 0 && dataOk,
     steps: [
@@ -216,7 +230,11 @@ async function auditInfo(browser, base, out) {
 
 /** 環境変数なしのビルド: オンライン連携の UI が無く、Supabase に通信しない */
 async function auditOnlineHidden(browser, base, dir) {
-  const context = await browser.newContext({ viewport: VIEWPORT, hasTouch: true });
+  const context = await browser.newContext({
+    viewport: VIEWPORT,
+    hasTouch: true,
+    locale: CONTEXT_LOCALE,
+  });
   const log = await watch(context);
   const page = await context.newPage();
   await page.goto(base);
@@ -225,7 +243,7 @@ async function auditOnlineHidden(browser, base, dir) {
   const ranking = await page.locator('.mode-tile[data-mode="ranking"]').isVisible();
   await page.click('.mode-tile[data-mode="settings"]');
   await shown(page, '.settings-screen');
-  await page.click('.settings-tabs .ui-seg-item:text-is("データ")');
+  await page.click(`.settings-tabs .ui-seg-item:text-is("${L('データ', 'settings.')}")`);
   const online = await page.locator('.online-settings').count();
   const headers = readFileSync(join(dir, '_headers'), 'utf8');
   const supabaseCsp = /supabase/.test(headers);

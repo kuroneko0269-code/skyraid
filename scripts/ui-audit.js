@@ -18,15 +18,18 @@
 // 8-1: `--release` を付けると公開前の点検（scripts/ui-audit-release.js。本番ビルド dist を _headers 付きで配信して全モード）
 // 8-3: `--browser chromium|firefox|webkit|all`（既定 chromium）で Playwright のエンジンを選ぶ。all は 3 つを <出力先>/<エンジン>/ に。
 //      取得していないエンジンは飛ばして「取得できない」と出す（`npx playwright install firefox webkit` で取得）
+// 8-4: `--lang en` で英語の画面を点検する（ブラウザの言語を en-US に。既定は ja-JP。scripts/audit-lang.js）
+import { CONTEXT_LOCALE, L } from './audit-lang.js';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { pickBrowsers } from './audit-browsers.js';
+import { showSampleToasts } from './audit-helpers.js';
 
 const argv = process.argv.slice(2);
 const valueOf = (name) => {
   const i = argv.indexOf(name);
   return i >= 0 ? argv[i + 1] : undefined;
 };
-const VALUED = ['--browser'];
+const VALUED = ['--browser', '--lang'];
 const positional = argv.filter((a, i) => !a.startsWith('--') && !VALUED.includes(argv[i - 1]));
 const out = positional[0] ?? 'ui-audit';
 const base = positional[1] ?? 'http://localhost:5173/';
@@ -153,6 +156,7 @@ for (const size of SIZES) {
     hasTouch: size.touch,
     isMobile: false,
     deviceScaleFactor: 1,
+    locale: CONTEXT_LOCALE,
   });
   const page = await context.newPage();
   // PC の大きさは SwiftShader の描画が重いので、待ちを長めに
@@ -238,7 +242,7 @@ for (const size of SIZES) {
     ['ゲーム', 'game'],
     ['データ', 'data'],
   ]) {
-    await page.click(`.settings-tabs .ui-seg-item:text-is("${tab}")`);
+    await page.click(`.settings-tabs .ui-seg-item:text-is("${L(tab, 'settings.')}")`);
     await shot(`settings-${name}`, '.settings-screen');
   }
   await page.click('.settings-screen .menu-back');
@@ -260,24 +264,14 @@ for (const size of SIZES) {
     ['ライセンス', 'licenses'],
     ['データの扱い', 'data'],
   ]) {
-    await page.click(`.info-tabs .ui-seg-item:text-is("${tab}")`);
+    await page.click(`.info-tabs .ui-seg-item:text-is("${L(tab, 'info.')}")`);
     await shot(`info-${name}`, '.info-screen');
   }
   await page.click('.info-screen .menu-back');
   await flow('情報 → 戻る', await shownOnly('.mode-select-screen', '.info-screen'));
 
   // トースト（更新の知らせと同じ部品・ボタン 2 つ）
-  await page.evaluate(async () => {
-    const m = await import('/src/ui/toast.ts');
-    m.showToast('新しいバージョンがあります（次回の起動で更新）', {
-      seconds: 0,
-      actions: [{ label: '今すぐ更新', kind: 'primary' }, { label: '閉じる' }],
-    });
-    m.showToast('共有ボタン →「ホーム画面に追加」で全画面で遊べます', {
-      seconds: 0,
-      actions: [{ label: '閉じる' }],
-    });
-  });
+  await showSampleToasts(page);
   await shot('toast', '.toast-stack');
   await page.evaluate(() => document.querySelector('.toast-stack')?.replaceChildren());
 
@@ -291,7 +285,7 @@ for (const size of SIZES) {
   await page.keyboard.press('Escape');
   await shown('.pause-screen');
   await shot('pause', '.pause-screen');
-  await page.click('.pause-actions .ui-button:text-is("すべての設定")');
+  await page.click(`.pause-actions .ui-button:text-is("${L('すべての設定')}")`);
   await shown('.settings-screen');
   for (const [tab, name] of [
     ['表示', 'display'],
@@ -300,10 +294,10 @@ for (const size of SIZES) {
     ['ゲーム', 'game'],
     ['データ', 'data'],
   ]) {
-    await page.click(`.settings-tabs .ui-seg-item:text-is("${tab}")`);
+    await page.click(`.settings-tabs .ui-seg-item:text-is("${L(tab, 'settings.')}")`);
     await shot(`pause-settings-${name}`, '.settings-screen');
   }
-  await page.click('.settings-tabs .ui-seg-item:text-is("表示")');
+  await page.click(`.settings-tabs .ui-seg-item:text-is("${L('表示', 'settings.')}")`);
   const paused = await page.evaluate(() => document.documentElement.dataset.screen);
   await page.click('.settings-screen .menu-back');
   const back = await shownOnly('.pause-screen', '.settings-screen');
