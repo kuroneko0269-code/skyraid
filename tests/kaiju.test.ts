@@ -9,17 +9,20 @@ import { TargetField } from '../src/entities/target-balloon';
 
 import { DT, flat, landed, target } from './kaiju-helpers';
 
+/** 4 人の部位ダメージ倍率（8-6c で 1 → 1.5） */
+const S4 = K.partyDamageScale[3];
+
 describe('部位 HP と全体 HP', () => {
-  it('部位ダメージはその部位と全体の両方を減らす（4 人は倍率 1）', () => {
+  it('部位ダメージはその部位と全体の両方を減らす（4 人は倍率 partyDamageScale[3]。8-6c で 1 → 1.5）', () => {
     const { kaiju } = landed(4);
     const head = kaiju.part('head');
     const tail = kaiju.part('tail');
     head.damageBy(500, 0);
-    expect(head.partHp).toBe(head.partMaxHp - 500);
+    expect(head.partHp).toBeCloseTo(head.partMaxHp - 500 * S4, 6);
     expect(tail.partHp).toBe(tail.partMaxHp);
-    expect(kaiju.hp).toBe(kaiju.maxHp - 500);
+    expect(kaiju.hp).toBeCloseTo(kaiju.maxHp - 500 * S4, 6);
     tail.damageBy(300, 1);
-    expect(kaiju.hp).toBe(kaiju.maxHp - 800);
+    expect(kaiju.hp).toBeCloseTo(kaiju.maxHp - 800 * S4, 6);
   });
 
   it('部位 HP は全体 HP の割合で、壊れた部位にもダメージは入り全体だけが減る（部位 HP は戻らない）', () => {
@@ -32,7 +35,7 @@ describe('部位 HP と全体 HP', () => {
     const before = kaiju.hp;
     head.damageBy(200, 0);
     expect(head.partHp).toBe(0);
-    expect(kaiju.hp).toBe(before - 200);
+    expect(kaiju.hp).toBeCloseTo(before - 200 * S4, 6);
   });
 
   it('1 人のときは部位ダメージ ×partyDamageScale[0]、ダウン中は ×2', () => {
@@ -136,16 +139,16 @@ describe('フェーズ', () => {
   it('HP 70% でフェーズ 2（攻撃間隔 ×0.8）、40% でフェーズ 3（最終フェーズの制限時間が始まる）', () => {
     const { kaiju, ai } = landed(4);
     const max = kaiju.maxHp;
-    kaiju.part('crystal').damageBy(max * 0.29, 0);
+    kaiju.part('crystal').damageBy((max * 0.29) / S4, 0);
     expect(kaiju.phase).toBe(1);
-    kaiju.part('crystal').damageBy(max * 0.02, 0);
+    kaiju.part('crystal').damageBy((max * 0.02) / S4, 0);
     expect(kaiju.phase).toBe(2);
     expect(kaiju.finalRemaining).toBeNull();
     // 攻撃が終わった後の間隔
     ai.begin('throw', 0);
     for (let i = 0; i < 4 * 60 && kaiju.attack; i++) ai.step([], DT);
     expect(ai.cooldown).toBeCloseTo(A.intervalSeconds * K.phases.phase2IntervalScale, 6);
-    kaiju.part('crystal').damageBy(max * 0.3, 0);
+    kaiju.part('crystal').damageBy((max * 0.3) / S4, 0);
     expect(kaiju.phase).toBe(3);
     expect(kaiju.finalRemaining).toBe(K.phases.finalSeconds);
   });
@@ -198,11 +201,11 @@ describe('ブレイク', () => {
     expect(leg.breakTimer).toBe(K.break.seconds);
     const before = kaiju.hp;
     leg.damageBy(10, 2);
-    expect(before - kaiju.hp).toBeCloseTo(10 * K.break.damageScale, 6);
+    expect(before - kaiju.hp).toBeCloseTo(10 * K.break.damageScale * S4, 6);
     // ほかの部位には効かない
     const b2 = kaiju.hp;
     kaiju.part('tail').damageBy(10, 0);
-    expect(b2 - kaiju.hp).toBeCloseTo(10, 6);
+    expect(b2 - kaiju.hp).toBeCloseTo(10 * S4, 6);
     for (let i = 0; i < 5.1 * 60; i++) ai.step([], DT);
     expect(leg.breakTimer).toBe(0);
   });

@@ -151,3 +151,39 @@ export class LoiterBot {
     this.waypoint.fly(this.point);
   }
 }
+
+/**
+ * 戦域外の警告で戻る（人の動き。8-6b / 8-6c）: 境界の外に出たら島の上空へ向かい、境界の 600m 内側まで戻ったら離す。
+ * active が true の間は fly の操縦を使い、射撃しない
+ */
+export class BoundsGuard {
+  private readonly wp: WaypointBot;
+  private back = false;
+
+  constructor(
+    private readonly session: FlightSession,
+    private readonly boundary: {
+      readonly outside: boolean;
+      readonly map: { readonly radius: number };
+      distance(x: number, z: number): number;
+    },
+  ) {
+    this.wp = new WaypointBot(session);
+  }
+
+  get controls(): AircraftControls {
+    return this.wp.controls;
+  }
+
+  /** 戻っている最中か（毎ステップ呼ぶ） */
+  check(): boolean {
+    const p = this.session.aircraft.state.position;
+    const b = this.boundary;
+    if (b.outside) this.back = true;
+    else if (this.back && b.distance(p.x, p.z) < b.map.radius - 600) this.back = false;
+    if (this.back) this.wp.fly(ISLAND_CENTER_SKY);
+    return this.back;
+  }
+}
+
+const ISLAND_CENTER_SKY: Vec3 = { x: 0, y: 900, z: 0 };

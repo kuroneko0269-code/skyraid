@@ -93,10 +93,14 @@ export const ISLAND_PATROL = [
   { x: -2000, y: 900, z: 2000 },
 ] as const;
 
+/** M2 の敵機の HP の倍率（8-6c。120 → 72） */
+const M2_ENEMY_HP_SCALE = 0.6;
+
 /**
- * M2 初陣: 敵機 3 機を撃墜する。1 機ずつ 20 秒差で来る（2-6 の事前修正。それまでは開始時に 2 機同時）:
- * 開始時に北西（easy。4-7 の事前修正）、20 秒後に北東（easy。4-11 の事前修正）、40 秒後に北西（normal）。
- * 開始位置は起動位置と同じ島の南の沖合
+ * M2 初陣: 敵機 3 機を撃墜する。1 機ずつ来る（2-6 の事前修正。それまでは開始時に 2 機同時）:
+ * 開始時に北西、30 秒後に北東、60 秒後に北西。開始位置は起動位置と同じ島の南の沖合。
+ * 8-6c: 3 機とも easy（3 機目は normal だった）・HP ×0.6（120 → 72）・間隔 20 → 30 秒。初心者役のボットがミサイルありでも
+ * 8 回中 1 回しか成功しなかった（docs/decisions.md の 8-6c）
  */
 export const FIRST_SORTIE_MISSION: MissionDef = {
   id: 'first-sortie',
@@ -110,6 +114,7 @@ export const FIRST_SORTIE_MISSION: MissionDef = {
       group: 'first-sortie-bandits',
       count: 1,
       difficulty: 'easy',
+      hpScale: M2_ENEMY_HP_SCALE,
       trigger: { type: 'start' },
       positions: [{ x: -3000, y: 1100, z: -2500, headingDeg: 120 }],
       patrol: ISLAND_PATROL,
@@ -119,7 +124,8 @@ export const FIRST_SORTIE_MISSION: MissionDef = {
       group: 'first-sortie-bandits',
       count: 1,
       difficulty: 'easy',
-      trigger: { type: 'time', seconds: 20 },
+      hpScale: M2_ENEMY_HP_SCALE,
+      trigger: { type: 'time', seconds: 30 },
       positions: [{ x: 3000, y: 1200, z: -3000, headingDeg: 240 }],
       patrol: ISLAND_PATROL,
     },
@@ -127,8 +133,9 @@ export const FIRST_SORTIE_MISSION: MissionDef = {
       kind: 'enemyFighter',
       group: 'first-sortie-bandits',
       count: 1,
-      difficulty: 'normal',
-      trigger: { type: 'time', seconds: 40 },
+      difficulty: 'easy',
+      hpScale: M2_ENEMY_HP_SCALE,
+      trigger: { type: 'time', seconds: 60 },
       positions: [{ x: -3200, y: 1200, z: -2200, headingDeg: 120 }],
       patrol: ISLAND_PATROL,
     },
