@@ -11,7 +11,7 @@ npm run check && npm test && npm run build     # 型・lint・テスト・本番
 npm run bench                                  # 時間の計測（スキンの生成 50ms 以内）
 npm run unused                                 # 使われていないコード・依存（knip）
 npm run perf                                   # チャンク一覧・起動時間・Lighthouse（8-2。docs/perf.md）
-node scripts/ui-audit.js <出力先> --release    # 本番ビルド（dist）を _headers 付きで配信して点検（Playwright）
+node scripts/ui-audit.js <出力先> --release [--browser all]  # 本番ビルド（dist）を _headers 付きで配信して点検（Playwright。8-3: エンジンの選択と互換性）
 npm run dev & node scripts/ui-audit.js <出力先> # 3 サイズの UI の点検（開発サーバー）
 ```
 
@@ -34,6 +34,7 @@ npm run dev & node scripts/ui-audit.js <出力先> # 3 サイズの UI の点検
 | 11 | 依存の脆弱性 | `npm audit --omit=dev` | ✅ 配信する依存は 0 件（開発用の eslint・workbox-build に moderate 21 件。配信物には入らない） |
 | 12 | 時間の計測 | `npm run bench` | ✅ スキンの生成 最大 約 40ms（上限 50ms） |
 | 13 | 容量（8-2） | `npm run build` の 500KB 超の警告・`npm run perf` | ✅ 警告なし（最大 `three-webgl` 371KB）。タイトルまでの JS・CSS は gzip 393KB（8-1 は 412KB） |
+| 14 | 互換性（8-3） | `--release` の compat: WebGL / WebGL 2 が無い・古いブラウザの案内、コンテキスト喪失 → ポーズ → 復帰、保存できない（localStorage の例外・容量超過）のお知らせ、音・全画面・向き・振動が無い、縦向きの案内、ゲームパッドの抜き差し。表と実機の手順は `docs/compat.md` | ✅ Chromium 10 / 10（Firefox・WebKit はクラウドで取得できず未実施。実機の手順は docs/compat.md） |
 
 ## 実機で確認（クラウドでは確かめられない）
 

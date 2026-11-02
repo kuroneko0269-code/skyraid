@@ -170,6 +170,8 @@ export function createWorldScene(renderer: WebGLRenderer, aspect: number): World
   };
   bake();
   world.weather.onBake = bake;
+  // 8-3: WebGL のコンテキストが戻ったら焼き直す（焼いたテクスチャの中身は GPU と一緒に消える。three の復帰の後に呼ばれる）
+  renderer.domElement.addEventListener('webglcontextrestored', bake);
 
   const camera = new PerspectiveCamera(cfg.camera.fov, aspect, cfg.camera.near, cfg.camera.far);
   camera.position.set(cfg.camera.position.x, cfg.camera.position.y, cfg.camera.position.z);

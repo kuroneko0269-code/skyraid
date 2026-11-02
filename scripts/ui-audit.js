@@ -16,25 +16,54 @@
 //   tabsMoved タブの位置がタブの切り替え・内容のスクロールで動いた（7-4c）
 // 画面遷移のチェック: 設定画面の「戻る」で開いた元（タイトル / モード選択 / ポーズ）に戻るか
 // 8-1: `--release` を付けると公開前の点検（scripts/ui-audit-release.js。本番ビルド dist を _headers 付きで配信して全モード）
+// 8-3: `--browser chromium|firefox|webkit|all`（既定 chromium）で Playwright のエンジンを選ぶ。all は 3 つを <出力先>/<エンジン>/ に。
+//      取得していないエンジンは飛ばして「取得できない」と出す（`npx playwright install firefox webkit` で取得）
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { pickBrowsers } from './audit-browsers.js';
 
-// クラウドセッションの Playwright は全体に入っている（require で見つかる。ESM の import では見つからない）
-const { chromium } = createRequire(import.meta.url)('playwright');
-
-const out = process.argv[2] ?? 'ui-audit';
-const base = process.argv.slice(3).find((a) => !a.startsWith('--')) ?? 'http://localhost:5173/';
+const argv = process.argv.slice(2);
+const valueOf = (name) => {
+  const i = argv.indexOf(name);
+  return i >= 0 ? argv[i + 1] : undefined;
+};
+const VALUED = ['--browser'];
+const positional = argv.filter((a, i) => !a.startsWith('--') && !VALUED.includes(argv[i - 1]));
+const out = positional[0] ?? 'ui-audit';
+const base = positional[1] ?? 'http://localhost:5173/';
+const engines = pickBrowsers(valueOf('--browser') ?? 'chromium');
 const SIZES = [
   { name: 'phone-se', width: 568, height: 320, touch: true },
   { name: 'phone', width: 844, height: 390, touch: true },
   { name: 'pc', width: 1920, height: 1080, touch: false },
 ];
 mkdirSync(out, { recursive: true });
-if (process.argv.includes('--release')) {
+if (argv.includes('--release')) {
   const { runReleaseAudit } = await import('./ui-audit-release.js');
-  await runReleaseAudit(chromium, out);
+  const summary = [];
+  for (const engine of engines) {
+    const dir = engines.length > 1 ? `${out}/${engine.name}` : out;
+    mkdirSync(dir, { recursive: true });
+    if (!engine.available) {
+      console.log(`\n== ${engine.name}: 取得できない（${engine.reason}）`);
+      summary.push({ browser: engine.name, available: false, reason: engine.reason });
+      continue;
+    }
+    console.log(`\n== ${engine.name}`);
+    const report = await runReleaseAudit(engine, dir);
+    summary.push({
+      browser: engine.name,
+      available: true,
+      version: report.browser.version,
+      ok: report.ok,
+    });
+  }
+  if (engines.length > 1) writeFileSync(`${out}/browsers.json`, JSON.stringify(summary, null, 2));
   process.exit(0);
 }
+if (engines.length !== 1 || !engines[0].available)
+  throw new Error(
+    `開発サーバーの点検はエンジン 1 つ（取得済み）だけ: ${engines.map((e) => e.name).join(', ')}`,
+  );
 
 /** ページの中で動かす点検（visible な screen の中の要素） */
 function inspect(rootSelector) {
@@ -116,7 +145,7 @@ async function measureBand(page, rootSelector) {
 
 const results = [];
 const flows = [];
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader'] });
+const browser = await engines[0].launch();
 
 for (const size of SIZES) {
   const context = await browser.newContext({

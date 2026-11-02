@@ -1,4 +1,4 @@
-/* global console, document, localStorage, indexedDB, navigator, fetch, URL, location, createImageBitmap */
+/* global document, localStorage, indexedDB, navigator, fetch, URL, location, createImageBitmap */
 // 公開前の点検（8-1。scripts/ui-audit.js の拡張）: `npm run build` の後に `node scripts/ui-audit.js <出力先> --release`。
 // dist を dist/_headers のヘッダー（CSP など）付きで配信し（Cloudflare Pages と同じ形）、844×390 のタッチ端末で次を確かめる:
 //   modes    全モードを通しで起動（チュートリアル・キャンペーン M1・フリーフライト・レース・レイド / 防衛戦のソロは飛行まで、
@@ -22,7 +22,9 @@ import {
   toModeSelect,
   watch,
 } from './audit-helpers.js';
+import { auditCompat } from './ui-audit-compat.js';
 import { auditModes } from './ui-audit-modes.js';
+import { printReleaseReport } from './audit-report.js';
 import { serveDist } from './serve-dist.js';
 
 /** 初回起動（ストレージが空）: タイトル → パイロット名 → モード選択にチュートリアルの案内 */
@@ -243,41 +245,25 @@ async function auditOnlineHidden(browser, base, dir) {
   return r;
 }
 
-export async function runReleaseAudit(chromium, out, dir = 'dist', port = 4174) {
+export async function runReleaseAudit(engine, out, dir = 'dist', port = 4174) {
   if (!existsSync(join(dir, 'index.html')))
     throw new Error(`${dir} がありません。先に npm run build`);
   const server = await serveDist(dir, port);
   const base = `http://localhost:${port}/`;
-  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader'] });
+  const browser = await engine.launch();
   const report = {
+    browser: { name: engine.name, version: browser.version() },
     modes: await auditModes(browser, base, out),
     firstRun: await auditFirstRun(browser, base, out),
     pwa: await auditPwa(browser, base, out),
     onlineHidden: await auditOnlineHidden(browser, base, dir),
     info: await auditInfo(browser, base, out),
+    // 8-3: 機能が無い・失敗する環境（scripts/ui-audit-compat.js）
+    compat: await auditCompat(browser, base, out),
   };
   await browser.close();
   server.close();
+  printReleaseReport(report);
   writeFileSync(`${out}/release.json`, JSON.stringify(report, null, 2));
-  const all = [...report.modes, report.firstRun, report.pwa, report.onlineHidden, report.info];
-  const errors = all.flatMap((r) => r.errors);
-  const csp = all.flatMap((r) => r.csp);
-  for (const m of report.modes)
-    console.log(
-      `mode\t${m.mode}\t${m.ok ? 'OK' : 'NG'}\t${m.detail}\terrors ${m.errors.length}\tcsp ${m.csp.length}`,
-    );
-  for (const [name, r] of [
-    ['firstRun', report.firstRun],
-    ['pwa', report.pwa],
-    ['onlineHidden', report.onlineHidden],
-    ['info', report.info],
-  ]) {
-    console.log(`${name}\t${r.ok ? 'OK' : 'NG'}`);
-    for (const s of r.steps) console.log(`    ${s}`);
-  }
-  console.log(`console errors\t${errors.length}`);
-  for (const e of [...new Set(errors)]) console.log(`    ${e}`);
-  console.log(`CSP violations\t${csp.length}`);
-  for (const v of [...new Set(csp)]) console.log(`    ${v}`);
   return report;
 }

@@ -1,314 +1,34 @@
+// エントリ（8-3）: WebGL 2 の描画を作れたらゲーム本体（app.ts）を起動し、作れなければ案内画面を出す（真っ黒にしない）。
+// <html data-app> は public/legacy-check.js への合図（このモジュールが動いた = 古いブラウザで構文エラーになっていない）
 import { WebGLRenderer } from 'three';
-import { parseSkipTitle } from './core/debug-flags';
-import { BOOT_TASKS, runBoot } from './core/boot';
-import { GameState } from './core/game-state';
-import { parseFlightOptions, parseFlightOverrides } from './core/flight-options';
-import { WORLD_CONFIG } from './data/terrain';
-import { MISSIONS } from './data/missions';
-import { createControls } from './entities/aircraft';
-import { createCombatInput } from './combat/combat-system';
-import { WeaponInput } from './core/weapon-input';
-import { FlightSession } from './missions/flight-session';
-import { GamePlay } from './missions/game-play';
-import { FlightViews } from './render/flight-views';
-import { HudLink } from './render/hud-link';
-import { MissionLink } from './render/mission-link';
-import { RingView } from './render/ring-view';
-import { HangarStage } from './render/hangar-stage';
-import { PlayerView } from './render/player-view';
-import { ChaseCamera } from './render/chase-camera';
-import { DemoCamera } from './render/demo-camera';
-import { RenderPipeline } from './render/pipeline';
-import { QualityLink } from './render/quality-link';
-import { createWorldScene } from './render/scene';
-import { ActiveMap } from './missions/active-map';
-import { DamageOverlay } from './ui/damage-overlay';
-import { AssistControl } from './core/assist-control';
-import { KaijuHud } from './ui/kaiju-hud';
-import { KaijuHudLink } from './render/kaiju-hud-link';
-import { installTouchGuards } from './ui/mobile';
-import { createGameSettings } from './ui/settings-link';
-import { createControlsLink } from './ui/controls-link';
-import { TutorialLink } from './ui/tutorial-link';
-import { openBrowserSave } from './ui/save-link';
-import { Screens } from './ui/screens';
-import { installAppShell } from './ui/app-shell';
-import { createGameAudio } from './audio/setup';
-import { FxEvents } from './render/fx/fx-events';
-import { FrameFx } from './render/frame-fx';
-import { linkWeather } from './ui/weather-link';
-import { createPvpWiring } from './ui/pvp-wiring';
-import { linkMissionEvents } from './ui/mission-wiring';
-import { createAppControls } from './ui/app-controls';
-import { createRaceLink } from './ui/race-link';
-import { GhostView } from './render/ghost-view';
-import { createDefenseLink } from './ui/defense-link';
-import { FREE_FLIGHT_ENEMIES } from './data/ai';
-import { DEFENSE_CONFIG } from './data/defense';
-import { ReplayHub } from './replay/hub';
-import type { SimWorld } from './replay/sim';
-import { StateSnapshot } from './replay/state-walk';
-import { startFlightRuntime } from './ui/flight-runtime';
-import { linkOnline } from './ui/online-link';
+import { startApp } from './app';
+import { probeWebGL, showCompatNotice, webglProblem } from './ui/compat-notice';
+
+document.documentElement.dataset.app = 'started';
+
+function createRenderer(container: HTMLElement): WebGLRenderer | null {
+  try {
+    const renderer = new WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    container.appendChild(renderer.domElement);
+    return renderer;
+  } catch {
+    // three は WebGL 2 のコンテキストを作れないと例外（console にも出す）
+    return null;
+  }
+}
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app が見つかりません');
-
-const renderer = new WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-container.appendChild(renderer.domElement);
-
-const { scene, camera, world } = createWorldScene(renderer, window.innerWidth / window.innerHeight);
-// 今のマップ（6-4）: 地面の高さ・街。切り替えると地形・水深・木・街を作り直す
-const activeMap = new ActiveMap();
-const getGroundHeight = activeMap.ground;
-activeMap.onChange((m) => {
-  world.setMap(m);
-});
-const pipeline = new RenderPipeline(renderer, scene, camera);
-const playerView = new PlayerView(scene);
-const aircraftMesh = playerView.mesh;
-const chaseCamera = new ChaseCamera(camera);
-// ハンガー（3-3）の機体の展示。表示中はカメラを展示の前に置く
-const hangarStage = new HangarStage(scene, camera);
-const demoCamera = new DemoCamera(camera);
-
-// セーブ（3-1）: 進み具合・クレジット・パイロット名・設定。壊れていたら初期値にしてお知らせ
-const save = openBrowserSave(document.body);
-// 設定の部品は今までどおり StorageLike で読み書きし、セーブの設定に振り分ける
-const storage = save.settingsStorage;
-
-// 画面状態（タイトル →（初回: パイロット名 →）モード選択 →（ミッション一覧 → ブリーフィング →）飛行 ⇄ ポーズ →（リザルト））。
-// ハンガー（3-3）はモード選択・ブリーフィングから
-const game = new GameState();
-const screens = new Screens(document.body, game, MISSIONS, save, () => {
-  play.abortMission();
-});
-screens.onAircraftView((model) => {
-  hangarStage.setModel(model, screens.hangar.loadout(model.id).missiles);
-});
-// 7-3: ハンガーの塗装（試し塗りもすぐ反映）と、塗装タブの上からのカメラ
-screens.paintHooks = hangarStage.paintHooks;
-
-// 品質設定（初期判定・切り替え・自動ダウングレード）と露出
-const quality = new QualityLink(renderer, pipeline, world, storage);
-installTouchGuards(document);
-installAppShell(document.body);
-// 設定（7-D: 設定画面のタブごとの slot。画質・HUD・音量・操作補助はポーズメニューにも貸す）
-const settingsUi = screens.settings;
-quality.createSelect(settingsUi.slot('quality'));
-
-window.addEventListener('resize', () => {
-  pipeline.resize(window.innerWidth, window.innerHeight);
-});
-
-const { input, gamepad, hud, missionHud, settingsParts, touch, debug, keys } = createAppControls({
-  game,
-  screens,
-  save,
-  storage,
-  pipeline,
-  world,
-  photoTouch: () => runtime.photo.showsTouch,
-  photoToggle: () => {
-    runtime.photo.toggle();
-  },
-});
-
-// 飛行: フリーフライトは島の沖合から、ミッション（2-4）は定義の開始位置から。?autolevel=off / ?invert で操作設定を変える。
-// 射撃（2-1）・ロックオンとミサイル（2-2）・敵機（2-3）。判定は固定ステップ、演出は描画フレーム
-const session = new FlightSession({
-  groundHeight: getGroundHeight,
-  buildings: () => activeMap.buildings,
-  flightOptions: parseFlightOptions(window.location.search),
-  start: WORLD_CONFIG.start,
-  // 7-2: 防衛戦の戦闘機の入れ物（協力のホストの世界と同じ数。ソロで同時に出すのは soloFighterPool まで。
-  // フリーフライトの敵の数の設定は今のまま）
-  enemies: { ...FREE_FLIGHT_ENEMIES, maxCount: DEFENSE_CONFIG.hostFighterPool },
-});
-const play = new GamePlay(session);
-// リプレイ（7-B）: 本番の飛行の記録・再生中かどうか・外部の操作の通り道。world は記録と再生で同じ始め方をする世界
-const replayHub = new ReplayHub(play);
-const simWorld: SimWorld & { pristine: StateSnapshot | null } = {
-  play,
-  useMap: (id) => {
-    activeMap.use(id);
-  },
-  buildings: () => activeMap.buildings,
-  pristine: null,
-};
-// 怪獣の HUD（6-2）: 体力バー・フェーズ・ロック中の部位・予兆・スタンのノイズ
-const kaijuHud = new KaijuHudLink(new KaijuHud(document.body), hud, session);
-const assistFlags = createGameSettings(settingsParts, session, (enabled, difficulty) => {
-  // 記録中の敵の設定の変更はリプレイに残す（7-B）
-  if (replayHub.recording)
-    replayHub.dispatch({ kind: 'enemies', enabled, difficulty, count: session.freeEnemies.count });
-  else session.configureEnemies(enabled, difficulty);
-});
-const assist = new AssistControl(session, assistFlags, () => input.lastDevice);
-const damageOverlay = new DamageOverlay(document.body);
-const controls = createControls();
-// エフェクトと音のきっかけ（4-4）。被弾・近くの爆発でカメラを揺らす
-const fxEvents = new FxEvents(session, getGroundHeight);
-const views = new FlightViews(scene, aircraftMesh, session, fxEvents, camera.position, (k) => {
-  chaseCamera.addImpact(k);
-});
-const audio = createGameAudio(session, fxEvents, getGroundHeight, settingsUi.slot('volume'), save);
-// 操作設定（4-11）: 感度・デッドゾーン・反転・オートレベル（URL の ?invert / ?autolevel が優先）・左右入替・振動・大きさ・キー割当
-const overrides = parseFlightOverrides(window.location.search);
-createControlsLink(
-  settingsUi.slot('controls'),
-  save,
-  input,
-  touch.controls,
-  session,
-  fxEvents,
-  overrides,
-);
-// チュートリアル（4-11）の指示と、タッチ操作のヒント。指示の「中断」はモード選択へ
-const tutorial = new TutorialLink(document.body, save, input, touch, hud, () => {
-  screens.abortTutorial(game);
-});
-const frameFx = new FrameFx(pipeline, playerView, camera, audio);
-// 防衛戦（7-2）: モード選択の選択・HUD・リザルト・音・報酬
-const defense = createDefenseLink({
-  game,
-  screens,
-  play,
-  save,
-  audio,
-  camera,
-  aircraft: aircraftMesh,
-  replay: replayHub,
-});
-// PvP（5-1）: 選んだとき・?room のときだけ通信の部分を読み込む
-const search = window.location.search;
-const { pvp, coopKaiju } = createPvpWiring({
-  screens,
-  search,
-  game,
-  scene,
-  camera,
-  session,
-  playerView,
-  save,
-  audio,
-  groundHeight: getGroundHeight,
-  activeMap,
-  input,
-  fxEvents,
-  views,
-  kaijuHud,
-  quality,
-  defenseHud: defense.hud,
-});
-const ringView = new RingView(scene);
-const missionLink = new MissionLink(missionHud, camera, aircraftMesh, play);
-linkMissionEvents({
-  session,
-  activeMap,
-  play,
-  screens,
-  missionHud,
-  tutorial,
-  save,
-  chaseCamera,
-  playerView,
-  groundHeight: getGroundHeight,
-  replaying: () => replayHub.playing,
-});
-const combatInput = createCombatInput();
-// 武器の操作（タッチ・パッドの長押しで兵装の切替・爆弾。2-6）
-const weaponInput = new WeaponInput();
-const hudLink = new HudLink(
-  hud,
-  camera,
-  aircraftMesh,
-  session,
-  getGroundHeight,
-  weaponInput,
-  () => assistFlags.hud,
-);
-// HUD の対象をタップ（クリック）すると選ぶ。スティック・ボタンの上は canvas に届かない
-hudLink.bindTap(
-  renderer.domElement,
-  () => game.state === 'flight' && !replayHub.playing,
-  (t) => {
-    replayHub.select(t);
-  },
-);
-
-// 天候（7-5）: 飛行・メニュー・ブリーフィング・ロビーの天候、HUD のマーカーと夜の減光、環境音
-linkWeather(world.weather, { game, screens, pvp, hud, hudLink, audio, save });
-// リングレース（7-1）: コース一覧・HUD・リザルト・音・ゴースト（天候の配線の後: レースの天候で上書きする）
-const ghost = new GhostView(scene);
-const race = createRaceLink({
-  game,
-  screens,
-  play,
-  save,
-  audio,
-  weather: world.weather,
-  ghost,
-  hud,
-  activeMap,
-  replay: replayHub,
-});
-// 飛行の始め・固定ステップ・描画・フォトモード（7-A）・リプレイ（7-B）を組み立ててゲームループを回す
-const runtime = startFlightRuntime({
-  activeMap,
-  screens,
-  session,
-  play,
-  playerView,
-  views,
-  chaseCamera,
-  quality,
-  pvp,
-  race,
-  defense,
-  game,
-  input,
-  gamepad,
-  keys,
-  controls,
-  combatInput,
-  weaponInput,
-  assist,
-  coopKaiju,
-  touch,
-  touchControls: touch.controls,
-  hangarStage,
-  aircraftMesh,
-  tutorial,
-  pipeline,
-  world,
-  camera,
-  demoCamera,
-  ringView,
-  damageOverlay,
-  hud,
-  hudLink,
-  missionLink,
-  frameFx,
-  debug,
-  assistFlags,
-  groundHeight: getGroundHeight,
-  canvas: renderer.domElement,
-  audio,
-  save,
-  kaijuHud,
-  replayHub,
-  simWorld,
-});
-
-// オンライン連携（7-4）: 環境変数があるときだけ読み込む（クラウドセーブ・記録の送信・ランキング）
-linkOnline({ game, screens, save });
-
-// 起動シーケンス: 読み込み（今はアセットなしで即完了）を待ってからタイトルへ。?skipTitle なら飛行へ直行
-void runBoot(BOOT_TASKS, (progress) => {
-  screens.loading.setProgress(progress);
-}).then(() => {
-  game.transition(parseSkipTitle(search) ? 'flight' : 'title');
-  pvp.joinFromUrl();
-});
+const renderer = createRenderer(container);
+if (!renderer) {
+  showCompatNotice(document.body, webglProblem(probeWebGL(document)));
+} else {
+  try {
+    startApp(renderer);
+  } catch (e) {
+    console.error(e);
+    renderer.domElement.remove();
+    showCompatNotice(document.body, 'start-failed', String(e).slice(0, 200));
+  }
+}
