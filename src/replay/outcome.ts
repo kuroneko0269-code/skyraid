@@ -6,7 +6,14 @@ import { findMap } from '../data/maps';
 import type { DefenseRunner } from '../missions/defense/runner';
 import type { GamePlay } from '../missions/game-play';
 import { missionStrings } from '../ui/mission-text';
-import type { ReplayOutcome, ReplayResult, ReplayStart } from './types';
+import {
+  isOtherGameVersion,
+  replayGameVersion,
+  type ReplayHeader,
+  type ReplayOutcome,
+  type ReplayResult,
+  type ReplayStart,
+} from './types';
 
 /** 一覧の題（ミッション名・コース名・マップ名） */
 export function replayTitle(s: ReplayStart): string {
@@ -146,4 +153,14 @@ function validResult(v: unknown): ReplayResult | null {
     default:
       return null;
   }
+}
+
+/**
+ * 今の版と違う版の記録の断り（8-7。版を持たない古い記録も「0.9.0 以前」として出す）。同じ版なら null。
+ * 再生は止めない（数値の調整で結果が変わることがあるだけ）
+ */
+export function replayVersionNotice(header: ReplayHeader, current: string): string | null {
+  if (!isOtherGameVersion(header, current)) return null;
+  const version = replayGameVersion(header) ?? t('replay.status.unknownGameVersion');
+  return t('replay.status.otherGameVersion', { version });
 }

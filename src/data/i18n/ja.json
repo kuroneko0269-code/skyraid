@@ -860,6 +860,8 @@
     },
     "status": {
       "startMismatch": "記録の始まりが今の版と違います",
+      "otherGameVersion": "前の版（v{version}）の記録なので、結果が変わることがあります",
+      "unknownGameVersion": "0.9.0 以前",
       "seeking": "計算中…",
       "ended": "終了"
     },

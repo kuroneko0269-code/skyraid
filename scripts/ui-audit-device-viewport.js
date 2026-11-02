@@ -55,6 +55,15 @@ export async function auditViewport({ browser, base, out, view: VIEW, touchConte
     });
     if (window.visualViewport)
       Object.defineProperty(window.visualViewport, 'height', { get: () => 343 });
+    // 8-7: 幕の中央にロゴが出たか（幕は数秒で外れるので、出ている間に見ておく）
+    const watch = window.setInterval(() => {
+      const logo = document.querySelector('.viewport-cover-logo.is-loaded');
+      if (logo) {
+        const r = logo.getBoundingClientRect();
+        window.__coverLogo = { width: Math.round(r.width), centerX: Math.round(r.x + r.width / 2) };
+        window.clearInterval(watch);
+      }
+    }, 50);
   });
   page = await ctx.newPage();
   await toTitle(page, base);
@@ -71,9 +80,10 @@ export async function auditViewport({ browser, base, out, view: VIEW, touchConte
   }
   await page.waitForTimeout(500);
   const coverLeft = await page.locator('.viewport-cover').count();
+  const coverLogo = await page.evaluate(() => window.__coverLogo ?? null);
   s = await canvasState(page);
   rows.push({
-    what: 'ホーム画面から起動・inner / client が小さい値（844×343）→ 描かれる 844×343 に合わせ、測り直しを試す（その間は黒い幕）',
+    what: 'ホーム画面から起動・inner / client が小さい値（844×343）→ 描かれる 844×343 に合わせ、測り直しを試す（その間は黒い幕・中央にロゴ）',
     ok:
       s.rect[2] === VIEW.width &&
       s.rect[3] === 343 &&
@@ -81,7 +91,12 @@ export async function auditViewport({ browser, base, out, view: VIEW, touchConte
       // 8-6f: 切り替えの間は黒い幕で隠し、試みが尽きたら外す
       nudged.some((l) => l.includes('cover on')) &&
       nudged.some((l) => l.includes('cover off')) &&
-      coverLeft === 0,
+      coverLeft === 0 &&
+      // 8-7: 幕の中央にタイトルのロゴ
+      coverLogo !== null &&
+      coverLogo.width > 100 &&
+      Math.abs(coverLogo.centerX - VIEW.width / 2) <= 2,
+    coverLogo,
     nudged,
     ...s,
   });

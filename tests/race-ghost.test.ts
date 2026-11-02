@@ -36,6 +36,7 @@ function recordBotRace(courseIndex: number): Run {
     title: course.name,
     pilotName: 'bot',
     date: '2026-10-31T00:00:00Z',
+    gameVersion: '1.0.0',
     startHash: simHash(w),
   });
   const bot = new RaceBot({ play: w.play, race, map: w.map });

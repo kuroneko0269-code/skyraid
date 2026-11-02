@@ -6,7 +6,7 @@
 // 起動したときは）screen を測って一番もっともらしい大きさを選び、CSS 変数 --app-width / --app-height に書く。
 // body は index.html でこの変数の大きさになり、position: fixed の画面（タイトル・メニュー・HUD）の基準にもなる（contain）。
 // 測り直すのは読み込みの完了・起動から数秒の間・resize・向きの変更・visualViewport・pageshow・表示に戻ったとき
-import { VIEWPORT_CONFIG } from '../data/app';
+import { BRAND_ASSETS, VIEWPORT_CONFIG } from '../data/app';
 
 export interface ViewportSample {
   readonly inner: { readonly width: number; readonly height: number };
@@ -174,9 +174,30 @@ function showCover(): void {
   cover = document.createElement('div');
   cover.className = 'viewport-cover';
   cover.setAttribute('aria-hidden', 'true');
+  fillCover(cover);
   document.body.appendChild(cover);
   note('cover on');
   extendCover();
+}
+
+/** 8-7: 幕の中央にタイトルのロゴ（読めたら出す。読めなければ「SkyRaid」の文字）。幕の出し入れ・時刻は変えない */
+function fillCover(c: HTMLElement): void {
+  const img = document.createElement('img');
+  img.className = 'viewport-cover-logo';
+  img.alt = '';
+  img.decoding = 'async';
+  img.onload = () => {
+    if (img.naturalWidth > 0) img.classList.add('is-loaded');
+    else c.classList.add('is-text');
+  };
+  img.onerror = () => {
+    c.classList.add('is-text');
+  };
+  img.src = `${import.meta.env.BASE_URL}${BRAND_ASSETS.logo}`;
+  const text = document.createElement('span');
+  text.className = 'viewport-cover-text';
+  text.textContent = 'SkyRaid';
+  c.append(img, text);
 }
 
 function hideCover(): void {

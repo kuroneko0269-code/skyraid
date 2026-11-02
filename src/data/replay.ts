@@ -20,6 +20,8 @@ export const REPLAY_CONFIG = {
   baseKeyframeSeconds: 60,
   /** 先へのシークで、1 描画フレームに計算するステップ数の上限（画面を止めないため） */
   seekStepsPerFrame: 300,
+  /** 前の版の記録を再生するときの断りを出す秒数（8-7） */
+  versionNoticeSeconds: 6,
   /** これより短い飛行は自動保存しない（秒） */
   minSeconds: 5,
   /** 自動保存（直近）と、名前を付けた保存の上限 */

@@ -1,5 +1,6 @@
 // リプレイの再生中の操作（7-B）: 記録の入力で固定ステップを進める（GameLoop の時間の倍率で速さ・一時停止）、
 // 10 秒スキップ・シーク（キーフレームから計算し直す。先は描画フレームごとに少しずつ）、カメラ、操作バー、UI を隠す、撮影、一覧へ
+import { APP_VERSION } from 'virtual:app-info';
 import type { GameAudio } from '../audio/game-audio';
 import type { CommonKeys } from '../core/common-keys';
 import type { GameState } from '../core/game-state';
@@ -17,11 +18,13 @@ import type { PlayerView } from '../render/player-view';
 import { REPLAY_CAMERAS, type ReplayCameras, type ReplayCameraMode } from '../render/replay-camera';
 import type { WeatherView } from '../render/weather/weather-view';
 import type { ReplayHub } from '../replay/hub';
+import { replayVersionNotice } from '../replay/outcome';
 import { ReplayPlayer } from '../replay/player';
 import type { SimWorld } from '../replay/sim';
 import type { ReplayData } from '../replay/types';
 import { ReplayBar } from './replay-bar';
 import { syncHudScreen } from './hud-screen';
+import { showToast } from './toast';
 
 export interface ReplayPlaybackParts {
   readonly game: GameState;
@@ -116,6 +119,9 @@ export class ReplayPlayback {
     p.frame.cameraOverride = p.cameras;
     document.documentElement.dataset.replay = '';
     this.setUiHidden(false);
+    // 8-7: 前の版の記録は結果が変わることがある（再生は続ける）
+    const notice = replayVersionNotice(data.header, APP_VERSION);
+    if (notice) showToast(notice, { seconds: REPLAY_CONFIG.versionNoticeSeconds });
   }
 
   /** 再生を終える（一覧へ戻るとき・別の飛行を始めるとき） */

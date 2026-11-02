@@ -100,7 +100,7 @@ describe('本番の記録のつなぎ（ReplayHub）', () => {
         seed: 1,
         weatherId: 'clear',
       },
-      { title: 't', pilotName: 'p', date: '', startHash: '' },
+      { title: 't', pilotName: 'p', date: '', gameVersion: '1.0.0', startHash: '' },
     );
     hub.capture(c, input);
     expect(c.pitch).toBe(Math.round(0.123456 * 127) / 127);

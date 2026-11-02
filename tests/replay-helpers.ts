@@ -130,6 +130,7 @@ export function record(
     title: 't',
     pilotName: 'p',
     date: '2026-10-31T00:00:00Z',
+    gameVersion: '1.0.0',
     startHash: simHash(w),
   });
   const pilot = new ScriptedPilot(o.pilotSeed ?? 7, o.analog ?? true);
