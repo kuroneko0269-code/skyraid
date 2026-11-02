@@ -1,3 +1,4 @@
+import { t } from '../core/i18n';
 import './pause.css';
 import { SCREEN_CONFIG } from '../data/screens';
 import { TOUCH_CONFIG } from '../data/touch';
@@ -32,7 +33,7 @@ export class PauseMenu {
     panel.className = 'ui-panel pause-panel';
     const heading = document.createElement('h2');
     heading.className = 'ui-heading pause-heading';
-    heading.textContent = 'ポーズ';
+    heading.textContent = t('pause.heading');
     const body = document.createElement('div');
     body.className = 'pause-body';
     const actions = document.createElement('div');
@@ -43,22 +44,27 @@ export class PauseMenu {
     panel.append(heading, body);
     root.appendChild(panel);
 
-    this.resumeButton = createButton(actions, 'ui-button is-primary', '再開', handlers.onResume);
+    this.resumeButton = createButton(
+      actions,
+      'ui-button is-primary',
+      t('pause.resume'),
+      handlers.onResume,
+    );
     // フリーフライト・キャンペーン・ソロのレイドだけ出す（7-A）
-    this.photoButton = createButton(actions, 'ui-button', 'フォトモード', () => {
+    this.photoButton = createButton(actions, 'ui-button', t('pause.photoMode'), () => {
       this.onPhoto?.();
     });
     this.photoButton.hidden = true;
-    createButton(actions, 'ui-button', 'すべての設定', handlers.onSettings);
+    createButton(actions, 'ui-button', t('pause.allSettings'), handlers.onSettings);
     // ミッション中だけ出す（2-4）
     this.abortButton = createButton(
       actions,
       'ui-button is-danger pause-title',
-      'ミッションを中断',
+      t('pause.abortMission'),
       handlers.onAbort,
     );
     this.abortButton.hidden = true;
-    createButton(actions, 'ui-button is-danger pause-title', 'タイトルへ', handlers.onTitle);
+    createButton(actions, 'ui-button is-danger pause-title', t('pause.toTitle'), handlers.onTitle);
     this.root = root;
   }
 
@@ -72,7 +78,7 @@ export class PauseMenu {
   }
 
   /** ミッション中か（「ミッションを中断」を出す）。label はチュートリアル（4-11）の「チュートリアルを中断」 */
-  setInMission(inMission: boolean, label = 'ミッションを中断'): void {
+  setInMission(inMission: boolean, label = t('pause.abortMission')): void {
     this.abortButton.hidden = !inMission;
     this.abortButton.textContent = label;
   }
@@ -91,7 +97,7 @@ export function createPauseButton(parent: HTMLElement, onPress: () => void): HTM
   const c = SCREEN_CONFIG.pauseButton;
   const yaw = TOUCH_CONFIG.yaw;
   const button = createButton(parent, 'pause-button', '⏸', onPress);
-  button.setAttribute('aria-label', 'ポーズ');
+  button.setAttribute('aria-label', t('pause.heading'));
   const vars: Record<string, string> = {
     '--pause-size': `${c.size}px`,
     '--pause-margin': `${TOUCH_CONFIG.edgeMargin}px`,

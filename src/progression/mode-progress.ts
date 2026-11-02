@@ -1,5 +1,6 @@
 // モード選択のカードに小さく出す進捗（7-D。Three.js・DOM 非依存）: キャンペーンのクリア数・レースのランクの数・
 // 防衛戦の最高波・レイドの最速。記録がなければ出さない（キャンペーンは 0/5 を出す）
+import { t } from '../core/i18n';
 import { RANKS } from '../data/ranking';
 import type { SaveData } from './save';
 import { bestDefenseWaves, bestRaidMs } from './save-records';
@@ -20,15 +21,15 @@ export function modeProgress(
 ): Partial<Record<ProgressMode, string>> {
   const out: Partial<Record<ProgressMode, string>> = {};
   const cleared = missionIds.filter((id) => (save.missions[id]?.bestRank ?? null) !== null).length;
-  out.campaign = `${cleared}/${missionIds.length} クリア`;
+  out.campaign = t('progress.campaign', { cleared, total: missionIds.length });
   const counts = new Map<string, number>();
   for (const r of Object.values(save.races))
     if (r.bestRank) counts.set(r.bestRank, (counts.get(r.bestRank) ?? 0) + 1);
   const ranks = RANKS.filter((r) => counts.has(r)).map((r) => `${r}×${counts.get(r) ?? 0}`);
-  if (ranks.length > 0) out.race = ranks.join('・');
+  if (ranks.length > 0) out.race = ranks.join(t('progress.separator'));
   const waves = bestDefenseWaves(save.records);
-  if (waves !== null) out.defense = `最高 ${waves} 波`;
+  if (waves !== null) out.defense = t('progress.defense', { waves });
   const raid = bestRaidMs(save.records);
-  if (raid !== null) out.raid = `最速 ${formatMinutes(raid)}`;
+  if (raid !== null) out.raid = t('progress.raid', { time: formatMinutes(raid) });
   return out;
 }

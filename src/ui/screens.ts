@@ -1,3 +1,4 @@
+import { t } from '../core/i18n';
 import type { Paint } from '../progression/paint';
 import { Paintshop } from '../progression/paintshop';
 import { parseUnlockAll } from '../core/debug-flags';
@@ -202,7 +203,7 @@ export class Screens {
       },
       unlockText: (id) => {
         const i = missionIds.indexOf(id);
-        return i >= 0 ? `M${i + 1} クリアで解放` : '未解放';
+        return i >= 0 ? t('campaign.unlockAfter', { mission: `M${i + 1}` }) : t('campaign.locked');
       },
       onPaint: (p) => {
         this.paintHooks.paint(p);

@@ -1,6 +1,7 @@
 // 協力レイドの役割分担の HUD（6-6。kaiju-hud.ts の下に付ける）: 部位ごとの小さな HP バーと、その部位をロックしている
 // 他プレイヤーの色の印（同じ部位を 2 人で撃つとブレイク）、自分が怪獣の攻撃の対象のときの「TARGET」。
 // ブレイクの貢献者の名前は kaiju-hud.ts の BREAK! の行に出す。DOM は最初に作り、値が変わったときだけ書く
+import { t } from '../core/i18n';
 import { KAIJU_CONFIG, KAIJU_PARTS } from '../data/kaiju';
 import type { KaijuPartView } from '../entities/kaiju-display';
 import { el } from './hud-dom';
@@ -42,7 +43,7 @@ export class KaijuCoopHud {
       const marks = el('span', 'kaiju-coop-marks', root);
       return { root, fill, marks, lastHp: NaN, lastMarks: '' };
     });
-    this.target = el('div', 'kaiju-target', overlay, 'TARGET  怪獣があなたを狙っています');
+    this.target = el('div', 'kaiju-target', overlay, t('kaiju.hud.targeted'));
     this.target.hidden = true;
     this.root.hidden = true;
   }

@@ -1,6 +1,7 @@
 // リングレース（7-1）と画面・音・天候・ゴースト・セーブの配線: モード選択の「リングレース」→ コース一覧（機体の選択）→
 // レース（カウントダウン・HUD・音・ゴースト）→ ゴールで記録・報酬 → リザルト（もう一度 / コース一覧へ）。
 // 7-B: ゴーストはベストの走行の入力の記録を別の世界で再生する（GhostSim）。リプレイの再生中は記録・報酬・リザルト・ゴーストなし
+import { t } from '../core/i18n';
 import type { GameAudio } from '../audio/game-audio';
 import { isResume, usesDemoCamera, type GameState } from '../core/game-state';
 import { COURSES } from '../data/courses';
@@ -161,7 +162,7 @@ export function createRaceLink(p: RaceLinkParts): RaceLink {
       const data = ghost ? decodeGhost(ghost.data, c.id) : null;
       ghostSim.start(data);
       p.ghost.setGhost(data ? ghostSim : null, ghost ? findAircraftModel(ghost.aircraftId) : null);
-      if (!replaying) screens.pause.setInMission(true, 'レースを中断');
+      if (!replaying) screens.pause.setInMission(true, t('race.abort'));
     },
     afterStep() {
       if (play.race && ghostSim.active) ghostSim.step();

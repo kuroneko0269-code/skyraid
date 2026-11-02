@@ -1,0 +1,326 @@
+{
+  "difficulty": {
+    "rookie": "Rookie",
+    "easy": "Easy",
+    "normal": "Normal",
+    "hard": "Hard",
+    "short": {
+      "rookie": "Rookie",
+      "easy": "Easy",
+      "normal": "Norm",
+      "hard": "Hard"
+    },
+    "range": "{from}–{to}"
+  },
+  "aircraft": {
+    "role": {
+      "kestrel": "All-rounder",
+      "swift": "Light & fast",
+      "bastion": "Heavy & tough",
+      "vector": "High performance"
+    }
+  },
+  "courses": {
+    "coast": {
+      "name": "Coastal Circuit",
+      "note": "One low lap around the island's coastline"
+    },
+    "canyon": {
+      "name": "Canyon Slalom",
+      "note": "A low slalom threading the northern slopes"
+    },
+    "harborSpeed": {
+      "name": "Harbor Sprint",
+      "note": "A high-speed run between the towers"
+    },
+    "acro": {
+      "name": "Sunset Aerobatics",
+      "note": "A vertical course of loops and rolls"
+    },
+    "level": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    }
+  },
+  "kaiju": {
+    "name": "Vorgas",
+    "parts": {
+      "head": "Head",
+      "crystal": "Crystal",
+      "leftLeg": "Left Leg",
+      "rightLeg": "Right Leg",
+      "tail": "Tail"
+    },
+    "attacks": {
+      "sweep": "Sweep",
+      "roar": "Roar",
+      "beam": "Heat Beam",
+      "throw": "Hurl"
+    },
+    "hud": {
+      "name": "VORGAS",
+      "finalPhase": "FINAL PHASE  {time}",
+      "down": "DOWN  {seconds}  DAMAGE ×{scale}",
+      "partBroken": "{part} (broken)",
+      "targeted": "TARGET  The kaiju is targeting you"
+    }
+  },
+  "maps": {
+    "island": "Coast & Island",
+    "harbor": "Harbor City"
+  },
+  "objectives": {
+    "vorgasDefeat": "Defeat Vorgas",
+    "label": {
+      "kill": "Enemy kills",
+      "survive": "Survive",
+      "rings": "Rings",
+      "escort": "Escort",
+      "destroy": "Targets destroyed",
+      "kaiju": "Repel kaiju",
+      "speed": "Speed"
+    },
+    "killTarget": {
+      "target": "Target kills",
+      "drone": "Drone kills",
+      "groundTarget": "Ground target kills",
+      "any": "Kills"
+    },
+    "fail": {
+      "playerDown": "Shot down",
+      "escortLost": "Escort lost",
+      "timeUp": "Time up",
+      "kaijuReachedCity": "The kaiju reached the city",
+      "outOfBounds": "Left the combat area"
+    },
+    "progressSeconds": "{label} {current} / {target} s",
+    "summarySeconds": "{label} {seconds} s"
+  },
+  "quality": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "downgraded": "Graphics quality lowered"
+  },
+  "weather": {
+    "time": {
+      "dawn": "Dawn",
+      "day": "Day",
+      "evening": "Dusk",
+      "night": "Night"
+    },
+    "sky": {
+      "clear": "Clear",
+      "overcast": "Cloudy",
+      "fog": "Fog",
+      "rain": "Rain"
+    },
+    "wind": {
+      "weak": "Light wind",
+      "strong": "Strong wind"
+    },
+    "label": "{time} · {sky} · {wind}"
+  },
+  "raid": {
+    "difficulty": {
+      "normal": "Normal",
+      "hard": "Hard"
+    },
+    "briefing": {
+      "title": "Briefing: Vorgas",
+      "lines": [
+        "Break the crystal to stop the Heat Beam, the tail for Sweep, the head for Roar",
+        "Break a leg to down it for 15 s (×2 damage to all parts)",
+        "Break: 2 players hit the same part within 3 s (×3 to that part)"
+      ],
+      "skip": "Skip",
+      "waitingSkip": "Waiting for everyone to skip"
+    },
+    "phrases": {
+      "head": "Hit the head",
+      "legs": "Hit the legs",
+      "crystal": "Hit the crystal",
+      "evade": "Evade!"
+    },
+    "result": {
+      "difficulty": "Difficulty",
+      "clearTime": "Clear time",
+      "elapsed": "Elapsed",
+      "rewardAll": "Reward (all)",
+      "damage": "Damage {damage}",
+      "pilot": "Pilot",
+      "total": "Total",
+      "breaks": "Breaks",
+      "respawns": "Respawns"
+    }
+  },
+  "progress": {
+    "campaign": "{cleared}/{total} cleared",
+    "separator": " · ",
+    "defense": "Best: Wave {waves}",
+    "raid": "Best {time}"
+  },
+  "campaign": {
+    "heading": "Campaign",
+    "balance": "Balance",
+    "backToModes": "← Modes",
+    "backToMissions": "← Missions",
+    "required": "Required",
+    "optional": "Optional",
+    "reward": "Reward",
+    "unlockAfter": "Clear {mission} to unlock",
+    "locked": "Locked",
+    "briefing": {
+      "objectives": "Objectives",
+      "changeAircraft": "Aircraft",
+      "launch": "Launch",
+      "withPrevious": "+ ",
+      "timeLimit": "Time limit",
+      "none": "None",
+      "weather": "Weather",
+      "rewardValue": "{credits} (S ×{scale})",
+      "aircraft": "Aircraft"
+    },
+    "result": {
+      "newGear": "New gear is available in the Hangar",
+      "toMissions": "Missions",
+      "retry": "Retry",
+      "time": "Time",
+      "hitsTaken": "Hits taken",
+      "protectedBuildings": "Buildings saved",
+      "rewardValue": "Earned +{earned} / Balance {balance}"
+    }
+  },
+  "hud": {
+    "timeLeft": "{time} left",
+    "shotDown": "SHOT DOWN",
+    "respawnIn": "Respawn in {seconds} s"
+  },
+  "title": {
+    "prompt": "Tap / Enter to start",
+    "settings": "Settings",
+    "loading": "Loading…"
+  },
+  "pause": {
+    "heading": "Paused",
+    "resume": "Resume",
+    "photoMode": "Photo Mode",
+    "allSettings": "All Settings",
+    "abortMission": "Abort Mission",
+    "toTitle": "Title"
+  },
+  "race": {
+    "hud": {
+      "missed": "MISSED RING +{seconds}s",
+      "thinBonus": "THIN RING −{seconds}s"
+    },
+    "abort": "Abort Race",
+    "result": {
+      "toCourses": "Courses",
+      "ghostSaved": "Ghost saved",
+      "place": "Best #{place}",
+      "run": "Run",
+      "penalty": "Penalty",
+      "penaltyValue": "+{seconds} s ({missed} missed)",
+      "bonus": "Bonus",
+      "bonusValue": "−{seconds} s ({thin} thin rings)",
+      "gold": "Gold",
+      "best": "Best",
+      "bestValue": "{time} ({aircraft})"
+    },
+    "kind": {
+      "normal": "Normal",
+      "boost": "Boost (free AB for {seconds} s)",
+      "thin": "Thin (−{seconds} s)",
+      "checkpoint": "Checkpoint (can't skip)"
+    },
+    "select": {
+      "heading": "Ring Race",
+      "bestTimes": "Top {count}",
+      "start": "Start",
+      "notRun": "Not run",
+      "map": "Map",
+      "rings": "Rings",
+      "ringCount": {
+        "one": "{count} ring",
+        "other": "{count} rings"
+      },
+      "bestRank": "Best rank",
+      "ghost": "Ghost",
+      "ghostValue": "Yes ({time})",
+      "noRecords": "No records yet"
+    }
+  },
+  "modes": {
+    "heading": "Select Mode",
+    "backToTitle": "← Title",
+    "play": "PLAY",
+    "manage": "MANAGE",
+    "players": {
+      "solo": "Solo",
+      "versus": "2–4 players",
+      "party": "1–4 players"
+    },
+    "campaign": {
+      "label": "Campaign",
+      "note": "Clear missions in order"
+    },
+    "free": {
+      "label": "Free Flight",
+      "noteOn": "Dogfight enemies or fly freely",
+      "noteOff": "Fly freely with no enemies"
+    },
+    "race": {
+      "label": "Ring Race",
+      "note": "Time attack through the rings"
+    },
+    "pvp": {
+      "label": "PvP",
+      "note": "Battle in the same sky"
+    },
+    "raid": {
+      "label": "Raid",
+      "note": "Take down the giant kaiju Vorgas"
+    },
+    "defense": {
+      "label": "Defense",
+      "note": "Defend the base from 10 waves"
+    },
+    "hangar": {
+      "label": "Hangar"
+    },
+    "replay": {
+      "label": "Replays"
+    },
+    "ranking": {
+      "label": "Rankings"
+    },
+    "settings": {
+      "label": "Settings"
+    },
+    "info": {
+      "label": "About"
+    },
+    "dialog": {
+      "back": "Back",
+      "map": "Map",
+      "weather": "Weather",
+      "time": "Time",
+      "timeFixed": "Fixed",
+      "timeFlow": "Flowing",
+      "launch": "Launch",
+      "coop": "Co-op 2–4",
+      "solo": "Solo"
+    },
+    "raidDialog": {
+      "title": "Raid: Vorgas",
+      "body": "Solo: pick a difficulty and launch right away (Hard: HP ×1.4, shorter tells, 3.5-min final phase, reward ×1.8). For 2–4 players, create a room or join with a room code (everyone on one team; the host picks the difficulty).",
+      "difficulty": "Difficulty (Solo)"
+    },
+    "defenseDialog": {
+      "body": "Defend the base HQ from all 10 waves. Between waves, pass low and slow over the base (below 300 m, speed under 150) to resupply. Hard: enemies ×1.3, HQ HP 1500. For 2–4 players, create a room or join with a room code (everyone on one team).",
+      "difficulty": "Difficulty"
+    }
+  }
+}

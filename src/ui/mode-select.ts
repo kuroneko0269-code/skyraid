@@ -1,3 +1,4 @@
+import { t } from '../core/i18n';
 import type { RaidDifficulty } from '../data/raid';
 import type { DefenseDifficulty } from '../data/defense';
 import './mode-select.css';
@@ -23,69 +24,41 @@ export const GAME_MODES = [
 ] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
-/** フリーフライトの説明（設定の「敵」に合わせて書き換える） */
-const FREE_FLIGHT_NOTES = { on: '敵機と空戦・自由に飛ぶ', off: '敵なしで自由に飛ぶ' } as const;
+/** フリーフライトの説明（設定の「敵」に合わせて書き換える）。表のキー modes.free.* */
+const FREE_FLIGHT_NOTE_KEYS = { on: 'modes.free.noteOn', off: 'modes.free.noteOff' } as const;
+
+/** 人数のバッジ（solo はソロ、versus は 2〜4 人、party は 1〜4 人）。表のキー modes.players.* */
+type PlayersBadge = 'solo' | 'versus' | 'party';
 
 interface PlayEntry {
   readonly mode: GameMode;
-  readonly label: string;
-  readonly note: string;
   /** 人数のバッジ */
-  readonly players: string;
+  readonly players: PlayersBadge;
   readonly glyph: GlyphKind;
 }
 
 /**
  * 上段「遊ぶ」（7-D）。大きなカードに人数のバッジと進捗。説明の人数（1〜4 人など）はバッジに移した。
- * チュートリアル（4-11）の文は i18n（コンストラクタで差し替える）。リングレース（7-1）は今はソロだけ
+ * 題と説明は表のキー modes.<mode>.label / note。チュートリアル（4-11）の文は tutorial-text（コンストラクタで差し替える）。
+ * リングレース（7-1）は今はソロだけ
  */
 const PLAY_ENTRIES: readonly PlayEntry[] = [
-  { mode: 'tutorial', label: '', note: '', players: 'ソロ', glyph: 'fighter' },
-  {
-    mode: 'campaign',
-    label: 'キャンペーン',
-    note: 'ミッションを順にクリア',
-    players: 'ソロ',
-    glyph: 'star',
-  },
-  {
-    mode: 'free',
-    label: 'フリーフライト',
-    note: FREE_FLIGHT_NOTES.on,
-    players: 'ソロ',
-    glyph: 'cloudWing',
-  },
-  {
-    mode: 'race',
-    label: 'リングレース',
-    note: 'リングを抜けるタイムアタック',
-    players: 'ソロ',
-    glyph: 'ring',
-  },
-  { mode: 'pvp', label: 'PvP', note: '同じ空で撃ち合う', players: '2〜4 人', glyph: 'crossedJets' },
-  {
-    mode: 'raid',
-    label: 'レイド',
-    note: '巨大怪獣ヴォルガスを撃破',
-    players: '1〜4 人',
-    glyph: 'kaiju',
-  },
-  {
-    mode: 'defense',
-    label: '防衛戦',
-    note: '基地を 10 波の敵から守る',
-    players: '1〜4 人',
-    glyph: 'radar',
-  },
+  { mode: 'tutorial', players: 'solo', glyph: 'fighter' },
+  { mode: 'campaign', players: 'solo', glyph: 'star' },
+  { mode: 'free', players: 'solo', glyph: 'cloudWing' },
+  { mode: 'race', players: 'solo', glyph: 'ring' },
+  { mode: 'pvp', players: 'versus', glyph: 'crossedJets' },
+  { mode: 'raid', players: 'party', glyph: 'kaiju' },
+  { mode: 'defense', players: 'party', glyph: 'radar' },
 ];
 
-/** 下段「管理」（7-D）。小さなタイル 1 行。ランキング（7-4）はオンライン連携の連携中だけ（setModeVisible） */
-const MANAGE_ENTRIES: readonly { mode: GameMode; label: string; glyph: GlyphKind }[] = [
-  { mode: 'hangar', label: 'ハンガー', glyph: 'hangar' },
-  { mode: 'replay', label: 'リプレイ', glyph: 'play' },
-  { mode: 'ranking', label: 'ランキング', glyph: 'trophy' },
-  { mode: 'settings', label: '設定', glyph: 'gear' },
-  { mode: 'info', label: '情報', glyph: 'info' },
+/** 下段「管理」（7-D）。小さなタイル 1 行。ランキング（7-4）はオンライン連携の連携中だけ（setModeVisible）。題は modes.<mode>.label */
+const MANAGE_ENTRIES: readonly { mode: GameMode; glyph: GlyphKind }[] = [
+  { mode: 'hangar', glyph: 'hangar' },
+  { mode: 'replay', glyph: 'play' },
+  { mode: 'ranking', glyph: 'trophy' },
+  { mode: 'settings', glyph: 'gear' },
+  { mode: 'info', glyph: 'info' },
 ];
 
 /** 初めは隠すモード（ランキングはオンライン連携の状態で出す） */
@@ -122,8 +95,8 @@ export class ModeSelectScreen {
   ) {
     const root = createScreen(parent, 'mode-select-screen');
     const header = el('div', 'menu-header', root);
-    createButton(header, 'ui-button is-ghost menu-back', '← タイトルへ', handlers.onBack);
-    el('h2', 'ui-heading menu-heading', header, 'モード選択');
+    createButton(header, 'ui-button is-ghost menu-back', t('modes.backToTitle'), handlers.onBack);
+    el('h2', 'ui-heading menu-heading', header, t('modes.heading'));
 
     const select = (mode: GameMode): void => {
       // 6-4: フリーフライトはマップを選んでから
@@ -131,26 +104,34 @@ export class ModeSelectScreen {
       else handlers.onSelect(mode);
     };
 
-    el('div', 'ui-kicker mode-section', root, '遊ぶ');
+    el('div', 'ui-kicker mode-section', root, t('modes.play'));
     const play = el('div', 'mode-play', root);
     for (const entry of PLAY_ENTRIES) {
       const tut = entry.mode === 'tutorial';
       const card = this.addButton(play, 'mode-card', entry.mode, entry.glyph, select);
-      el('span', 'mode-label', card, tut ? tutorial.title : entry.label);
-      const note = el('span', 'mode-note', card, tut ? tutorial.note : entry.note);
+      el('span', 'mode-label', card, tut ? tutorial.title : t(`modes.${entry.mode}.label`));
+      const noteText = tut
+        ? tutorial.note
+        : t(entry.mode === 'free' ? FREE_FLIGHT_NOTE_KEYS.on : `modes.${entry.mode}.note`);
+      const note = el('span', 'mode-note', card, noteText);
       if (entry.mode === 'free') this.freeNote = note;
       // 下の行: 左に進捗、右に人数のバッジ（題の行を広く使う）
       const foot = el('span', 'mode-card-foot', card);
       this.progressLines.set(entry.mode, el('span', 'mode-progress', foot));
-      const multi = entry.players !== 'ソロ';
-      el('span', `mode-badge${multi ? ' is-multi' : ''}`, foot, entry.players);
+      const multi = entry.players !== 'solo';
+      el(
+        'span',
+        `mode-badge${multi ? ' is-multi' : ''}`,
+        foot,
+        t(`modes.players.${entry.players}`),
+      );
     }
 
-    el('div', 'ui-kicker mode-section', root, '管理');
+    el('div', 'ui-kicker mode-section', root, t('modes.manage'));
     const manage = el('div', 'mode-manage', root);
     for (const entry of MANAGE_ENTRIES) {
       const tile = this.addButton(manage, 'mode-tile', entry.mode, entry.glyph, select);
-      el('span', 'mode-label', tile, entry.label);
+      el('span', 'mode-label', tile, t(`modes.${entry.mode}.label`));
     }
 
     this.dialogs = new ModeDialogs(root, tutorial, {
@@ -248,7 +229,7 @@ export class ModeSelectScreen {
 
   /** フリーフライトの説明を敵の設定（ON/OFF）に合わせる */
   setEnemiesEnabled(enabled: boolean): void {
-    if (this.freeNote) this.freeNote.textContent = FREE_FLIGHT_NOTES[enabled ? 'on' : 'off'];
+    if (this.freeNote) this.freeNote.textContent = t(FREE_FLIGHT_NOTE_KEYS[enabled ? 'on' : 'off']);
   }
 
   setShown(shown: boolean): void {

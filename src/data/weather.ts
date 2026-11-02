@@ -1,5 +1,6 @@
 // 天候と時間帯（7-5）。時間帯（太陽の高さ）× 天候 × 風の組み合わせをプリセットにする。
 // 補間と時間の進行は src/core/weather-state.ts（Three.js 非依存）、描画への適用は src/render/weather/
+import { t } from '../core/i18n';
 import { SKY_CONFIG } from './sky';
 
 export const TIMES_OF_DAY = ['dawn', 'day', 'evening', 'night'] as const;
@@ -28,12 +29,36 @@ export const TIME_OF_DAY_CONFIG: Readonly<
   Record<TimeOfDay, { elevation: number; side: 'morning' | 'afternoon'; label: string }>
 > = {
   /** 橙〜桃（低い太陽の透過率が赤く、空の多重散乱が青いので、地平線の霞が桃色に寄る）。7-5b で 8 → 6° */
-  dawn: { elevation: 6, side: 'morning', label: '早朝' },
-  day: { elevation: SKY_CONFIG.sun.elevation, side: 'afternoon', label: '昼' },
+  dawn: {
+    elevation: 6,
+    side: 'morning',
+    get label() {
+      return t('weather.time.dawn');
+    },
+  },
+  day: {
+    elevation: SKY_CONFIG.sun.elevation,
+    side: 'afternoon',
+    get label() {
+      return t('weather.time.day');
+    },
+  },
   /** 赤橙。7-5b で 12 → 5°（地平線の赤橙・天頂の紫青・長い影） */
-  evening: { elevation: 5, side: 'afternoon', label: '夕方' },
+  evening: {
+    elevation: 5,
+    side: 'afternoon',
+    get label() {
+      return t('weather.time.evening');
+    },
+  },
   /** 月光と星（太陽は地平線の下） */
-  night: { elevation: -10, side: 'afternoon', label: '夜' },
+  night: {
+    elevation: -10,
+    side: 'afternoon',
+    get label() {
+      return t('weather.time.night');
+    },
+  },
 };
 
 // 低い太陽の色（旧 SUN_TINT）は 7-5b で大気散乱の計算（src/data/sky.ts の LOW_SUN_CONFIG）に置き換えた
@@ -62,7 +87,9 @@ export interface SkyKindParams {
 
 export const SKY_KIND_CONFIG: Readonly<Record<SkyKind, SkyKindParams>> = {
   clear: {
-    label: '快晴',
+    get label() {
+      return t('weather.sky.clear');
+    },
     overcast: 0,
     coverage: 0.45,
     cloudDark: 0,
@@ -73,7 +100,9 @@ export const SKY_KIND_CONFIG: Readonly<Record<SkyKind, SkyKindParams>> = {
     exposureBias: 0,
   },
   overcast: {
-    label: '曇り',
+    get label() {
+      return t('weather.sky.overcast');
+    },
     overcast: 0.8,
     coverage: 0.85,
     cloudDark: 0.15,
@@ -84,7 +113,9 @@ export const SKY_KIND_CONFIG: Readonly<Record<SkyKind, SkyKindParams>> = {
     exposureBias: -0.25,
   },
   fog: {
-    label: '霧',
+    get label() {
+      return t('weather.sky.fog');
+    },
     overcast: 0.75,
     coverage: 0.6,
     cloudDark: 0,
@@ -95,7 +126,9 @@ export const SKY_KIND_CONFIG: Readonly<Record<SkyKind, SkyKindParams>> = {
     exposureBias: 0,
   },
   rain: {
-    label: '雨',
+    get label() {
+      return t('weather.sky.rain');
+    },
     overcast: 1,
     coverage: 0.95,
     cloudDark: 0.6,
@@ -109,8 +142,18 @@ export const SKY_KIND_CONFIG: Readonly<Record<SkyKind, SkyKindParams>> = {
 
 /** 風: 0（弱）〜 1（強）を補間する。飛行モデルには影響させない（見た目と音だけ） */
 export const WIND_LEVEL_CONFIG: Readonly<Record<WindLevel, { value: number; label: string }>> = {
-  weak: { value: 0, label: '弱風' },
-  strong: { value: 1, label: '強風' },
+  weak: {
+    value: 0,
+    get label() {
+      return t('weather.wind.weak');
+    },
+  },
+  strong: {
+    value: 1,
+    get label() {
+      return t('weather.wind.strong');
+    },
+  },
 };
 
 /**
@@ -161,7 +204,11 @@ export function isWeatherId(id: unknown): id is string {
 /** 表示名（例「夕方・快晴・弱風」） */
 export function weatherLabel(id: string): string {
   const p = findWeather(id);
-  return `${TIME_OF_DAY_CONFIG[p.time].label}・${SKY_KIND_CONFIG[p.sky].label}・${WIND_LEVEL_CONFIG[p.wind].label}`;
+  return t('weather.label', {
+    time: TIME_OF_DAY_CONFIG[p.time].label,
+    sky: SKY_KIND_CONFIG[p.sky].label,
+    wind: WIND_LEVEL_CONFIG[p.wind].label,
+  });
 }
 
 /**

@@ -130,7 +130,7 @@ export class Kaiju implements KaijuPartOwner, KaijuPoseInput {
 
   part(id: KaijuPartId): KaijuPart {
     const p = this.parts[KAIJU_PARTS.indexOf(id)];
-    if (!p) throw new Error(`部位がない: ${id}`);
+    if (!p) throw new Error(`unknown kaiju part: ${id}`);
     return p;
   }
 

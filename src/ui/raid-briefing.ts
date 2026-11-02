@@ -1,5 +1,6 @@
 // 協力レイドの開始前のブリーフィング（6-6）: カウントダウンの前の 5 秒、怪獣の弱点と「ブレイクは 2 人で同じ部位」の
 // ヒントを出す。2 回目以降（前に最後まで見た）はスキップを押せる（全員が押すとホストが早く終わらせる）
+import { t } from '../core/i18n';
 import type { BuildingField } from '../combat/buildings';
 import { RAID_BRIEFING } from '../data/raid';
 import type { SaveStore } from '../progression/save-store';
@@ -19,12 +20,17 @@ export class RaidBriefing {
     this.remain = el('span', 'raid-briefing-remain', head);
     const list = el('ul', 'briefing-text raid-briefing-lines', this.root);
     for (const line of RAID_BRIEFING.lines) el('li', '', list, line);
-    this.skip = createButton(this.root, 'ui-button raid-briefing-skip', 'スキップ', () => {
-      this.pressed = true;
-      this.skip.disabled = true;
-      this.skip.textContent = '全員のスキップを待っています';
-      onSkip();
-    });
+    this.skip = createButton(
+      this.root,
+      'ui-button raid-briefing-skip',
+      t('raid.briefing.skip'),
+      () => {
+        this.pressed = true;
+        this.skip.disabled = true;
+        this.skip.textContent = t('raid.briefing.waitingSkip');
+        onSkip();
+      },
+    );
     this.root.hidden = true;
   }
 
@@ -44,7 +50,7 @@ export class RaidBriefing {
   reset(): void {
     this.pressed = false;
     this.skip.disabled = false;
-    this.skip.textContent = 'スキップ';
+    this.skip.textContent = t('raid.briefing.skip');
     this.root.hidden = true;
   }
 

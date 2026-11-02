@@ -1,5 +1,7 @@
 // リングレース（7-1）のコース一覧: 左にコース（難易度・ベストタイム・最高ランク）、右に選んだコースの詳細
 // （マップ・天候・リング・ゴールドタイム・制限時間・ベスト 5）と機体の選択（所持機体。ハンガーの選択も変わる）と「スタート」
+import { formatDate } from '../core/format';
+import { t, tn } from '../core/i18n';
 import './campaign.css';
 import './race.css';
 import './segmented.css';
@@ -16,11 +18,25 @@ import { formatCredits } from './mission-text';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 const KIND_TEXT: Readonly<Record<RingKind, string>> = {
-  normal: '通常',
-  boost: `ブースト（AB ${RACE_CONFIG.boostSeconds} 秒無料）`,
-  thin: `細い（−${RACE_CONFIG.thinBonusSeconds} 秒）`,
-  checkpoint: 'チェックポイント（飛ばせない）',
+  get normal() {
+    return t('race.kind.normal');
+  },
+  get boost() {
+    return t('race.kind.boost', { seconds: RACE_CONFIG.boostSeconds });
+  },
+  get thin() {
+    return t('race.kind.thin', { seconds: RACE_CONFIG.thinBonusSeconds });
+  },
+  get checkpoint() {
+    return t('race.kind.checkpoint');
+  },
 };
+
+/** 記録の日付「YYYY-MM-DD」（ローカルの日付）を今の言語の表記に。読めなければそのまま */
+function formatRecordDate(date: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  return m ? formatDate(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : date;
+}
 
 interface Entry {
   readonly course: CourseDef;
@@ -49,12 +65,12 @@ export class RaceSelectScreen {
     handlers: { onStart: (course: CourseDef) => void; onBack: () => void },
   ) {
     const first = courses[0];
-    if (!first) throw new Error('コースがない');
+    if (!first) throw new Error('no courses');
     this.selected = first;
     const root = createScreen(parent, 'campaign-screen race-screen');
-    el('h2', 'ui-heading campaign-heading', root, 'リングレース');
+    el('h2', 'ui-heading campaign-heading', root, t('race.select.heading'));
     const balance = el('div', 'campaign-balance', root);
-    el('span', '', balance, '残高');
+    el('span', '', balance, t('campaign.balance'));
     this.balance = el('span', 'campaign-balance-value', balance);
     const layout = el('div', 'race-layout', root);
     const list = el('div', 'race-course-list', layout);
@@ -81,16 +97,31 @@ export class RaceSelectScreen {
         `#${RACE_CONFIG.colors[k].toString(16).padStart(6, '0')}`,
       );
     }
-    el('div', 'campaign-label', detail, `ベスト ${RACE_CONFIG.bestTimes}`);
+    el(
+      'div',
+      'campaign-label',
+      detail,
+      t('race.select.bestTimes', { count: RACE_CONFIG.bestTimes }),
+    );
     this.times = el('table', 'race-times', detail);
-    el('div', 'campaign-label', detail, '機体');
+    el('div', 'campaign-label', detail, t('campaign.briefing.aircraft'));
     this.aircraft = el('div', 'race-aircraft', detail);
     this.aircraft.setAttribute('role', 'radiogroup');
     const buttons = el('div', 'campaign-buttons', root);
-    createButton(buttons, 'ui-button is-ghost campaign-back', '← モード選択', handlers.onBack);
-    this.start = createButton(buttons, 'ui-button is-primary campaign-go', 'スタート', () => {
-      handlers.onStart(this.selected);
-    });
+    createButton(
+      buttons,
+      'ui-button is-ghost campaign-back',
+      t('campaign.backToModes'),
+      handlers.onBack,
+    );
+    this.start = createButton(
+      buttons,
+      'ui-button is-primary campaign-go',
+      t('race.select.start'),
+      () => {
+        handlers.onStart(this.selected);
+      },
+    );
     this.root = root;
     this.refresh();
   }
@@ -106,7 +137,9 @@ export class RaceSelectScreen {
     for (const { course, button, best } of this.entries) {
       const rec = this.record(course.id);
       const top = rec.times[0];
-      best.textContent = top ? `BEST ${formatRaceTime(top.time)}  ${rec.bestRank ?? ''}` : '未走行';
+      best.textContent = top
+        ? `BEST ${formatRaceTime(top.time)}  ${rec.bestRank ?? ''}`
+        : t('race.select.notRun');
       best.classList.toggle('race-rank-s', rec.bestRank === 'S');
       button.classList.toggle('is-selected', course === this.selected);
       button.setAttribute('aria-pressed', String(course === this.selected));
@@ -121,23 +154,28 @@ export class RaceSelectScreen {
       el('span', 'campaign-fact-label', row, label);
       el('span', 'campaign-fact-value', row, value);
     };
-    fact('マップ', findMap(c.mapId).name);
-    fact('天候', weatherLabel(c.weatherId));
-    fact('リング', `${c.rings.length} 個`);
-    fact('ゴールド', formatRaceTime(c.goldTimeSeconds));
-    fact('制限時間', formatRaceTime(c.timeLimitSeconds));
-    fact('最高ランク', rec.bestRank ?? '—');
-    fact('ゴースト', rec.ghost ? `あり（${formatRaceTime(rec.ghost.time)}）` : 'なし');
+    fact(t('race.select.map'), findMap(c.mapId).name);
+    fact(t('campaign.briefing.weather'), weatherLabel(c.weatherId));
+    fact(t('race.select.rings'), tn('race.select.ringCount', c.rings.length));
+    fact(t('race.result.gold'), formatRaceTime(c.goldTimeSeconds));
+    fact(t('campaign.briefing.timeLimit'), formatRaceTime(c.timeLimitSeconds));
+    fact(t('race.select.bestRank'), rec.bestRank ?? '—');
+    fact(
+      t('race.select.ghost'),
+      rec.ghost
+        ? t('race.select.ghostValue', { time: formatRaceTime(rec.ghost.time) })
+        : t('campaign.briefing.none'),
+    );
     this.times.replaceChildren();
     if (rec.times.length === 0) {
-      el('td', '', el('tr', '', this.times), 'まだ記録がありません');
+      el('td', '', el('tr', '', this.times), t('race.select.noRecords'));
     }
-    rec.times.forEach((t, i) => {
+    rec.times.forEach((entry, i) => {
       const tr = el('tr', '', this.times);
       el('td', '', tr, `${i + 1}.`);
-      el('td', '', tr, formatRaceTime(t.time));
-      el('td', '', tr, t.aircraftName);
-      el('td', '', tr, t.date);
+      el('td', '', tr, formatRaceTime(entry.time));
+      el('td', '', tr, entry.aircraftName);
+      el('td', '', tr, formatRecordDate(entry.date));
     });
     this.renderAircraft();
   }

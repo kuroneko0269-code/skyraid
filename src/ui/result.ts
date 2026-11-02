@@ -1,3 +1,4 @@
+import { t } from '../core/i18n';
 import './campaign.css';
 import './save.css';
 import type { MissionResult } from '../missions/runner';
@@ -48,20 +49,20 @@ export class ResultScreen {
     this.rank = el('div', 'result-rank', panel);
     this.objectives = el('ul', 'result-objectives', panel);
     this.facts = el('div', 'campaign-facts', panel);
-    this.gear = el('div', 'result-gear', panel, 'ハンガーで新しい装備が買えます');
+    this.gear = el('div', 'result-gear', panel, t('campaign.result.newGear'));
     this.gear.hidden = true;
     this.extras = el('div', 'result-extras', panel);
     const buttons = el('div', 'campaign-buttons', panel);
     this.back = createButton(
       buttons,
       'ui-button is-ghost campaign-back',
-      'ミッション一覧へ',
+      t('campaign.result.toMissions'),
       handlers.onList,
     );
     this.retry = createButton(
       buttons,
       'ui-button is-primary campaign-go',
-      'もう一度',
+      t('campaign.result.retry'),
       handlers.onRetry,
     );
     this.root = root;
@@ -72,7 +73,7 @@ export class ResultScreen {
     this.root.classList.toggle('is-success', success);
     this.outcome.textContent =
       extras.tutorial?.title ?? (success ? 'MISSION COMPLETE' : 'MISSION FAILED');
-    this.back.textContent = extras.tutorial?.back ?? 'ミッション一覧へ';
+    this.back.textContent = extras.tutorial?.back ?? t('campaign.result.toMissions');
     this.pilot.textContent = extras.pilotName === null ? '' : `PILOT  ${extras.pilotName}`;
     this.pilot.hidden = extras.pilotName === null;
     this.reason.textContent = r.failReason ? FAIL_REASON_TEXT[r.failReason] : '';
@@ -86,7 +87,7 @@ export class ResultScreen {
       const li = el('li', done ? 'result-objective is-done' : 'result-objective', this.objectives);
       el('span', 'result-mark', li, done ? '✓' : '✗');
       el('span', '', li, objectiveProgressText(o.def, o.current, o.target));
-      if (!o.def.required) el('span', 'tag', li, '任意');
+      if (!o.def.required) el('span', 'tag', li, t('campaign.optional'));
     }
     this.facts.replaceChildren();
     const fact = (label: string, value: string): void => {
@@ -94,11 +95,18 @@ export class ResultScreen {
       el('span', 'campaign-fact-label', row, label);
       el('span', 'campaign-fact-value', row, value);
     };
-    fact('時間', formatClock(r.elapsedSeconds));
-    fact('被弾', `${Math.round(r.damageTaken)} / ${r.maxHp}`);
+    fact(t('campaign.result.time'), formatClock(r.elapsedSeconds));
+    fact(t('campaign.result.hitsTaken'), `${Math.round(r.damageTaken)} / ${r.maxHp}`);
     // 6-4: 街のあるマップ（レイド）だけ。スコアの表示で報酬には影響しない
-    if (r.protectedBuildings !== undefined) fact('守れた建物', `${r.protectedBuildings}%`);
-    fact('報酬', `獲得 +${formatCredits(r.credits)} / 残高 ${formatCredits(extras.balance)}`);
+    if (r.protectedBuildings !== undefined)
+      fact(t('campaign.result.protectedBuildings'), `${r.protectedBuildings}%`);
+    fact(
+      t('campaign.reward'),
+      t('campaign.result.rewardValue', {
+        earned: formatCredits(r.credits),
+        balance: formatCredits(extras.balance),
+      }),
+    );
     this.gear.hidden = !extras.newGear;
   }
 

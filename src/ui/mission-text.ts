@@ -1,4 +1,5 @@
 // ミッションの表示用の文字列（HUD・ブリーフィング・リザルト。2-4）。DOM 非依存の純関数
+import { formatCredits as formatCreditsText } from '../core/format';
 import { hasMessage, t, tList } from '../core/i18n';
 import { DIFFICULTIES, DIFFICULTY_SHORT_LABELS, type Difficulty } from '../data/ai';
 import type { FailCondition, MissionDef, ObjectiveDef, ObjectiveType } from '../missions/types';
@@ -16,44 +17,43 @@ export function missionStrings(id: string): MissionStrings {
 }
 
 /** 目標の種類ごとの既定の表示名（定義の label で上書きできる） */
-const OBJECTIVE_LABELS: Record<ObjectiveType, string> = {
-  kill: '敵機撃墜',
-  survive: '生存',
-  rings: 'リング通過',
-  escort: '護衛',
-  destroy: '目標破壊',
-  kaiju: '怪獣撃退',
-  speed: '速度',
-};
+function defaultObjectiveLabel(type: ObjectiveType): string {
+  return t(`objectives.label.${type}`);
+}
 
 export const FAIL_REASON_TEXT: Record<FailCondition, string> = {
-  playerDown: '撃墜された',
-  escortLost: '護衛対象を失った',
-  timeUp: '時間切れ',
-  kaijuReachedCity: '怪獣が街に到達した',
-  outOfBounds: '戦域を離脱した',
+  get playerDown() {
+    return t('objectives.fail.playerDown');
+  },
+  get escortLost() {
+    return t('objectives.fail.escortLost');
+  },
+  get timeUp() {
+    return t('objectives.fail.timeUp');
+  },
+  get kaijuReachedCity() {
+    return t('objectives.fail.kaijuReachedCity');
+  },
+  get outOfBounds() {
+    return t('objectives.fail.outOfBounds');
+  },
 };
 
 export function objectiveLabel(def: ObjectiveDef): string {
   if (def.label) return def.label;
   if (def.type === 'kill' && def.target !== 'enemyFighter') {
-    const names = { target: '的', drone: 'ドローン', groundTarget: '地上目標', any: '目標' };
-    return `${names[def.target]}撃墜`;
+    return t(`objectives.killTarget.${def.target}`);
   }
-  return OBJECTIVE_LABELS[def.type];
+  return defaultObjectiveLabel(def.type);
 }
 
 /** 進み具合の表示。例「敵機撃墜 1 / 3」「生存 12 / 60 秒」 */
 export function objectiveProgressText(def: ObjectiveDef, current: number, target: number): string {
+  const label = objectiveLabel(def);
+  if (def.type === 'survive') return t('objectives.progressSeconds', { label, current, target });
   const unit =
-    def.type === 'survive'
-      ? ' 秒'
-      : def.type === 'speed'
-        ? ' m/s'
-        : def.type === 'kaiju' || def.type === 'escort'
-          ? ' %'
-          : '';
-  return `${objectiveLabel(def)} ${current} / ${target}${unit}`;
+    def.type === 'speed' ? ' m/s' : def.type === 'kaiju' || def.type === 'escort' ? ' %' : '';
+  return `${label} ${current} / ${target}${unit}`;
 }
 
 /** ブリーフィングの目標の説明。例「リング通過 10」「敵機撃墜 2」「生存 60 秒」 */
@@ -65,7 +65,7 @@ export function objectiveSummary(def: ObjectiveDef): string {
     case 'rings':
       return `${label} ${def.rings.length}`;
     case 'survive':
-      return `${label} ${def.seconds} 秒`;
+      return t('objectives.summarySeconds', { label, seconds: def.seconds });
     case 'destroy':
       return `${label} ${def.count}`;
     case 'escort':
@@ -102,7 +102,7 @@ export function missionDifficultyText(def: MissionDef): string {
   if (!a || !b) return '';
   return a === b
     ? DIFFICULTY_SHORT_LABELS[a]
-    : `${DIFFICULTY_SHORT_LABELS[a]}〜${DIFFICULTY_SHORT_LABELS[b]}`;
+    : t('difficulty.range', { from: DIFFICULTY_SHORT_LABELS[a], to: DIFFICULTY_SHORT_LABELS[b] });
 }
 
 /** 時間の表示「m:ss」（切り上げ。残り時間が 0.2 秒なら 0:01） */
@@ -114,5 +114,5 @@ export function formatClock(seconds: number, roundUp = false): string {
 
 /** クレジットの表示（3 桁区切り） */
 export function formatCredits(credits: number): string {
-  return `${Math.round(credits).toLocaleString('en-US')} CR`;
+  return formatCreditsText(credits);
 }

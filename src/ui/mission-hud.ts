@@ -1,6 +1,7 @@
 // ミッションの HUD（2-4）: 右上の目標の進み具合と残り時間、画面中央の大きな文字（目標達成・成功・失敗）、
 // 戦域の境界の警告（RETURN TO BATTLEFIELD とカウント）、次のリングの印。進み具合はランナーのイベントを購読する。
 // DOM は最初に作り、値が変わったときだけ書く
+import { t } from '../core/i18n';
 import './mission-hud.css';
 import { MISSION_FLOW } from '../data/missions';
 import type { MissionRunner } from '../missions/runner';
@@ -122,7 +123,7 @@ export class MissionHud {
 
   /** 残り時間（制限時間がなければ null） */
   setTimeLeft(seconds: number | null): void {
-    const text = seconds === null ? '' : `残り ${formatClock(seconds, true)}`;
+    const text = seconds === null ? '' : t('hud.timeLeft', { time: formatClock(seconds, true) });
     if (text === this.last.time) return;
     this.last.time = text;
     this.timer.textContent = text;

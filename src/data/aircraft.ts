@@ -1,5 +1,6 @@
 // 機体ごとの飛行パラメータ。速度は m/s 相当、角速度は 度/秒
 // docs/spec.md「4. 飛行モデル」に各数値の意味を書いている
+import { t } from '../core/i18n';
 import {
   BASTION_SHAPE,
   KESTREL_SHAPE,
@@ -200,7 +201,9 @@ export const AIRCRAFT_MODELS: readonly AircraftModel[] = [
   {
     id: STARTER_AIRCRAFT.id,
     name: 'Kestrel',
-    role: 'バランス型',
+    get role() {
+      return t('aircraft.role.kestrel');
+    },
     stats: { speed: 1, turn: 1, durability: 1, payload: 1 },
     price: 0,
     unlockMission: null,
@@ -210,7 +213,9 @@ export const AIRCRAFT_MODELS: readonly AircraftModel[] = [
     // 最高速 +12%・旋回 +15%。HP 140（敵の機銃 28 発）、ミサイル 3・ロケット 8・爆弾 3・フレア 4
     id: 'swift',
     name: 'Swift',
-    role: '軽量・高速',
+    get role() {
+      return t('aircraft.role.swift');
+    },
     stats: { speed: 1.12, turn: 1.15, durability: 0.7, payload: 0.7 },
     price: 8000,
     unlockMission: null,
@@ -220,7 +225,9 @@ export const AIRCRAFT_MODELS: readonly AircraftModel[] = [
     // 最高速 −8%・旋回 −15%。HP 320（敵の機銃 64 発）、ミサイル 6・ロケット 18・爆弾 6・フレア 9
     id: 'bastion',
     name: 'Bastion',
-    role: '重武装・高耐久',
+    get role() {
+      return t('aircraft.role.bastion');
+    },
     stats: { speed: 0.92, turn: 0.85, durability: 1.6, payload: 1.5 },
     price: 12000,
     unlockMission: null,
@@ -230,7 +237,9 @@ export const AIRCRAFT_MODELS: readonly AircraftModel[] = [
     // 最高速 +15%・旋回 +12%。HP 250、ミサイル 5・ロケット 14・爆弾 5・フレア 7。M4（strike）クリアで解放
     id: 'vector',
     name: 'Vector',
-    role: '高性能',
+    get role() {
+      return t('aircraft.role.vector');
+    },
     stats: { speed: 1.15, turn: 1.12, durability: 1.25, payload: 1.2 },
     price: 25000,
     unlockMission: 'strike',

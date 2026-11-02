@@ -1,5 +1,6 @@
 // 護衛・破壊・怪獣の目標を使うミッション（2-5 の M3〜M5。データだけ、ロジックなし）。一覧（MISSIONS）は src/data/missions.ts。
 // タイトル・ブリーフィング文は src/data/i18n/*.json の missions[id]。距離は m、時間は秒、北は -Z、向きは -Z から右回り
+import { t } from '../core/i18n';
 import { RAID_RULES, type RaidDifficulty } from './raid';
 import type { MissionDef } from '../missions/types';
 import { RAID_CONFIG } from './kaiju';
@@ -239,7 +240,9 @@ export function raidMission(difficulty: RaidDifficulty = 'normal'): MissionDef {
         required: true,
         start: 'withPrevious',
         damageRatio: 1,
-        label: 'ヴォルガス撃破',
+        get label() {
+          return t('objectives.vorgasDefeat');
+        },
       },
     ],
     success: 'allRequiredObjectives',

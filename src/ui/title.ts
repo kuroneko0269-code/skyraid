@@ -1,3 +1,4 @@
+import { t } from '../core/i18n';
 import './title.css';
 import './save.css';
 import { APP_VERSION } from 'virtual:app-info';
@@ -41,14 +42,14 @@ export class TitleScreen {
       el('span', `title-frame-${part}`, frame);
     this.logo = el('div', 'title-logo', root);
     el('span', 'title-logo-main', this.logo, 'SkyRaid');
-    el('div', 'title-prompt', root, 'タップ / Enter で開始');
+    el('div', 'title-prompt', root, t('title.prompt'));
     this.pilot = el('div', 'title-pilot', root);
     this.pilot.hidden = true;
     el('div', 'title-scanlines', root);
     const corner = el('div', 'title-corner', root);
     el('span', 'title-version', corner, `v${APP_VERSION}`);
     const gear = createButton(corner, 'ui-button title-settings', '', onSettings);
-    gear.setAttribute('aria-label', '設定');
+    gear.setAttribute('aria-label', t('title.settings'));
     gear.appendChild(createGlyph('gear', 'title-settings-icon'));
     // 歯車のタップ・クリックは画面の「タップで開始」に渡さない
     gear.addEventListener('click', (e) => {
