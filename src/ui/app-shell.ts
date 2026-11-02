@@ -1,6 +1,7 @@
 import { APP_SHELL_CONFIG } from '../data/app';
 import { checkInstallHint } from '../core/install-hint';
 import { SKIP_WAITING_MESSAGE, watchForUpdate, type WorkerLike } from '../core/sw-update';
+import { setLazyToast } from './lazy-load';
 import { showToast } from './toast';
 import { isStandaloneDisplay } from './standalone';
 
@@ -10,6 +11,8 @@ import { isStandaloneDisplay } from './standalone';
  * SW は本番ビルドだけ（開発サーバーでは登録しない）
  */
 export function installAppShell(parent: HTMLElement): void {
+  // 遅延読み込み（8-2）の「読み込み中…」と失敗のお知らせもトーストで出す
+  setLazyToast(showToast);
   if (import.meta.env.PROD && 'serviceWorker' in navigator) registerServiceWorker(parent);
   showInstallHint(parent);
 }

@@ -63,7 +63,7 @@ export class FlightViews {
           { pool: ff.props.friendlyAaa.shells, color: DEFENSE_VIEW.friendlyTracer },
         ]),
     );
-    this.props = added(g.enemies, () => new MissionPropsView(scene, ff.props));
+    this.props = added(g.enemies, () => new MissionPropsView(scene, ff.props, g.enemies));
     this.groundTargets = added(
       g.enemies,
       () => new GroundTargetView(scene, ff.props.allGroundTargets),
@@ -85,6 +85,11 @@ export class FlightViews {
     this.defense.update(alpha);
     if (frameSeconds > 0) this.events.frame();
     this.fx.update(frameSeconds);
+  }
+
+  /** 怪獣のモデルを先に読んで作っておく（8-2。モード選択を開いたとき） */
+  prefetchKaiju(): void {
+    this.props.prefetchKaiju();
   }
 
   /** 敵機・輸送機のモデルの細かさ（画質。4-3） */

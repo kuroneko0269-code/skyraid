@@ -37,4 +37,8 @@ export const APP_SHELL_CONFIG = {
     launchKey: 'skyraid.launches',
     shownKey: 'skyraid.installHintShown',
   },
+  /** 遅延読み込み（8-2）: 読み込みがこの時間を超えたら「読み込み中…」を出す（ms。キャッシュから読むときは出さない） */
+  lazyIndicatorDelayMs: 300,
+  /** 読み込みに失敗したお知らせを出しておく秒数（0 なら閉じるまで出す） */
+  lazyErrorToastSeconds: 0,
 } as const;

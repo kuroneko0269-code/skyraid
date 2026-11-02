@@ -150,6 +150,11 @@ export class KaijuObject {
   }
 
   /** 描画フレームごと。body の前ステップとの間を alpha で補間し、骨を動かす */
+  /** 演出の時間だけ進める（8-2: モデルを遅れて作ったとき、それまでの時間を足す。update の隠れている間と同じ） */
+  advanceTime(seconds: number): void {
+    this.time += seconds;
+  }
+
   update(body: KaijuBodyView, fx: KaijuEffectsView | null, alpha: number, dt: number): void {
     this.group.visible = body.visible;
     this.time += dt;

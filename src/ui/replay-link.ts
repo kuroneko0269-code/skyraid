@@ -1,6 +1,8 @@
 // リプレイ（7-B）と画面・保存の配線: 本番の飛行の記録の始め・終わり（終わったら IndexedDB に自動保存。直近 10 本）、
 // リザルトの「リプレイを保存」（名前を付けて永久保存。30 本まで）、モード選択の「リプレイ」→ 一覧 → 再生、
-// .skyreplay の書き出し・読み込み。再生中の操作は ui/replay-playback.ts
+// .skyreplay の書き出し・読み込み。再生中の操作は ui/replay-playback.ts。
+// 8-2: 一覧・再生の操作・書き出し / 読み込みは別のチャンク（replay-ui.ts）にし、一覧を開くときに読む（loadUi）。
+// 読めなければ（オフライン・古いチャンク）お知らせを出してモード選択へ戻る
 import type { GameState } from '../core/game-state';
 import { REPLAY_CONFIG } from '../data/replay';
 import type { DefenseRunner } from '../missions/defense/runner';
@@ -14,10 +16,39 @@ import { ReplayStore, type ReplayEntry } from '../replay/store';
 import type { ReplayData, ReplayStart } from '../replay/types';
 import type { FlightReplayHooks } from './flight-start';
 import type { FlightLoopReplay } from './flight-loop';
-import { downloadReplay, pickReplayFile, replayFileName } from './replay-file';
-import { ReplayListScreen } from './replay-list';
+import type { ReplayListScreen } from './replay-list';
 import type { ReplayPlayback } from './replay-playback';
 import { ReplaySaveBox } from './replay-save';
+import type * as ReplayUi from './replay-ui';
+
+/** 再生の操作（8-2: replay-ui のチャンクを読んでから作る。作るまでは何もしない） */
+export class PlaybackSlot {
+  impl: ReplayPlayback | null = null;
+
+  get active(): boolean {
+    return this.impl?.active ?? false;
+  }
+
+  start(data: ReplayData): void {
+    this.impl?.start(data);
+  }
+
+  stop(): void {
+    this.impl?.stop();
+  }
+
+  update(): void {
+    this.impl?.update();
+  }
+
+  stepOnce(): void {
+    this.impl?.stepOnce();
+  }
+
+  render(): void {
+    this.impl?.render();
+  }
+}
 
 export interface ReplayLinkParts {
   readonly game: GameState;
@@ -25,7 +56,9 @@ export interface ReplayLinkParts {
   readonly play: GamePlay;
   readonly world: SimWorld;
   readonly save: SaveStore;
-  readonly playback: ReplayPlayback;
+  readonly playback: PlaybackSlot;
+  /** 一覧・再生の操作のチャンクを読む（読み込みの表示付き。読めなければ null。読めたら playback も作る） */
+  readonly loadUi: () => Promise<typeof ReplayUi | null>;
   /** リザルト（ミッション・レース・防衛戦）の追加の欄 */
   readonly resultExtras: readonly HTMLElement[];
 }
@@ -49,61 +82,70 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
   /** takePending で取り出した、これから再生する記録 */
   let playbackData: ReplayData | null = null;
 
-  const list = new ReplayListScreen(document.body, {
-    onPlay: (e) => {
-      void play1(e);
-    },
-    onSave: (e, name) => {
-      void withStore(async (s) => {
-        const r = await s.save(e.id, name);
-        list.say(
-          r === 'full'
-            ? `保存は ${String(REPLAY_CONFIG.savedMax)} 本までです。不要なものを削除してください`
-            : '保存しました',
-        );
-      });
-    },
-    onRename: (e, name) => {
-      void withStore((s) => s.rename(e.id, name));
-    },
-    onExport: (e) => {
-      void withStore(async (s) => {
-        const r = await s.get(e.id);
-        if (r)
-          downloadReplay(r.bytes, replayFileName(r.entry.header, e.kind === 'saved' ? e.name : ''));
-      });
-    },
-    onDelete: (e) => {
-      if (!window.confirm(`「${e.kind === 'saved' ? e.name : e.header.title}」を削除しますか？`))
-        return;
-      void withStore((s) => s.remove(e.id));
-    },
-    onImport: () => {
-      void importFile();
-    },
-    onBack: () => game.transition('mode_select'),
-  });
+  let list: ReplayListScreen | null = null;
+  const say = (text: string): void => {
+    list?.say(text);
+  };
+  const createList = (ui: typeof ReplayUi): ReplayListScreen =>
+    new ui.ReplayListScreen(document.body, {
+      onPlay: (e) => {
+        void play1(e);
+      },
+      onSave: (e, name) => {
+        void withStore(async (s) => {
+          const r = await s.save(e.id, name);
+          say(
+            r === 'full'
+              ? `保存は ${String(REPLAY_CONFIG.savedMax)} 本までです。不要なものを削除してください`
+              : '保存しました',
+          );
+        });
+      },
+      onRename: (e, name) => {
+        void withStore((s) => s.rename(e.id, name));
+      },
+      onExport: (e) => {
+        void withStore(async (s) => {
+          const r = await s.get(e.id);
+          if (r)
+            ui.downloadReplay(
+              r.bytes,
+              ui.replayFileName(r.entry.header, e.kind === 'saved' ? e.name : ''),
+            );
+        });
+      },
+      onDelete: (e) => {
+        if (!window.confirm(`「${e.kind === 'saved' ? e.name : e.header.title}」を削除しますか？`))
+          return;
+        void withStore((s) => s.remove(e.id));
+      },
+      onImport: () => {
+        void importFile(ui);
+      },
+      onBack: () => game.transition('mode_select'),
+    });
 
   /** 保存の操作をして一覧を入れ直す */
   const withStore = async (fn: (s: ReplayStore) => Promise<unknown>): Promise<void> => {
     const s = await storeReady;
     if (!s) {
-      list.say('このブラウザではリプレイを保存できません（IndexedDB が使えません）');
+      say('このブラウザではリプレイを保存できません（IndexedDB が使えません）');
       return;
     }
     try {
       await fn(s);
     } catch {
-      list.say('保存の操作に失敗しました');
+      say('保存の操作に失敗しました');
     }
     await refresh();
   };
 
   const refresh = async (): Promise<void> => {
     const s = await storeReady;
+    if (!list) return;
     if (!s) {
       list.update([], { savedCount: 0, savedBytes: 0, autoCount: 0, autoBytes: 0 });
-      list.say('このブラウザではリプレイを保存できません（IndexedDB が使えません）');
+      say('このブラウザではリプレイを保存できません（IndexedDB が使えません）');
       return;
     }
     list.update(await s.list(), await s.usage());
@@ -116,14 +158,14 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
     try {
       hub.pending = decodeReplay(r.bytes);
     } catch {
-      list.say('このリプレイは壊れていて再生できません');
+      say('このリプレイは壊れていて再生できません');
       return;
     }
     game.transition('flight');
   };
 
-  const importFile = async (): Promise<void> => {
-    const f = await pickReplayFile();
+  const importFile = async (ui: typeof ReplayUi): Promise<void> => {
+    const f = await ui.pickReplayFile();
     if (!f) return;
     try {
       const header = decodeHeader(f.bytes);
@@ -131,12 +173,12 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
       decodeReplay(f.bytes);
       await withStore(async (s) => {
         const r = await s.importSaved(header, f.bytes, f.name);
-        list.say(
+        say(
           r === 'full' ? `保存は ${String(REPLAY_CONFIG.savedMax)} 本までです` : '読み込みました',
         );
       });
     } catch {
-      list.say('リプレイのファイルとして読めませんでした');
+      say('リプレイのファイルとして読めませんでした');
     }
   };
 
@@ -174,9 +216,22 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
       }),
   );
 
+  /** 一覧を開く（初回はチャンクを読んでから。読めなければモード選択へ戻る） */
+  const openList = async (): Promise<void> => {
+    const ui = await p.loadUi();
+    if (game.state !== 'replay_select') return;
+    if (!ui) {
+      game.transition('mode_select');
+      return;
+    }
+    list ??= createList(ui);
+    list.setShown(true);
+    await refresh();
+  };
+
   game.onChange(({ from, to }) => {
-    list.setShown(to === 'replay_select');
-    if (to === 'replay_select') void refresh();
+    if (to === 'replay_select') void openList();
+    else list?.setShown(false);
     // 飛行から出たら記録を終える（リザルト・中断・メニュー）。再生も終える
     if (inFlight(from) && !inFlight(to)) {
       finishLive();

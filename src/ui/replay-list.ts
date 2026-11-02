@@ -6,6 +6,7 @@ import { formatClock } from '../replay/outcome';
 import type { ReplayEntry, ReplayUsage } from '../replay/store';
 import { REPLAY_MODE_LABELS } from '../replay/types';
 import { el } from './hud-dom';
+import { stopKeys } from './replay-save';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 export interface ReplayListHandlers {
@@ -159,11 +160,4 @@ export class ReplayListScreen {
       this.h.onDelete(e);
     });
   }
-}
-
-/** 文字の入力欄のキーを飛行・メニューの操作（H・P など）に渡さない（Esc は戻るに使う） */
-export function stopKeys(input: HTMLInputElement): void {
-  input.addEventListener('keydown', (e) => {
-    if (e.code !== 'Escape') e.stopPropagation();
-  });
 }

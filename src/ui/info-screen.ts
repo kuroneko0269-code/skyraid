@@ -1,7 +1,8 @@
 // 「情報」画面（7-D）: モード選択の「情報」から。モード選択の上に重ねる（ランキングと同じ）。
 // タブは 版 / 更新履歴（docs/changelog.md）/ ライセンス（ビルド時に生成。scripts/vite-app-info.ts）/ データの扱い
 import './info.css';
-import { APP_VERSION, LICENSES } from 'virtual:app-info';
+import { APP_VERSION } from 'virtual:app-info';
+import { LICENSES } from 'virtual:app-licenses';
 import changelogText from '../../docs/changelog.md?raw';
 import { parseChangelog } from '../core/changelog';
 import { APP_MANIFEST } from '../data/app';
@@ -72,13 +73,14 @@ export class InfoScreen {
     this.root = root;
   }
 
-  /** モード選択の上に重ねる情報画面を作る（Esc で閉じる・閉じたらモード選択を出し直す） */
+  /**
+   * モード選択の上に重ねる情報画面を作る（閉じたらモード選択を出し直す）。8-2 から初めて開くときに読み込んで作る。
+   * Esc で閉じるつなぎ（modeSelect.addOverlay）は起動時に Screens が付ける
+   */
   static over(parent: HTMLElement, modeSelect: ModeSelectScreen, game: GameState): InfoScreen {
-    const info = new InfoScreen(parent, modeSelect, () => {
+    return new InfoScreen(parent, modeSelect, () => {
       if (game.state === 'mode_select') modeSelect.reveal();
     });
-    modeSelect.addOverlay(() => info.close());
-    return info;
   }
 
   show(): void {

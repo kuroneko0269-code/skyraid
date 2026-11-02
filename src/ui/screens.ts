@@ -19,7 +19,7 @@ import { ResultScreen } from './result';
 import { FadeCurtain, LoadingScreen, applyScreenFade } from './screen';
 import { syncHudScreen } from './hud-screen';
 import { TitleScreen } from './title';
-import { InfoScreen } from './info-screen';
+import { InfoEntry } from './info-entry';
 import { SettingsNav } from './settings-nav';
 import { SettingsScreen } from './settings-screen';
 import { modeProgress } from '../progression/mode-progress';
@@ -65,7 +65,7 @@ export class Screens {
   readonly settings: SettingsScreen;
   readonly settingsNav: SettingsNav;
   /** 情報画面（7-D。モード選択の上に重ねる） */
-  readonly info: InfoScreen;
+  readonly info: InfoEntry;
   /** ミッション一覧で選んだミッション（ブリーフィング・もう一度で使う） */
   selectedMission: MissionDef | null = null;
   /** 次に飛行へ入るときのミッション（null はフリーフライト。チュートリアル（4-11）・ブリーフィングの出撃で決める） */
@@ -147,7 +147,7 @@ export class Screens {
         else if (mode === 'replay') game.transition('replay_select');
         else if (mode === 'ranking') this.onRanking();
         else if (mode === 'settings') this.settingsNav.open();
-        else if (mode === 'info') this.info.show();
+        else if (mode === 'info') void this.info.show();
         else if (mode === 'hangar') this.openHangar(game, 'mode_select');
         else if (mode === 'pvp') this.pvp?.onSelect(false);
         else if (mode === 'defense') this.modeSelect.showDefensePrompt();
@@ -167,7 +167,7 @@ export class Screens {
       onBack: () => game.transition('title'),
     });
     this.modeSelect.progress = () => modeProgress(save.snapshot, missionIds);
-    this.info = InfoScreen.over(parent, this.modeSelect, game);
+    this.info = new InfoEntry(parent, this.modeSelect, game);
     this.missionSelect = new MissionSelectScreen(
       parent,
       missions,

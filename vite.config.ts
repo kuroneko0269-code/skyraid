@@ -5,6 +5,7 @@ import { APP_MANIFEST, BRAND_ASSETS } from './src/data/app.ts';
 import { addConnectSrc } from './src/online/csp.ts';
 import { readOnlineEnv } from './src/online/env.ts';
 import { appInfo } from './scripts/vite-app-info.ts';
+import { chunkPlan } from './scripts/vite-chunks.ts';
 
 /**
  * 7-4: 書き出しの後に dist/_headers（public/_headers の写し）の CSP の connect-src へ VITE_SUPABASE_URL のオリジンだけを足す。
@@ -32,13 +33,17 @@ function supabaseCsp(): Plugin {
 }
 
 const root = decodeURIComponent(new URL('.', import.meta.url).pathname).replace(/\/$/, '');
+// 8-2: 起動時に読むモジュールを three-core / three-webgl / game / render / app に分ける（scripts/vite-chunks.ts）
+const chunks = chunkPlan();
 
 export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     target: 'es2022',
+    rolldownOptions: { output: { codeSplitting: { groups: chunks.groups } } },
   },
   plugins: [
+    chunks.plugin,
     supabaseCsp(),
     // 7-D: 「情報」画面の版とライセンスの一覧（virtual:app-info）
     appInfo(root),
@@ -76,7 +81,9 @@ export default defineConfig(({ mode }) => ({
         // 8-2 の事前修正: 環境変数なしのビルドではオンライン連携（Supabase）のチャンクは読まないのでプリキャッシュしない
         // （判定はアプリの src/ui/online-link.ts と同じ readOnlineEnv）
         globIgnores: readOnlineEnv(loadEnv(mode, root, 'VITE_')) ? [] : ['**/assets/online-app-*'],
-        // three を含む本体の JS が既定の上限（2MiB）を超えても入れる
+        // 8-2: 遅延読み込みのチャンク（PvP・怪獣・フォトモード・リプレイ・情報画面）もすべてプリキャッシュする（オフラインで
+        // 全モードが動き、デプロイの直後も古い SW が古いチャンクを返せる）。8-2 のチャンク分けで 2MiB を超えるファイルは
+        // 無くなったが、上限は念のため 7-x までと同じにしておく
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         navigateFallback: 'index.html',
