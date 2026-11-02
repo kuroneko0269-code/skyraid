@@ -84,7 +84,10 @@ export function startOnline(env: OnlineEnv, p: OnlineLinkParts): void {
     new MemberAdmin(backend, () => service.status.owner),
     saveBox,
   );
-  service.onStatus(members.update);
+  // 8-6: パイロット名（= サーバーの表示名）を変えたら、メンバー管理の自分の行も直す
+  service.onStatus((s) => {
+    members.update(s, service.profileName);
+  });
 
   // 「セーブデータを削除」の「サーバーのバックアップも削除する」（7-4b）
   setServerBackupOption({
@@ -138,6 +141,6 @@ export function startOnline(env: OnlineEnv, p: OnlineLinkParts): void {
     if (!available) ranking.close();
   });
 
-  members.update(service.status);
+  members.update(service.status, service.profileName);
   void service.start();
 }

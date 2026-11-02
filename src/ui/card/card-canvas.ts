@@ -12,7 +12,7 @@ import { CARD_CONFIG } from '../../data/card';
 const C = CARD_CONFIG.color;
 
 export function font(size: number, family: CardFontFamily): string {
-  const weight = family === 'display' ? 600 : 500;
+  const weight = CARD_CONFIG.fontWeight[family];
   return `${weight} ${Math.round(size * 10) / 10}px ${CARD_CONFIG.fontFamily[family]}`;
 }
 

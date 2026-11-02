@@ -41,6 +41,7 @@ import { RaidBriefing } from './raid-briefing';
 import { pilotProfile, roomLoadout, rosterAircraftId } from './pvp-profile';
 import { rosterPaint, settleMatch } from './pvp-settle';
 import { QUICK_PHRASES } from '../data/pvp';
+import { viewport } from '../core/viewport';
 
 export interface PvpDeps {
   readonly parent: HTMLElement;
@@ -317,7 +318,7 @@ export class PvpLink {
   /** 描画フレームごと（pipeline.render の前）。他機・名札・成績・?netdebug */
   render(alpha: number): void {
     if (this.deps.game.state !== 'flight') return;
-    this.flight?.render(alpha, window.innerWidth, window.innerHeight);
+    this.flight?.render(alpha, viewport.width, viewport.height);
   }
 
   private endFlight(): void {

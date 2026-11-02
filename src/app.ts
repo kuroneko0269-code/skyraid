@@ -52,6 +52,7 @@ import { startFlightRuntime } from './ui/flight-runtime';
 import { linkOnline } from './ui/online-link';
 import { linkContextLoss } from './ui/context-loss';
 import { createLanguageSettings } from './ui/language-settings';
+import { watchViewport } from './core/viewport';
 
 /**
  * ゲーム本体を組み立てて起動する（8-3: main.ts が WebGL2 の描画を作れたときだけ呼ぶ。作れなければ案内画面）。
@@ -108,8 +109,9 @@ export function startApp(renderer: WebGLRenderer): void {
     inFlight: () => screens.settingsNav.route.origin === 'pause',
   });
 
-  window.addEventListener('resize', () => {
-    pipeline.resize(window.innerWidth, window.innerHeight);
+  // 描画の大きさ（8-6）: canvas の実際の大きさに合わせる（iOS の起動直後・向きの変更の後の古い window の値を使わない）
+  watchViewport(renderer.domElement, (w, h) => {
+    pipeline.resize(w, h);
   });
 
   const { input, gamepad, hud, missionHud, settingsParts, touch, debug, keys } = createAppControls({

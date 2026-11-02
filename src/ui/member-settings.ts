@@ -50,7 +50,7 @@ export function createMemberSettings(
   panel: HTMLElement,
   admin: MemberAdmin,
   before: Element | null,
-): { readonly update: (s: OnlineStatus) => void } {
+): { readonly update: (s: OnlineStatus, selfName: string | null) => void } {
   const box = document.createElement('div');
   box.className = 'save-settings online-settings member-settings';
   box.hidden = true;
@@ -141,13 +141,15 @@ export function createMemberSettings(
   };
   reload.addEventListener('click', load);
 
-  const update = (s: OnlineStatus): void => {
+  /** selfName はサーバーの表示名（= パイロット名。8-6）。変わっていれば自分の行を直す */
+  const update = (s: OnlineStatus, selfName: string | null): void => {
     const show = s.owner && s.userId !== null;
     if (s.userId !== selfId) {
       selfId = s.userId;
       loaded = false;
       admin.clear();
     }
+    if (selfId !== null && selfName !== null) admin.renameSelf(selfId, selfName);
     box.hidden = !show;
     if (show && !loaded && !busy) load();
     else render();

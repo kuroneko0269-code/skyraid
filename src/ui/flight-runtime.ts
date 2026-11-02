@@ -15,6 +15,7 @@ import type { KaijuHudLink } from '../render/kaiju-hud-link';
 import { createPhotoMode, type PhotoEntry } from './photo/photo-entry';
 import type { RaceLink } from './race-link';
 import { createReplayWiring } from './replay-wiring';
+import { viewport } from '../core/viewport';
 
 export type FlightRuntimeParts = Omit<FlightStartParts, 'world' | 'replay' | 'race' | 'defense'> &
   Omit<FlightLoopParts, 'startFlight' | 'replay' | 'afterStep'> &
@@ -121,7 +122,7 @@ export function startFlightRuntime(p: FlightRuntimeParts): { photo: PhotoEntry }
     replay.playback.render();
     pvp.render(alpha);
     race.render(alpha);
-    defense.render(window.innerWidth, window.innerHeight);
+    defense.render(viewport.width, viewport.height);
     frame.render(game.state, alpha, p.keys.menuTick);
     if (game.state === 'flight') p.kaijuHud.update();
     p.tutorial.update(game.state === 'flight');

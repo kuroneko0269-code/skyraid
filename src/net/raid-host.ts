@@ -60,7 +60,7 @@ export class RaidHost {
     });
     const f = RAID_CONFIG.kaijuFrom;
     const c = RAID_CONFIG.cityCenter;
-    this.kaiju.emerge(f.x, f.z, c.x, c.z, { players, hard: o.hard ?? false });
+    this.kaiju.emerge(f.x, f.z, c.x, c.z, { players, hard: o.hard ?? false, raid: true });
     this.ai.configure({ goal: c, stopRadius: RAID_CONFIG.reachRadius, arrivalFails: true });
     arena.setKaijuParts(this.kaiju.parts);
     this.buildings?.onCollapse((e) => {

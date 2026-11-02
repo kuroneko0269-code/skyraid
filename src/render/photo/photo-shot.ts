@@ -3,6 +3,7 @@
 import { captureSize, photoFileName, saveMethod, watermarkLayout } from '../../core/photo-capture';
 import { PHOTO_UI, PHOTO_WATERMARK, type PhotoResolution } from '../../data/photo';
 import type { RenderPipeline } from '../pipeline';
+import { viewport } from '../../core/viewport';
 
 export interface ShotOptions {
   readonly resolution: PhotoResolution;
@@ -17,8 +18,8 @@ export async function takePhoto(
 ): Promise<'share' | 'download' | 'cancel'> {
   const size = captureSize(
     o.resolution,
-    window.innerWidth,
-    window.innerHeight,
+    viewport.width,
+    viewport.height,
     o.mobile,
     pipeline.maxCaptureSide,
   );

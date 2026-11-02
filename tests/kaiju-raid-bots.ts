@@ -3,7 +3,9 @@
 // 「平均的な命中率」: 機銃は射程内で機首が 5° 以内のとき撃ち、1 発 30% で狙った部位に当たる。ミサイルはロック（1.2 秒）
 // してから 75% で当たる（狙った部位に中心のダメージ）。ロケット・爆弾は使わない（控えめに見積もる）。
 // 機体は狙う部位を走るたびに選び（脚を少し多め）、近づいて撃ち、350m で離脱して 1.2〜1.8km 先から入り直す。
-// 予兆を見て避ける: 熱線が自分に向いたら横へ、咆哮の範囲なら半分の確率でフレア（なければ上昇）、薙ぎ払いは離れる
+// 予兆を見て避ける: 熱線が自分に向いたら横へ、咆哮の範囲なら半分の確率でフレア（なければ上昇）、薙ぎ払いは離れる。
+// 8-6: 腕前 skilled（慣れた人）を足した。減速（150 m/s）して長く撃ち、脚から順に壊してダウンを取る。8-6 の調整の前は
+// 1 人で約 1.1 分（実機の「何度か挑戦すれば 1〜2 分」と合う）。調整の数値はこのボットで決めた（docs/decisions.md の 8-6）
 import { KaijuAi, type KaijuTarget } from '../src/ai/kaiju-ai';
 import { GunHeat } from '../src/combat/heat';
 import { createRandom } from '../src/core/random';
@@ -14,34 +16,21 @@ import { Kaiju } from '../src/entities/kaiju';
 import { resolveLoadout } from '../src/progression/loadout';
 import { HARBOR_TERRAIN } from '../src/data/terrain-harbor';
 import { createHeightField } from '../src/render/terrain-height';
+import {
+  FOCUS_ORDER,
+  SKILLS,
+  type RaidBotOptions,
+  type RaidBotResult,
+  type SkillSpec,
+} from './raid-bot-skills';
+
+export type { RaidBotOptions, RaidBotResult, RaidBotSkill } from './raid-bot-skills';
 
 // 6-4: レイドは港湾都市（地形は 1 回だけ作る）
 const getGroundHeight = createHeightField(HARBOR_TERRAIN).getGroundHeight;
 
 const DT = 1 / 60;
 const DEG = Math.PI / 180;
-
-export interface RaidBotOptions {
-  readonly players: number;
-  readonly seed: number;
-  /** 機銃の命中率（平均的 0.3） */
-  readonly hitRate?: number;
-  /** 打ち切り（秒） */
-  readonly maxSeconds?: number;
-}
-
-export interface RaidBotResult {
-  readonly seconds: number;
-  readonly killed: boolean;
-  readonly cityReached: boolean;
-  readonly downs: number;
-  readonly breaks: number;
-  readonly partsBroken: number;
-  readonly playerDowns: number;
-  /** 最終フェーズに入った時刻（入らなければ null） */
-  readonly finalAt: number | null;
-  readonly attacks: Readonly<Record<string, number>>;
-}
 
 class Bot implements KaijuTarget {
   readonly position = { x: 0, y: 0, z: 0 };
@@ -95,10 +84,17 @@ class Bot implements KaijuTarget {
 
 export function runRaidBots(o: RaidBotOptions): RaidBotResult {
   const rng = createRandom(o.seed);
-  const hitRate = o.hitRate ?? 0.3;
+  const base = SKILLS[o.skill ?? 'average'];
+  const skill: SkillSpec = { ...base, hitRate: o.hitRate ?? base.hitRate };
   const model = findAircraftModel('kestrel');
   if (!model) throw new Error('kestrel');
-  const load = resolveLoadout(model, { engine: 0, airframe: 0, weapons: 0, avionics: 0 });
+  const load = resolveLoadout(model, {
+    engine: 0,
+    airframe: 0,
+    weapons: skill.weaponsLevel,
+    avionics: 0,
+  });
+  const gunDamage = load.gunDamage;
   const floor = (x: number, z: number): number => Math.max(0, getGroundHeight(x, z));
   const kaiju = new Kaiju(getGroundHeight);
   const bots: Bot[] = [];
@@ -127,6 +123,8 @@ export function runRaidBots(o: RaidBotOptions): RaidBotResult {
   const f = RAID_CONFIG.kaijuFrom;
   kaiju.emerge(f.x, f.z, RAID_CONFIG.cityCenter.x, RAID_CONFIG.cityCenter.z, {
     players: o.players,
+    hard: o.hard ?? false,
+    raid: true,
   });
   ai.configure({
     goal: RAID_CONFIG.cityCenter,
@@ -150,7 +148,7 @@ export function runRaidBots(o: RaidBotOptions): RaidBotResult {
   });
   const max = o.maxSeconds ?? 900;
   while (t < max && !kaiju.isDestroyed && !kaiju.cityReached) {
-    for (const b of bots) stepBot(b, kaiju, ai, rng, hitRate, floor);
+    for (const b of bots) stepBot(b, kaiju, ai, rng, skill, gunDamage, floor);
     ai.step(bots, DT);
     t += DT;
   }
@@ -167,7 +165,8 @@ export function runRaidBots(o: RaidBotOptions): RaidBotResult {
   };
 }
 
-function pickPart(rng: () => number, kaiju: Kaiju): KaijuPartId {
+function pickPart(rng: () => number, kaiju: Kaiju, skill: SkillSpec): KaijuPartId {
+  if (skill.focus) return FOCUS_ORDER.find((id) => !kaiju.part(id).broken) ?? 'crystal';
   // 脚を少し多め（ダウンを狙う）。壊れた部位も撃つ（全体 HP は減る）が、壊れていない部位を優先
   const weights: Record<KaijuPartId, number> = {
     head: 1,
@@ -191,7 +190,8 @@ function stepBot(
   kaiju: Kaiju,
   ai: KaijuAi,
   rng: () => number,
-  hitRate: number,
+  skill: SkillSpec,
+  gunDamage: number,
   floor: (x: number, z: number) => number,
 ): void {
   b.flareAge += DT;
@@ -208,7 +208,7 @@ function stepBot(
   const atk = kaiju.attack;
   // 熱線・投擲が自分に向いたら、怪獣への視線と直角の向きへ逃げる（反応は 0.3〜0.8 秒遅れる）
   if (atk && kaiju.attackStep === 'windup' && ai.targetId === b.id && b.dodge <= 0) {
-    if ((atk === 'beam' || atk === 'throw') && kaiju.attackTime > 0.3 + b.id * 0.15) {
+    if ((atk === 'beam' || atk === 'throw') && kaiju.attackTime > skill.react + b.id * 0.15) {
       b.dodge = atk === 'beam' ? kaiju.attackDuration - kaiju.attackTime + 3.2 : 2.5;
       b.dodgeSide = rng() < 0.5 ? -1 : 1;
     }
@@ -229,7 +229,7 @@ function stepBot(
   }
   if (atk === 'sweep' && kaiju.attackStep === 'windup') {
     const d = Math.hypot(p.x - k.x, p.z - k.z);
-    if (d < 400 && b.mode === 'in') beginOut(b, kaiju, rng);
+    if (d < 400 && b.mode === 'in') beginOut(b, kaiju, rng, skill);
   }
   // 行き先
   let tx: number;
@@ -256,11 +256,12 @@ function stepBot(
     let diff = want - b.heading;
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
-    const turn = (b.dodge > 0 ? 45 : 30) * DEG * DT;
+    const turn = (b.dodge > 0 ? 45 : skill.turnDeg) * DEG * DT;
     b.heading += Math.max(-turn, Math.min(turn, diff));
   }
   const minY = floor(p.x, p.z) + 120;
   const climb = Math.max(-60, Math.min(60, (Math.max(ty, minY) - p.y) * 0.8));
+  b.speed = b.mode === 'in' && b.dodge <= 0 ? skill.attackSpeed : 230;
   p.x += Math.sin(b.heading) * b.speed * DT;
   p.z += -Math.cos(b.heading) * b.speed * DT;
   p.y += climb * DT;
@@ -275,12 +276,12 @@ function stepBot(
   const cosH = (ex * fx + ez * fz) / hd;
   if (b.mode === 'in' && b.stun <= 0 && b.dodge <= 0 && kaiju.targetable) {
     const nose = cosH > Math.cos(6 * DEG);
-    if (nose && dist < GUN_CONFIG.range * 0.75 && dist > 200 && b.heat.canFire) {
+    if (nose && dist < skill.fireRange[1] && dist > skill.fireRange[0] && b.heat.canFire) {
       b.shotTimer -= DT;
       while (b.shotTimer <= 0) {
         b.shotTimer += 1 / GUN_CONFIG.fireRate;
         b.heat.addShot();
-        if (rng() < hitRate) part.damageBy(GUN_CONFIG.damage, b.id);
+        if (rng() < skill.hitRate) part.damageBy(gunDamage, b.id);
       }
     }
     const inLock =
@@ -295,22 +296,24 @@ function stepBot(
     ) {
       b.missiles--;
       b.missileCooldown = 2;
-      if (rng() < 0.75) part.damageBy(MISSILE_CONFIG.maxDamage, b.id);
+      if (rng() < skill.missileHitRate) part.damageBy(MISSILE_CONFIG.maxDamage, b.id);
     }
-    if (Math.hypot(part.position.x - p.x, part.position.z - p.z) < 350) beginOut(b, kaiju, rng);
+    if (Math.hypot(part.position.x - p.x, part.position.z - p.z) < skill.breakOff)
+      beginOut(b, kaiju, rng, skill);
   } else if (b.mode === 'out') {
     b.outTimer -= DT;
     if (b.outTimer <= 0 || Math.hypot(b.way.x - p.x, b.way.z - p.z) < 300) {
       b.mode = 'in';
-      b.part = pickPart(rng, kaiju);
+      b.part = pickPart(rng, kaiju, skill);
     }
   }
 }
 
-function beginOut(b: Bot, kaiju: Kaiju, rng: () => number): void {
+function beginOut(b: Bot, kaiju: Kaiju, rng: () => number, skill: SkillSpec): void {
   b.mode = 'out';
   const a = rng() * Math.PI * 2;
-  const r = 1200 + rng() * 600;
+  const [near, far] = skill.outRange;
+  const r = near + rng() * (far - near);
   b.way.x = kaiju.feet.x + Math.sin(a) * r;
   b.way.z = kaiju.feet.z - Math.cos(a) * r;
   b.way.y = 250 + rng() * 450;

@@ -24,6 +24,7 @@ import type { PlayerView } from './player-view';
 import type { QualityLink } from './quality-link';
 import type { RingView } from './ring-view';
 import type { World } from './scene';
+import { viewport } from '../core/viewport';
 
 export interface FlightFrameParts {
   readonly pipeline: RenderPipeline;
@@ -121,8 +122,8 @@ export class FlightFrame {
           : p.camera.position,
     );
     if (state === 'flight' && p.hud.visible)
-      p.hudLink.update(alpha, window.innerWidth, window.innerHeight);
-    if (state === 'flight') p.missionLink.update(window.innerWidth, window.innerHeight);
+      p.hudLink.update(alpha, viewport.width, viewport.height);
+    if (state === 'flight') p.missionLink.update(viewport.width, viewport.height);
     p.frameFx.update(state, this.worldTime);
     p.pipeline.render();
     if (

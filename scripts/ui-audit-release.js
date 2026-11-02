@@ -30,6 +30,8 @@ import { auditModes } from './ui-audit-modes.js';
 import { printReleaseReport } from './audit-report.js';
 import { serveDist } from './serve-dist.js';
 
+const APP_PACKAGE = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+
 /** 初回起動（ストレージが空）: タイトル → パイロット名 → モード選択にチュートリアルの案内 */
 async function auditFirstRun(browser, base, out) {
   const context = await browser.newContext({
@@ -218,7 +220,8 @@ async function auditInfo(browser, base, out) {
       : /メールアドレス[^。]*と表示名[^。]*だけ/.test(info.data) && /IP アドレス/.test(info.data));
   const r = {
     ok:
-      info.version.includes('0.8.0') &&
+      // 版は package.json と同じ（8-6: 決め打ちの 0.8.0 をやめた）
+      info.version.includes(APP_PACKAGE.version) &&
       missing.length === 0 &&
       info.withText > 0 &&
       dataOk &&

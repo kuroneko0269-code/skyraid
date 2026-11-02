@@ -49,12 +49,26 @@ export const CARD_CONFIG = {
     rank: 'rgba(255, 255, 255, 0.9)',
     line: 'rgba(110, 240, 255, 0.55)',
   },
-  /** フォント（見出し・数値は Rajdhani、無い字（日本語）は端末のフォント） */
+  /**
+   * フォント。display（見出し・数値）は Rajdhani、heading は display の役の文で Rajdhani に無い字（日本語など）を含むもの、
+   * body は本文。8-6: 1 つの文の中で Rajdhani と端末のフォントが混ざらないよう、Rajdhani に無い字を含む文は文ごと heading
+   * （日本語のフォントの太字）にする（iOS の Canvas は Rajdhani に無い字を端末任せの代わりのフォントで描き、一部の字だけ
+   * 字形が違って見えた。src/core/card-layout.ts の cardFamily）
+   */
   fontFamily: {
     display:
       "Rajdhani, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Noto Sans CJK JP', 'Yu Gothic', Meiryo, system-ui, sans-serif",
+    heading:
+      "'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Noto Sans CJK JP', 'Yu Gothic', Meiryo, system-ui, sans-serif",
     body: "'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Noto Sans CJK JP', 'Yu Gothic', Meiryo, system-ui, sans-serif",
   },
+  /** 太さ（display・heading は見出しの太さ） */
+  fontWeight: { display: 600, heading: 600, body: 500 },
+  /**
+   * Rajdhani（Google Fonts の latin の字の範囲）で描ける字: 基本ラテン・Latin-1・ダッシュ・引用符・「…」・「•」。
+   * これ以外を含む文は display でも heading で描く
+   */
+  displayChars: /^[\u0020-\u007e\u00a0-\u00ff\u2013\u2014\u2018-\u201d\u2022\u2026]*$/u,
   /** 読み込みを待つフォント（index.html の Google Fonts） */
   waitFonts: ['600 48px Rajdhani'],
   /** 共有の文面のハッシュタグ */

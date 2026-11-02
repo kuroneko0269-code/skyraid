@@ -2,6 +2,7 @@
 // ui-audit の --release でブラウザで確かめる）。パイロット名を載せない選択・共有の文面・遊べる URL
 import { describe, expect, it } from 'vitest';
 import {
+  cardFamily,
   fitText,
   layoutCard,
   textBox,
@@ -9,7 +10,7 @@ import {
   type CardTextOp,
 } from '../src/core/card-layout';
 import type { CardSource } from '../src/core/card-source';
-import { CARD_SIZES } from '../src/data/card';
+import { CARD_CONFIG, CARD_SIZES } from '../src/data/card';
 import type { Paint } from '../src/progression/paint';
 import { buildCardModel, cardShareText, displayUrl } from '../src/ui/card/card-model';
 import { useLocale } from './i18n-helpers';
@@ -144,6 +145,30 @@ describe('記録カードの配置', () => {
       }
     }
   }
+
+  it('8-6: 1 つの文の中で Rajdhani と日本語のフォントが混ざらない（Rajdhani に無い字を含む文は文ごと heading）', () => {
+    for (const locale of ['ja', 'en'] as const)
+      for (const [name, source] of Object.entries(SOURCES)) {
+        useLocale(locale);
+        const model = buildCardModel(source, { includePilot: true, url: URL_ });
+        for (const o of texts(layoutCard(model, CARD_SIZES.wide, measure).ops)) {
+          const latin = CARD_CONFIG.displayChars.test(o.text);
+          if (o.family === 'display')
+            expect(latin, `${locale}/${name}/${o.id}: ${o.text}`).toBe(true);
+          // 見出し・数値・ランクは、Rajdhani で描ける文なら Rajdhani のまま
+          if (['headline', 'metric', 'rank', 'rankLabel', 'game'].includes(o.id) && latin)
+            expect(o.family, `${locale}/${name}/${o.id}`).toBe('display');
+        }
+      }
+    // 日本語のレイドのステージ名（ヴォルガス（高難度））・記号・数字・英字
+    expect(cardFamily('ヴォルガス（高難度）', 'display')).toBe('heading');
+    expect(cardFamily('12:34.5', 'display')).toBe('display');
+    expect(cardFamily('MISSION COMPLETE', 'display')).toBe('display');
+    expect(cardFamily('7 / 10', 'display')).toBe('display');
+    expect(cardFamily('Vorgas (Hard)…', 'display')).toBe('display');
+    expect(cardFamily('S・A', 'display')).toBe('heading');
+    expect(cardFamily('クリアタイム', 'body')).toBe('body');
+  });
 
   it('モードごとの評価・スコアまたはタイム（両言語）', () => {
     useLocale('ja');

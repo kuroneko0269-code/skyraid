@@ -38,4 +38,15 @@ export class MemberAdmin {
   clear(): void {
     this.list = [];
   }
+
+  /**
+   * 自分の行の名前を今の表示名にする（8-6）。一覧は開いたときに 1 回だけ読むので、その後にパイロット名を変えても
+   * 古い名前のままだった。サーバーは profiles.display_name を変えてあるので、読み直さずに手元の行だけ直す。変えたら true
+   */
+  renameSelf(userId: string, name: string): boolean {
+    const row = this.list.find((r) => r.userId === userId);
+    if (!row || row.displayName === name) return false;
+    this.list = this.list.map((r) => (r === row ? { ...r, displayName: name } : r));
+    return true;
+  }
 }

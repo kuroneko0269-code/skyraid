@@ -1,4 +1,4 @@
-// 8-1 公開チェック: 版・更新履歴（v0.1〜v0.8。フェーズごとに 3〜5 行）・情報画面の「データの扱い」の文面
+// 8-1 公開チェック: 版・更新履歴（v0.1〜v0.9。8-6 で 0.9.0。フェーズごとに 3〜5 行）・情報画面の「データの扱い」の文面
 import { describe, expect, it } from 'vitest';
 import { APP_VERSION } from 'virtual:app-info';
 import changelogText from '../docs/changelog.md?raw';
@@ -6,14 +6,15 @@ import { parseChangelog } from '../src/core/changelog';
 import { DATA_POLICY } from '../src/data/data-policy';
 
 describe('版と更新履歴', () => {
-  it('版は 0.8.0（フェーズ 8）', () => {
-    expect(APP_VERSION).toBe('0.8.0');
+  it('版は 0.9.0（8-6 の指示。v1.0.0 は 8-7）', () => {
+    expect(APP_VERSION).toBe('0.9.0');
   });
 
-  it('更新履歴は新しい順に 0.8.0〜0.1.0、各版 3〜5 行', () => {
+  it('更新履歴は新しい順に 0.9.0〜0.1.0、各版 3〜5 行', () => {
     const entries = parseChangelog(changelogText);
     const versions = entries.map((e) => /^(\d+\.\d+\.\d+)/.exec(e.title)?.[1]);
     expect(versions).toEqual([
+      '0.9.0',
       '0.8.0',
       '0.7.0',
       '0.6.0',

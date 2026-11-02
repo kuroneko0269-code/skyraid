@@ -14,6 +14,7 @@ import { PostEffects } from './post';
 import type { HazeSegment } from './fx/heat-haze';
 import type { GradeUniforms } from '../core/photo-grade';
 import type { FocusSettings } from './focus-pass';
+import { viewport } from '../core/viewport';
 
 export interface RenderStats {
   /** 1 フレームの合計（影・シーン・ポストエフェクトのすべての描画） */
@@ -68,7 +69,7 @@ export class RenderPipeline {
       this.post.setBloom(preset.bloom);
       this.post.setExposure(this.exposure * this.exposureScale);
       this.post.setGrade(this.grade);
-      this.post.setSize(window.innerWidth, window.innerHeight, this.renderer.getPixelRatio());
+      this.post.setSize(viewport.width, viewport.height, this.renderer.getPixelRatio());
     } else if (this.post) {
       this.post.dispose();
       this.post = null;
@@ -138,8 +139,8 @@ export class RenderPipeline {
   capture(width: number, height: number): HTMLCanvasElement {
     const r = this.renderer;
     const canvas = r.domElement;
-    const cssW = window.innerWidth;
-    const cssH = window.innerHeight;
+    const cssW = viewport.width;
+    const cssH = viewport.height;
     const ratio = r.getPixelRatio();
     const aspect = this.camera.aspect;
     r.setPixelRatio(1);
@@ -175,7 +176,8 @@ export class RenderPipeline {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.maxPixelRatio));
-    this.renderer.setSize(width, height);
+    // 表示の大きさは CSS のまま（8-6。px を書くと iOS の古い値で画面より小さく残る）
+    this.renderer.setSize(width, height, false);
     this.post?.setSize(width, height, this.renderer.getPixelRatio());
   }
 

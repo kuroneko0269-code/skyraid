@@ -196,3 +196,14 @@ export function launchRock(
   rock.age = 0;
   rock.active = true;
 }
+
+/** from から to への単位ベクトルを out に（熱線の向き。kaiju-ai.ts から移した） */
+export function aimAt(out: Vec3, from: Readonly<Vec3>, to: Readonly<Vec3>): void {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const dz = to.z - from.z;
+  const n = Math.hypot(dx, dy, dz) || 1;
+  out.x = dx / n;
+  out.y = dy / n;
+  out.z = dz / n;
+}
