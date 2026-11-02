@@ -1,5 +1,6 @@
 // ポーズメニューの設定「敵 ON/OFF」「難易度」（2-3）。部品の見た目はほかの設定（.settings-item）と同じ。
 // 変えたらすぐ保存して、敵を出し直す
+import { t } from '../core/i18n';
 import { isDifficulty, loadEnemySettings, saveEnemySettings } from '../core/enemy-settings';
 import type { StorageLike } from '../core/settings';
 import { DIFFICULTIES, DIFFICULTY_LABELS, type Difficulty } from '../data/ai';
@@ -17,7 +18,7 @@ export function createEnemySettings(
     apply(settings.enabled, settings.difficulty);
   };
   apply(settings.enabled, settings.difficulty);
-  createToggleButton(panel, '敵', settings.enabled, () => {
+  createToggleButton(panel, t('settings.enemies'), settings.enabled, () => {
     settings.enabled = !settings.enabled;
     changed();
     return settings.enabled;
@@ -35,7 +36,7 @@ export function createDifficultySelect(
 ): HTMLSelectElement {
   const label = document.createElement('label');
   label.className = 'ui-toggle settings-item';
-  label.textContent = '難易度 ';
+  label.textContent = `${t('settings.difficulty')} `;
   const select = document.createElement('select');
   for (const d of DIFFICULTIES) {
     const option = document.createElement('option');

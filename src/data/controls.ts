@@ -1,5 +1,6 @@
 // 操作設定（4-11）の値: ポーズメニューの設定「操作」。初期値は 4-10 までの挙動と同じ。
 // 変換は src/core/control-settings.ts、保存はセーブの settings.controls（v5）
+import { t } from '../core/i18n';
 import type { Action } from './keybinds';
 
 export const BUTTON_SIZES = ['small', 'medium', 'large'] as const;
@@ -38,28 +39,80 @@ export const CONTROL_SETTINGS = {
 
 /** 設定の表示名 */
 export const CONTROL_LABELS = {
-  sensitivity: 'スティック感度',
-  deadzone: 'デッドゾーン（タッチ）',
-  invertPitch: 'ピッチ反転',
-  autoLevel: 'オートレベル',
-  swapSides: '左右入替（タッチ）',
-  vibration: '振動',
-  vibrationUnsupported: '振動（Android のみ。この端末は非対応）',
-  buttonSize: 'ボタンの大きさ',
-  keys: 'キー割当',
-  buttonSizes: { small: '小', medium: '中', large: '大' } satisfies Record<ButtonSize, string>,
+  get sensitivity() {
+    return t('controls.sensitivity');
+  },
+  get deadzone() {
+    return t('controls.deadzone');
+  },
+  get invertPitch() {
+    return t('controls.invertPitch');
+  },
+  get autoLevel() {
+    return t('controls.autoLevel');
+  },
+  get swapSides() {
+    return t('controls.swapSides');
+  },
+  get vibration() {
+    return t('controls.vibration');
+  },
+  get vibrationUnsupported() {
+    return t('controls.vibrationUnsupported');
+  },
+  get buttonSize() {
+    return t('controls.buttonSize');
+  },
+  get keys() {
+    return t('controls.keys');
+  },
+  buttonSizes: {
+    get small() {
+      return t('controls.buttonSizes.small');
+    },
+    get medium() {
+      return t('controls.buttonSizes.medium');
+    },
+    get large() {
+      return t('controls.buttonSizes.large');
+    },
+  } satisfies Record<ButtonSize, string>,
   actions: {
-    pitchDown: '機首下げ',
-    pitchUp: '機首上げ',
-    rollLeft: '左ロール',
-    rollRight: '右ロール',
-    yawLeft: '左ヨー',
-    yawRight: '右ヨー',
-    throttleUp: 'スロットル +',
-    throttleDown: 'スロットル −',
-    fire: '機銃',
-    missile: 'ミサイル',
-    afterburner: 'アフターバーナー',
-    flare: 'フレア',
+    get pitchDown() {
+      return t('controls.actions.pitchDown');
+    },
+    get pitchUp() {
+      return t('controls.actions.pitchUp');
+    },
+    get rollLeft() {
+      return t('controls.actions.rollLeft');
+    },
+    get rollRight() {
+      return t('controls.actions.rollRight');
+    },
+    get yawLeft() {
+      return t('controls.actions.yawLeft');
+    },
+    get yawRight() {
+      return t('controls.actions.yawRight');
+    },
+    get throttleUp() {
+      return t('controls.actions.throttleUp');
+    },
+    get throttleDown() {
+      return t('controls.actions.throttleDown');
+    },
+    get fire() {
+      return t('controls.actions.fire');
+    },
+    get missile() {
+      return t('controls.actions.missile');
+    },
+    get afterburner() {
+      return t('controls.actions.afterburner');
+    },
+    get flare() {
+      return t('controls.actions.flare');
+    },
   } satisfies Record<RemappableAction, string>,
 } as const;

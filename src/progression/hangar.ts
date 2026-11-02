@@ -165,6 +165,6 @@ export class Hangar {
 
 function starterModel(): AircraftModel {
   const m = findAircraftModel(STARTER_AIRCRAFT.id);
-  if (!m) throw new Error('初期機が AIRCRAFT_MODELS にない');
+  if (!m) throw new Error('Starter aircraft is missing from AIRCRAFT_MODELS');
   return m;
 }

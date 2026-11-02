@@ -1,0 +1,249 @@
+{
+  "skins": {
+    "color": {
+      "slateBlue": "灰青",
+      "vermilion": "朱",
+      "silver": "銀灰",
+      "blue": "青",
+      "olive": "オリーブ",
+      "gold": "金",
+      "gunmetal": "ガンメタル",
+      "white": "白",
+      "black": "黒",
+      "navy": "紺",
+      "sand": "砂",
+      "purple": "紫"
+    },
+    "pattern": {
+      "solid": "単色",
+      "camoForest": "森林迷彩",
+      "camoDesert": "砂漠迷彩",
+      "camoOcean": "海洋迷彩",
+      "twoTone": "2 トーン",
+      "splitter": "スプリッター",
+      "stripe": "ストライプ",
+      "metal": "金属地"
+    },
+    "decal": {
+      "chevron": "シェブロン",
+      "hexring": "六角環",
+      "diamonds": "三連ダイヤ",
+      "star": "星",
+      "bolt": "稲妻",
+      "bird": "燕",
+      "number": "数字",
+      "checker": "チェッカー",
+      "claws": "爪痕",
+      "compass": "方位星"
+    },
+    "unlock": {
+      "allMissionsS": "全ミッション S で解放",
+      "pvpKills": {
+        "other": "PvP で {count} 撃墜で解放（{have}/{count}）"
+      },
+      "allRacesA": "レース 4 コース全部 A 以上で解放"
+    }
+  },
+  "upgrades": {
+    "engine": {
+      "label": "エンジン",
+      "effect": "最高速・加速・AB 持続"
+    },
+    "airframe": {
+      "label": "機体",
+      "effect": "HP・旋回"
+    },
+    "weapons": {
+      "label": "武装",
+      "effect": "機銃ダメージ・ミサイル +1"
+    },
+    "avionics": {
+      "label": "電子装備",
+      "effect": "ロック時間・索敵距離・フレア +1"
+    }
+  },
+  "touch": {
+    "mode": {
+      "auto": "自動",
+      "on": "表示",
+      "off": "非表示"
+    },
+    "label": "タッチ"
+  },
+  "assist": {
+    "aim": "エイムアシスト",
+    "camera": "ターゲットカメラ",
+    "hud": "HUD 補助"
+  },
+  "save": {
+    "resetNotice": "セーブデータを初期化しました",
+    "close": "閉じる",
+    "heading": "セーブデータ",
+    "copy": "セーブデータをコピー",
+    "paste": "貼り付けて復元",
+    "restore": "復元する",
+    "cancel": "やめる",
+    "delete": "セーブデータを削除",
+    "deleteWarning": "進み具合・クレジット・設定がすべて消えます。元に戻せません",
+    "deleteServerToo": "サーバーのバックアップも削除する",
+    "serverDeleted": "サーバーのバックアップも消えます",
+    "serverKept": "サーバーのバックアップは残ります（次の同期でサーバーのセーブを読み込みます）",
+    "serverKeptOffline": "サーバーのバックアップは残ります（次の同期でサーバーのセーブを読み込みます）。削除はオンライン連携中のときだけ選べます",
+    "confirmDelete": "削除する",
+    "copyFailed": "コピーできませんでした。下の文字列を選んでコピーしてください",
+    "copied": "コピーしました。新しい端末で「貼り付けて復元」に貼り付けてください",
+    "pasteHint": "コピーした文字列を貼り付けて「復元する」を押してください（今のデータは上書きされます）",
+    "restored": "復元しました",
+    "restoreFailed": "読み込めませんでした。文字列がすべて貼り付けられているか確かめてください",
+    "deletingServer": "サーバーのバックアップを削除中…",
+    "deleteServerFailed": "サーバーのバックアップを削除できませんでした（セーブデータは消していません）: {error}"
+  },
+  "controls": {
+    "sensitivity": "スティック感度",
+    "deadzone": "デッドゾーン（タッチ）",
+    "invertPitch": "ピッチ反転",
+    "autoLevel": "オートレベル",
+    "swapSides": "左右入替（タッチ）",
+    "vibration": "振動",
+    "vibrationUnsupported": "振動（Android のみ。この端末は非対応）",
+    "buttonSize": "ボタンの大きさ",
+    "keys": "キー割当",
+    "buttonSizes": {
+      "small": "小",
+      "medium": "中",
+      "large": "大"
+    },
+    "actions": {
+      "pitchDown": "機首下げ",
+      "pitchUp": "機首上げ",
+      "rollLeft": "左ロール",
+      "rollRight": "右ロール",
+      "yawLeft": "左ヨー",
+      "yawRight": "右ヨー",
+      "throttleUp": "スロットル +",
+      "throttleDown": "スロットル −",
+      "fire": "機銃",
+      "missile": "ミサイル",
+      "afterburner": "アフターバーナー",
+      "flare": "フレア"
+    },
+    "heading": "操作",
+    "keyName": {
+      "shiftRight": "右Shift",
+      "controlRight": "右Ctrl",
+      "altRight": "右Alt"
+    },
+    "otherActions": {
+      "targetNext": "ターゲット切替",
+      "cameraToggle": "カメラ切替",
+      "rocket": "ロケット",
+      "bomb": "爆弾",
+      "debugToggle": "デバッグ表示",
+      "hudToggle": "HUD 表示"
+    },
+    "pressKey": "キーを押す…（Esc で取消）",
+    "conflict": "⚠ {names}と重複",
+    "listSeparator": "・",
+    "resetKeys": "初期の割当に戻す"
+  },
+  "settings": {
+    "enemies": "敵",
+    "difficulty": "難易度",
+    "quality": "画質",
+    "nightHudDim": "夜の HUD 減光",
+    "back": {
+      "title": "← タイトルへ",
+      "modeSelect": "← モード選択へ",
+      "pause": "← ポーズへ",
+      "default": "← 戻る"
+    },
+    "volume": {
+      "master": "マスター",
+      "sfx": "効果音",
+      "bgm": "BGM",
+      "aria": "{name}の音量"
+    },
+    "title": "設定",
+    "tab": {
+      "display": "表示",
+      "sound": "音",
+      "controls": "操作",
+      "game": "ゲーム",
+      "data": "データ"
+    }
+  },
+  "mobile": {
+    "exitFullscreen": "全画面解除",
+    "fullscreen": "全画面",
+    "rotate": "画面を横にしてください"
+  },
+  "pilot": {
+    "name": "パイロット名",
+    "registerHint": {
+      "other": "{count} 文字まで。リザルトとタイトルに表示します（空なら {default}）"
+    },
+    "submit": "決定",
+    "rename": "パイロット名を変更",
+    "newName": "新しいパイロット名",
+    "renameHint": {
+      "other": "{count} 文字まで（空なら {default}）"
+    },
+    "confirmRename": "変更する",
+    "current": "今の名前: {name}",
+    "renamed": "パイロット名を「{name}」に変更しました",
+    "renamedWithExtra": "{done}。{extra}"
+  },
+  "hangar": {
+    "back": "← 戻る",
+    "tab": {
+      "perf": "性能",
+      "paint": "塗装"
+    },
+    "upgradesHeading": "強化（この機体だけ）",
+    "confirmBuy": "{name} を {price} で購入しますか？",
+    "bought": "{name} を購入しました",
+    "confirmUpgrade": "{price} で強化しますか？",
+    "balance": "残高 {credits}",
+    "selected": "出撃機",
+    "owned": "所持",
+    "payload": "ミサイル {missiles} / ロケット {rockets} / 爆弾 {bombs} / フレア {flares}",
+    "buy": "購入する {price}",
+    "locked": "未解放",
+    "stat": {
+      "speed": "速度",
+      "turn": "旋回",
+      "durability": "耐久",
+      "payload": "積載"
+    },
+    "upgrade": "強化する {price}",
+    "cancel": "やめる",
+    "confirm": "購入する"
+  },
+  "paint": {
+    "slot": {
+      "wing": "主翼",
+      "fin": "垂直尾翼"
+    },
+    "patterns": "パターン（全機体共通で解放）",
+    "color": {
+      "base": "基本色",
+      "accent": "アクセント",
+      "marking": "マーキング"
+    },
+    "decals": "デカール（500 CR・全機体共通）",
+    "none": "なし",
+    "slider": {
+      "x": "位置（横）",
+      "y": "位置（縦）",
+      "size": "大きさ",
+      "rotation": "回転"
+    },
+    "number": "機体番号",
+    "random": "ランダム",
+    "bought": "{name} を購入しました",
+    "owned": "所持",
+    "locked": "未解放",
+    "buy": "{name} を購入 {price}",
+    "trialNotice": "未購入のものは試し塗りだけです（購入すると保存されます）"
+  }
+}

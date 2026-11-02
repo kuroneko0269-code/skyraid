@@ -1,4 +1,5 @@
 // ハンガー画面（3-3）の部品: 4 パラメータのバー、強化の行、確認ダイアログ。画面の本体は src/ui/hangar.ts
+import { t } from '../core/i18n';
 import type { AircraftStats } from '../data/aircraft';
 import { UPGRADE_INFO, UPGRADE_LEVELS, type UpgradeKind } from '../data/upgrades';
 import { el } from './hud-dom';
@@ -13,10 +14,18 @@ export const STAT_KEYS = [
 ] as const satisfies readonly (keyof AircraftStats)[];
 
 const STAT_LABELS: Readonly<Record<keyof AircraftStats, string>> = {
-  speed: '速度',
-  turn: '旋回',
-  durability: '耐久',
-  payload: '積載',
+  get speed() {
+    return t('hangar.stat.speed');
+  },
+  get turn() {
+    return t('hangar.stat.turn');
+  },
+  get durability() {
+    return t('hangar.stat.durability');
+  },
+  get payload() {
+    return t('hangar.stat.payload');
+  },
 };
 
 /** バーの右に出す値の文字列 */
@@ -88,7 +97,7 @@ export class UpgradeRow {
       this.button.disabled = true;
       return;
     }
-    this.button.textContent = `強化する ${formatCredits(price)}`;
+    this.button.textContent = t('hangar.upgrade', { price: formatCredits(price) });
     this.button.disabled = !owned || credits < price;
   }
 }
@@ -106,10 +115,10 @@ export class ConfirmDialog {
     const box = el('div', 'ui-dialog hangar-confirm-box', this.root);
     this.text = el('p', 'hangar-confirm-text', box);
     const buttons = el('div', 'campaign-buttons', box);
-    createButton(buttons, 'ui-button is-ghost campaign-back', 'やめる', () => {
+    createButton(buttons, 'ui-button is-ghost campaign-back', t('hangar.cancel'), () => {
       this.close();
     });
-    this.ok = createButton(buttons, 'ui-button is-primary campaign-go', '購入する', () => {
+    this.ok = createButton(buttons, 'ui-button is-primary campaign-go', t('hangar.confirm'), () => {
       const fn = this.action;
       this.close();
       fn?.();

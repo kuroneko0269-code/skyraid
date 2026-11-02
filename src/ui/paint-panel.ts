@@ -14,6 +14,7 @@ import {
 } from '../data/skins';
 import { clonePaint, type Paint } from '../progression/paint';
 import { unlockLabel, type Paintshop } from '../progression/paintshop';
+import { t } from '../core/i18n';
 import { el } from './hud-dom';
 import { formatCredits } from './mission-text';
 import { PaintSlider, SwatchRow, decalIcon, setDecalIcon } from './paint-parts';
@@ -28,7 +29,6 @@ export interface PaintPanelHandlers {
 }
 
 const two = (n: number): string => String(n).padStart(2, '0');
-const SLOT_LABELS: Readonly<Record<DecalSlot, string>> = { wing: '主翼', fin: '垂直尾翼' };
 
 export class PaintPanel {
   readonly root: HTMLDivElement;
@@ -53,6 +53,8 @@ export class PaintPanel {
   private readonly sliders: Record<'x' | 'y' | 'size' | 'rotation', PaintSlider>;
   private readonly numberText: HTMLSpanElement;
   private readonly notice: HTMLDivElement;
+  /** notice に出している文の種類（bought: 購入した / trial: 試し塗りの注意） */
+  private noticeKind: 'none' | 'bought' | 'trial' = 'none';
 
   constructor(
     parent: HTMLElement,
@@ -60,7 +62,7 @@ export class PaintPanel {
     private readonly handlers: PaintPanelHandlers,
   ) {
     const root = el('div', 'paint-panel', parent);
-    el('div', 'campaign-label', root, 'パターン（全機体共通で解放）');
+    el('div', 'campaign-label', root, t('paint.patterns'));
     const grid = el('div', 'paint-grid', root);
     for (const p of SKIN_PATTERNS) {
       const button = createButton(grid, 'ui-button ui-item paint-item', '', () => {
@@ -77,17 +79,17 @@ export class PaintPanel {
     const color = (key: 'base' | 'accent' | 'marking') => (i: number) => {
       this.edit((d) => (d[key] = i));
     };
-    this.base = new SwatchRow(root, '基本色', color('base'));
-    this.accent = new SwatchRow(root, 'アクセント', color('accent'));
-    this.marking = new SwatchRow(root, 'マーキング', color('marking'));
+    this.base = new SwatchRow(root, t('paint.color.base'), color('base'));
+    this.accent = new SwatchRow(root, t('paint.color.accent'), color('accent'));
+    this.marking = new SwatchRow(root, t('paint.color.marking'), color('marking'));
 
-    el('div', 'campaign-label', root, 'デカール（500 CR・全機体共通）');
+    el('div', 'campaign-label', root, t('paint.decals'));
     this.slotSeg = new Segmented(
       root,
       '',
       [
-        { value: 'wing', label: SLOT_LABELS.wing },
-        { value: 'fin', label: SLOT_LABELS.fin },
+        { value: 'wing', label: t('paint.slot.wing') },
+        { value: 'fin', label: t('paint.slot.fin') },
       ],
       'wing',
       (v) => {
@@ -103,9 +105,10 @@ export class PaintPanel {
         this.edit((p) => (p[this.slot].decal = d?.id ?? null));
       });
       const icon = decalIcon(button, d?.id ?? null, 0);
-      el('span', 'paint-item-name', button, d?.name ?? 'なし');
+      const name = d?.name ?? t('paint.none');
+      el('span', 'paint-item-name', button, name);
       const status = el('span', 'paint-item-status', button);
-      button.setAttribute('aria-label', d?.name ?? 'なし');
+      button.setAttribute('aria-label', name);
       this.decals.set(key, { button, status, icon });
     }
     this.buyDecal = createButton(root, 'ui-button is-primary paint-buy', '', () => {
@@ -119,12 +122,12 @@ export class PaintPanel {
     };
     const pct = (v: number): string => `${Math.round((v / 255) * 100)}%`;
     this.sliders = {
-      x: new PaintSlider(root, '位置（横）', pct, slide('x'), commit),
-      y: new PaintSlider(root, '位置（縦）', pct, slide('y'), commit),
-      size: new PaintSlider(root, '大きさ', pct, slide('size'), commit),
+      x: new PaintSlider(root, t('paint.slider.x'), pct, slide('x'), commit),
+      y: new PaintSlider(root, t('paint.slider.y'), pct, slide('y'), commit),
+      size: new PaintSlider(root, t('paint.slider.size'), pct, slide('size'), commit),
       rotation: new PaintSlider(
         root,
-        '回転',
+        t('paint.slider.rotation'),
         (v) => `${Math.round((v / 256) * 360 - 180)}°`,
         slide('rotation'),
         commit,
@@ -132,14 +135,14 @@ export class PaintPanel {
     };
 
     const numRow = el('div', 'paint-row paint-number', root);
-    el('span', 'paint-row-label', numRow, '機体番号');
+    el('span', 'paint-row-label', numRow, t('paint.number'));
     const step = (d: number) => () => {
       this.edit((p) => (p.number = (p.number + d + 100) % 100), true);
     };
     createButton(numRow, 'ui-button paint-step', '−', step(-1));
     this.numberText = el('span', 'paint-number-value', numRow);
     createButton(numRow, 'ui-button paint-step', '+', step(1));
-    createButton(numRow, 'ui-button is-ghost paint-random', 'ランダム', () => {
+    createButton(numRow, 'ui-button is-ghost paint-random', t('paint.random'), () => {
       this.edit((p) => (p.number = Math.floor(Math.random() * (SKIN_CONFIG.numberMax + 1))), true);
     });
     this.notice = el('div', 'hangar-notice paint-notice', root);
@@ -151,6 +154,7 @@ export class PaintPanel {
     this.aircraftId = id;
     this.draft = this.shop.paint(id);
     this.notice.textContent = '';
+    this.noticeKind = 'none';
     this.refresh();
     this.handlers.onPreview(clonePaint(this.draft));
   }
@@ -209,7 +213,8 @@ export class PaintPanel {
           : 'unknown';
     const ok = result === 'ok';
     if (ok) {
-      this.notice.textContent = `${name} を購入しました`;
+      this.notice.textContent = t('paint.bought', { name });
+      this.noticeKind = 'bought';
       document.dispatchEvent(new Event(UI_SOUND_EVENTS.purchase));
       this.save();
       this.handlers.onPurchase();
@@ -230,13 +235,20 @@ export class PaintPanel {
       e.button.classList.toggle('is-locked', st === 'locked');
       e.button.setAttribute('aria-pressed', String(d.pattern === p.id));
       e.status.textContent =
-        st === 'owned' ? '所持' : st === 'locked' ? '未解放' : formatCredits(p.price);
+        st === 'owned'
+          ? t('paint.owned')
+          : st === 'locked'
+            ? t('paint.locked')
+            : formatCredits(p.price);
     }
     const pat = findSkinPattern(d.pattern);
     const pst = shop.patternStatus(d.pattern);
     this.buyPattern.hidden = pst === 'owned';
     if (pat && pst === 'buyable') {
-      this.buyPattern.textContent = `${pat.name} を購入 ${formatCredits(pat.price)}`;
+      this.buyPattern.textContent = t('paint.buy', {
+        name: pat.name,
+        price: formatCredits(pat.price),
+      });
       this.buyPattern.disabled = credits < pat.price;
     } else if (pat?.unlock && pst === 'locked') {
       this.buyPattern.textContent = unlockLabel(pat.unlock, shop.snapshot);
@@ -256,7 +268,7 @@ export class PaintPanel {
         id === null
           ? ''
           : shop.decalStatus(id) === 'owned'
-            ? '所持'
+            ? t('paint.owned')
             : formatCredits(findDecal(id)?.price ?? 0);
       if (id === 'number') setDecalIcon(e.icon, id, d.number);
     }
@@ -265,7 +277,10 @@ export class PaintPanel {
     this.buyDecal.hidden = dOwned;
     if (did !== null && !dOwned) {
       const price = findDecal(did)?.price ?? 0;
-      this.buyDecal.textContent = `${findDecal(did)?.name ?? ''} を購入 ${formatCredits(price)}`;
+      this.buyDecal.textContent = t('paint.buy', {
+        name: findDecal(did)?.name ?? '',
+        price: formatCredits(price),
+      });
       this.buyDecal.disabled = credits < price;
     }
     for (const k of ['x', 'y', 'size', 'rotation'] as const) {
@@ -273,9 +288,13 @@ export class PaintPanel {
       this.sliders[k].disabled = did === null;
     }
     this.numberText.textContent = two(d.number);
-    if (!shop.isOwnedPaint(d) && !this.notice.textContent.endsWith('購入しました'))
-      this.notice.textContent = '未購入のものは試し塗りだけです（購入すると保存されます）';
-    else if (shop.isOwnedPaint(d) && this.notice.textContent.startsWith('未購入'))
+    const owned = shop.isOwnedPaint(d);
+    if (!owned && this.noticeKind !== 'bought') {
+      this.notice.textContent = t('paint.trialNotice');
+      this.noticeKind = 'trial';
+    } else if (owned && this.noticeKind === 'trial') {
       this.notice.textContent = '';
+      this.noticeKind = 'none';
+    }
   }
 }

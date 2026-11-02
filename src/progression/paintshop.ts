@@ -1,6 +1,7 @@
 // 塗装の売り買い（7-3、Three.js・DOM 非依存）: パターン・デカールの状態（所持 / 購入可 / 未解放）・購入・
 // 機体ごとの塗装の読み書き。解放条件（全ミッション S・PvP 10 撃墜・レース全コース A 以上）もここで判定する。
 // 色・機体番号・置き方は無料。持っていないパターン・デカールは塗装に保存しない（ハンガーの試し塗りだけ）
+import { t, tn } from '../core/i18n';
 import { AIRCRAFT_MODELS, findAircraftModel } from '../data/aircraft';
 import { COURSES } from '../data/courses';
 import { MISSIONS } from '../data/missions';
@@ -46,11 +47,13 @@ export function isSkinUnlocked(
 export function unlockLabel(unlock: SkinUnlock, save: Readonly<SaveData>): string {
   switch (unlock.kind) {
     case 'allMissionsS':
-      return '全ミッション S で解放';
+      return t('skins.unlock.allMissionsS');
     case 'pvpKills':
-      return `PvP で ${unlock.count} 撃墜で解放（${Math.min(unlock.count, save.skins.pvpKills)}/${unlock.count}）`;
+      return tn('skins.unlock.pvpKills', unlock.count, {
+        have: Math.min(unlock.count, save.skins.pvpKills),
+      });
     case 'allRacesA':
-      return 'レース 4 コース全部 A 以上で解放';
+      return t('skins.unlock.allRacesA');
   }
 }
 
@@ -135,7 +138,7 @@ export class Paintshop {
     if (saved) return clonePaint(saved);
     const model = findAircraftModel(aircraftId);
     const shape = (model ?? AIRCRAFT_MODELS[0])?.shape;
-    if (!shape) throw new Error('機体の定義がありません');
+    if (!shape) throw new Error('No aircraft model defined');
     const fresh = defaultPaint(shape, null, this.rng);
     if (model)
       this.save.transact((d) => {

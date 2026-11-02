@@ -1,5 +1,6 @@
 import './campaign.css';
 import './save.css';
+import { t, tn } from '../core/i18n';
 import { SAVE_CONFIG } from '../data/save';
 import { truncateChars } from '../progression/save';
 import { el } from './hud-dom';
@@ -17,12 +18,14 @@ export class PilotNameScreen {
     const root = createScreen(parent, 'campaign-screen pilot-name-screen');
     const panel = el('div', 'ui-panel campaign-panel', root);
     el('div', 'ui-kicker campaign-kicker', panel, 'PILOT REGISTRATION');
-    el('h2', 'ui-title campaign-title', panel, 'パイロット名');
+    el('h2', 'ui-title campaign-title', panel, t('pilot.name'));
     el(
       'p',
       'briefing-text',
       panel,
-      `${SAVE_CONFIG.pilotNameMaxLength} 文字まで。リザルトとタイトルに表示します（空なら ${SAVE_CONFIG.defaultPilotName}）`,
+      tn('pilot.registerHint', SAVE_CONFIG.pilotNameMaxLength, {
+        default: SAVE_CONFIG.defaultPilotName,
+      }),
     );
     const form = el('form', 'pilot-name-form', panel);
     this.input = el('input', 'ui-field pilot-name-input', form);
@@ -30,14 +33,14 @@ export class PilotNameScreen {
     this.input.placeholder = SAVE_CONFIG.defaultPilotName;
     this.input.autocomplete = 'off';
     this.input.spellcheck = false;
-    this.input.setAttribute('aria-label', 'パイロット名');
+    this.input.setAttribute('aria-label', t('pilot.name'));
     clipPilotNameInput(this.input);
     isolateKeys(this.input);
     const buttons = el('div', 'campaign-buttons', form);
     const submit = createButton(
       buttons,
       'ui-button is-primary campaign-go',
-      '決定',
+      t('pilot.submit'),
       () => undefined,
     );
     submit.type = 'submit';

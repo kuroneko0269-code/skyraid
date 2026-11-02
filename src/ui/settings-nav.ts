@@ -1,6 +1,7 @@
 // 設定画面の開閉（7-D）: 開いた元（タイトル / モード選択 / ポーズ）を隠して設定画面を重ね、「戻る」・Esc で元を出し直す。
 // 画面の状態（GameState）は変えない（core/settings-route.ts）。ポーズから開いても飛行は止まったまま
 import type { GameState } from '../core/game-state';
+import { t } from '../core/i18n';
 import { SettingsRoute, type SettingsOrigin } from '../core/settings-route';
 import type { ModeSelectScreen } from './mode-select';
 import type { PauseMenu } from './pause';
@@ -9,9 +10,15 @@ import type { SettingsScreen } from './settings-screen';
 import type { TitleScreen } from './title';
 
 const BACK_LABELS: Readonly<Record<SettingsOrigin, string>> = {
-  title: '← タイトルへ',
-  mode_select: '← モード選択へ',
-  pause: '← ポーズへ',
+  get title() {
+    return t('settings.back.title');
+  },
+  get mode_select() {
+    return t('settings.back.modeSelect');
+  },
+  get pause() {
+    return t('settings.back.pause');
+  },
 };
 
 export interface SettingsOrigins {

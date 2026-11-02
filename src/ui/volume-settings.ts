@@ -1,11 +1,18 @@
 import './volume-settings.css';
 import type { Volumes } from '../audio/engine';
+import { t } from '../core/i18n';
 import type { SaveStore } from '../progression/save-store';
 
 const LABELS: Readonly<Record<keyof Volumes, string>> = {
-  master: 'マスター',
-  sfx: '効果音',
-  bgm: 'BGM',
+  get master() {
+    return t('settings.volume.master');
+  },
+  get sfx() {
+    return t('settings.volume.sfx');
+  },
+  get bgm() {
+    return t('settings.volume.bgm');
+  },
 };
 
 /**
@@ -33,7 +40,7 @@ export function createVolumeSettings(
     input.max = '100';
     input.step = '1';
     input.value = String(Math.round(current[key] * 100));
-    input.setAttribute('aria-label', `${LABELS[key]}の音量`);
+    input.setAttribute('aria-label', t('settings.volume.aria', { name: LABELS[key] }));
     const value = document.createElement('span');
     value.className = 'volume-value';
     value.textContent = input.value;

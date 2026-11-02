@@ -3,6 +3,7 @@
 // 7-4b: オンライン連携があるときは、削除の確認に「サーバーのバックアップも削除する」（既定 OFF）を出す
 import './save.css';
 import type { SaveStore } from '../progression/save-store';
+import { t } from '../core/i18n';
 import { el } from './hud-dom';
 import { isolateKeys } from './pilot-name';
 
@@ -32,10 +33,10 @@ export function createSaveSettings(
   },
 ): void {
   const box = el('div', 'save-settings', panel);
-  el('div', 'save-settings-heading', box, 'セーブデータ');
+  el('div', 'save-settings-heading', box, t('save.heading'));
   const row = el('div', 'save-settings-row', box);
-  const copy = button(row, 'セーブデータをコピー');
-  const paste = button(row, '貼り付けて復元');
+  const copy = button(row, t('save.copy'));
+  const paste = button(row, t('save.paste'));
   const status = el('div', 'save-settings-status', box);
   status.hidden = true;
 
@@ -47,25 +48,20 @@ export function createSaveSettings(
   isolateKeys(area);
   const restoreRow = el('div', 'save-settings-row', box);
   restoreRow.hidden = true;
-  const restore = button(restoreRow, '復元する');
-  const cancelRestore = button(restoreRow, 'やめる');
+  const restore = button(restoreRow, t('save.restore'));
+  const cancelRestore = button(restoreRow, t('save.cancel'));
 
   // 削除（2 段階確認）
-  const remove = button(box, 'セーブデータを削除', 'is-danger save-settings-danger');
+  const remove = button(box, t('save.delete'), 'is-danger save-settings-danger');
   const confirmBox = el('div', 'save-settings-confirm', box);
   confirmBox.hidden = true;
-  el(
-    'div',
-    'save-settings-warning',
-    confirmBox,
-    '進み具合・クレジット・設定がすべて消えます。元に戻せません',
-  );
+  el('div', 'save-settings-warning', confirmBox, t('save.deleteWarning'));
   // サーバーのバックアップ（オンライン連携があるときだけ出す）
   const backupLabel = el('label', 'save-settings-check', confirmBox);
   backupLabel.hidden = true;
   const backupCheck = el('input', 'save-settings-checkbox', backupLabel);
   backupCheck.type = 'checkbox';
-  el('span', '', backupLabel, 'サーバーのバックアップも削除する');
+  el('span', '', backupLabel, t('save.deleteServerToo'));
   const backupNote = el('div', 'save-settings-status', confirmBox);
   backupNote.hidden = true;
   const syncBackupNote = (): void => {
@@ -77,13 +73,19 @@ export function createSaveSettings(
     backupCheck.disabled = !can;
     if (!can) backupCheck.checked = false;
     backupNote.textContent = backupCheck.checked
-      ? 'サーバーのバックアップも消えます'
-      : `サーバーのバックアップは残ります（次の同期でサーバーのセーブを読み込みます）${can ? '' : '。削除はオンライン連携中のときだけ選べます'}`;
+      ? t('save.serverDeleted')
+      : can
+        ? t('save.serverKept')
+        : t('save.serverKeptOffline');
   };
   backupCheck.addEventListener('change', syncBackupNote);
   const confirmRow = el('div', 'save-settings-row', confirmBox);
-  const confirmRemove = button(confirmRow, '削除する', 'is-danger save-settings-danger');
-  const cancelRemove = button(confirmRow, 'やめる');
+  const confirmRemove = button(
+    confirmRow,
+    t('save.confirmDelete'),
+    'is-danger save-settings-danger',
+  );
+  const cancelRemove = button(confirmRow, t('save.cancel'));
 
   const say = (text: string): void => {
     status.textContent = text;
@@ -104,12 +106,12 @@ export function createSaveSettings(
       area.readOnly = true;
       area.value = text;
       area.select();
-      say('コピーできませんでした。下の文字列を選んでコピーしてください');
+      say(t('save.copyFailed'));
     };
     // 安全でない接続（http）などでは clipboard がなく例外になる。そのときは手動でコピーしてもらう
     try {
       navigator.clipboard.writeText(text).then(() => {
-        say('コピーしました。新しい端末で「貼り付けて復元」に貼り付けてください');
+        say(t('save.copied'));
       }, showManual);
     } catch {
       showManual();
@@ -117,7 +119,7 @@ export function createSaveSettings(
   });
 
   paste.addEventListener('click', () => {
-    say('コピーした文字列を貼り付けて「復元する」を押してください（今のデータは上書きされます）');
+    say(t('save.pasteHint'));
     area.hidden = false;
     area.readOnly = false;
     area.value = '';
@@ -130,10 +132,10 @@ export function createSaveSettings(
   });
   restore.addEventListener('click', () => {
     if (save.importString(area.value)) {
-      say('復元しました');
+      say(t('save.restored'));
       onReplaced();
     } else {
-      say('読み込めませんでした。文字列がすべて貼り付けられているか確かめてください');
+      say(t('save.restoreFailed'));
     }
   });
 
@@ -152,13 +154,11 @@ export function createSaveSettings(
     if (opt && backupCheck.checked && opt.canDelete()) {
       // サーバーを先に消す。消せなければローカルも消さない（やり直すか、チェックを外して消す）
       confirmRemove.disabled = true;
-      say('サーバーのバックアップを削除中…');
+      say(t('save.deletingServer'));
       void opt.deleteServer().then((error) => {
         confirmRemove.disabled = false;
         if (error !== null) {
-          say(
-            `サーバーのバックアップを削除できませんでした（セーブデータは消していません）: ${error}`,
-          );
+          say(t('save.deleteServerFailed', { error }));
           return;
         }
         save.clear();
