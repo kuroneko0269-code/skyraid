@@ -75,7 +75,7 @@
 | --- | --- |
 | 早朝 / 昼 / 夕方 / 夜 | Dawn / Day / Dusk / Night |
 | 快晴 / 曇り / 霧 / 雨 | Clear / Cloudy / Fog / Rain |
-| 弱風 / 強風 | Light wind / Strong wind |
+| 弱風 / 強風 | Breezy / Windy |
 
 ## 目標・結果
 

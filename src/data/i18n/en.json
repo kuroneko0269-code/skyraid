@@ -58,7 +58,7 @@
   },
   "tutorial": {
     "title": "Tutorial",
-    "note": "Learn the controls in 3–4 minutes",
+    "note": "Learn the controls",
     "prompt": "Start the tutorial?",
     "promptBody": "Practice flying and shooting in 5 short steps (3–4 minutes). You can also start it later from \"Tutorial\" in the mode select.",
     "start": "Start",
@@ -346,8 +346,8 @@
       "rain": "Rain"
     },
     "wind": {
-      "weak": "Light wind",
-      "strong": "Strong wind"
+      "weak": "Breezy",
+      "strong": "Windy"
     },
     "label": "{time} · {sky} · {wind}"
   },
@@ -493,28 +493,28 @@
     },
     "campaign": {
       "label": "Campaign",
-      "note": "Clear missions in order"
+      "note": "Clear each mission"
     },
     "free": {
       "label": "Free Flight",
-      "noteOn": "Dogfight enemies or fly freely",
-      "noteOff": "Fly freely with no enemies"
+      "noteOn": "Dogfight or fly free",
+      "noteOff": "Fly free, no enemies"
     },
     "race": {
       "label": "Ring Race",
-      "note": "Time attack through the rings"
+      "note": "Race through rings"
     },
     "pvp": {
       "label": "PvP",
-      "note": "Battle in the same sky"
+      "note": "Dogfight each other"
     },
     "raid": {
       "label": "Raid",
-      "note": "Take down the giant kaiju Vorgas"
+      "note": "Defeat kaiju Vorgas"
     },
     "defense": {
       "label": "Defense",
-      "note": "Defend the base from 10 waves"
+      "note": "Hold off 10 waves"
     },
     "hangar": {
       "label": "Hangar"
