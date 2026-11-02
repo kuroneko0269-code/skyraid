@@ -1,8 +1,9 @@
-import type { Plugin } from 'vite';
+import { loadEnv, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { APP_MANIFEST, BRAND_ASSETS } from './src/data/app.ts';
 import { addConnectSrc } from './src/online/csp.ts';
+import { readOnlineEnv } from './src/online/env.ts';
 import { appInfo } from './scripts/vite-app-info.ts';
 
 /**
@@ -30,7 +31,9 @@ function supabaseCsp(): Plugin {
   };
 }
 
-export default defineConfig({
+const root = decodeURIComponent(new URL('.', import.meta.url).pathname).replace(/\/$/, '');
+
+export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     target: 'es2022',
@@ -38,7 +41,7 @@ export default defineConfig({
   plugins: [
     supabaseCsp(),
     // 7-D: 「情報」画面の版とライセンスの一覧（virtual:app-info）
-    appInfo(decodeURIComponent(new URL('.', import.meta.url).pathname).replace(/\/$/, '')),
+    appInfo(root),
     // PWA（4-10）: manifest とビルド成果物をプリキャッシュする Service Worker。
     // prompt 型（skipWaiting しない）なので、更新は全部のタブを閉じた次の起動で入る。登録は src/ui/app-shell.ts
     VitePWA({
@@ -70,8 +73,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
-        // アイコンの元画像（1254px・約 1.3MB）は配信には使わないのでプリキャッシュしない
-        globIgnores: ['**/brand/icon-source.png'],
+        // 8-2 の事前修正: 環境変数なしのビルドではオンライン連携（Supabase）のチャンクは読まないのでプリキャッシュしない
+        // （判定はアプリの src/ui/online-link.ts と同じ readOnlineEnv）
+        globIgnores: readOnlineEnv(loadEnv(mode, root, 'VITE_')) ? [] : ['**/assets/online-app-*'],
         // three を含む本体の JS が既定の上限（2MiB）を超えても入れる
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         cleanupOutdatedCaches: true,
@@ -85,4 +89,4 @@ export default defineConfig({
     // テーマのテスト（tests/theme.test.ts）が UI の CSS を ?raw で読むため、CSS を空にしない
     css: { include: [/src\/ui\/.+\.css/] },
   },
-});
+}));

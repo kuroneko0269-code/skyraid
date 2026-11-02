@@ -16,14 +16,13 @@ npm run dev
 | ファイル | 用途 | 推奨 |
 | --- | --- | --- |
 | `public/brand/logo.png` | タイトル画面のロゴ。**置けば画像、無ければテキストのロゴ** | 横長・背景透過の PNG。透明な余白はトリム、幅 2000px・500KB 以下。表示は画面の幅の 46%（最大 760px）・高さの 24% に収める |
-| `public/brand/icon-source.png` | アイコンの元画像（配信・プリキャッシュには使わない） | 正方形（1024px 以上）。角丸の外は白 |
 | `public/brand/icon-512.png` | PWA のアイコン（ホーム画面・スプラッシュ） | 512×512。角丸・外は透明 |
 | `public/brand/icon-192.png` | PWA のアイコン・ブラウザのタブ（PNG に対応したもの） | 192×192。角丸・外は透明 |
 | `public/brand/icon-maskable-512.png` | PWA の maskable アイコン（Android が形を切り抜く） | 512×512。全面を塗り、絵は中央 80% の円に収める |
 | `public/brand/apple-touch-icon.png` | iOS のホーム画面 | 180×180。全面を塗る（iOS が角を丸める） |
 | `public/brand/favicon.ico` | ブラウザのタブのアイコン | 16・32・48px を含む ICO |
 
-アイコンを差し替えるときは `icon-source.png` を置き換えて `python3 -I scripts/brand-icons.py public/brand`（Pillow が必要）を実行すると、上の 5 つを作り直し、ロゴの余白もトリムします。
+アイコンを差し替えるときは、元画像 `assets-src/brand/icon-source.png`（正方形・1024px 以上・角丸の外は白。配信物には入らない）を置き換えて `python3 -I scripts/brand-icons.py public/brand`（Pillow が必要）を実行すると、上の 5 つのアイコンを作り直し、ロゴの余白もトリムします。
 
 アプリ名・テーマ色は `src/data/app.ts`、セキュリティヘッダーは `public/_headers`（Cloudflare Pages の形式）。
 
@@ -39,7 +38,7 @@ npm run dev
 
 - ループ再生し、画面が変わると 1 秒でクロスフェードします。ループの継ぎ目が目立たないよう、曲の頭と終わりをつなげて作ってください
 - 1 ファイル 25MB 以下（Cloudflare Pages の制限）。数 MB に収まる 128〜192kbps 程度を推奨。オフライン用のキャッシュ（Service Worker）には入りません
-- 置き換えたら `npm run build` して公開するだけです（コードの変更はいりません）。音量は設定画面の「音」（またはポーズメニュー）の BGM のスライダー
+- **ビルド時に存在するファイルだけを読みます。追加・削除した後は再ビルドが必要です**（main への push で Cloudflare Pages が自動でビルドします）。置き換えたら `npm run build` して公開するだけです（コードの変更はいりません）。音量は設定画面の「音」（またはポーズメニュー）の BGM のスライダー
 - ライセンスが明確な素材（CC0 / CC-BY）だけを使い、出典を `docs/assets.md` に書いてください
 
 ### 音が鳴らないとき

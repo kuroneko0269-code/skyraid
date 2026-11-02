@@ -3,12 +3,15 @@
 // 見た目は 4-10 のデザインシステム。通信はしない（ui/pvp-link.ts が呼ぶ）。文字は textContent だけで入れる
 import './lobby.css';
 import { NET_CONFIG } from '../data/net';
-import type { PlayerInfo } from '../net/protocol';
+import { initialSettings, type DefensePreset } from '../net/lobby-rules';
+import type { GameSettings, PlayerInfo } from '../net/protocol';
 import { renderAgain, renderResult, type ResultView } from './pvp-result';
 import { el } from './hud-dom';
 import { LobbyHangar, type LobbyHangarEntry } from './lobby-hangar';
 import { LobbyRoom, type LobbyRoomHandlers, type LobbyRoomView } from './lobby-room';
+import { lobbyHeading, type LobbyMode } from './lobby-text';
 import { isolateKeys } from './pilot-name';
+import { detectLocale, type Locale } from '../core/locale';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 export type { LobbyRoomView };
@@ -42,17 +45,25 @@ export class LobbyScreen {
   private readonly againBody: HTMLDivElement;
   private readonly againButton: HTMLButtonElement;
   private readonly hangar: LobbyHangar;
+  private readonly kicker: HTMLDivElement;
+  private readonly title: HTMLHeadingElement;
+  private readonly note: HTMLParagraphElement;
 
-  constructor(parent: HTMLElement, handlers: LobbyHandlers) {
+  constructor(
+    parent: HTMLElement,
+    handlers: LobbyHandlers,
+    private readonly locale: Locale = detectLocale(window.location.search, navigator.languages),
+  ) {
     const root = createScreen(parent, 'campaign-screen lobby-screen');
     const panel = el('div', 'ui-panel campaign-panel lobby-panel', root);
     this.panel = panel;
-    el('div', 'ui-kicker campaign-kicker', panel, 'PVP');
+    this.kicker = el('div', 'ui-kicker campaign-kicker', panel);
 
     // 最初の選択: 部屋を作る / コードで参加
     this.menu = el('div', 'lobby-view', panel);
-    el('h2', 'ui-title campaign-title', this.menu, 'PvP');
-    el('p', 'briefing-text', this.menu, `2〜${NET_CONFIG.maxPlayers} 人で同じ空を飛ぶ`);
+    this.title = el('h2', 'ui-title campaign-title', this.menu);
+    this.note = el('p', 'briefing-text', this.menu);
+    this.setMode('pvp');
     this.createButton = createButton(
       this.menu,
       'ui-button is-primary lobby-wide',
@@ -120,6 +131,20 @@ export class LobbyScreen {
   /** 「もう一度」を押した人の印を描き直す */
   updateAgain(players: readonly Readonly<PlayerInfo>[], localId: number): void {
     renderAgain(this.againBody, players, localId);
+  }
+
+  /** ロビーを開く: 部屋を作るときのホスト設定（レイド・防衛戦の協力）を返し、見出しを遊び方に合わせる */
+  prepare(raid: boolean, defense: DefensePreset): GameSettings | undefined {
+    this.setMode(raid ? 'raid' : defense ? 'defense' : 'pvp');
+    return initialSettings(raid, defense);
+  }
+
+  /** 見出しを遊び方に合わせる（8-2 の事前修正: 協力レイド・協力防衛戦から入ったときはその名前） */
+  setMode(mode: LobbyMode): void {
+    const h = lobbyHeading(mode, this.locale, NET_CONFIG.maxPlayers);
+    this.kicker.textContent = h.kicker;
+    this.title.textContent = h.title;
+    this.note.textContent = h.note;
   }
 
   /** 部屋コードの入力欄に入れる（?room=XXXXXX） */
