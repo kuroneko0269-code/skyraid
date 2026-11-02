@@ -15,6 +15,7 @@
     "/src/ui/member-settings.ts",
     "/src/ui/online-settings.ts",
     "/src/ui/card/card-dialog.ts",
-    "/src/core/viewport-fit.ts"
+    "/src/core/viewport-fit.ts",
+    "/src/render/aircraft-model/aircraft-object.ts"
   ]
 }
