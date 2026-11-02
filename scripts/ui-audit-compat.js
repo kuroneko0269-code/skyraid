@@ -12,6 +12,14 @@
 //   portrait     縦向きのスマホ（タッチ・幅 600px 以下）→ どの画面でも「画面を横にしてください」
 //   gamepad      ゲームパッドの接続 → 切断で入力が離れる（例外なし）
 import { AUDIT_LANG, L } from './audit-lang.js';
+
+/** 保存できない環境のお知らせ（の一部）で探す */
+const STORAGE_NOTE =
+  AUDIT_LANG === 'en'
+    ? L(
+        'この環境ではデータを保存できません（プライベートブラウズ・容量不足など）。遊べますが、進み具合・設定は閉じると消えます',
+      ).slice(0, 24)
+    : '保存できません';
 import {
   VIEWPORT,
   dialogButton,
@@ -182,7 +190,7 @@ async function auditStorage(browser, base, out, kind) {
   await shown(page, '.title-screen');
   const toast = async () =>
     page
-      .locator('.app-toast', { hasText: L('保存できません') })
+      .locator('.app-toast', { hasText: STORAGE_NOTE })
       .first()
       .waitFor({ timeout: 8000 })
       .then(
@@ -197,7 +205,7 @@ async function auditStorage(browser, base, out, kind) {
   await shown(page, '.mode-select-screen');
   const told = await toast();
   await page.screenshot({ path: `${out}/compat-storage-${kind}.png` });
-  const count = await page.locator('.app-toast', { hasText: L('保存できません') }).count();
+  const count = await page.locator('.app-toast', { hasText: STORAGE_NOTE }).count();
   await page.keyboard.press('Escape');
   await page.click('.mode-tile[data-mode="replay"]');
   const replay = await page
