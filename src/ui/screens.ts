@@ -28,6 +28,7 @@ import { MAPS } from '../data/maps';
 import { RAID_MISSION, raidMission } from '../data/missions-special';
 import type { DefenseDifficulty } from '../data/defense';
 import { tutorialStrings, type TutorialStrings } from './tutorial-text';
+import { missionCardSource } from './card/card-entry';
 
 interface PvpHandlers {
   onSelect: (raid: boolean) => void;
@@ -341,6 +342,9 @@ export class Screens {
       newGear,
       tutorial: tutorial ? { title: t.complete, back: t.back } : undefined,
     });
+    // 8-5: 記録カード（キャンペーン・ソロのレイド。チュートリアルは作らない）
+    const raid = this.inRaid ? (this.nextMission?.reward.raid?.difficulty ?? 'normal') : null;
+    this.result.card.set(tutorial ? null : missionCardSource(result, raid, this.hangar, this.save));
   }
 
   private show(state: ScreenState): void {

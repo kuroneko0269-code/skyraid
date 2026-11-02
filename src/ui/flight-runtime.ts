@@ -4,6 +4,7 @@ import type { GameAudio } from '../audio/game-audio';
 import { GameLoop } from '../core/loop';
 import type { SaveStore } from '../progression/save-store';
 import { FlightFrame, type FlightFrameParts } from '../render/flight-frame';
+import { setCardSceneCapture } from './card/card-entry';
 import type { ReplayHub } from '../replay/hub';
 import { simSkip, type SimWorld } from '../replay/sim';
 import { StateSnapshot } from '../replay/state-walk';
@@ -92,6 +93,8 @@ export function startFlightRuntime(p: FlightRuntimeParts): { photo: PhotoEntry }
     },
     frame,
   );
+  // 8-5: 記録カードの背景（結果の時点の場面を 1 枚。フォトモードの撮影と同じく描画バッファを一時的にその大きさにして描く）
+  setCardSceneCapture((w, h) => p.pipeline.capture(w, h));
   // 8-2: モード選択を開いたら、遅延読み込みのフォトモードと怪獣のモデルを先に読んでおく（タイトルの表示を遅らせない）
   game.onChange(({ to }) => {
     if (to !== 'mode_select') return;

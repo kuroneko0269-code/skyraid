@@ -1,6 +1,7 @@
 {
   "app": {
-    "description": "ブラウザで動く 3D フライトシューティング"
+    "description": "ブラウザで動く 3D フライトシューティング",
+    "ogDescription": "ブラウザで遊べる 3D フライトシューティング。空戦・リングレース・巨大怪獣のレイド。ソロのキャンペーンと防衛戦、2〜4 人のオンライン対戦・協力。無料・インストール不要。"
   },
   "missions": {
     "training": {
@@ -1131,7 +1132,49 @@
     "environment": "動作環境",
     "licensesIntro": "このゲームは次のオープンソースのライブラリ・素材を使っています（ビルド時に集計）。",
     "unknownLicense": "不明",
+    "changesNote": "更新履歴は日本語で書いています。",
     "fontName": "Rajdhani（Google Fonts）"
+  },
+  "card": {
+    "open": "記録カード",
+    "title": "記録カード",
+    "pilotToggle": "パイロット名を載せる",
+    "privacy": "オンライン連携の情報（メールアドレスなど）は載りません。",
+    "making": "カードを作成中…",
+    "failed": "カードを作れませんでした",
+    "share": "共有",
+    "save": "画像を保存",
+    "copy": "文面をコピー",
+    "close": "閉じる",
+    "shared": "共有しました",
+    "saved": "画像を保存しました",
+    "copied": "文面をコピーしました",
+    "copyFailed": "コピーできませんでした。文面を選んでコピーしてください",
+    "shareFailed": "共有できなかったため、画像を保存しました",
+    "alt": "記録カードのプレビュー",
+    "textLabel": "共有の文面",
+    "mode": {
+      "mission": "キャンペーン",
+      "raid": "レイド",
+      "race": "リングレース",
+      "defense": "防衛戦"
+    },
+    "metric": {
+      "time": "タイム",
+      "clearTime": "クリアタイム",
+      "elapsed": "経過時間",
+      "waves": "クリアした波"
+    },
+    "fact": {
+      "kills": "撃墜",
+      "protected": "守った建物",
+      "newBest": "自己ベスト更新"
+    },
+    "skin": "{pattern}・{color}",
+    "skinDefault": "標準塗装",
+    "sep": "・",
+    "resultRank": "ランク {rank}",
+    "shareText": "{game} の{mode}「{stage}」で {result} {hashtag}"
   },
   "dataPolicy": {
     "save": {

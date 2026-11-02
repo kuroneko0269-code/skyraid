@@ -4,7 +4,7 @@ import { formatDateTime } from '../core/format';
 import { t } from '../core/i18n';
 import { REPLAY_CONFIG } from '../data/replay';
 import { findAircraftModel } from '../data/aircraft';
-import { formatClock, replayTitle } from '../replay/outcome';
+import { formatClock, replayOutcomeLabel, replayTitle } from '../replay/outcome';
 import type { ReplayEntry, ReplayUsage } from '../replay/store';
 import { REPLAY_MODE_LABELS } from '../replay/types';
 import { el } from './hud-dom';
@@ -112,7 +112,7 @@ export class ReplayListScreen {
       );
       el('span', 'mission-entry-title', b, e.kind === 'saved' ? e.name : replayTitle(hd));
       const sub = el('span', 'race-course-best replay-entry-sub', b);
-      sub.textContent = `${formatLocalDate(hd.date)}  ${formatClock(hd.steps / 60)}  ${hd.outcome?.label ?? ''}`;
+      sub.textContent = `${formatLocalDate(hd.date)}  ${formatClock(hd.steps / 60)}  ${replayOutcomeLabel(hd.outcome) ?? ''}`;
       b.classList.toggle('is-selected', e.id === this.selectedId);
       b.setAttribute('aria-pressed', String(e.id === this.selectedId));
     }
@@ -139,7 +139,7 @@ export class ReplayListScreen {
     );
     fact(t('replay.list.factDate'), formatLocalDate(hd.date));
     fact(t('replay.list.factLength'), formatClock(hd.steps / 60));
-    fact(t('replay.list.factResult'), hd.outcome?.label ?? '—');
+    fact(t('replay.list.factResult'), replayOutcomeLabel(hd.outcome) ?? '—');
     fact(t('replay.list.factAircraft'), findAircraftModel(hd.aircraftId)?.name ?? hd.aircraftId);
     fact(t('replay.list.factPilot'), hd.pilotName);
     fact(t('replay.list.factSize'), formatBytes(e.size));

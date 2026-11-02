@@ -1,0 +1,133 @@
+/* 記録カード（8-5）の画面: 結果画面の上に重ねる（トースト 85 の下）。横に広い画面はプレビューと操作の 2 列 */
+.card-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--ui-space-3) + var(--ui-safe-top))
+    calc(var(--ui-space-3) + var(--ui-safe-right)) calc(var(--ui-space-3) + var(--ui-safe-bottom))
+    calc(var(--ui-space-3) + var(--ui-safe-left));
+  /* 後ろの結果画面の文字が透けないよう濃いめ */
+  background: rgba(0, 6, 14, 0.82);
+  touch-action: pan-y;
+}
+
+.card-overlay[hidden] {
+  display: none;
+}
+
+.card-dialog {
+  --fill: var(--ui-bg-strong);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ui-space-3);
+  width: min(960px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--ui-space-4);
+  box-sizing: border-box;
+}
+
+.card-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.card-preview {
+  display: block;
+  width: 100%;
+  max-height: 52vh;
+  aspect-ratio: 1200 / 630;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--ui-line-faint);
+}
+
+.card-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
+  min-width: 0;
+}
+
+.card-pilot {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  min-height: 44px;
+  padding: 0 var(--ui-space-3);
+  cursor: pointer;
+}
+
+.card-pilot input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--ui-accent);
+}
+
+.card-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ui-text-dim);
+}
+
+.card-text {
+  width: 100%;
+  min-height: 0;
+  resize: none;
+  font-size: 12px;
+  line-height: 1.4;
+  box-sizing: border-box;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.card-status {
+  min-height: 1.4em;
+  font-size: 13px;
+  color: var(--ui-accent);
+}
+
+.card-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+
+.card-buttons .ui-button {
+  flex: 1 0 auto;
+  min-height: 44px;
+}
+
+/* 横に広い画面: プレビュー（左）と操作（右） */
+@media (min-width: 640px) and (min-aspect-ratio: 4 / 3) {
+  .card-dialog {
+    grid-template-columns: minmax(0, 1.55fr) minmax(220px, 1fr);
+    align-items: center;
+  }
+
+  .card-preview {
+    max-height: calc(100vh - 80px);
+  }
+}
+
+/* 背の低い横画面（スマホ）: 文面は 2 行、余白を詰める */
+@media (max-height: 480px) {
+  .card-dialog {
+    padding: var(--ui-space-3);
+    gap: var(--ui-space-2);
+  }
+
+  .card-text {
+    font-size: 11px;
+  }
+
+  .card-buttons .ui-button {
+    min-height: 40px;
+  }
+}

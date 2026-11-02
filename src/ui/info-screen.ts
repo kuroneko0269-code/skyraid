@@ -5,7 +5,7 @@ import { APP_VERSION } from 'virtual:app-info';
 import { LICENSES } from 'virtual:app-licenses';
 import changelogText from '../../docs/changelog.md?raw';
 import { parseChangelog } from '../core/changelog';
-import { t } from '../core/i18n';
+import { getLocale, t } from '../core/i18n';
 import { APP_MANIFEST } from '../data/app';
 import { MIN_ENVIRONMENT, minEnvironmentNote } from '../data/compat';
 import { DATA_POLICY } from '../data/data-policy';
@@ -122,6 +122,8 @@ export class InfoScreen {
   }
 
   private buildChanges(p: HTMLElement): void {
+    // 8-5: 更新履歴は日本語だけ（docs/changelog.md）。英語の画面では先に断りを 1 行
+    if (getLocale() !== 'ja') el('p', 'info-text info-changes-note', p, t('info.changesNote'));
     for (const entry of parseChangelog(changelogText)) {
       el('h3', 'info-subheading', p, entry.title);
       const list = el('ul', 'info-list', p);

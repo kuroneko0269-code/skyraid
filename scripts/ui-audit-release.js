@@ -8,6 +8,7 @@
 //   firstRun localStorage / IndexedDB が空の状態からの初回起動（タイトル → パイロット名 → チュートリアルの案内）
 //   pwa      manifest・アイコン・Service Worker の登録・オフラインでの起動
 //   offline  環境変数なしのビルドでオンライン機能が隠れる（設定の「オンライン連携」・「ランキング」が無く、Supabase に通信しない）
+//   card     記録カード（8-5。日本語・英語）: 結果画面からの生成（オフライン）・保存・文面のコピー・パイロット名を外す・共有の切り替え
 // Google Fonts はクラウドの環境から外へ出られないので、空の CSS を返す（CSP の判定はブラウザが先に行うので影響しない）。
 // 結果は <出力先>/release.json と各 PNG
 import { AUDIT_LANG, CONTEXT_LOCALE, L } from './audit-lang.js';
@@ -23,6 +24,7 @@ import {
   toModeSelect,
   watch,
 } from './audit-helpers.js';
+import { auditCard } from './ui-audit-card.js';
 import { auditCompat } from './ui-audit-compat.js';
 import { auditModes } from './ui-audit-modes.js';
 import { printReleaseReport } from './audit-report.js';
@@ -195,6 +197,7 @@ async function auditInfo(browser, base, out) {
     return {
       version: text('.info-version')[0] ?? '',
       changes: text('.info-tab:nth-child(2) .info-subheading'),
+      changesNote: text('.info-changes-note')[0] ?? '',
       licenses: text('.info-license summary'),
       withText: document.querySelectorAll('.info-license-text').length,
       data: text('.info-tab:nth-child(4) .info-subheading, .info-tab:nth-child(4) .info-text').join(
@@ -214,10 +217,16 @@ async function auditInfo(browser, base, out) {
       ? /email address[^.]*display name/i.test(info.data) && /IP address/.test(info.data)
       : /メールアドレス[^。]*と表示名[^。]*だけ/.test(info.data) && /IP アドレス/.test(info.data));
   const r = {
-    ok: info.version.includes('0.8.0') && missing.length === 0 && info.withText > 0 && dataOk,
+    ok:
+      info.version.includes('0.8.0') &&
+      missing.length === 0 &&
+      info.withText > 0 &&
+      dataOk &&
+      // 8-5: 英語の画面では更新履歴の前に「日本語で書いている」断り
+      info.changesNote === (AUDIT_LANG === 'en' ? 'The changelog is in Japanese.' : ''),
     steps: [
       `版: ${info.version}`,
-      `更新履歴: ${info.changes.length} 版（${info.changes[0] ?? ''} 〜 ${info.changes.at(-1) ?? ''}）`,
+      `更新履歴: ${info.changes.length} 版（${info.changes[0] ?? ''} 〜 ${info.changes.at(-1) ?? ''}）${info.changesNote ? `・「${info.changesNote}」` : ''}`,
       `ライセンス: ${info.licenses.length} 件・本文あり ${info.withText} 件${missing.length ? `・不足 ${missing.join(', ')}` : ''}`,
       `データの扱い: ${dataOk ? 'セーブはブラウザ内・メールと表示名だけ・P2P の IP の記載あり' : '記載が不足 ⚠'}`,
     ],
@@ -278,6 +287,8 @@ export async function runReleaseAudit(engine, out, dir = 'dist', port = 4174) {
     info: await auditInfo(browser, base, out),
     // 8-3: 機能が無い・失敗する環境（scripts/ui-audit-compat.js）
     compat: await auditCompat(browser, base, out),
+    // 8-5: 記録カード（日本語・英語。scripts/ui-audit-card.js）
+    card: await auditCard(browser, base, out),
   };
   await browser.close();
   server.close();

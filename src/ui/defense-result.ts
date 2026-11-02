@@ -5,6 +5,7 @@ import './defense.css';
 import { DEFENSE_CONFIG } from '../data/defense';
 import type { DefenseRewardBreakdown, DefenseScore } from '../missions/defense/score';
 import { t } from '../core/i18n';
+import { RecordCardButton } from './card/card-entry';
 import { el } from './hud-dom';
 import { formatCredits } from './mission-text';
 import { createButton, createScreen, setScreenShown } from './screen';
@@ -29,6 +30,8 @@ export interface DefenseResultExtras {
 export class DefenseResultScreen {
   /** ボタンの上の追加の欄（7-B: リプレイを保存） */
   readonly extras: HTMLDivElement;
+  /** 8-5: 記録カードのボタン（中身は結果を出す側が set する） */
+  readonly card: RecordCardButton;
   readonly root: HTMLDivElement;
   private readonly info: HTMLDivElement;
   private readonly outcome: HTMLHeadingElement;
@@ -50,6 +53,7 @@ export class DefenseResultScreen {
     this.facts = el('div', 'campaign-facts', panel);
     this.table = el('div', 'defense-result-table', panel);
     this.extras = el('div', 'result-extras', panel);
+    this.card = new RecordCardButton(this.extras);
     const buttons = el('div', 'campaign-buttons', panel);
     createButton(
       buttons,

@@ -39,10 +39,13 @@ npm run dev
 | `public/brand/icon-maskable-512.png` | PWA の maskable アイコン（Android が形を切り抜く） | 512×512。全面を塗り、絵は中央 80% の円に収める |
 | `public/brand/apple-touch-icon.png` | iOS のホーム画面 | 180×180。全面を塗る（iOS が角を丸める） |
 | `public/brand/favicon.ico` | ブラウザのタブのアイコン | 16・32・48px を含む ICO |
+| `public/brand/og-image.jpg` | リンクのプレビュー（OGP。8-5）。英語の固定の画像 | 1200×630 の JPEG。ロゴを差し替えたら `node scripts/og-image.js` で作り直す（記録カードと同じ描画） |
 
 アイコンを差し替えるときは、元画像 `assets-src/brand/icon-source.png`（正方形・1024px 以上・角丸の外は白。配信物には入らない）を置き換えて `python3 -I scripts/brand-icons.py public/brand`（Pillow が必要）を実行すると、上の 5 つのアイコンを作り直し、ロゴの余白もトリムします。
 
 アプリ名・テーマ色は `src/data/app.ts`、セキュリティヘッダーは `public/_headers`（Cloudflare Pages の形式）。
+
+OGP の `og:image` は、Cloudflare Pages ではビルドに渡される `CF_PAGES_URL` で絶対 URL になります。独自ドメインで公開するときは環境変数 `VITE_SITE_URL`（例 `https://skyraid.example.com`）を入れると、その URL を使います（無ければ `/brand/og-image.jpg`）。
 
 ## BGM の差し替え
 

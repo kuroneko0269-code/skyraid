@@ -6,6 +6,7 @@ import './race.css';
 import type { RaceResult } from '../missions/race/runner';
 import { betterRank, formatRaceTime } from '../missions/race/score';
 import type { RaceRecordOutcome } from '../progression/race-records';
+import { RecordCardButton } from './card/card-entry';
 import { el } from './hud-dom';
 import { formatCredits } from './mission-text';
 import { createButton, createScreen, setScreenShown } from './screen';
@@ -13,6 +14,8 @@ import { createButton, createScreen, setScreenShown } from './screen';
 export class RaceResultScreen {
   /** ボタンの上の追加の欄（7-B: リプレイを保存） */
   readonly extras: HTMLDivElement;
+  /** 8-5: 記録カードのボタン（中身は結果を出す側が set する） */
+  readonly card: RecordCardButton;
   readonly root: HTMLDivElement;
   private readonly course: HTMLDivElement;
   private readonly outcome: HTMLHeadingElement;
@@ -33,6 +36,7 @@ export class RaceResultScreen {
     this.rank = el('div', 'result-rank', panel);
     this.facts = el('div', 'campaign-facts', panel);
     this.extras = el('div', 'result-extras', panel);
+    this.card = new RecordCardButton(this.extras);
     const buttons = el('div', 'campaign-buttons', panel);
     createButton(
       buttons,

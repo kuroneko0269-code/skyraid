@@ -124,7 +124,7 @@
 | 日本語 | English |
 | --- | --- |
 | 追従 / 自由 / 敵視点 / シネマ（カメラ） | Follow / Free / Enemy View / Cinema |
-| 次の敵 / 一覧へ | Next Foe / Back |
+| 次の敵 / 一覧へ | Next Enemy / Back |
 | 自動 / 保存 | Auto / Saved |
 | 正面 / 真横 / 後方上 / 翼端 / 見上げ / 俯瞰 | Front / Side / High Rear / Wingtip / Low / Top |
 | なし / フィルム / モノクロ / セピア / 高コントラスト | None / Film / Mono / Sepia / Punch |
@@ -145,3 +145,8 @@
 | 版 / 更新履歴 / ライセンス / データの扱い（情報のタブ） | Version / Changelog / Licenses / Privacy |
 | 動作環境 / パソコン | Requirements / Desktop |
 | 言語 | Language |
+| 記録カード（結果画面のボタン / 画面の題） | Share Card / Record Card |
+| パイロット名を載せる | Show pilot name |
+| 共有 / 画像を保存 / 文面をコピー | Share / Save Image / Copy Text |
+| クリアタイム / 経過時間 / クリアした波 / 守った建物 / 自己ベスト更新（カード） | Clear Time / Elapsed / Waves Cleared / Buildings Saved / New Personal Best |
+| 標準塗装 | Factory paint |
