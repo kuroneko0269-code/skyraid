@@ -97,5 +97,5 @@
 - [x] 8-5 記録カード共有（結果画面（キャンペーン・ソロのレイド・リングレース・ソロの防衛戦）の「記録カード」: 1200×630 の PNG を Canvas 2D で（背景は結果の時点の場面）・パイロット名を載せるかの選択・Web Share API（ファイル付き）/ 画像を保存・文面をコピー・オフラインで生成・遅延チャンク card-dialog、OGP（英語の固定の画像 og-image.jpg）、テストと ui-audit --release の card、事前修正: リプレイの結果を今の言語で・英語の更新履歴の断り・Next Enemy） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/52bf1198a74dc12217c895b3b95dfa43ab0db1a0
 - [x] 8-6 実機確認の修正（iPhone の実機確認: 名前をパイロット名に一本化・メンバー管理の名前と行の高さ・横画面の黒い余白・メニューのタップの取りこぼし・排気口の黒い輪・記録カードのフォント・レイドの難易度、版 0.9.0） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/b11d3c436728b22108f3ca2a36852342cb87bb78
 - [x] 8-6b 追加修正（M1 のリング後の敵が機銃だけで倒せない → 敵の HP ×0.6・ミサイルの補充、M2〜M5・防衛戦のミサイルなしの表、レイドを通常と高難度で分けて調整、データタブの「パイロット名を変更」を 1 か所に、排気の先の黒い輪（陽炎のシェーダー）と 8-6 のふたの変更を戻す） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/c50b48753b531d426d54c0fc201f578ceb4343f5
-- [ ] 8-6c 追加修正（協力レイドの人数の補正（2〜4 人の部位ダメージ倍率）・M2 初陣の難易度（easy × 3・HP ×0.6・30 秒間隔）・レイドのブリーフィングのダウンの文を難易度ごとに）
+- [x] 8-6c 追加修正（協力レイドの人数の補正（2〜4 人の部位ダメージ倍率）・M2 初陣の難易度（easy × 3・HP ×0.6・30 秒間隔）・レイドのブリーフィングのダウンの文を難易度ごとに） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/0f25e1d13ee984a5bdf55486d0fe9880c1ae7bc2
 - [ ] 8-7 v1.0.0 公開
