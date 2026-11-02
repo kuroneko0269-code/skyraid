@@ -530,3 +530,17 @@
 | 2026-11-02 | 8-2: 読み込みが 300ms を超えたらトーストで「読み込み中…」、失敗したら今の画面のまま理由（オフライン / 新しい版の公開直後）と「再読み込み」を出す。失敗した読み込みは覚えないが、Chrome は読めなかったモジュールを再読み込みまで覚えているので、お知らせは再読み込みを勧める | 失敗してもゲームを止めない。Cloudflare Pages はデプロイで古いハッシュのファイルが消えるので、SW の無いブラウザで古いページを開いたままだと遅延チャンクが読めない |
 | 2026-11-02 | 8-2: Service Worker は遅延チャンクもすべてプリキャッシュする（推奨案 A。環境変数なしのビルドの `online-app` だけ除く）。ほかの案: B = `pvp-link`（gzip 約 70KB）を外して使うときに取る（初回のインストールが軽くなるが、デプロイの直後に古い SW が古い PvP のチャンクを取りに行って 404 になる。P2P は通信が要るのでオフラインの利点はない） | オフラインで全シングルプレイ（フォトモード・リプレイ・レイド）が動き、古いページを開いたままでも古い SW が同じ版のチャンクを返せる。プリキャッシュの合計は 8-1 と同じ程度（icon-source を外した分と online-app の分で減った） |
 | 2026-11-02 | 8-2: 計測は `npm run perf`（`scripts/perf.js`。Playwright はクラウドの全体のもの、Lighthouse は devDependency に追加）。Lighthouse は既定のモバイル設定で、LCP が取れなかった回（NO_LCP）を除いた有効な 3 回の中央値 | 追加パッケージは計測用だけ（指示）。クラウドはソフトウェア描画で LCP が取れない回が多く、スコア 0 が混ざると中央値が崩れる |
+
+## 8-3 互換性（2026-11-02）
+
+| 日付 | 判断 | 理由 |
+| --- | --- | --- |
+| 2026-11-02 | 8-3: 最低動作環境は iOS / iPadOS 16.4・Android Chrome 105・Chrome / Edge 105・Safari 16.4・Firefox 121（推奨案 A）。ほかの案: B = ビルドの target を下げて（static ブロックを変換）iOS 15.4 まで広げる（three の出力が変わり、iOS 15 の WebGL 2 の不具合を実機で確かめられない）、C = 下限を書かず「最新の 2 版」とする（古い端末の人に案内できない） | 下限はビルドの出力が決める: three の class の static ブロック（ES2022。Safari 16.4・Chrome 94・Firefox 93）と WebGL 2（iOS 15・Chrome 56）。CSS の `:has()`（Chrome 105・Firefox 121）は設定の選択欄の枠だけで、無くても見た目が少し変わるだけだが、表には合わせた。polyfill は入れない |
+| 2026-11-02 | 8-3: 起動を `src/main.ts`（WebGL 2 の描画を作る・作れなければ案内画面）と `src/app.ts`（7-x までの main.ts の本体を `startApp(renderer)` にしたもの）に分けた。静的な import のままなので 8-2 のチャンク分けは変わらない（エントリは `app` に入る。`app` が gzip +1.4KB） | three の WebGLRenderer は WebGL 2 が無いと例外を出し、以後の組み立てが全部止まって真っ黒だった。描画を作るのは 1 回だけ（先に試しのコンテキストを作らない）。作れなかったときだけ WebGL 1 の有無を調べて文面を分ける |
+| 2026-11-02 | 8-3: 構文を読めない古いブラウザの案内は ES5 の `public/legacy-check.js`（classic script・defer。load の後に `<html data-app>` が無ければ案内）。文面と動作環境は `src/data/compat.ts` と同じものを手で書き、`tests/compat.test.ts` で一致を確かめる。案内の CSS は `index.html` の `<style>` | モジュールが構文エラーだと案内を出すコードも動かない。CSP は `script-src 'self'` なので inline の script は使えず、別ファイルにした。`style-src` は `'unsafe-inline'` があるので CSS は inline で、アプリの CSS が読めなくても出る |
+| 2026-11-02 | 8-3: WebGL のコンテキスト喪失ではソロの飛行中だけポーズにする（PvP・協力は止められない・リプレイの再生は止める必要がない）。復帰は three に任せ、1 回だけ焼く空の環境マップは復帰のイベントで焼き直す。5 秒で戻らなければ「再読み込み」のトースト | 確かめたら、喪失中も判定が進み描けないまま墜落していた（クラウドで再現）。three は復帰で資源を作り直すが、PMREM の中身は描き直さないと黒いまま |
+| 2026-11-02 | 8-3: 保存できない環境では `SaveStore.onWriteFail` で最初の 1 回だけトースト（閉じるまで）。localStorage が無ければ起動時に出す | 7-x までは失敗を黙って捨てていて、遊んだ後に消えることに気づけなかった。毎回出すとうるさいので 1 回 |
+| 2026-11-02 | 8-3: 音・全画面 / 向きの固定 / 振動・縦向きの案内・safe-area・ゲームパッドの抜き差しは、今の挙動を点検で確かめて変えなかった（例外なし・無い機能は項目を作らないか押せない） | 指示「今の挙動を確かめてから必要なものだけ直す」 |
+| 2026-11-02 | 8-3: 事前修正: Lighthouse の SEO の meta description を足した（manifest の description と同じ文）。Accessibility の meta viewport（`user-scalable=no`・`maximum-scale=1`）は直さない | 拡大を許すと、両手でスティックとボタンを押す操作で画面が拡大・ずれる（Android Chrome は viewport に従う。iOS は無視するので 4-10 から JS でも止めている）。ゲームの操作に関わるため |
+| 2026-11-02 | 8-3: `scripts/ui-audit.js` に `--browser chromium\|firefox\|webkit\|all`（`scripts/audit-browsers.js`）。追加パッケージなし（Playwright はクラウドの全体のもの） | クラウドのネットワーク方針で Playwright のブラウザの配布元（cdn.playwright.dev ほか）が拒否され、Firefox・WebKit を取得できなかった。取得していないエンジンは飛ばして理由を出すので、手元で `npx playwright install firefox webkit` すれば同じ点検が回る |
+

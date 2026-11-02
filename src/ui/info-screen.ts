@@ -6,6 +6,7 @@ import { LICENSES } from 'virtual:app-licenses';
 import changelogText from '../../docs/changelog.md?raw';
 import { parseChangelog } from '../core/changelog';
 import { APP_MANIFEST } from '../data/app';
+import { MIN_ENVIRONMENT, MIN_ENVIRONMENT_NOTE } from '../data/compat';
 import { DATA_POLICY } from '../data/data-policy';
 import type { GameState } from '../core/game-state';
 import { el } from './hud-dom';
@@ -115,6 +116,11 @@ export class InfoScreen {
     el('div', 'info-version', p, `バージョン ${APP_VERSION}`);
     el('p', 'info-text', p, APP_MANIFEST.description);
     el('p', 'info-text', p, '更新は自動で届き、次に起動したときに入ります。');
+    // 8-3: 最低動作環境（docs/compat.md）
+    el('h3', 'info-subheading', p, '動作環境');
+    const list = el('ul', 'info-list', p);
+    for (const m of MIN_ENVIRONMENT) el('li', '', list, `${m.platform}: ${m.browser}`);
+    el('p', 'info-text', p, MIN_ENVIRONMENT_NOTE);
   }
 
   private buildChanges(p: HTMLElement): void {

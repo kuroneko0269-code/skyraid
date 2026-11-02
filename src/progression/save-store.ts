@@ -31,6 +31,9 @@ export class SaveStore {
   private data: SaveData;
   /** 保存のたびに呼ぶ（7-4: オンライン連携のセーブの送信。登録は起動の後） */
   private readonly persistListeners: (() => void)[] = [];
+  /** 8-3: 書けなかったときに 1 回だけ呼ぶ（容量超過・プライベートブラウズ・ストレージ無効） */
+  private writeFailListener: (() => void) | null = null;
+  private writeFailed = false;
   /** 設定の部品に渡す StorageLike。古いキーで読み書きすると、セーブの設定に振り分けて保存する */
   readonly settingsStorage: StorageLike;
 
@@ -204,16 +207,30 @@ export class SaveStore {
     }
   }
 
+  /** 書けなかったときの知らせ先（8-3。最初の 1 回だけ呼ぶ。ストレージが無ければ登録した時点で呼ぶ） */
+  onWriteFail(fn: () => void): void {
+    this.writeFailListener = fn;
+    if (!this.storage) this.failWrite();
+  }
+
   /** 保存する。書けなければ（容量超過・プライベートモード等）false */
   persist(): boolean {
     for (const fn of this.persistListeners) fn();
-    if (!this.storage) return false;
+    if (!this.storage) return this.failWrite();
     try {
       this.storage.setItem(SAVE_CONFIG.storageKey, JSON.stringify(this.data));
       return true;
     } catch {
-      return false;
+      return this.failWrite();
     }
+  }
+
+  private failWrite(): false {
+    if (!this.writeFailed) {
+      this.writeFailed = true;
+      this.writeFailListener?.();
+    }
+    return false;
   }
 
   private ensureMission(id: string): MissionRecord {

@@ -15,11 +15,11 @@
 
 /* タッチ操作中に縦画面なら全面に案内を出す（ゲームは裏で動いたまま） */
 @media (orientation: portrait) {
-  .touch-active .rotate-hint {
+  .rotate-hint {
     position: fixed;
     inset: 0;
-    z-index: 40;
-    display: flex;
+    /* 8-3: 画面（60〜70）の上・トースト（85）の下。メニューの縦画面でもボタンが透けないように 40 から上げた */
+    z-index: 80;
     align-items: center;
     justify-content: center;
     padding: 24px;
@@ -29,5 +29,16 @@
     color: #fff;
     text-align: center;
     background: rgba(0, 0, 0, 0.8);
+  }
+
+  .touch-active .rotate-hint {
+    display: flex;
+  }
+}
+
+/* 8-3: 幅の狭い（スマホの）タッチ端末の縦画面は、メニューも横向きの作りで崩れるのでどの画面でも出す（iPad の縦は出さない） */
+@media (orientation: portrait) and (max-width: 600px) and (pointer: coarse) {
+  .rotate-hint {
+    display: flex;
   }
 }

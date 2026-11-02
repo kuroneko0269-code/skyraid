@@ -9,6 +9,18 @@ npm run dev
 
 仕様は `docs/spec.md`、計画は `docs/plan.md` を参照。
 
+## 動作環境（8-3）
+
+| 端末 | 最低の版 |
+| --- | --- |
+| iPhone / iPad | iOS / iPadOS 16.4 以降の Safari（ホーム画面に追加したアプリも同じ） |
+| Android | Chrome 105 以降 |
+| パソコン | Chrome / Edge 105 以降・Safari 16.4 以降・Firefox 121 以降 |
+
+- WebGL 2 が必要（ブラウザのハードウェア アクセラレーションを ON）。推奨はノートパソコンの内蔵 GPU 以上・2020 年以降のスマホ
+- 下限はビルドの出力（three の class の static ブロック = ES2022）と WebGL 2 で決まる。決め方と各機能の確認結果は `docs/compat.md`
+- WebGL が使えない・古いブラウザでは真っ黒にせず案内画面を出す。表は `src/data/compat.ts` と `public/legacy-check.js` にも同じものがある（変えたら全部）
+
 ## ブランド素材の差し替え
 
 `public/brand/` のファイルを同じ名前で置き換えると、ビルド後にそのまま使われます。

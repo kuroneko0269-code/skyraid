@@ -77,3 +77,25 @@ export async function toModeSelect(page, base) {
 
 export const dialogButton = (page, label) =>
   page.locator(`.mode-prompt:not([hidden]) .ui-button:text-is("${label}")`).first();
+
+/** 点検用のページ（8-3: 互換性の点検。opts.init は init script、opts.viewport・opts.touch）*/
+export async function newPage(browser, opts = {}) {
+  const context = await browser.newContext({
+    viewport: opts.viewport ?? VIEWPORT,
+    hasTouch: opts.touch ?? true,
+    isMobile: false,
+    deviceScaleFactor: 1,
+  });
+  const log = await watch(context);
+  if (opts.init) await context.addInitScript(opts.init, opts.arg);
+  const page = await context.newPage();
+  page.setDefaultTimeout(60000);
+  return { context, log, page };
+}
+
+export async function finish(r, page, log, context) {
+  await collectCsp(page, log);
+  Object.assign(r, { errors: log.errors, csp: log.csp });
+  await context.close();
+  return r;
+}

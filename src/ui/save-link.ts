@@ -1,5 +1,6 @@
 import './save.css';
 import { getBrowserStorage } from '../core/settings';
+import { COMPAT_CONFIG } from '../data/compat';
 import { SAVE_CONFIG } from '../data/save';
 import { SaveStore } from '../progression/save-store';
 import { showToast as showCommonToast } from './toast';
@@ -13,5 +14,13 @@ export function showToast(parent: HTMLElement, text: string, seconds: number): v
 export function openBrowserSave(parent: HTMLElement): SaveStore {
   const { store, status } = SaveStore.open(getBrowserStorage());
   if (status === 'reset') showToast(parent, SAVE_CONFIG.resetNotice, SAVE_CONFIG.noticeSeconds);
+  // 8-3: 保存できない環境（localStorage が使えない・容量超過）でも遊べる。そのことを 1 回だけ知らせる
+  store.onWriteFail(() => {
+    showCommonToast(COMPAT_CONFIG.storageNotice, {
+      parent,
+      seconds: COMPAT_CONFIG.storageNoticeSeconds,
+      actions: [{ label: '閉じる' }],
+    });
+  });
   return store;
 }
