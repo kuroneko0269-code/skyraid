@@ -1,8 +1,8 @@
 // 設定 → データの「パイロット名を変更」（8-1 の事前修正）: 初回の入力と同じ検証（8 文字まで・制御文字を除く・空なら既定の名前）。
 // オンライン連携中はサーバーの表示名（profiles.display_name）も変える。オンライン連携は動的 import なので、
 // 読み込まれたときに setPilotRenameHook でつなぐ（ui/online-app.ts）。
-// 8-6: 名前はパイロット名の 1 つだけ。オンライン連携の欄にも同じ「今の名前 + 変更」を置く（createPilotRenameControls。
-// 処理は同じで、どちらで変えても両方の表示が変わる）
+// 8-6: 名前はパイロット名の 1 つだけ。8-6b: オンライン連携の欄は「今の名前」の表示だけ（createPilotNameView。変更はこの欄の
+// 1 か所。変えるとオンライン連携の欄の表示も変わる）
 import './save.css';
 import { t, tn } from '../core/i18n';
 import { SAVE_CONFIG } from '../data/save';
@@ -17,8 +17,8 @@ let renameHook: PilotRenameHook | null = null;
 
 /** 画面に置いた「今の名前」の表示（どこで変えても全部を直す） */
 const currentViews = new Set<() => void>();
-/** 設定 → データの欄を作ったときのセーブと変えた後の処理（オンライン連携の欄が借りる） */
-let context: { save: SaveStore; onRenamed: (name: string) => void } | null = null;
+/** 設定 → データの欄を作ったときのセーブ（オンライン連携の欄の表示が借りる） */
+let context: { save: SaveStore } | null = null;
 
 /** オンライン連携から呼ぶ（ui/online-app.ts） */
 export function setPilotRenameHook(hook: PilotRenameHook): void {
@@ -31,18 +31,27 @@ export function createPilotRename(
   /** 変えた後（タイトルの表示を直す） */
   onRenamed: (name: string) => void,
 ): void {
-  context = { save, onRenamed };
+  context = { save };
   const box = el('div', 'save-settings pilot-rename', panel);
   el('div', 'save-settings-heading', box, t('pilot.name'));
   buildControls(box, save, onRenamed);
 }
 
 /**
- * オンライン連携の欄の「パイロット名」（8-6）: 設定 → データと同じ「今の名前 + 変更」を parent に作る。
+ * オンライン連携の欄の「パイロット名」（8-6b）: 今の名前の表示だけを parent に作る（変更は設定 → データの欄だけ）。
  * 設定 → データの欄（createPilotRename）を先に作っておくこと。無ければ何もしない
  */
-export function createPilotRenameControls(parent: HTMLElement): void {
-  if (context) buildControls(parent, context.save, context.onRenamed);
+export function createPilotNameView(parent: HTMLElement): void {
+  const save = context?.save;
+  if (!save) return;
+  const current = el('div', 'pilot-rename-current', parent);
+  const show = (): void => {
+    current.textContent = t('pilot.current', {
+      name: save.pilotName ?? SAVE_CONFIG.defaultPilotName,
+    });
+  };
+  currentViews.add(show);
+  show();
 }
 
 function buildControls(box: HTMLElement, save: SaveStore, onRenamed: (name: string) => void): void {

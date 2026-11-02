@@ -10,7 +10,7 @@ import {
 } from '../data/kaiju';
 import { vec3, type Vec3 } from '../flight/math';
 import type { Kaiju } from '../entities/kaiju';
-import { RAID_RULES } from '../data/raid';
+import { raidTuning } from '../data/raid';
 import { forwardOf, headingToward, mouthPosition } from '../entities/kaiju-pose';
 import {
   aimAt,
@@ -139,13 +139,13 @@ export class KaijuAi {
   }
 
   private get intervalScale(): number {
-    const raid = this.kaiju.raid ? RAID_RULES.tuning.attackInterval : 1;
+    const raid = this.kaiju.raid ? raidTuning(this.kaiju.hard).attackInterval : 1;
     return (this.kaiju.phase >= 2 ? KAIJU_CONFIG.phases.phase2IntervalScale : 1) * raid;
   }
 
   /** 攻撃のダメージの倍率（レイドだけ。8-6） */
   private get damageScale(): number {
-    return this.kaiju.raid ? RAID_RULES.tuning.attackDamage : 1;
+    return this.kaiju.raid ? raidTuning(this.kaiju.hard).attackDamage : 1;
   }
 
   private stepWalk(targets: readonly KaijuTarget[], dt: number): void {

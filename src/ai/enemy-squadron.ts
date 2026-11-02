@@ -124,6 +124,7 @@ export class EnemySquadron {
       u.gun.reset();
       u.targeting.reset();
       u.difficulty = this.difficultyValue;
+      u.hpScale = 1;
       u.preferAllies = false;
       u.ai.setPatrol(this.config.patrols[i % this.config.patrols.length] ?? []);
       if (this.enabledFlag && i < this.countValue)
@@ -152,6 +153,8 @@ export class EnemySquadron {
     difficulty: Difficulty,
     /** true: 味方の輸送機を優先して狙う（M3。2-5） */
     preferAllies = false,
+    /** HP の倍率（8-6b。M1） */
+    hpScale = 1,
   ): number {
     const i = this.units.findIndex((u) => !u.enemy.active);
     const u = this.units[i];
@@ -159,6 +162,7 @@ export class EnemySquadron {
     u.gun.reset();
     u.difficulty = difficulty;
     u.preferAllies = preferAllies;
+    u.hpScale = hpScale;
     u.playerAggro = false;
     u.ai.setPatrol(patrol);
     this.spawn(u, at);
@@ -259,7 +263,7 @@ export class EnemySquadron {
 
   private spawn(u: Unit, at: EnemySpawn | undefined): void {
     if (!at) return;
-    u.enemy.spawn(at);
+    u.enemy.spawn(at, u.hpScale);
     const preset = DIFFICULTY_PRESETS[u.difficulty];
     u.ai.difficulty = preset;
     u.ai.reset();

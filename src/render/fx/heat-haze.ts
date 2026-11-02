@@ -44,14 +44,17 @@ const vertexShader = /* glsl */ `
   }
 `;
 
-// uv.y は根元（z = 0）0 → 先（z = 1）1
+// uv.y は根元（z = 0）0 → 先（z = 1）1。
+// 8-6b: along は 0〜1 に収める。筒の先の縁の画素では、MSAA（中心で補間）や精度で vUv.y がわずかに 1 を超えることがあり、
+// pow(1.0 - along, 1.3) が負の数の累乗（GLSL では未定義。iOS の GPU は NaN）になって、筒の先（12 角形）に黒い点が並び、
+// 噴流の先の細い黒い輪に見えた
 const fragmentShader = /* glsl */ `
   uniform vec3 uColor;
   uniform float uOpacity;
   uniform float uTime;
   varying vec2 vUv;
   void main() {
-    float along = vUv.y;
+    float along = clamp(vUv.y, 0.0, 1.0);
     float a = vUv.x * 6.2832;
     float wave = sin(a * 5.0 + along * 9.0 - uTime * 1.7) * sin(a * 3.0 - along * 13.0 + uTime * 2.3);
     float shimmer = 0.5 + 0.5 * wave;

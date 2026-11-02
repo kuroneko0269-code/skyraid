@@ -56,6 +56,8 @@ export interface EnemyFighterSpawn {
    * 飛び方・撃ち方（AI の数値）は同じで、相手の選び方だけが変わる
    */
   readonly attack?: 'player' | 'transport';
+  /** HP の倍率（8-6b。M1 の敵は 0.6。省略は 1） */
+  readonly hpScale?: number;
 }
 
 /** 射撃練習用の的（風船。位置は src/data/targets.ts の出現地点の先頭から count 個）。再出現しない */
@@ -257,4 +259,8 @@ export interface MissionDef {
    * 省略で通常のミッション
    */
   readonly practice?: boolean;
+  /**
+   * ミサイルの補充（8-6b。M1 だけ）: 撃ち尽くして（自機が飛んでいる間に）この秒数たつと満タンに戻す。省略は補充なし
+   */
+  readonly missileResupplySeconds?: number;
 }

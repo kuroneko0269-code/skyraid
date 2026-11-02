@@ -34,6 +34,8 @@ export class GamePlay {
   private readonly raceWorld: RaceWorld;
   private readonly placeAt = vec3();
   private readonly placeQuat = quatIdentity();
+  /** ミサイルを撃ち尽くしてからの秒数（8-6b。missileResupplySeconds のあるミッションだけ数える） */
+  private missileEmpty = 0;
 
   constructor(readonly session: FlightSession) {
     const a = session.aircraft;
@@ -176,6 +178,7 @@ export class GamePlay {
     }
     this.session.step(controls, input, dt);
     this.runner?.step(dt);
+    this.stepResupply(dt);
     const d = this.defense;
     if (d) {
       const a = this.session.aircraft.state;
@@ -187,6 +190,25 @@ export class GamePlay {
       me.active = this.session.player.active;
       d.step(dt, [me]);
     }
+  }
+
+  /**
+   * ミサイルの補充（8-6b。M1）: 撃ち尽くして missileResupplySeconds たったら満タンに戻し、HUD に知らせる。
+   * 撃ち尽くすと機銃だけでは初見の人が敵を倒せなかったため
+   */
+  private stepResupply(dt: number): void {
+    const r = this.runner;
+    const after = r?.def.missileResupplySeconds;
+    const ammo = this.session.combat.missileAmmo;
+    if (!r?.running || after === undefined || !this.session.player.active || ammo.count > 0) {
+      this.missileEmpty = 0;
+      return;
+    }
+    this.missileEmpty += dt;
+    if (this.missileEmpty < after) return;
+    this.missileEmpty = 0;
+    ammo.refill();
+    r.bus.emit('mission:resupply', { missiles: ammo.count });
   }
 
   /** 自機を pose に水平で置く（巡航速度）。fullThrottle ならスロットル全開 */

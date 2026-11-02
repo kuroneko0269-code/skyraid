@@ -19,6 +19,8 @@ export const MISSION_FLOW = {
  *   （間隔 約 2.4km = 巡航で約 10 秒）、高度 450〜750m。向きは円の接線（南 → 東 → 北 → 西と回る）。一周 約 100 秒
  * - 敵機: リングをすべて通ると（撃墜の目標が始まると）、島の上空に南向きで出て、島の周りを回る（巡航の経路はフリーフライトと同じ）
  * - 基準時間 240 秒（リング 約 100 秒 + 空戦 約 140 秒）、制限時間 480 秒
+ * - 8-6b: 敵機の HP ×0.6（機銃 10 発 → 6 発）・ミサイルを撃ち尽くして 8 秒で満タンに補充（初見の人がミサイルを外し切ると、
+ *   機銃だけでは倒せず詰んでいた。docs/decisions.md の 8-6b）
  */
 export const TRAINING_MISSION: MissionDef = {
   id: 'training',
@@ -26,12 +28,16 @@ export const TRAINING_MISSION: MissionDef = {
   start: { x: 0, y: 500, z: 4500, headingDeg: 0 },
   timeLimitSeconds: 480,
   parTimeSeconds: 240,
+  // 8-6b: ミサイルを撃ち尽くして 8 秒で満タンに（外し切っても詰まない）
+  missileResupplySeconds: 8,
   spawns: [
     {
       kind: 'enemyFighter',
       group: 'training-bandits',
       count: 2,
       difficulty: 'rookie',
+      // 8-6b: 機銃だけでも倒せるよう HP ×0.6（120 → 72。機銃 6 発）
+      hpScale: 0.6,
       trigger: { type: 'objectiveActive', objective: 'bandits' },
       positions: [
         { x: -800, y: 1000, z: -600, headingDeg: 200 },

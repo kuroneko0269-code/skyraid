@@ -40,7 +40,7 @@ export class EnemyAircraft implements CombatTarget {
   flashTimer = 0;
   /** 前回 takeDamage() してから受けたダメージ（AI の「被弾が続く」判定に使う） */
   private damageSinceRead = 0;
-  private readonly health: Health;
+  private health: Health;
   private readonly spawnQuat: Quat = { x: 0, y: 0, z: 0, w: 1 };
   private readonly wreck: Vec3 = vec3();
 
@@ -103,7 +103,10 @@ export class EnemyAircraft implements CombatTarget {
   }
 
   /** 出現地点に HP 満タン・巡航速度で出す */
-  spawn(at: EnemySpawn): void {
+  /** hpScale は最大 HP の倍率（8-6b。M1 の敵。1 は機体のまま） */
+  spawn(at: EnemySpawn, hpScale = 1): void {
+    const maxHp = Math.max(1, Math.round(this.spec.hull.maxHp * hpScale));
+    if (maxHp !== this.health.maxHp) this.health = new Health(maxHp);
     const p = this.wreck;
     p.x = at.x;
     p.y = at.y;
