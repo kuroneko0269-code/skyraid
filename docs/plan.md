@@ -91,7 +91,7 @@
 ## フェーズ8: 公開準備
 
 - [x] 8-1 公開チェック（更新履歴 v0.1〜v0.8 と追記のルール・情報画面のライセンスとデータの扱い・公開前の点検リスト `docs/release-checklist.md`（全モードの起動・console / CSP・初回起動・セーブ v1〜v9 の移行・PWA・環境変数なしのビルド）・不要物の整理・版 0.8.0、事前修正: パイロット名の変更・ポーズの HUD の位置・スキンの時間計測を `npm run bench` へ・README のオンライン連携の手順） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/d4d2dd9d1688141a429345851118c7b4ff79414d
-- [ ] 8-2 性能と容量
+- [x] 8-2 性能と容量（計測の基準と `npm run perf`（チャンク一覧・起動時間・モードごとの読み込み・Lighthouse。docs/perf.md）・three の 2 分割と起動時のアプリの game / render / app への分割（500KB 超の警告を解消）・情報画面 / フォトモード / 怪獣のモデル / リプレイの一覧と再生操作の遅延読み込み（読み込み中・失敗のお知らせ、モード選択で先読み）・遅延チャンクのプリキャッシュ、タイトルまでの JS・CSS gzip 412.5KB → 393.3KB、事前修正: 協力ロビーの見出し・環境変数なしで online-app をプリキャッシュしない・icon-source を配信物から外す・README の BGM） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/f11d148b8f138b3f2875568478e91f0c536d76f1（事前修正 https://github.com/kuroneko0269-code/skyraid/commit/be4465ab9254a332a849900ae21ee4b789b327e5）
 - [ ] 8-3 互換性
 - [ ] 8-4 英語化
 - [ ] 8-5 記録カード共有
