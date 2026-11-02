@@ -2,7 +2,6 @@ import type { Paint } from '../progression/paint';
 import { Paintshop } from '../progression/paintshop';
 import { parseUnlockAll } from '../core/debug-flags';
 import { usesDemoCamera, type GameState, type ScreenState } from '../core/game-state';
-import { detectLocale } from '../core/locale';
 import type { MissionResult } from '../missions/runner';
 import type { MissionDef } from '../missions/types';
 import type { AircraftModel } from '../data/aircraft';
@@ -102,8 +101,7 @@ export class Screens {
   ) {
     applyScreenFade(document.documentElement);
     const search = window.location.search;
-    const locale = detectLocale(search, navigator.languages);
-    this.tutorialText = tutorialStrings(locale);
+    this.tutorialText = tutorialStrings();
     this.progress = new CampaignProgress(
       missions.map((m) => m.id),
       save,
@@ -173,7 +171,6 @@ export class Screens {
       missions,
       this.progress,
       () => save.credits,
-      locale,
       {
         onSelect: (mission) => {
           this.selectedMission = mission;
@@ -185,7 +182,7 @@ export class Screens {
         onBack: () => game.transition('mode_select'),
       },
     );
-    this.briefing = new BriefingScreen(parent, locale, {
+    this.briefing = new BriefingScreen(parent, {
       onLaunch: () => {
         this.nextMission = this.selectedMission;
         game.transition('flight');

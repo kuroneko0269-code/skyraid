@@ -1,4 +1,7 @@
 {
+  "app": {
+    "description": "ブラウザで動く 3D フライトシューティング"
+  },
   "missions": {
     "training": {
       "title": "訓練",
@@ -115,6 +118,11 @@
       "kicker": "CO-OP DEFENSE",
       "title": "協力防衛戦",
       "note": "2〜{max} 人で基地を 10 波の敵から守る"
+    }
+  },
+  "common": {
+    "waves": {
+      "other": "{count} 波"
     }
   }
 }

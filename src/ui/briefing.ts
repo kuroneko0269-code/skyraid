@@ -1,5 +1,4 @@
 import './campaign.css';
-import type { Locale } from '../core/locale';
 import { DEFAULT_RANK_MULTIPLIERS } from '../data/ranking';
 import { missionWeather, weatherLabel } from '../data/weather';
 import type { MissionDef } from '../missions/types';
@@ -20,7 +19,6 @@ export class BriefingScreen {
 
   constructor(
     parent: HTMLElement,
-    private readonly locale: Locale,
     handlers: { onLaunch: () => void; onBack: () => void; onHangar: () => void },
   ) {
     const root = createScreen(parent, 'campaign-screen briefing-screen');
@@ -46,7 +44,7 @@ export class BriefingScreen {
 
   /** 表示するミッション */
   show(m: MissionDef): void {
-    const text = missionStrings(m.id, this.locale);
+    const text = missionStrings(m.id);
     this.title.textContent = text.title;
     this.text.textContent = text.briefing.join('\n');
     this.objectives.replaceChildren();

@@ -1,7 +1,5 @@
 // ミッションの表示用の文字列（HUD・ブリーフィング・リザルト。2-4）。DOM 非依存の純関数
-import type { Locale } from '../core/locale';
-import en from '../data/i18n/en.json';
-import ja from '../data/i18n/ja.json';
+import { hasMessage, t, tList } from '../core/i18n';
 import { DIFFICULTIES, DIFFICULTY_SHORT_LABELS, type Difficulty } from '../data/ai';
 import type { FailCondition, MissionDef, ObjectiveDef, ObjectiveType } from '../missions/types';
 
@@ -11,15 +9,10 @@ export interface MissionStrings {
   readonly briefing: readonly string[];
 }
 
-interface LocaleStrings {
-  readonly missions: Readonly<Record<string, MissionStrings | undefined>>;
-}
-
-const STRINGS: Record<Locale, LocaleStrings> = { ja, en };
-
-/** ミッションのタイトルとブリーフィング文（その言語になければ日本語、それもなければ id） */
-export function missionStrings(id: string, locale: Locale): MissionStrings {
-  return STRINGS[locale].missions[id] ?? STRINGS.ja.missions[id] ?? { title: id, briefing: [] };
+/** ミッションのタイトルとブリーフィング文（今の言語。なければ id） */
+export function missionStrings(id: string): MissionStrings {
+  if (!hasMessage(`missions.${id}.title`)) return { title: id, briefing: [] };
+  return { title: t(`missions.${id}.title`), briefing: tList(`missions.${id}.briefing`) };
 }
 
 /** 目標の種類ごとの既定の表示名（定義の label で上書きできる） */

@@ -11,7 +11,7 @@ import type { ReplayOutcome, ReplayStart } from './types';
 export function replayTitle(s: ReplayStart): string {
   switch (s.mode) {
     case 'mission':
-      return missionStrings(s.missionId ?? '', 'ja').title;
+      return missionStrings(s.missionId ?? '').title;
     case 'raid':
       return s.raidDifficulty === 'hard' ? 'ヴォルガス（高難度）' : 'ヴォルガス';
     case 'race':

@@ -185,13 +185,18 @@ describe('キャンペーンの進み具合', () => {
 });
 
 describe('表示言語', () => {
-  it('既定は日本語（他の UI がまだ日本語だけ）。?lang=en で英語、?lang=auto でブラウザの言語', () => {
-    expect(detectLocale('', ['en-US'])).toBe('ja');
-    expect(detectLocale('?lang=en', ['ja-JP'])).toBe('en');
-    expect(detectLocale('?lang=ja', ['en-US'])).toBe('ja');
-    expect(detectLocale('?lang=fr', ['en-US'])).toBe('ja');
-    expect(detectLocale('?lang=auto', ['ja-JP', 'en'])).toBe('ja');
-    expect(detectLocale('?lang=auto', ['en-US'])).toBe('en');
-    expect(detectLocale('?lang=auto', [])).toBe('ja');
+  it('8-4: ?lang= > セーブの設定 > ブラウザの言語（ja で始まれば日本語、ほかは英語）', () => {
+    expect(detectLocale('', ['en-US'])).toBe('en');
+    expect(detectLocale('', ['ja-JP', 'en'])).toBe('ja');
+    expect(detectLocale('', ['ja'])).toBe('ja');
+    expect(detectLocale('', ['fr-FR', 'ja'])).toBe('en');
+    expect(detectLocale('', [])).toBe('en');
+    expect(detectLocale('', ['en-US'], 'ja')).toBe('ja');
+    expect(detectLocale('', ['ja-JP'], 'en')).toBe('en');
+    expect(detectLocale('?lang=en', ['ja-JP'], 'ja')).toBe('en');
+    expect(detectLocale('?lang=ja', ['en-US'], 'en')).toBe('ja');
+    expect(detectLocale('?lang=fr', ['en-US'], 'ja')).toBe('ja');
+    expect(detectLocale('?lang=auto', ['ja-JP', 'en'], 'en')).toBe('ja');
+    expect(detectLocale('?lang=auto', ['en-US'], 'ja')).toBe('en');
   });
 });

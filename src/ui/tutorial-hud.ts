@@ -1,6 +1,5 @@
 import './tutorial-hud.css';
 import type { InputDevice } from '../core/input';
-import type { Locale } from '../core/locale';
 import type { Action } from '../data/keybinds';
 import {
   TUTORIAL_CONFIG,
@@ -33,12 +32,11 @@ export class TutorialHud {
 
   constructor(
     parent: HTMLElement,
-    private readonly locale: Locale,
     private readonly keyName: (action: Action) => string,
     private readonly highlight: (parts: readonly TouchPart[]) => void,
     onAbort: () => void,
   ) {
-    const t = tutorialStrings(locale);
+    const t = tutorialStrings();
     this.root = el('div', 'tutorial-hud', parent);
     const head = el('div', 'tutorial-hud-head', this.root);
     this.count = el('span', 'tutorial-hud-count', head);
@@ -92,7 +90,7 @@ export class TutorialHud {
   }
 
   private render(): void {
-    const t = tutorialStrings(this.locale);
+    const t = tutorialStrings();
     const index = this.step ? TUTORIAL_STEPS.indexOf(this.step) : -1;
     this.count.textContent = this.complete
       ? t.complete
@@ -100,7 +98,7 @@ export class TutorialHud {
     this.text.textContent =
       this.complete || !this.step
         ? ''
-        : tutorialStepText(this.step, this.device ?? 'keyboard', this.locale, this.keyName);
+        : tutorialStepText(this.step, this.device ?? 'keyboard', this.keyName);
     this.text.hidden = this.text.textContent === '';
     // 練習の注意は最初の段階だけ
     this.note.hidden = this.complete || index !== 0;

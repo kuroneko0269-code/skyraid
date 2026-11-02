@@ -11,7 +11,6 @@ import { LobbyHangar, type LobbyHangarEntry } from './lobby-hangar';
 import { LobbyRoom, type LobbyRoomHandlers, type LobbyRoomView } from './lobby-room';
 import { lobbyHeading, type LobbyMode } from './lobby-text';
 import { isolateKeys } from './pilot-name';
-import { detectLocale, type Locale } from '../core/locale';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 export type { LobbyRoomView };
@@ -52,7 +51,6 @@ export class LobbyScreen {
   constructor(
     parent: HTMLElement,
     handlers: LobbyHandlers,
-    private readonly locale: Locale = detectLocale(window.location.search, navigator.languages),
   ) {
     const root = createScreen(parent, 'campaign-screen lobby-screen');
     const panel = el('div', 'ui-panel campaign-panel lobby-panel', root);
@@ -141,7 +139,7 @@ export class LobbyScreen {
 
   /** 見出しを遊び方に合わせる（8-2 の事前修正: 協力レイド・協力防衛戦から入ったときはその名前） */
   setMode(mode: LobbyMode): void {
-    const h = lobbyHeading(mode, this.locale, NET_CONFIG.maxPlayers);
+    const h = lobbyHeading(mode, NET_CONFIG.maxPlayers);
     this.kicker.textContent = h.kicker;
     this.title.textContent = h.title;
     this.note.textContent = h.note;

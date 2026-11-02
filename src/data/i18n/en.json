@@ -1,4 +1,7 @@
 {
+  "app": {
+    "description": "A 3D flight shooter that runs in your browser"
+  },
   "missions": {
     "training": {
       "title": "Training",
@@ -115,6 +118,12 @@
       "kicker": "CO-OP DEFENSE",
       "title": "Co-op Defense",
       "note": "Defend the base from 10 waves with 2–{max} players"
+    }
+  },
+  "common": {
+    "waves": {
+      "one": "{count} wave",
+      "other": "{count} waves"
     }
   }
 }

@@ -1,5 +1,6 @@
 // 初期ミッション 5 本（2-5）のデータと、シード固定のボットでの通し（本番と同じ FlightSession + MissionRunner）。
 // 「順当に進めれば成功」「放置すれば失敗」を確かめる。ボットの成功率は docs/decisions.md に記録
+import { useLocale } from './i18n-helpers';
 import { describe, expect, it } from 'vitest';
 import { createRandom } from '../src/core/random';
 import { LOCALES } from '../src/core/locale';
@@ -39,7 +40,8 @@ describe('初期ミッション 5 本のデータ', () => {
   it('タイトルと 3〜4 行のブリーフィング文が日本語・英語の両方にある', () => {
     for (const m of MISSIONS) {
       for (const locale of LOCALES) {
-        const text = missionStrings(m.id, locale);
+        useLocale(locale);
+        const text = missionStrings(m.id);
         expect(text.title).not.toBe(m.id);
         expect(text.briefing.length).toBeGreaterThanOrEqual(3);
         expect(text.briefing.length).toBeLessThanOrEqual(4);

@@ -92,6 +92,7 @@ export default defineConfig(({ mode }) => ({
   ],
   test: {
     include: ['tests/**/*.test.ts'],
+    setupFiles: ['tests/i18n-setup.ts'],
     environment: 'node',
     // テーマのテスト（tests/theme.test.ts）が UI の CSS を ?raw で読むため、CSS を空にしない
     css: { include: [/src\/ui\/.+\.css/] },

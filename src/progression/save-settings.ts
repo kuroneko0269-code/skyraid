@@ -6,6 +6,7 @@ import { ASSIST_SETTINGS, type AssistKind } from '../data/assist';
 import { AUDIO_CONFIG } from '../data/audio';
 import { QUALITY_LEVELS, type QualityLevel } from '../data/quality';
 import { TOUCH_MODES, type TouchMode } from '../data/touch';
+import { isLocale, type Locale } from '../core/locale';
 
 /** 設定（ポーズメニューの設定。1-6 / 2-3 の別キーから統合） */
 export interface SaveSettings {
@@ -28,6 +29,8 @@ export interface SaveSettings {
   nightHudDim: boolean;
   /** フォトモード（7-A）の保存画像の透かし「SkyRaid」（版は上げず、ない項目は既定値の ON） */
   photoWatermark: boolean;
+  /** 表示言語（8-4。null はブラウザの言語に従う。版は上げず、ない項目は既定値の null） */
+  language: Locale | null;
   /** 音量（4-4。v3 から）: マスター / 効果音 / BGM。0〜1 */
   volume: VolumeSettings;
   /** 操作補助（4-12。v4 から）: エイムアシスト / ターゲットカメラ / HUD 補助 */
@@ -70,6 +73,7 @@ export function defaultSettings(): SaveSettings {
     hud: true,
     nightHudDim: true,
     photoWatermark: true,
+    language: null,
     volume: defaultVolume(),
     assist: defaultAssist(),
     controls: defaultControls(),
@@ -93,6 +97,7 @@ export function normalizeSettings(s: Json): SaveSettings {
   if (typeof s.hud === 'boolean') set.hud = s.hud;
   if (typeof s.nightHudDim === 'boolean') set.nightHudDim = s.nightHudDim;
   if (typeof s.photoWatermark === 'boolean') set.photoWatermark = s.photoWatermark;
+  if (isLocale(s.language)) set.language = s.language;
   if (isObject(s.volume)) {
     const v = s.volume;
     const d = set.volume;
