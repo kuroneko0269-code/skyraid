@@ -663,7 +663,7 @@
     "autoLevel": "Auto-level",
     "swapSides": "Swap sides (touch)",
     "vibration": "Vibration",
-    "vibrationUnsupported": "Vibration (Android only; not supported here)",
+    "vibrationUnsupported": "Vibration (Android only)",
     "buttonSize": "Button size",
     "keys": "Key Bindings",
     "buttonSizes": {
