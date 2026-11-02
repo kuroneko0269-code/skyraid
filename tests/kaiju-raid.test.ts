@@ -41,14 +41,30 @@ describe('ボット（8-6b: 通常は慣れた人で 2.5〜3.5 分・平均的�
     expect(m).toBeLessThanOrEqual(3.5 * 60);
   }, 60000);
 
-  it('通常・熟練 4 人: 2.5〜4.5 分で倒せる（人数に応じて同じ割合）。ブレイクも起きる', () => {
+  it('通常・熟練 4 人: 1.5〜3 分で倒せる（8-6c: 1 人より遅くならない）。ブレイクも起きる', () => {
     for (const r of times(4, [1, 2, 3, 4, 5], { skill: 'skilled' })) {
       expect(r.killed).toBe(true);
-      expect(r.seconds).toBeGreaterThanOrEqual(2.5 * 60);
-      expect(r.seconds).toBeLessThanOrEqual(4.5 * 60);
+      expect(r.seconds).toBeGreaterThanOrEqual(1.5 * 60);
+      expect(r.seconds).toBeLessThanOrEqual(3 * 60);
       expect(r.breaks).toBeGreaterThan(0);
     }
   }, 60000);
+
+  it('8-6c: 2〜4 人の熟練の中央値は 1 人以下（通常・高難度）。高難度 4 人は 8 シードすべて倒せる', () => {
+    const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
+    for (const hard of [false, true]) {
+      const solo = median(times(1, seeds, { skill: 'skilled', hard }).map((r) => r.seconds));
+      for (const players of [2, 3, 4]) {
+        const rs = times(players, seeds, { skill: 'skilled', hard });
+        expect([hard, players, median(rs.map((r) => r.seconds)) <= solo]).toEqual([
+          hard,
+          players,
+          true,
+        ]);
+        if (hard && players === 4) expect(rs.every((r) => r.killed)).toBe(true);
+      }
+    }
+  }, 240000);
 
   it('通常・平均的な 1 人（初見に近い腕前）: 8 回のうち失敗は 3 回以下、クリアは 12 分以内', () => {
     const rs = times(1, [1, 2, 3, 4, 5, 6, 7, 8], {});

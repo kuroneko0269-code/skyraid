@@ -51,12 +51,20 @@ export const RAID_RULES = {
 } as const;
 
 /** ブリーフィングの文（怪獣の弱点と協力のヒント） */
-export const RAID_BRIEFING: { readonly title: string; readonly lines: readonly string[] } = {
+export const RAID_BRIEFING: {
+  readonly title: string;
+  readonly lines: readonly string[];
+  /** 難易度ごとの文（8-6c: 脚のダウン中のダメージ 2 倍は高難度だけ） */
+  linesFor(hard: boolean): readonly string[];
+} = {
   get title() {
     return t('raid.briefing.title');
   },
   get lines() {
     return tList('raid.briefing.lines');
+  },
+  linesFor(hard: boolean): readonly string[] {
+    return tList(hard ? 'raid.briefing.linesHard' : 'raid.briefing.lines');
   },
 };
 

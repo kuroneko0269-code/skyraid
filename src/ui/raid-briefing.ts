@@ -11,6 +11,7 @@ export class RaidBriefing {
   private readonly root: HTMLDivElement;
   private readonly remain: HTMLSpanElement;
   private readonly skip: HTMLButtonElement;
+  private readonly list: HTMLUListElement;
   private lastText = '';
   private pressed = false;
 
@@ -18,8 +19,8 @@ export class RaidBriefing {
     this.root = el('div', 'ui-dialog raid-briefing', parent);
     const head = el('div', 'campaign-label', this.root, RAID_BRIEFING.title);
     this.remain = el('span', 'raid-briefing-remain', head);
-    const list = el('ul', 'briefing-text raid-briefing-lines', this.root);
-    for (const line of RAID_BRIEFING.lines) el('li', '', list, line);
+    this.list = el('ul', 'briefing-text raid-briefing-lines', this.root);
+    this.fill(false);
     this.skip = createButton(
       this.root,
       'ui-button raid-briefing-skip',
@@ -46,8 +47,15 @@ export class RaidBriefing {
     this.skip.hidden = !canSkip;
   }
 
-  /** 新しい飛行の始め */
-  reset(): void {
+  /** 難易度の文で埋める（8-6c: 高難度だけ「ダウン中はダメージ 2 倍」） */
+  private fill(hard: boolean): void {
+    this.list.replaceChildren();
+    for (const line of RAID_BRIEFING.linesFor(hard)) el('li', '', this.list, line);
+  }
+
+  /** 新しい飛行の始め。hard は高難度 */
+  reset(hard = false): void {
+    this.fill(hard);
     this.pressed = false;
     this.skip.disabled = false;
     this.skip.textContent = t('raid.briefing.skip');

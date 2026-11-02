@@ -51,13 +51,11 @@ function runM1(seed: number, skill: DifficultySpec): { status: string; resupplie
 const HUMAN_GUN = { gunBurstSeconds: 2, gunPauseSeconds: 0.5 };
 
 describe('M1 訓練: ミサイルを外し切っても機銃で倒せる（8-6b）', () => {
-  it('M1 の敵機は HP ×0.6（120 → 72）、ミサイルは撃ち尽くして 8 秒で補充。M2 は変えない', () => {
+  it('M1 の敵機は HP ×0.6（120 → 72）、ミサイルは撃ち尽くして 8 秒で補充。ミサイルの補充は M1 だけ', () => {
     const spawn = TRAINING_MISSION.spawns[0];
     expect(spawn?.kind === 'enemyFighter' && spawn.hpScale).toBe(0.6);
     expect(TRAINING_MISSION.missileResupplySeconds).toBe(8);
     expect(FIRST_SORTIE_MISSION.missileResupplySeconds).toBeUndefined();
-    for (const sp of FIRST_SORTIE_MISSION.spawns)
-      if (sp.kind === 'enemyFighter') expect(sp.hpScale).toBeUndefined();
   });
 
   it('初心者役が機銃だけ（ミサイルを撃たない）で 8 シード中 6 回以上成功（8-6b の前は 4 回）', () => {

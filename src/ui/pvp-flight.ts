@@ -118,7 +118,10 @@ export class PvpFlight {
     this.mirror = new PvpMirror(deps.session, room.localPlayerId, deps.otherGun);
     this.raid =
       room.settings.mode === 'raid'
-        ? new RaidFlight(this.net, this.mirror, () => this.players.keys(), this.nameOf, deps)
+        ? new RaidFlight(this.net, this.mirror, () => this.players.keys(), this.nameOf, {
+            ...deps,
+            hard: room.settings.hard,
+          })
         : null;
     this.defense =
       room.settings.mode === 'defense'

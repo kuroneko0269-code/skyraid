@@ -32,6 +32,8 @@ export interface RaidFlightDeps {
   readonly briefing: RaidBriefing;
   readonly briefingSeen: () => boolean;
   readonly markBriefingSeen: () => void;
+  /** 高難度（ブリーフィングの文を難易度で変える。8-6c） */
+  readonly hard: boolean;
 }
 
 export class RaidFlight {
@@ -56,7 +58,7 @@ export class RaidFlight {
     private readonly deps: RaidFlightDeps,
   ) {
     this.canSkip = deps.briefingSeen();
-    deps.briefing.reset();
+    deps.briefing.reset(deps.hard);
     this.attachKaiju();
   }
 

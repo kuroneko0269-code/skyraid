@@ -75,9 +75,9 @@ describe('4 人協力を 10 分通す', () => {
     const m = await startMatch(3, { latencyMs: 50, jitterMs: 15 }, RAID, 0, harbor, 23, {
       buildings: (id) => fs[id] ?? null,
     });
-    // 8-6 / 8-6b: レイドの怪獣が受けるダメージを割り、通常はダウン中の倍率もなくしたので、引き金を引く量を 8 → 30 にして
-    // 10 分以内の撃破を保つ（このテストは通信とリザルトの一致を見る）
-    const state = { breakOff: [0, 0, 0, 0], fireTicks: 30 };
+    // 8-6 / 8-6b / 8-6c: レイドの怪獣が受けるダメージと人数の倍率を変えたので、引き金を引く量を 8 → 20 にして
+    // 5〜10 分の撃破を保つ（このテストは通信とリザルトの一致を見る）
+    const state = { breakOff: [0, 0, 0, 0], fireTicks: 20 };
     const seconds = 600;
     let elapsed = 0;
     while (elapsed < seconds && !m.host.finished) {

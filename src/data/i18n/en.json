@@ -50,10 +50,10 @@
     "raid": {
       "title": "Raid: Vorgas",
       "briefing": [
-        "The giant monster Vorgas is coming ashore from the sea southeast of the island.",
+        "The giant monster Vorgas is coming ashore from the bay, heading for the harbor city's towers.",
         "Glowing shoulder crystals mean a heat beam; a raised tail means a sweep. Read the tells and dodge.",
-        "Break a leg to knock it down: it stops and can't attack for a while.",
-        "Below 40% health it enters the final phase. Defeat it within 3 minutes or it reaches the city."
+        "Break a leg to knock it down: it stops and can't attack for a while (on Hard, all parts also take double damage).",
+        "Below 40% health it enters the final phase. Defeat it within 4.5 minutes (3.5 on Hard) or it reaches the city."
       ]
     }
   },
@@ -362,6 +362,11 @@
       "lines": [
         "Break the crystal to stop the Heat Beam, the tail for Sweep, the head for Roar",
         "Break a leg to down it for 15 s (it stops and can't attack)",
+        "Break: 2 players hit the same part within 3 s (×3 to that part)"
+      ],
+      "linesHard": [
+        "Break the crystal to stop the Heat Beam, the tail for Sweep, the head for Roar",
+        "Break a leg to down it for 15 s (it stops and can't attack; ×2 damage to all parts)",
         "Break: 2 players hit the same part within 3 s (×3 to that part)"
       ],
       "skip": "Skip",

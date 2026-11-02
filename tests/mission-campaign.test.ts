@@ -23,7 +23,10 @@ import type { MissionDef } from '../src/missions/types';
 import { getGroundHeight, getHeight } from '../src/render/terrain-height';
 import { missionStrings } from '../src/ui/mission-text';
 import { AVERAGE, PilotBot, VETERAN } from './ai-sim';
-import { DT, LoiterBot, StrikeBot, nearestActive, newPlay } from './mission-bots';
+import { BoundsGuard, DT, LoiterBot, StrikeBot, nearestActive, newPlay } from './mission-bots';
+import { createCombatInput } from '../src/combat/combat-system';
+
+const IDLE = createCombatInput();
 
 describe('初期ミッション 5 本のデータ', () => {
   it('M1 訓練 → M2 初陣 → M3 護衛 → M4 爆撃 → M5 遭遇 の順。基本報酬は 1000 / 1500 / 2000 / 2000 / 3000', () => {
@@ -62,18 +65,19 @@ describe('初期ミッション 5 本のデータ', () => {
     }
   });
 
-  it('M2: 敵機 3 機が 1 機ずつ 20 秒差（0 / 20 / 40 秒）で出る。easy・easy・normal（4-7 / 4-11 の事前修正）', () => {
+  it('M2: 敵機 3 機が 1 機ずつ 30 秒差（0 / 30 / 60 秒）で出る。3 機とも easy・HP ×0.6（8-6c。それまでは 20 秒差・easy・easy・normal）', () => {
     const fighters = FIRST_SORTIE_MISSION.spawns.filter((s) => s.kind === 'enemyFighter');
     expect(
       fighters.map((s) => [
         s.count,
         s.difficulty,
         s.trigger.type === 'time' ? s.trigger.seconds : s.trigger.type,
+        s.hpScale,
       ]),
     ).toEqual([
-      [1, 'easy', 'start'],
-      [1, 'easy', 20],
-      [1, 'normal', 40],
+      [1, 'easy', 'start', 0.6],
+      [1, 'easy', 30, 0.6],
+      [1, 'easy', 60, 0.6],
     ]);
   });
 
@@ -169,9 +173,11 @@ describe('初期ミッションの通し（シード固定のボット）', () =
     const s = play.session;
     const runner = play.startMission(FIRST_SORTIE_MISSION);
     const bot = new PilotBot(s, VETERAN, createRandom(501), undefined, getGroundHeight);
+    // 8-6c: 人と同じく戦域外の警告で戻る（ボットは敵を追って境界の外へ出続ける）
+    const guard = new BoundsGuard(s, runner.boundary);
     runUntilEnd(play, runner, 450, () => {
       bot.think(DT);
-      return bot;
+      return guard.check() ? { controls: guard.controls, input: IDLE } : bot;
     });
     expect(runner.status).toBe('success');
     expect(s.destroyedCount('enemyFighter', 'first-sortie-bandits')).toBe(3);
@@ -238,7 +244,7 @@ describe('初期ミッションの通し（シード固定のボット）', () =
     ]);
   });
 
-  it('M2 初陣（1 機ずつ 20 秒差・easy・easy・normal）の成功率: 8 シードで 熟練者役 6/8・平均的 0/8（4-11 の事前修正。easy・normal・normal では 1/8・0/8。docs/decisions.md の 4-11）', () => {
+  it('M2 初陣（8-6c: 30 秒差・easy × 3・HP ×0.6）の成功率: 8 シードで 熟練者役 8/8・平均的 7/8（戦域外の警告で戻る。4-11 の 20 秒差・easy・easy・normal は 6/8・0/8、戻る動きなし）', () => {
     const rate = (skill: typeof VETERAN): number => {
       let ok = 0;
       for (let seed = 1; seed <= 8; seed++) {
@@ -251,17 +257,17 @@ describe('初期ミッションの通し（シード固定のボット）', () =
           undefined,
           getGroundHeight,
         );
+        const guard = new BoundsGuard(play.session, runner.boundary);
         runUntilEnd(play, runner, 450, () => {
           bot.think(DT);
-          return bot;
+          return guard.check() ? { controls: guard.controls, input: IDLE } : bot;
         });
         if (runner.status === 'success') ok++;
       }
       return ok;
     };
-    expect([rate(VETERAN), rate(AVERAGE)]).toEqual([6, 0]);
-    // 16 回 × 最大 450 秒のシミュレーション（全体の実行中は 5 秒を超えることがある）
-  }, 30000);
+    expect([rate(VETERAN), rate(AVERAGE)]).toEqual([8, 7]);
+  }, 60000);
 
   it('M5 遭遇: 敵機と戦い、怪獣が出たら怪獣を撃って 20% 削れば、怪獣が海へ引き返して成功', () => {
     const play = newPlay(2);
