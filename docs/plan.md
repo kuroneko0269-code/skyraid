@@ -99,4 +99,5 @@
 - [x] 8-6b 追加修正（M1 のリング後の敵が機銃だけで倒せない → 敵の HP ×0.6・ミサイルの補充、M2〜M5・防衛戦のミサイルなしの表、レイドを通常と高難度で分けて調整、データタブの「パイロット名を変更」を 1 か所に、排気の先の黒い輪（陽炎のシェーダー）と 8-6 のふたの変更を戻す） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/c50b48753b531d426d54c0fc201f578ceb4343f5
 - [x] 8-6c 追加修正（協力レイドの人数の補正（2〜4 人の部位ダメージ倍率）・M2 初陣の難易度（easy × 3・HP ×0.6・30 秒間隔）・レイドのブリーフィングのダウンの文を難易度ごとに） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/0f25e1d13ee984a5bdf55486d0fe9880c1ae7bc2
 - [x] 8-6d 実機確認の修正 その 2（横向きの起動の黒い余白（ルート要素の大きさ・?debug=viewport）・ダイアログのフォント・キャンペーン共通のミサイルの補充・パイロット名の変更を 1 か所に・メンバー管理の 1 人 1 行の表・横スクロールの点検） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/77a4aef9a28338d34b80803f1b56508e939affbf
+- [ ] 8-6e 横向きの起動の黒い余白（実機の ?debug=viewport の値から: 描かれる大きさに合わせる・viewport-fit の切り替えで測り直させる試み）
 - [ ] 8-7 v1.0.0 公開

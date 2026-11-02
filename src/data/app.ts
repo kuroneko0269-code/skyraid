@@ -55,5 +55,10 @@ export const VIEWPORT_CONFIG = {
    * 画面の大きさの表示（?debug=viewport）をホーム画面のアプリでも出す: タイトルの版の表示を tapCount 回（tapWindowMs 以内）
    * 押すと出す / 消す。端末に保存する（storageKey）。ホーム画面のアプリは URL を変えられず、iOS は Safari と保存領域が別のため
    */
+  /**
+   * 8-6e: iOS のホーム画面から横向きで起動して描かれる高さが足りないとき、viewport-fit を auto にして restoreMs 後に cover に戻す
+   * （atMs の時刻に、最大 maxTries 回。checkMs 後に測り直す）
+   */
+  nudge: { atMs: [600, 2500], maxTries: 2, restoreMs: 150, checkMs: 400 },
   debugToggle: { tapCount: 5, tapWindowMs: 3000, storageKey: 'skyraid.debugViewport' },
 } as const;

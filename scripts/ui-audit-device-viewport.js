@@ -40,8 +40,9 @@ export async function auditViewport({ browser, base, out, view: VIEW, touchConte
   rows.push({ what: 'innerWidth / innerHeight が古い値（600×280）', ok: fills(s, VIEW), ...s });
   await page.screenshot({ path: `${out}/viewport-stale-inner.png` });
   await ctx.close();
-  // 2b. 8-6d: iOS のホーム画面から起動（navigator.standalone）で、inner・client・visualViewport がどれも小さい値（844×343）のまま
-  //     → screen の大きさ（844×390）を下限にして body・canvas が画面の端まで
+  // 2b. 8-6d / 8-6e: iOS のホーム画面から起動（navigator.standalone）で、inner・client・visualViewport がどれも小さい値（844×343）のまま
+  //     → 8-6e: iOS は 343 より下を描かないので、body・canvas は 844×343 に合わせる（下端の UI を描かれる範囲に）。
+  //     viewport-fit を切り替える試み（nudge）が記録に残る
   ctx = await touchContext(browser);
   await ctx.addInitScript(() => {
     Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
@@ -58,9 +59,19 @@ export async function auditViewport({ browser, base, out, view: VIEW, touchConte
   page = await ctx.newPage();
   await toTitle(page, base);
   s = await canvasState(page);
+  await page.waitForTimeout(3500);
+  const nudged = await page.evaluate(async () => {
+    const m = await import('/src/core/viewport-fit.ts');
+    return m.fitHistory.filter((l) => l.includes('nudge'));
+  });
+  s = await canvasState(page);
   rows.push({
-    what: 'ホーム画面から起動・inner / client が小さい値（844×343）',
-    ok: fills(s, VIEW),
+    what: 'ホーム画面から起動・inner / client が小さい値（844×343）→ 描かれる 844×343 に合わせ、測り直しを試す',
+    ok:
+      s.rect[2] === VIEW.width &&
+      s.rect[3] === 343 &&
+      nudged.some((l) => l.includes('nudge#1 viewport-fit=auto')),
+    nudged,
     ...s,
   });
   await page.screenshot({ path: `${out}/viewport-standalone-stale.png` });
