@@ -99,5 +99,22 @@
       "radar": "Radar. Up is where your nose points; red dots are enemies",
       "ammo": "Ammo: missiles, flares and more"
     }
+  },
+  "lobby": {
+    "pvp": {
+      "kicker": "PVP",
+      "title": "PvP",
+      "note": "Fly the same sky with 2–{max} players"
+    },
+    "raid": {
+      "kicker": "CO-OP RAID",
+      "title": "Co-op Raid",
+      "note": "Take down the giant kaiju Vorgas with 2–{max} players"
+    },
+    "defense": {
+      "kicker": "CO-OP DEFENSE",
+      "title": "Co-op Defense",
+      "note": "Defend the base from 10 waves with 2–{max} players"
+    }
   }
 }

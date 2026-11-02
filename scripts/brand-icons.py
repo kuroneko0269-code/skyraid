@@ -1,11 +1,12 @@
-# ブランド素材の生成（4-4 の事前修正）: public/brand/icon-source.png（正方形・角丸の外は白）から
+# ブランド素材の生成（4-4 の事前修正）: assets-src/brand/icon-source.png（正方形・角丸の外は白。8-2 で配信物から外した）から
 # icon-512 / icon-192（角丸・外は透明）、icon-maskable-512 / apple-touch-icon（180px。角を紺で塗った全面）、
 # favicon.ico（16・32・48）を作り、logo.png の透明な余白をトリムする（幅 2000px を超えたら縮小）。
-# 使い方: python3 -I scripts/brand-icons.py public/brand   （Pillow が必要。npm の依存には入れない）
+# 使い方: python3 -I scripts/brand-icons.py public/brand [元画像]   （元画像の既定は assets-src/brand/icon-source.png。
+# Pillow が必要。npm の依存には入れない）
 import sys
 from PIL import Image, ImageDraw
 d = sys.argv[1]
-src = Image.open(f'{d}/icon-source.png').convert('RGB')
+src = Image.open(sys.argv[2] if len(sys.argv) > 2 else 'assets-src/brand/icon-source.png').convert('RGB')
 W = src.size[0]
 px = src.load()
 navy = px[60, W // 2]

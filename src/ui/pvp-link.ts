@@ -12,7 +12,7 @@ import type { CombatInput } from '../combat/combat-input';
 import type { AircraftControls, GroundHeightFn } from '../entities/aircraft';
 import type { FlightSession } from '../missions/flight-session';
 import { ClientRoom } from '../net/client-room';
-import { allAgain, initialSettings, type DefensePreset } from '../net/lobby-rules';
+import { allAgain, type DefensePreset } from '../net/lobby-rules';
 import { openLocalTransport } from '../net/local-transport';
 import { openPeerTransport } from '../net/peerjs-transport';
 import { HostRoom, JoinFailure, normalizeRoomCode } from '../net/room';
@@ -156,7 +156,7 @@ export class PvpLink {
 
   /** ロビーを開く。code があればすぐ参加する（?room）。raid はレイドの協力（6-2）として部屋を作る */
   openLobby(code?: string, raid = false, defense: DefensePreset = null): void {
-    this.preset = initialSettings(raid, defense);
+    this.preset = this.lobby.prepare(raid, defense);
     const game = this.deps.game;
     if (game.state !== 'mode_select') game.transition('mode_select');
     game.transition('lobby');

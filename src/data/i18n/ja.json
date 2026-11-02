@@ -99,5 +99,22 @@
       "radar": "レーダー。上が機首の向き、赤い点が敵",
       "ammo": "残弾。ミサイル・フレアなど"
     }
+  },
+  "lobby": {
+    "pvp": {
+      "kicker": "PVP",
+      "title": "PvP",
+      "note": "2〜{max} 人で同じ空を飛ぶ"
+    },
+    "raid": {
+      "kicker": "CO-OP RAID",
+      "title": "協力レイド",
+      "note": "2〜{max} 人で巨大怪獣ヴォルガスを撃破"
+    },
+    "defense": {
+      "kicker": "CO-OP DEFENSE",
+      "title": "協力防衛戦",
+      "note": "2〜{max} 人で基地を 10 波の敵から守る"
+    }
   }
 }
