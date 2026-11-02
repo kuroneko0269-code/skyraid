@@ -1,5 +1,5 @@
 // エントリ（8-3）: WebGL 2 の描画を作れたらゲーム本体（app.ts）を起動し、作れなければ案内画面を出す（真っ黒にしない）。
-// <html data-app> は public/legacy-check.js への合図（このモジュールが動いた = 古いブラウザで構文エラーになっていない）
+// <html data-app> は legacy-check.js（src/legacy/。8-4）への合図（このモジュールが動いた = 古いブラウザで構文エラーになっていない）
 // 8-4: 画面を作る前に今の言語の文言の表を読み込む（?lang= > セーブの設定 > ブラウザの言語）
 import { WebGLRenderer } from 'three';
 import { startApp } from './app';

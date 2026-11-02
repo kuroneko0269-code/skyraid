@@ -343,7 +343,7 @@
 - ミッション一覧（2-5 で 5 本。並び順に表示し、前のミッションを成功するまで次は選べない（「LOCKED」・薄く・押せない）。クリア済みには「CLEAR S」のように最高ランク。解放とランクは `src/progression/campaign-progress.ts` がセーブデータに記録する（3-1。2-5 ではページを開いている間だけだった）。一覧の上部にクレジット残高（3-2）。番号の横に出てくる敵の難易度（4-12。敵機と対空砲の最も低いもの〜最も高いもの。M1 入門 / M2 易〜普 / M3 普 / M4 普（対空砲）/ M5 易）。開発用の `?unlockAll` ですべて選べる（セーブには書かない））→ ブリーフィング（タイトル・説明・目標の一覧（必須 / 任意、順番の目標に「→」）・制限時間・報酬・「出撃」）→ 飛行 → リザルト（MISSION COMPLETE / FAILED と理由・目標ごとの ✓ / ✗ と進み具合・時間・被弾・ランク・報酬（「獲得 +1,500 CR / 残高 4,500 CR」。3-2）・パイロット名（3-1）・「もう一度」「ミッション一覧へ」）。「もう一度」は飛行へ直接
 - 飛行中の HUD 右上（⏸ ボタン・タッチのヨーボタンの下）: 残り時間（30 秒以下で赤）と目標の進み具合（例「敵機撃墜 1 / 2」。始まっていない目標は薄く、達成は黄色に ✓）
 - 目標の達成で画面中央に「OBJECTIVE COMPLETE」と目標を 2 秒（黄色）
-- 表示言語（2-5。`src/core/locale.ts`）: ミッションのタイトルとブリーフィング文だけを日本語・英語で切り替える。ほかの UI はまだ日本語だけなので既定は日本語。`?lang=en` で英語、`?lang=auto` でブラウザの言語（ja で始まれば日本語、ほかは英語）
+- 表示言語（2-5。8-4 で UI 全体を英語化。決め方は「英語化（8-4）」の節）
 - 次のリング: 黄色く光る輪（その先の 3 個は半透明の水色）。HUD は黄色の菱形と距離、画面外なら画面端の黄色の三角。描画は `src/render/ring-view.ts`（draw call 2）
 - H キー / HUD OFF で隠すのは右上の目標と次のリングの印だけ。大きな文字と境界の警告は出す
 
@@ -830,7 +830,7 @@
 
 - タイトル → モード選択 → （ハンガー）→ ブリーフィング → プレイ → リザルト
 - HUD: 速度、高度、HP、武装残弾、ロックオン枠、レーダー、ミッション目標
-- 全画面DOM。文字は日本語・英語の2言語（i18n JSON）
+- 全画面DOM。文字は日本語・英語の2言語（i18n JSON。8-4）
 
 #### デザインシステム（4-10。`src/ui/theme.css`、数値は `src/data/app.ts`）
 
@@ -886,12 +886,24 @@
 
 - 最低動作環境: iOS / iPadOS 16.4 以降の Safari・Android の Chrome 105 以降・パソコンの Chrome / Edge 105 以降・Safari 16.4 以降・Firefox 121 以降、WebGL 2 が必要。下限はビルドの出力（three の class の static ブロック = ES2022）と WebGL 2 で決まる。情報画面の「版」と README に出す。polyfill は入れない（下限の版はどれも使っている API を持つ。無くても動くもの（`Intl.Segmenter`・Vibration・全画面・Gamepad）は使う前に確かめている）
 - 起動: エントリ `src/main.ts` が WebGL 2 の描画（three の WebGLRenderer）を作れたらゲーム本体 `src/app.ts` の `startApp` を呼ぶ。作れなければ案内画面（`src/ui/compat-notice.ts`。WebGL 1 はある → 「WebGL 2 に対応していません」、無い → 「3D の描画（WebGL）が使えません」。動作環境と「再読み込み」）。`startApp` が例外を出したら「起動できませんでした」と例外の文。真っ黒にしない
-- 古いブラウザ: モジュールの構文を読めないと `main.ts` が動かないので、ES5 の `public/legacy-check.js`（classic script・defer）が読み込みの後（load + 0.5 秒）に `<html data-app>` が無ければ「このブラウザは古いため起動できません」と動作環境を出す。案内の見た目は `index.html` の `<style>`（アプリの CSS が読めなくても出す）
+- 古いブラウザ: モジュールの構文を読めないと `main.ts` が動かないので、ES5 の `legacy-check.js`（classic script・defer。8-4 から元は `src/legacy/legacy-check.js` で、文言は表の `compat` からビルド時に埋め込む。ブラウザの言語・セーブの言語で日本語 / 英語）が読み込みの後（load + 0.5 秒）に `<html data-app>` が無ければ「このブラウザは古いため起動できません」と動作環境を出す。案内の見た目は `index.html` の `<style>`（アプリの CSS が読めなくても出す）
 - WebGL のコンテキスト喪失（`src/ui/context-loss.ts`）: 失ったらソロの飛行中はポーズ（PvP・協力・リプレイの再生は止めない）。three が喪失中の描画を飛ばし、戻ると GPU の資源を作り直す。1 回だけ焼く空の環境マップ（PMREM）は復帰のイベントで焼き直す（`src/render/scene.ts`）。5 秒で戻らなければトーストで「画面の描画を復帰できませんでした。再読み込みしてください」と「再読み込み」
 - 保存できない環境（localStorage が例外・容量超過・プライベートブラウズ）: 遊べる（メモリの中で進む）。最初に書けなかったとき（localStorage が無ければ起動時）に 1 回だけトースト「この環境ではデータを保存できません（プライベートブラウズ・容量不足など）。遊べますが、進み具合・設定は閉じると消えます」（閉じるまで）。リプレイ（IndexedDB）は開けなければ 7-B のとおり一覧が空で保存しない
 - 縦向き: スマホ（`(pointer: coarse)` かつ幅 600px 以下）の縦画面はどの画面でも「画面を横にしてください」を全面に出す（メニューは横向きの作りで縦では崩れるため。7-x までは飛行中のタッチ操作のときだけ）。iPad の縦・パソコンは今までどおり飛行中のタッチ操作のときだけ。重なりは画面（60〜70）の上・トースト（85）の下（z-index 80）
 - 8-3 で確かめて変えなかったもの: 音（AudioContext は最初の操作で作り、止まっていれば操作のたびに resume。裏に回ったら suspend・戻ったら resume。4-4）、全画面（API が無ければボタンを作らない。4-10）・画面の向きの固定（失敗は無視）・振動（Android 以外は「この端末は非対応」で押せない。4-11）、safe-area（`--ui-safe-*`。4-10）、ゲームパッドの抜き差し（切断で入力を離す。1-5）
 - 点検: `node scripts/ui-audit.js <出力先> --release [--browser chromium|firefox|webkit|all]`。`--release` に互換性の点検（`scripts/ui-audit-compat.js`・`ui-audit-compat-device.js`。API を init script で消す・投げる）を足した。取得していないエンジンは飛ばして「取得できない」と出す
+
+#### 英語化（8-4。表は `src/data/i18n/ja.json` / `en.json`、仕組みは `src/core/i18n.ts`・`format.ts`・`locale.ts`・`i18n-load.ts`、訳語は `docs/glossary.md`、決定は `docs/decisions.md` の 8-4）
+
+- 文言はすべて表のキー（点区切り。例 `hangar.buy`）で引く（`t(key, params)`。`{name}` を置き換え）。数で形が変わる文は `{ "one", "other" }` の形で `tn(key, count)`（Intl.PluralRules。日本語は other だけ）。文の配列は `tList`。i18n ライブラリは使わない
+- 起動時（`src/main.ts`）に今の言語の表だけを読み込む（ja / en は別チャンク）。モジュールの最上位では `t()` を呼ばない（データの名前・ラベルの定数はゲッター）。`<html lang>` と meta description も言語に合わせる
+- 言語の決め方: URL の `?lang=ja|en` > セーブの `settings.language`（null = 未設定。セーブの版は上げず、無ければ null）> ブラウザの言語（`navigator.languages` の先頭が ja で始まれば日本語、それ以外は英語）。`?lang=auto` はセーブを無視してブラウザの言語
+- 切り替え: 設定 → 表示 → 言語（日本語 / English。どちらの言語でもその言語の名前）。選ぶとセーブして読み込み直す（URL の `?lang=` は外す）。ポーズから開いた設定（飛行中）では切り替えない（「メニューから切り替えてください」）
+- 書式: 数値・クレジットは Intl.NumberFormat（3 桁区切り）、日付・日時は Intl.DateTimeFormat（ja「2026/11/02 13:05」・en「11/02/2026, 13:05」。24 時間）。時計（m:ss）は言語によらない。保存・送信・ファイル名の日付文字列は変えない
+- 古いブラウザの案内（`src/legacy/legacy-check.js`）と index.html の meta description・manifest の description は、ビルド時に表から埋め込む（`scripts/vite-legacy-check.ts`。manifest は日本語のまま）
+- 開発者だけが見る文字列（console・画面に出ない内部のエラー）は英語の直書き。記録に保存済みの文字列（リプレイの結果の表示など）は記録したときの言語のまま
+- 抜け防止（`tests/i18n.test.ts`）: ja / en のキーとプレースホルダが一致・英語に日本語が無い・コードの `t('…')` のキーが表にある・src に日本語の直書きが無い（コメント・GLSL のコメント・除外リストは除く）・index.html と public に日本語の文言が無い
+- 点検: `node scripts/ui-audit.js <出力先> --lang en`（ブラウザの言語を en-US に。既定は ja-JP）。`--release` でも同じ。画面の文字で探す箇所は `scripts/audit-lang.js` の `L('日本語')` が英語の文に置き換える
 
 #### タイトル・ブランド素材・PWA（4-10）
 

@@ -25,7 +25,7 @@ npm run dev
 
 - WebGL 2 が必要（ブラウザのハードウェア アクセラレーションを ON）。推奨はノートパソコンの内蔵 GPU 以上・2020 年以降のスマホ
 - 下限はビルドの出力（three の class の static ブロック = ES2022）と WebGL 2 で決まる。決め方と各機能の確認結果は `docs/compat.md`
-- WebGL が使えない・古いブラウザでは真っ黒にせず案内画面を出す。表は `src/data/compat.ts` と `public/legacy-check.js` にも同じものがある（変えたら全部）
+- WebGL が使えない・古いブラウザでは真っ黒にせず案内画面を出す。文面と表は `src/data/i18n/ja.json` / `en.json` の `compat`（`src/legacy/legacy-check.js` にはビルド時に埋め込む）
 
 ## ブランド素材の差し替え
 

@@ -3,7 +3,7 @@
 // 例外を出さずに案内・代わりの動きになるかを確かめる。どのエンジンでも同じ作り方（init script で API を消す・投げる）にする。
 //   noWebGL      canvas.getContext('webgl2' / 'webgl') が null → 案内画面（真っ黒にしない）
 //   noWebGL2     webgl2 だけ null（WebGL1 はある）→ 同じ案内画面
-//   legacy       アプリのモジュールが構文エラー（古いブラウザ）→ public/legacy-check.js の案内
+//   legacy       アプリのモジュールが構文エラー（古いブラウザ）→ src/legacy/legacy-check.js の案内
 //   contextLost  飛行中に WEBGL_lose_context で喪失 → ポーズ。復帰後に描画が続く
 //   noStorage    localStorage の取得が例外・indexedDB が無い → 遊べて、保存できない旨のお知らせ
 //   quota        localStorage.setItem が QuotaExceededError → 同じお知らせ（1 回だけ）
@@ -66,7 +66,7 @@ async function auditNoWebGL(browser, base, out, mode) {
   return finish(r, page, log, context);
 }
 
-/** 古いブラウザ（モジュールの構文を読めない）: アプリのモジュールを構文エラーにして、public/legacy-check.js の案内が出るか */
+/** 古いブラウザ（モジュールの構文を読めない）: アプリのモジュールを構文エラーにして、src/legacy/legacy-check.js の案内が出るか */
 async function auditLegacy(browser, base, out) {
   const { context, log, page } = await newPage(browser);
   const r = { ok: false, steps: [] };
