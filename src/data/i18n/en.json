@@ -1,6 +1,7 @@
 {
   "app": {
-    "description": "A 3D flight shooter that runs in your browser"
+    "description": "A 3D flight shooter that runs in your browser",
+    "ogDescription": "Dogfight, race through rings and take down a giant kaiju in a 3D flight shooter that runs in your browser. Solo campaign, base defense and 2–4 player online battles and raids. Free, no install."
   },
   "missions": {
     "training": {
@@ -852,8 +853,8 @@
       "speed": "Speed (↑ ↓)",
       "seek": "Seek",
       "camera": "Camera (C)",
-      "nextTarget": "Next Foe",
-      "nextTargetWith": "Next Foe ({target})",
+      "nextTarget": "Next Enemy",
+      "nextTargetWith": "Next Enemy ({target})",
       "photo": "Photo",
       "photoHint": "Photo Mode (P)",
       "hideUi": "Hide UI",
@@ -1143,7 +1144,49 @@
     "environment": "Requirements",
     "licensesIntro": "This game uses the following open source libraries and assets (collected at build time).",
     "unknownLicense": "Unknown",
+    "changesNote": "The changelog is in Japanese.",
     "fontName": "Rajdhani (Google Fonts)"
+  },
+  "card": {
+    "open": "Share Card",
+    "title": "Record Card",
+    "pilotToggle": "Show pilot name",
+    "privacy": "Online account info (such as your email address) is never included.",
+    "making": "Creating card…",
+    "failed": "Couldn't create the card",
+    "share": "Share",
+    "save": "Save Image",
+    "copy": "Copy Text",
+    "close": "Close",
+    "shared": "Shared",
+    "saved": "Image saved",
+    "copied": "Text copied",
+    "copyFailed": "Couldn't copy. Select the text and copy it",
+    "shareFailed": "Couldn't share, so the image was saved instead",
+    "alt": "Record card preview",
+    "textLabel": "Share text",
+    "mode": {
+      "mission": "Campaign",
+      "raid": "Raid",
+      "race": "Ring Race",
+      "defense": "Defense"
+    },
+    "metric": {
+      "time": "Time",
+      "clearTime": "Clear Time",
+      "elapsed": "Elapsed",
+      "waves": "Waves Cleared"
+    },
+    "fact": {
+      "kills": "Kills",
+      "protected": "Buildings Saved",
+      "newBest": "New Personal Best"
+    },
+    "skin": "{pattern} · {color}",
+    "skinDefault": "Factory paint",
+    "sep": " · ",
+    "resultRank": "Rank {rank}",
+    "shareText": "{mode} \"{stage}\" in {game}: {result} {hashtag}"
   },
   "dataPolicy": {
     "save": {

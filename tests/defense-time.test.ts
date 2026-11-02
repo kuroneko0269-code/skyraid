@@ -28,6 +28,7 @@ describe('リプレイの結果（中断した防衛戦）', () => {
     expect(replayOutcome(sim.play, 'defense', d)).toEqual({
       label: '中断（2 波）',
       success: false,
+      result: { kind: 'abortedWaves', count: 2 },
     });
   });
 });

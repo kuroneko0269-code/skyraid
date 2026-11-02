@@ -60,12 +60,27 @@ export interface ReplayStart {
   readonly paint?: string;
 }
 
+/**
+ * 記録の結果の種類と数値（8-5。表示は replayOutcomeLabel が今の言語で組み立てる）。
+ * rank はミッション・レイド・レースのランク（無ければ null）、time はレースのタイム（秒）、count は波数・撃墜数
+ */
+export type ReplayResult =
+  | { readonly kind: 'aborted' | 'failed' | 'defended' | 'timeout' }
+  | { readonly kind: 'success'; readonly rank: string | null }
+  | { readonly kind: 'race'; readonly time: number; readonly rank: string | null }
+  | { readonly kind: 'fallen' | 'abortedWaves' | 'kills'; readonly count: number };
+
 /** 記録の結果（一覧の「結果」） */
 export interface ReplayOutcome {
-  /** 一覧に出す短い文（「成功 S」「1:23.456」「10 波クリア」など） */
+  /**
+   * 一覧に出す短い文（「成功 S」「1:23.456」「10 波クリア」など）。記録したときの言語。
+   * 8-5 からは result から組み立てて出し、label は result の無い古い記録と古い版のゲームのために残す
+   */
   readonly label: string;
   /** 成功・完走か（色分け） */
   readonly success: boolean;
+  /** 結果の種類と数値（8-5 から。それより前の記録には無い） */
+  readonly result?: ReplayResult;
 }
 
 /** 記録のヘッダ（JSON で保存） */

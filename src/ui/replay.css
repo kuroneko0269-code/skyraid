@@ -110,13 +110,29 @@
   display: none !important;
 }
 
-/* ---- リザルトの「リプレイを保存」 ---- */
+/* ---- リザルトの「リプレイを保存」と「記録カード」（8-5。1 行に並べ、狭ければ折り返す） ---- */
 .result-extras:empty {
+  display: none;
+}
+
+.result-extras {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--ui-space-2);
+}
+
+.result-card {
+  margin: var(--ui-space-2) 0;
+}
+
+.result-card[hidden] {
   display: none;
 }
 
 .replay-save {
   display: flex;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--ui-space-2);

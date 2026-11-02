@@ -2,6 +2,7 @@ import { t } from '../core/i18n';
 import './campaign.css';
 import './save.css';
 import type { MissionResult } from '../missions/runner';
+import { RecordCardButton } from './card/card-entry';
 import { el } from './hud-dom';
 import {
   FAIL_REASON_TEXT,
@@ -28,6 +29,8 @@ export interface ResultExtras {
 export class ResultScreen {
   /** ボタンの上の追加の欄（7-B: リプレイを保存） */
   readonly extras: HTMLDivElement;
+  /** 8-5: 記録カードのボタン（中身は結果を出す側が set する） */
+  readonly card: RecordCardButton;
   readonly root: HTMLDivElement;
   private readonly pilot: HTMLDivElement;
   private readonly outcome: HTMLHeadingElement;
@@ -52,6 +55,7 @@ export class ResultScreen {
     this.gear = el('div', 'result-gear', panel, t('campaign.result.newGear'));
     this.gear.hidden = true;
     this.extras = el('div', 'result-extras', panel);
+    this.card = new RecordCardButton(this.extras);
     const buttons = el('div', 'campaign-buttons', panel);
     this.back = createButton(
       buttons,

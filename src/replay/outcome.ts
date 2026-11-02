@@ -6,7 +6,7 @@ import { findMap } from '../data/maps';
 import type { DefenseRunner } from '../missions/defense/runner';
 import type { GamePlay } from '../missions/game-play';
 import { missionStrings } from '../ui/mission-text';
-import type { ReplayOutcome, ReplayStart } from './types';
+import type { ReplayOutcome, ReplayResult, ReplayStart } from './types';
 
 /** 一覧の題（ミッション名・コース名・マップ名） */
 export function replayTitle(s: ReplayStart): string {
@@ -48,32 +48,102 @@ export function replayOutcome(
   mode: ReplayStart['mode'],
   lastDefense: DefenseRunner | null = null,
 ): ReplayOutcome {
-  const kills = play.session.combat.kills;
+  const [result, success] = outcomeResult(play, mode, lastDefense);
+  return { label: resultLabel(result), success, result };
+}
+
+function outcomeResult(
+  play: GamePlay,
+  mode: ReplayStart['mode'],
+  lastDefense: DefenseRunner | null,
+): [ReplayResult, boolean] {
   switch (mode) {
     case 'mission':
     case 'raid': {
       const r = play.runner?.result;
-      if (!r || r.outcome === 'aborted')
-        return { label: t('replay.outcome.aborted'), success: false };
-      if (r.outcome === 'success')
-        return { label: t('replay.outcome.success', { rank: r.rank ?? '' }).trim(), success: true };
-      return { label: t('replay.outcome.failed'), success: false };
+      if (!r || r.outcome === 'aborted') return [{ kind: 'aborted' }, false];
+      if (r.outcome === 'success') return [{ kind: 'success', rank: r.rank }, true];
+      return [{ kind: 'failed' }, false];
     }
     case 'race': {
       const r = play.race?.result;
-      if (!r) return { label: t('replay.outcome.aborted'), success: false };
-      if (r.outcome === 'timeout') return { label: 'TIME OVER', success: false };
-      return { label: `${formatRaceTime(r.time)} ${r.rank ?? ''}`.trim(), success: true };
+      if (!r) return [{ kind: 'aborted' }, false];
+      if (r.outcome === 'timeout') return [{ kind: 'timeout' }, false];
+      return [{ kind: 'race', time: r.time, rank: r.rank }, true];
     }
     case 'defense': {
       const d = play.defense ?? lastDefense;
-      if (!d) return { label: t('replay.outcome.aborted'), success: false };
-      if (d.phase === 'cleared') return { label: t('replay.outcome.defended'), success: true };
-      if (d.phase === 'failed')
-        return { label: tn('replay.outcome.fallen', d.wavesCleared), success: false };
-      return { label: tn('replay.outcome.abortedWaves', d.wavesCleared), success: false };
+      if (!d) return [{ kind: 'aborted' }, false];
+      if (d.phase === 'cleared') return [{ kind: 'defended' }, true];
+      if (d.phase === 'failed') return [{ kind: 'fallen', count: d.wavesCleared }, false];
+      return [{ kind: 'abortedWaves', count: d.wavesCleared }, false];
     }
     default:
-      return { label: tn('replay.outcome.kills', kills), success: true };
+      return [{ kind: 'kills', count: play.session.combat.kills }, true];
+  }
+}
+
+/** 結果の短い文（今の言語） */
+function resultLabel(r: ReplayResult): string {
+  switch (r.kind) {
+    case 'aborted':
+      return t('replay.outcome.aborted');
+    case 'failed':
+      return t('replay.outcome.failed');
+    case 'defended':
+      return t('replay.outcome.defended');
+    case 'timeout':
+      return 'TIME OVER';
+    case 'success':
+      return t('replay.outcome.success', { rank: r.rank ?? '' }).trim();
+    case 'race':
+      return `${formatRaceTime(r.time)} ${r.rank ?? ''}`.trim();
+    case 'fallen':
+      return tn('replay.outcome.fallen', r.count);
+    case 'abortedWaves':
+      return tn('replay.outcome.abortedWaves', r.count);
+    case 'kills':
+      return tn('replay.outcome.kills', r.count);
+  }
+}
+
+/**
+ * 一覧・詳細に出す結果の文（8-5）: 種類と数値があれば今の言語で組み立て、無い（8-5 より前の記録）・読めない
+ * （読み込んだファイルの中身がおかしい）ときは記録した文字列をそのまま出す
+ */
+export function replayOutcomeLabel(o: ReplayOutcome | null | undefined): string | null {
+  if (!o) return null;
+  const r = validResult(o.result);
+  return r ? resultLabel(r) : typeof o.label === 'string' ? o.label : null;
+}
+
+const RANK_RE = /^[A-Z]{1,2}$/;
+
+/** 読み込んだ記録の result を確かめる（インポートしたファイルは信用しない） */
+function validResult(v: unknown): ReplayResult | null {
+  if (typeof v !== 'object' || v === null) return null;
+  const r = v as Record<string, unknown>;
+  const count = (x: unknown): x is number =>
+    typeof x === 'number' && Number.isInteger(x) && x >= 0 && x < 1e6;
+  const rank = (x: unknown): x is string | null =>
+    x === null || (typeof x === 'string' && RANK_RE.test(x));
+  switch (r.kind) {
+    case 'aborted':
+    case 'failed':
+    case 'defended':
+    case 'timeout':
+      return { kind: r.kind };
+    case 'success':
+      return rank(r.rank) ? { kind: 'success', rank: r.rank } : null;
+    case 'race':
+      return typeof r.time === 'number' && Number.isFinite(r.time) && r.time >= 0 && rank(r.rank)
+        ? { kind: 'race', time: r.time, rank: r.rank }
+        : null;
+    case 'fallen':
+    case 'abortedWaves':
+    case 'kills':
+      return count(r.count) ? { kind: r.kind, count: r.count } : null;
+    default:
+      return null;
   }
 }

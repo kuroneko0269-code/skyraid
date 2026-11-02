@@ -16,6 +16,7 @@ import type { GamePlay } from '../missions/game-play';
 import type { SaveStore } from '../progression/save-store';
 import { DefenseHudLink } from '../render/defense-hud-link';
 import { DefenseHud, type DefenseHudState } from './defense-hud';
+import { cardPaint } from './card/card-entry';
 import { DefenseResultScreen } from './defense-result';
 import type { Screens } from './screens';
 import type { ReplayHub } from '../replay/hub';
@@ -196,6 +197,20 @@ export function createDefenseLink(p: DefenseLinkParts): DefenseLink {
       balance: save.credits,
       pilotName: save.pilotName,
       players: [],
+    });
+    // 8-5: 記録カード
+    const aircraftId = screens.hangar.selectedId;
+    result.card.set({
+      mode: 'defense',
+      mapId: s.mapId,
+      difficulty: s.difficulty,
+      cleared: r.score.outcome === 'cleared',
+      waves: r.score.wavesCleared,
+      kills: r.score.kills,
+      aircraftId,
+      paint: cardPaint(save, aircraftId),
+      pilotName: save.pilotName,
+      date: Date.now(),
     });
     game.transition('result');
   };

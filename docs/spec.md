@@ -901,9 +901,22 @@
 - 切り替え: 設定 → 表示 → 言語（日本語 / English。どちらの言語でもその言語の名前）。選ぶとセーブして読み込み直す（URL の `?lang=` は外す）。ポーズから開いた設定（飛行中）では切り替えない（「メニューから切り替えてください」）
 - 書式: 数値・クレジットは Intl.NumberFormat（3 桁区切り）、日付・日時は Intl.DateTimeFormat（ja「2026/11/02 13:05」・en「11/02/2026, 13:05」。24 時間）。時計（m:ss）は言語によらない。保存・送信・ファイル名の日付文字列は変えない
 - 古いブラウザの案内（`src/legacy/legacy-check.js`）と index.html の meta description・manifest の description は、ビルド時に表から埋め込む（`scripts/vite-legacy-check.ts`。manifest は日本語のまま）
-- 開発者だけが見る文字列（console・画面に出ない内部のエラー）は英語の直書き。記録に保存済みの文字列（リプレイの結果の表示など）は記録したときの言語のまま
+- 開発者だけが見る文字列（console・画面に出ない内部のエラー）は英語の直書き。記録に保存済みの文字列（リプレイの結果の表示など）は記録したときの言語のまま（リプレイの結果は 8-5 から種類と数値も記録し、今の言語で組み立てる）
 - 抜け防止（`tests/i18n.test.ts`）: ja / en のキーとプレースホルダが一致・英語に日本語が無い・コードの `t('…')` のキーが表にある・src に日本語の直書きが無い（コメント・GLSL のコメント・除外リストは除く）・index.html と public に日本語の文言が無い
 - 点検: `node scripts/ui-audit.js <出力先> --lang en`（ブラウザの言語を en-US に。既定は ja-JP）。`--release` でも同じ。画面の文字で探す箇所は `scripts/audit-lang.js` の `L('日本語')` が英語の文に置き換える
+
+#### 記録カード共有（8-5。数値は `src/data/card.ts`、元の結果は `src/core/card-source.ts`、配置は `src/core/card-layout.ts`（DOM 非依存）、文は `src/ui/card/card-model.ts`、描画は `src/ui/card/card-canvas.ts`、画面は `src/ui/card/card-dialog.ts`（遅延チャンク `card-dialog`）、入口は `src/ui/card/card-entry.ts`。決定は `docs/decisions.md` の 8-5）
+
+- 対象: キャンペーンのミッション・ソロのレイド・リングレース・ソロの防衛戦の結果画面に「記録カード」（成功・失敗とも）。チュートリアル・フリーフライト・マルチ（PvP・協力レイド・協力防衛戦）の結果には出さない（マルチは他のプレイヤーの名前が載るため。決定の 8-5）
+- 画像: PNG 1200×630（OGP と同じ比。1080×1080 は `CARD_SIZE` の切り替えで同じ配置の計算が使える）。Canvas 2D だけで描く（外部サービス・追加パッケージなし）。背景は「記録カード」を押した時点の場面（結果画面の後ろは飛行の終わりの場面のまま。フォトモードの撮影と同じく描画バッファを一時的に 1200×630 にして 1 回描く。HUD は DOM なので入らない）。撮れなければ固定のデザイン（夜明けの空・地平線・海の線）。左の文字の側と下の帯を暗くする
+- 載せるもの: ゲーム名「SkyRaid: Titan Skies」・モード・ステージ（ミッション名 / 「ヴォルガス（高難度）」/ コース名 / 「マップ・難易度」）・見出し（MISSION COMPLETE / MISSION FAILED / FINISH / TIME OVER / 防衛成功 / 基地陥落）・評価（ランク。右の列に大きく。S は金色）・スコアまたはタイム（ミッション・レースはタイム、レイドはクリアタイム / 経過時間、防衛戦はクリアした波 ○ / 10）・添える数値（レイドの守った建物・レースの自己ベスト更新・防衛戦の撃墜）・機体と塗装（「Kestrel / スプリッター・朱」）・パイロット名（選んだときだけ）・日付（今の言語の書式）・遊べる URL（開いているアプリの origin。https:// を外して表示）。オンライン連携の情報（メールアドレスなど）は持たせない
+- 文字: 今の言語で組み立てる。見出し・数値は Rajdhani（無い字は端末の日本語フォント）。Google Fonts の読み込み（`document.fonts.load`）を最大 2.5 秒待ってから描く（オフラインで読めなければ代わりのフォント）。枠に収まらない文字は 4% ずつ縮め（下限あり）、下限でも入らなければ末尾を「…」
+- 画面: プレビュー・「パイロット名を載せる」（既定 ON。外すと描き直す。パイロット名が無ければ出さない）・共有の文面（読み取り専用）・ボタン。ファイル付きの Web Share API が使える（`navigator.canShare({ files })`）ときは「共有」「画像を保存」、使えなければ「画像を保存」「文面をコピー」。共有に失敗したら保存に切り替える（取り消しは何もしない）。コピーに失敗したら文面を選んだ状態にする。「閉じる」・枠の外のタップ・Esc で閉じて結果画面へ。保存は `skyraid-card-YYYYMMDD-HHMMSS.png`
+- 共有の文面: ja「SkyRaid: Titan Skies のキャンペーン「訓練」で MISSION COMPLETE・ランク S・タイム 3:12 #SkyRaid」、en「Campaign "Training" in SkyRaid: Titan Skies: MISSION COMPLETE · Rank S · Time 3:12 #SkyRaid」と、2 行目に遊べる URL
+- オフライン: 生成・保存・コピーは通信なしでできる（画面のチャンクは結果画面を出したときに先読みし、Service Worker もプリキャッシュする）
+- OGP（`index.html`・`scripts/vite-ogp.ts`）: og:title「SkyRaid: Titan Skies」・og:description（en.json の `app.ogDescription`）・og:image（`public/brand/og-image.jpg`。1200×630・英語の固定の画像。カードと同じ背景にロゴ。作り直しは `node scripts/og-image.js`）・twitter:card。og:image は公開の URL（環境変数 `VITE_SITE_URL`、無ければ Cloudflare Pages の `CF_PAGES_URL`）があれば絶対 URL、無ければ `/brand/og-image.jpg`
+- 事前修正: リプレイの記録の結果に種類と数値（`ReplayOutcome.result`）を足し、一覧・詳細は今の言語で組み立てる（8-5 より前の記録は記録した文字列のまま。`label` も残すので形式の版は上げず、古い版のゲームでも読める）。英語の画面の更新履歴の先頭に「The changelog is in Japanese.」。リプレイの「Next Foe」→「Next Enemy」
+- 点検: `--release` の card（日本語・英語。キャンペーン M1 で墜落 → 結果画面 → オフラインで生成 → 項目・1200×630・保存・コピー・パイロット名を外す・共有の API を差し込むと「共有」で PNG 付き → Esc）。見本は `node scripts/card-samples.js <出力先>`（4 モード × 2 言語、固定の背景）
 
 #### タイトル・ブランド素材・PWA（4-10）
 

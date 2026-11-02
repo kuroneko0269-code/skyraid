@@ -6,6 +6,7 @@ import { addConnectSrc } from './src/online/csp.ts';
 import { readOnlineEnv } from './src/online/env.ts';
 import { appInfo } from './scripts/vite-app-info.ts';
 import { legacyCheck } from './scripts/vite-legacy-check.ts';
+import { ogp } from './scripts/vite-ogp.ts';
 import ja from './src/data/i18n/ja.json';
 import { chunkPlan } from './scripts/vite-chunks.ts';
 
@@ -51,6 +52,8 @@ export default defineConfig(({ mode }) => ({
     appInfo(root),
     // 8-3 / 8-4: 古いブラウザの案内（dist/legacy-check.js。文言の表を埋め込む）と index.html の meta description
     legacyCheck(root),
+    // 8-5: OGP（英語。og:image は公開の URL があれば絶対 URL）
+    ogp(root, loadEnv(mode, root, 'VITE_').VITE_SITE_URL || process.env.CF_PAGES_URL),
     // PWA（4-10）: manifest とビルド成果物をプリキャッシュする Service Worker。
     // prompt 型（skipWaiting しない）なので、更新は全部のタブを閉じた次の起動で入る。登録は src/ui/app-shell.ts
     VitePWA({

@@ -7,6 +7,7 @@ export function printReleaseReport(report) {
     ['onlineHidden', report.onlineHidden],
     ['info', report.info],
     ...Object.entries(report.compat).map(([k, v]) => [`compat.${k}`, v]),
+    ...Object.entries(report.card ?? {}).map(([k, v]) => [`card.${k}`, v]),
   ];
   const all = [...report.modes, ...checks.map(([, r]) => r)];
   // 8-3: WebGL が無い環境の点検では、three が描画を作れなかったことを console に出す（想定どおり）。数えない

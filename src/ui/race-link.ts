@@ -18,6 +18,7 @@ import type { SaveStore } from '../progression/save-store';
 import type { GhostView } from '../render/ghost-view';
 import type { WeatherView } from '../render/weather/weather-view';
 import { RaceHud } from './race-hud';
+import { cardPaint } from './card/card-entry';
 import { RaceResultScreen } from './race-result';
 import { RaceSelectScreen } from './race-select';
 import type { Screens } from './screens';
@@ -141,6 +142,20 @@ export function createRaceLink(p: RaceLinkParts): RaceLink {
       balance: save.credits,
       pilotName: save.pilotName,
       gold: c.goldTimeSeconds,
+    });
+    // 8-5: 記録カード
+    const aircraftId = hangar.selectedId;
+    result.card.set({
+      mode: 'race',
+      courseId: c.id,
+      finished: pending.result.outcome === 'finished',
+      rank: pending.result.rank,
+      time: pending.result.time,
+      newBest: pending.out.newBest,
+      aircraftId,
+      paint: cardPaint(save, aircraftId),
+      pilotName: save.pilotName,
+      date: Date.now(),
     });
     pending = null;
     game.transition('result');
