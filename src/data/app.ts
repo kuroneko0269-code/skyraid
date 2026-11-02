@@ -57,8 +57,19 @@ export const VIEWPORT_CONFIG = {
    */
   /**
    * 8-6e: iOS のホーム画面から横向きで起動して描かれる高さが足りないとき、viewport-fit を auto にして restoreMs 後に cover に戻す
-   * （atMs の時刻に、最大 maxTries 回。checkMs 後に測り直す）
+   * （atMs の時刻に、最大 maxTries 回。checkMs 後に測り直す。8-6f: 2 回目以降は前の試みが終わってから）
    */
-  nudge: { atMs: [600, 2500], maxTries: 2, restoreMs: 150, checkMs: 400 },
+  nudge: {
+    atMs: [600, 2500],
+    maxTries: 2,
+    restoreMs: 150,
+    checkMs: 400,
+    /**
+     * 8-6f: 切り替えの間の黒い幕を外すまでの上限（ms。ふつうは試みが終わったときに外す。試みのたびに延ばす安全策）と、消えるまでのフェード（ms。index.html の
+     * .viewport-cover と同じ）。試みは順番に、前の試みの後 atMs の間隔をあけて
+     */
+    coverMaxMs: 6000,
+    coverFadeMs: 250,
+  },
   debugToggle: { tapCount: 5, tapWindowMs: 3000, storageKey: 'skyraid.debugViewport' },
 } as const;

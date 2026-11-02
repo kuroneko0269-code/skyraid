@@ -58,19 +58,30 @@ export async function auditViewport({ browser, base, out, view: VIEW, touchConte
   });
   page = await ctx.newPage();
   await toTitle(page, base);
-  s = await canvasState(page);
-  await page.waitForTimeout(3500);
-  const nudged = await page.evaluate(async () => {
-    const m = await import('/src/core/viewport-fit.ts');
-    return m.fitHistory.filter((l) => l.includes('nudge'));
-  });
+  // 試みが終わって幕が外れるまで待つ（SwiftShader は起動が重く、タイマーが遅れる）
+  const history = () =>
+    page.evaluate(async () => {
+      const m = await import('/src/core/viewport-fit.ts');
+      return m.fitHistory.filter((l) => l.includes('nudge') || l.includes('cover'));
+    });
+  let nudged = await history();
+  for (let i = 0; i < 20 && !nudged.some((l) => l.includes('cover off')); i++) {
+    await page.waitForTimeout(1000);
+    nudged = await history();
+  }
+  await page.waitForTimeout(500);
+  const coverLeft = await page.locator('.viewport-cover').count();
   s = await canvasState(page);
   rows.push({
-    what: 'ホーム画面から起動・inner / client が小さい値（844×343）→ 描かれる 844×343 に合わせ、測り直しを試す',
+    what: 'ホーム画面から起動・inner / client が小さい値（844×343）→ 描かれる 844×343 に合わせ、測り直しを試す（その間は黒い幕）',
     ok:
       s.rect[2] === VIEW.width &&
       s.rect[3] === 343 &&
-      nudged.some((l) => l.includes('nudge#1 viewport-fit=auto')),
+      nudged.some((l) => l.includes('nudge#1 viewport-fit=auto')) &&
+      // 8-6f: 切り替えの間は黒い幕で隠し、試みが尽きたら外す
+      nudged.some((l) => l.includes('cover on')) &&
+      nudged.some((l) => l.includes('cover off')) &&
+      coverLeft === 0,
     nudged,
     ...s,
   });
