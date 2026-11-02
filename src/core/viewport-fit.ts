@@ -40,7 +40,8 @@ const ok = (v: number): boolean => Number.isFinite(v) && v >= 1;
  * ルート要素の大きさを選ぶ（DOM 非依存。テストする）。
  * - 基本は inner・visualViewport（拡大していないとき）・client の大きい方（どれかが古い小さい値のまま残っても広がる）
  * - タッチが主の端末では screen の長辺・短辺（向きに合わせる）を超えない（向きを変える前の値で画面からはみ出さない）
- * - iOS のホーム画面から起動したときは画面全体がアプリなので、screen の大きさ（向きに合わせる）を下限にする
+ * - 8-6e: iOS のホーム画面から起動したときに screen を下限にするのはやめた（実機の値: inner・visual・client が 874×340、
+ *   screen 402×874 のとき、body を 402 にしても iOS は 340 より下を描かず、下端の UI が黒い帯に隠れた）。描かれる大きさに合わせる
  */
 export function pickRootSize(s: ViewportSample): RootSize {
   const long = Math.max(s.screen.width, s.screen.height);
@@ -60,7 +61,7 @@ export function pickRootSize(s: ViewportSample): RootSize {
     return best;
   };
   const visual = s.visual && Math.abs(s.visual.scale - 1) < 0.01 ? s.visual : null;
-  let w = pick(
+  const w = pick(
     [
       ['inner', s.inner.width],
       ['client', s.client.width],
@@ -68,7 +69,7 @@ export function pickRootSize(s: ViewportSample): RootSize {
     ],
     capW,
   );
-  let h = pick(
+  const h = pick(
     [
       ['inner', s.inner.height],
       ['client', s.client.height],
@@ -76,10 +77,6 @@ export function pickRootSize(s: ViewportSample): RootSize {
     ],
     capH,
   );
-  if (s.iosStandalone && screenOk) {
-    if (w.value < screenW) w = { value: screenW, source: 'screen' };
-    if (h.value < screenH) h = { value: screenH, source: 'screen' };
-  }
   const width = Math.round(w.value > 0 ? w.value : 1);
   const height = Math.round(h.value > 0 ? h.value : 1);
   return { width, height, source: `${w.source}/${h.source}` };
@@ -147,6 +144,46 @@ export function fitRoot(doc: Document = document): boolean {
   return true;
 }
 
+/**
+ * iOS のホーム画面から横向きで起動したときに、描かれる高さが screen の短辺より小さいか（8-6e。実機: 340 / 402。
+ * 差の 62px は縦向きの上の安全領域と同じ。向きを変えると直る）
+ */
+export function isShortStandalone(s: ViewportSample): boolean {
+  const short = Math.min(s.screen.width, s.screen.height);
+  return s.iosStandalone && s.landscape && ok(short) && s.inner.height < short - 1;
+}
+
+let nudges = 0;
+
+function note(text: string): void {
+  fitHistory.push(`${(performance.now() / 1000).toFixed(2)}s ${text}`);
+  if (fitHistory.length > 10) fitHistory.shift();
+  lastSample = '';
+}
+
+/**
+ * 8-6e の試み: viewport の meta の viewport-fit を一度 auto にして cover に戻し、iOS に安全領域と表示の大きさを測り直させる。
+ * isShortStandalone のときだけ、最大 VIEWPORT_CONFIG.nudge.maxTries 回。結果は ?debug=viewport の記録に出す
+ */
+function nudgeViewport(): void {
+  const { maxTries, restoreMs, checkMs } = VIEWPORT_CONFIG.nudge;
+  if (nudges >= maxTries || !isShortStandalone(sampleViewport())) return;
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  if (!meta?.content.includes('viewport-fit=cover')) return;
+  nudges++;
+  const n = nudges;
+  const original = meta.content;
+  note(`nudge#${n} viewport-fit=auto (inner ${window.innerWidth}x${window.innerHeight})`);
+  meta.content = original.replace('viewport-fit=cover', 'viewport-fit=auto');
+  setTimeout(() => {
+    meta.content = original;
+    setTimeout(() => {
+      fitRoot();
+      note(`nudge#${n} after: inner ${window.innerWidth}x${window.innerHeight}`);
+    }, checkMs);
+  }, restoreMs);
+}
+
 /** 起動の最初に 1 回呼ぶ（main.ts） */
 export function installViewportFit(): void {
   fitRoot();
@@ -158,8 +195,9 @@ export function installViewportFit(): void {
     requestAnimationFrame(now);
     for (const ms of VIEWPORT_CONFIG.recheckMs) setTimeout(now, ms);
   };
-  // 起動から数秒の間（iOS は横向きの起動で、しばらくしてから値が正しくなることがある）
+  // 起動から数秒の間（iOS は横向きの起動で、しばらくしてから値が正しくなることがある）。8-6e: 描かれる高さが足りなければ測り直させる
   for (const ms of VIEWPORT_CONFIG.startupRecheckMs) setTimeout(now, ms);
+  for (const ms of VIEWPORT_CONFIG.nudge.atMs) setTimeout(nudgeViewport, ms);
   window.addEventListener('load', later);
   window.addEventListener('resize', later);
   window.addEventListener('orientationchange', later);

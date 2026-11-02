@@ -1,7 +1,7 @@
 // 8-6d: ルート要素（html・body）の大きさの選び方。iPhone を横向きのまま起動すると、起動直後の初期包含ブロック
 // （CSS の 100%・documentElement.clientHeight）が小さいまま残り、下に黒い余白が出ていた
 import { describe, expect, it } from 'vitest';
-import { pickRootSize, type ViewportSample } from '../src/core/viewport-fit';
+import { isShortStandalone, pickRootSize, type ViewportSample } from '../src/core/viewport-fit';
 
 const IPHONE: ViewportSample = {
   inner: { width: 844, height: 390 },
@@ -23,15 +23,28 @@ describe('pickRootSize（8-6d）', () => {
     expect(pickRootSize(s)).toMatchObject({ width: 844, height: 390 });
   });
 
-  it('ホーム画面から起動（iOS）: inner も client も小さいままなら、screen の大きさ（向きに合わせる）を下限にする', () => {
-    const s: ViewportSample = {
-      ...IPHONE,
-      inner: { width: 844, height: 343 },
-      visual: { width: 844, height: 343, scale: 1 },
-      client: { width: 844, height: 343 },
-      iosStandalone: true,
-    };
-    expect(pickRootSize(s)).toMatchObject({ width: 844, height: 390, source: 'inner/screen' });
+  // 8-6e: 実機（iPhone・ホーム画面から横向きで起動）の値。iOS は 340 より下を描かないので、body も 340 に合わせる
+  // （8-6d は screen の 402 を下限にして、下端の UI が黒い帯に隠れた）
+  const IOS_STANDALONE_SHORT: ViewportSample = {
+    inner: { width: 874, height: 340 },
+    visual: { width: 874, height: 340, scale: 1 },
+    client: { width: 874, height: 340 },
+    screen: { width: 402, height: 874 },
+    iosStandalone: true,
+    landscape: true,
+    capToScreen: true,
+  };
+
+  it('ホーム画面から起動（iOS）で描かれる高さが短いとき: screen ではなく描かれる大きさ（874×340）に合わせる（8-6e）', () => {
+    expect(pickRootSize(IOS_STANDALONE_SHORT)).toMatchObject({ width: 874, height: 340 });
+  });
+
+  it('isShortStandalone: ホーム画面から・横向き・inner が screen の短辺より小さいときだけ（8-6e）', () => {
+    expect(isShortStandalone(IOS_STANDALONE_SHORT)).toBe(true);
+    const fixed = { ...IOS_STANDALONE_SHORT, inner: { width: 874, height: 402 } };
+    expect(isShortStandalone(fixed)).toBe(false);
+    expect(isShortStandalone({ ...IOS_STANDALONE_SHORT, iosStandalone: false })).toBe(false);
+    expect(isShortStandalone({ ...IOS_STANDALONE_SHORT, landscape: false })).toBe(false);
   });
 
   it('Safari（ホーム画面からではない）は screen を下限にしない（ツールバーの分を足さない）', () => {

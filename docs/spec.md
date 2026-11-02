@@ -933,7 +933,7 @@
 
 #### 実機確認の修正 その 2（8-6d。決定は `docs/decisions.md` の 8-6d。点検は `node scripts/ui-audit.js <出力先>` と `node scripts/ui-audit-device.js <出力先>`）
 
-- ルート要素の大きさ（`src/core/viewport-fit.ts`）: `window.innerWidth / innerHeight`・`visualViewport`（拡大していないとき）・`documentElement.clientWidth / clientHeight` の大きい方（タッチの端末は screen の長辺・短辺（向きに合わせる）まで）。iOS のホーム画面から起動したとき（`navigator.standalone`）は screen の大きさを下限にする。CSS 変数 `--app-width / --app-height` に書き、`index.html` の body がこの大きさになって `contain: layout` で position: fixed の画面の基準になる。測り直すのは起動時・起動から 0.1〜5 秒（`VIEWPORT_CONFIG.startupRecheckMs`）・load・resize・向きの変更・pageshow・focus・表示に戻ったとき・visualViewport の resize
+- ルート要素の大きさ（`src/core/viewport-fit.ts`）: `window.innerWidth / innerHeight`・`visualViewport`（拡大していないとき）・`documentElement.clientWidth / clientHeight` の大きい方（タッチの端末は screen の長辺・短辺（向きに合わせる）まで）。8-6e: iOS のホーム画面から横向きで起動して描かれる高さが screen の短辺より小さいとき（実機 340 / 402）は、描かれる大きさに合わせ（screen を下限にしない）、viewport-fit を一度 auto にして戻して測り直させる（`VIEWPORT_CONFIG.nudge`）。CSS 変数 `--app-width / --app-height` に書き、`index.html` の body がこの大きさになって `contain: layout` で position: fixed の画面の基準になる。測り直すのは起動時・起動から 0.1〜5 秒（`VIEWPORT_CONFIG.startupRecheckMs`）・load・resize・向きの変更・pageshow・focus・表示に戻ったとき・visualViewport の resize
 - `?debug=viewport`（ホーム画面のアプリはタイトルの版の表示を 5 回押す。端末に保存し、もう 5 回で消す。`src/ui/viewport-debug-toggle.ts`）: 左上に inner / outer・visualViewport・screen・向き・client・100vh / dvh / svh / lvh・安全領域・ホーム画面からの起動か・ルート要素 / html / body / #app / canvas の実寸と描画バッファ、値が変わった時刻の記録（ルート要素を合わせたときの測った値は起動直後から最新 10 件、表示の値は最新 4 件。時刻は読み込みからの秒）を出す（`src/ui/viewport-debug.ts`。遅延チャンク。fps の表示は出さない）
 - フォント: body に本文のフォント（`--ui-font-body`）。.screen の外に置く要素（記録カードの画面・確認のダイアログ・お知らせ）も受け継ぐ
 - キャンペーン M1〜M5 共通: ミサイルを撃ち尽くして 8 秒で満タンに補充（お知らせ。`src/data/campaign-rules.ts`）。レイドは無し
