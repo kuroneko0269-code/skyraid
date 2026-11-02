@@ -49,4 +49,11 @@ export const APP_SHELL_CONFIG = {
 export const VIEWPORT_CONFIG = {
   /** resize・向きの変更の後に測り直す時刻（ms。iOS は向きの変更の後に大きさが遅れて変わる） */
   recheckMs: [120, 400, 1000],
+  /** 起動から測り直す時刻（ms。8-6d: iOS の横向きの起動で、初期包含ブロックの大きさが遅れて正しくなることがある） */
+  startupRecheckMs: [100, 300, 600, 1000, 1500, 2000, 3000, 5000],
+  /**
+   * 画面の大きさの表示（?debug=viewport）をホーム画面のアプリでも出す: タイトルの版の表示を tapCount 回（tapWindowMs 以内）
+   * 押すと出す / 消す。端末に保存する（storageKey）。ホーム画面のアプリは URL を変えられず、iOS は Safari と保存領域が別のため
+   */
+  debugToggle: { tapCount: 5, tapWindowMs: 3000, storageKey: 'skyraid.debugViewport' },
 } as const;

@@ -26,6 +26,8 @@
   min-height: 0;
   padding: var(--ui-space-3) var(--ui-space-4);
   overflow-y: auto;
+  /* 8-6d: 縦だけスクロールする（overflow-y: auto だけだと横も auto になり、中身が数 px 広いと横にずれる） */
+  overflow-x: hidden;
 }
 
 .hangar-entries {

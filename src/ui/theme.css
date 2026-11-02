@@ -81,6 +81,15 @@
   --ui-safe-left: env(safe-area-inset-left, 0px);
 }
 
+/*
+ * 8-6d: アプリの外側（body の直下）に置く要素（記録カードの画面・確認のダイアログ・お知らせなど）も、アプリのフォントを受け継ぐ。
+ * それまでは本文のフォントを .screen にだけ指定していたので、.screen の外の要素はブラウザ既定（明朝体・serif）で出ていた。
+ * 大きさ・色は変えない（各部品が指定する）
+ */
+body {
+  font-family: var(--ui-font-body);
+}
+
 /* ---- チャンファーの枠: 内側の 1px の線 + 切った角の斜めの線（グラデーション）+ 塗り ---- */
 :where(.ui-button),
 :where(.ui-panel),

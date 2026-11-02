@@ -32,7 +32,7 @@ export function createSaveSettings(
     window.location.reload();
   },
 ): void {
-  const box = el('div', 'save-settings', panel);
+  const box = el('div', 'save-settings save-data', panel);
   el('div', 'save-settings-heading', box, t('save.heading'));
   const row = el('div', 'save-settings-row', box);
   const copy = button(row, t('save.copy'));

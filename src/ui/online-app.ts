@@ -77,7 +77,9 @@ export function startOnline(env: OnlineEnv, p: OnlineLinkParts): void {
 
   // 設定の「オンライン連携」と「メンバー管理」（owner だけ。7-4b）（セーブデータの欄の上）
   const panel = screens.settings.slot('data');
-  const saveBox = panel.querySelector('.save-settings');
+  // 8-6d: セーブデータの欄（.save-data）の前に。それまでは最初の .save-settings（8-1 から先頭にあるパイロット名の欄）の前に
+  // 入っていたので、データのタブの 2 列で、オンライン連携の欄の「今の名前」とパイロット名の欄が同じ段に並んでいた
+  const saveBox = panel.querySelector('.save-data');
   say = createOnlineSettings(panel, service, saveBox).say;
   const members = createMemberSettings(
     panel,

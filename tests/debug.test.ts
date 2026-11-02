@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseDebugFlags } from '../src/core/debug-flags';
+import { parseDebugFlags, parseViewportDebug } from '../src/core/debug-flags';
 import { FrameStats } from '../src/core/frame-stats';
 
 describe('parseDebugFlags', () => {
@@ -11,6 +11,16 @@ describe('parseDebugFlags', () => {
   it('?debug=input は従来どおり入力ログを有効にする', () => {
     expect(parseDebugFlags('?debug=input')).toEqual({ overlay: true, logInput: true });
     expect(parseDebugFlags('?foo=1&debug=input')).toMatchObject({ logInput: true });
+  });
+
+  it('?debug=viewport（8-6d）は画面の大きさの表示だけ（fps のオーバーレイは出さない）', () => {
+    expect(parseViewportDebug('?debug=viewport')).toBe(true);
+    expect(parseDebugFlags('?debug=viewport')).toEqual({ overlay: false, logInput: false });
+    expect(parseDebugFlags('?debug=viewport&debug=input')).toEqual({
+      overlay: true,
+      logInput: true,
+    });
+    expect(parseViewportDebug('?debug')).toBe(false);
   });
 
   it('指定なしならどちらも無効', () => {

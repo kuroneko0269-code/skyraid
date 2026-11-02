@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { createCombatInput } from '../src/combat/combat-system';
 import { AssistControl } from '../src/core/assist-control';
 import { createRandom } from '../src/core/random';
-import { FIRST_SORTIE_MISSION, TRAINING_MISSION } from '../src/data/missions';
+import { MISSIONS, TRAINING_MISSION } from '../src/data/missions';
+import { raidMission } from '../src/data/missions-special';
 import type { DifficultySpec } from '../src/data/ai';
 import { getGroundHeight } from '../src/render/terrain-height';
 import { BEGINNER, PilotBot } from './ai-sim';
@@ -51,11 +52,12 @@ function runM1(seed: number, skill: DifficultySpec): { status: string; resupplie
 const HUMAN_GUN = { gunBurstSeconds: 2, gunPauseSeconds: 0.5 };
 
 describe('M1 訓練: ミサイルを外し切っても機銃で倒せる（8-6b）', () => {
-  it('M1 の敵機は HP ×0.6（120 → 72）、ミサイルは撃ち尽くして 8 秒で補充。ミサイルの補充は M1 だけ', () => {
+  it('M1 の敵機は HP ×0.6（120 → 72）、ミサイルは撃ち尽くして 8 秒で補充。8-6d: 補充はキャンペーン M1〜M5 共通（レイドには無い）', () => {
     const spawn = TRAINING_MISSION.spawns[0];
     expect(spawn?.kind === 'enemyFighter' && spawn.hpScale).toBe(0.6);
-    expect(TRAINING_MISSION.missileResupplySeconds).toBe(8);
-    expect(FIRST_SORTIE_MISSION.missileResupplySeconds).toBeUndefined();
+    expect(MISSIONS.map((m) => m.missileResupplySeconds)).toEqual([8, 8, 8, 8, 8]);
+    expect(raidMission('normal').missileResupplySeconds).toBeUndefined();
+    expect(raidMission('hard').missileResupplySeconds).toBeUndefined();
   });
 
   it('初心者役が機銃だけ（ミサイルを撃たない）で 8 シード中 6 回以上成功（8-6b の前は 4 回）', () => {

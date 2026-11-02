@@ -1003,7 +1003,7 @@
     "signIn": "ログイン",
     "reenterEmail": "メールを入れ直す",
     "recheck": "承認を再確認",
-    "nameHint": "ランキングとメンバー一覧にはこの名前が出ます",
+    "nameHint": "ランキングとメンバー一覧には、パイロット名「{name}」が出ます（変更は「パイロット名」の欄で）",
     "signOut": "ログアウト",
     "checkEmail": "メールアドレスを確かめてください",
     "sending": "送信中…",
@@ -1119,7 +1119,17 @@
     "pending": "承認待ち（{count}）",
     "approved": "承認済み（{count}）",
     "empty": "ありません",
-    "loading": "読み込み中…"
+    "loading": "読み込み中…",
+    "col": {
+      "name": "名前",
+      "requested": "申請日",
+      "status": "状態",
+      "actions": "操作"
+    },
+    "status": {
+      "pending": "承認待ち",
+      "approved": "承認済み"
+    }
   },
   "info": {
     "title": "情報",

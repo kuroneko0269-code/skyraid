@@ -1,10 +1,11 @@
-/* global console, process, document, window, localStorage, getComputedStyle, setTimeout */
+/* global console, process, document, localStorage, getComputedStyle, setTimeout */
 // 実機確認の修正（8-6）の点検: 開発サーバーで、iPhone 横画面（844×390・タッチ）を模して確かめる。
 // - tap: 少しずれたタップ（指が 8〜20px 動く）でも設定のタブ・モード選択のカード・セグメントが選ばれる。1 回のタップで
 //   クリックは 1 回だけ。30px 動かしたとき・一覧をスクロールしたときは選ばない
 // - viewport: canvas が画面の端まで（844×390）。iOS のように window.innerWidth / innerHeight が古い値でも、縦 → 横に
-//   向きを変えた後も、描画バッファの縦横比が canvas と同じ
-// - members: メンバー管理の行の高さが自分の行（ボタンなし）とほかの人の行でそろう
+//   向きを変えた後も、描画バッファの縦横比が canvas と同じ。8-6d: ホーム画面から起動で inner・client が小さい値のままでも
+// - debug: 画面の大きさの表示（8-6d。?debug=viewport・タイトルの版の表示を 5 回押す）
+// - members: メンバー管理の行の高さが自分の行（ボタンなし）とほかの人の行でそろう（8-6d: 1 人 1 行の表）
 // - nozzle: 戦闘機 4 機種の排気と噴流（画質 3 × アフターバーナーの有無、横と斜め後ろ）を PNG に。噴流の後ろの黒い画素と
 //   HalfFloat の描画先の NaN を数える（8-6b。scripts/ui-audit-device-nozzle.js）
 // 使い方: `node scripts/ui-audit-device.js <出力先>`。結果は <出力先>/device.json と PNG
@@ -12,6 +13,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createServer } from 'vite';
 import { auditNozzles } from './ui-audit-device-nozzle.js';
+import { auditViewport, auditViewportDebug } from './ui-audit-device-viewport.js';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
 const out = process.argv[2] ?? 'device-audit';
@@ -155,59 +157,6 @@ async function auditTap(browser, base) {
   return rows;
 }
 
-const canvasState = (page) =>
-  page.evaluate(() => {
-    const c = document.querySelector('#app > canvas');
-    const r = c.getBoundingClientRect();
-    return {
-      rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)],
-      buffer: [c.width, c.height],
-      inner: [window.innerWidth, window.innerHeight],
-    };
-  });
-
-const fills = (s, view) =>
-  s.rect[0] === 0 &&
-  s.rect[1] === 0 &&
-  s.rect[2] === view.width &&
-  s.rect[3] === view.height &&
-  Math.abs(s.buffer[0] / s.buffer[1] - view.width / view.height) < 0.01;
-
-async function auditViewport(browser, base) {
-  const rows = [];
-  // 1. ふつうに横向きで起動
-  let ctx = await touchContext(browser);
-  let page = await ctx.newPage();
-  await toTitle(page, base);
-  let s = await canvasState(page);
-  rows.push({ what: '横向きで起動', ok: fills(s, VIEW), ...s });
-  await page.screenshot({ path: `${out}/viewport-landscape.png` });
-  await ctx.close();
-  // 2. iOS のように innerWidth / innerHeight が古い（小さい）値のまま（resize も来ない）
-  ctx = await touchContext(browser);
-  await ctx.addInitScript(() => {
-    Object.defineProperty(window, 'innerWidth', { get: () => 600 });
-    Object.defineProperty(window, 'innerHeight', { get: () => 280 });
-  });
-  page = await ctx.newPage();
-  await toTitle(page, base);
-  s = await canvasState(page);
-  rows.push({ what: 'innerWidth / innerHeight が古い値（600×280）', ok: fills(s, VIEW), ...s });
-  await page.screenshot({ path: `${out}/viewport-stale-inner.png` });
-  await ctx.close();
-  // 3. 縦で起動して横に向きを変える
-  ctx = await touchContext(browser, { width: VIEW.height, height: VIEW.width });
-  page = await ctx.newPage();
-  await toTitle(page, base);
-  await page.setViewportSize(VIEW);
-  await page.waitForTimeout(1500);
-  s = await canvasState(page);
-  rows.push({ what: '縦で起動 → 横に回す', ok: fills(s, VIEW), ...s });
-  await page.screenshot({ path: `${out}/viewport-rotated.png` });
-  await ctx.close();
-  return rows;
-}
-
 async function auditMembers(browser, base) {
   const ctx = await touchContext(browser);
   const page = await ctx.newPage();
@@ -243,21 +192,23 @@ async function auditMembers(browser, base) {
       load: () => Promise.resolve(rows),
       clear: () => undefined,
       renameSelf: () => false,
+      act: () => Promise.resolve(false),
     };
     const panel = document.createElement('div');
     panel.className = 'settings-grid';
-    // 設定の 2 列の 1 列（844×390 で約 344px）
-    panel.style.width = '344px';
+    // 8-6d: メンバー管理は設定の 2 列をまたいで横幅いっぱい（844×390 で約 700px）。狭い 568×320 は約 500px
+    panel.style.width = '500px';
     panel.style.color = '#fff';
     document.body.appendChild(panel);
     const m = createMemberSettings(panel, admin, null);
     m.update({ owner: true, userId: 'u0' }, 'AUDIT');
     await new Promise((r) => setTimeout(r, 200));
-    return [...document.querySelectorAll('.member-row')].map((r) => ({
+    // 8-6d: 行は display: contents（セルを表の格子に並べる）なので、行の高さは名前のセルで測る
+    return [...document.querySelectorAll('.member-row:not(.member-header)')].map((r) => ({
       name: r.querySelector('.member-name')?.textContent ?? '',
-      height: Math.round(r.getBoundingClientRect().height * 10) / 10,
+      height: Math.round(r.querySelector('.member-name').getBoundingClientRect().height * 10) / 10,
       buttons: r.querySelectorAll('button').length,
-      font: getComputedStyle(r).fontSize,
+      font: getComputedStyle(r.querySelector('.member-name')).fontSize,
     }));
   });
   await page.locator('.member-settings').screenshot({ path: `${out}/members.png` });
@@ -273,10 +224,12 @@ const browser = await chromium.launch({
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
 let failed = 0;
+const env = { browser, base, out, view: VIEW, touchContext, toTitle };
 try {
   const result = {
     tap: await auditTap(browser, base),
-    viewport: await auditViewport(browser, base),
+    viewport: await auditViewport(env),
+    debug: await auditViewportDebug(env),
     members: await auditMembers(browser, base),
     nozzle: await auditNozzles(browser, base, out),
   };

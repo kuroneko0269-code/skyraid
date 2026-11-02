@@ -193,7 +193,7 @@ export class GamePlay {
   }
 
   /**
-   * ミサイルの補充（8-6b。M1）: 撃ち尽くして missileResupplySeconds たったら満タンに戻し、HUD に知らせる。
+   * ミサイルの補充（8-6b。8-6d でキャンペーン共通）: 撃ち尽くして missileResupplySeconds たったら満タンに戻し、HUD に知らせる。
    * 撃ち尽くすと機銃だけでは初見の人が敵を倒せなかったため
    */
   private stepResupply(dt: number): void {

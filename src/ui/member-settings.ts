@@ -1,6 +1,8 @@
 // 設定の「メンバー管理」（7-4b）: owner（app_metadata.roles.skyraid = 'owner'）のときだけ出す。
 // 承認待ちの一覧（承認 / 却下）と承認済みの一覧（取り消し）。承認・却下は 1 タップで確定、取り消しだけ確認のダイアログ。
-// 権限はサーバー（SQL の is_owner）が確かめる。ここでの出し分けは見た目だけ
+// 権限はサーバー（SQL の is_owner）が確かめる。ここでの出し分けは見た目だけ。
+// 8-6d: 1 人 1 行（名前・申請日・状態・操作）の詰めた表にし、設定の 2 列をまたいで横幅いっぱいに置く（online.css）。
+// 承認待ち → 承認済みの順に 1 つの表に並べ、件数は見出しの横に出す
 import './online.css';
 import { t } from '../core/i18n';
 import type { MemberAdmin } from '../online/member-admin';
@@ -55,14 +57,14 @@ export function createMemberSettings(
   box.className = 'save-settings online-settings member-settings';
   box.hidden = true;
   panel.insertBefore(box, before);
-  el('div', 'save-settings-heading', box, t('members.heading'));
+  const head = el('div', 'member-head', box);
+  el('div', 'save-settings-heading', head, t('members.heading'));
+  const counts = el('div', 'member-counts', head);
+  const reload = smallButton(head, t('members.reload'), 'member-reload');
   const note = el('div', 'save-settings-status online-note', box);
   note.hidden = true;
-  const pendingHead = el('div', 'member-heading', box);
-  const pendingList = el('div', 'member-list', box);
-  const approvedHead = el('div', 'member-heading', box);
-  const approvedList = el('div', 'member-list', box);
-  const reload = smallButton(box, t('members.reload'), 'settings-item');
+  const table = el('div', 'member-table', box);
+  table.setAttribute('role', 'table');
 
   let selfId: string | null = null;
   let loaded = false;
@@ -88,13 +90,31 @@ export function createMemberSettings(
     }
   };
 
-  const row = (parent: HTMLElement, line: MemberLine, actions: readonly MemberAction[]): void => {
-    const r = el('div', 'member-row', parent);
-    el('span', 'member-name', r, line.self ? t('members.self', { name: line.name }) : line.name);
-    el('span', 'member-date', r, line.requested);
+  const cell = (parent: HTMLElement, cls: string, text = ''): HTMLElement => {
+    const c = el('div', `member-cell ${cls}`, parent, text);
+    c.setAttribute('role', 'cell');
+    return c;
+  };
+
+  const row = (
+    line: MemberLine,
+    status: 'pending' | 'approved',
+    actions: readonly MemberAction[],
+  ): void => {
+    const r = el('div', `member-row is-${status}`, table);
+    r.setAttribute('role', 'row');
+    const name = cell(
+      r,
+      'member-name',
+      line.self ? t('members.self', { name: line.name }) : line.name,
+    );
+    name.title = name.textContent;
+    cell(r, 'member-date', line.requested);
+    cell(r, 'member-status', t(`members.status.${status}`));
+    const ops = cell(r, 'member-actions');
     for (const a of actions) {
       const b = smallButton(
-        r,
+        ops,
         t(`members.action.${a}`),
         a === 'approve' ? 'is-primary' : 'is-danger',
       );
@@ -108,13 +128,21 @@ export function createMemberSettings(
 
   function render(): void {
     const lists = memberLists(admin.rows, selfId);
-    pendingHead.textContent = t('members.pending', { count: lists.pending.length });
-    approvedHead.textContent = t('members.approved', { count: lists.approved.length });
-    pendingList.replaceChildren();
-    approvedList.replaceChildren();
-    if (lists.pending.length === 0) el('div', 'member-empty', pendingList, t('members.empty'));
-    for (const l of lists.pending) row(pendingList, l, ['approve', 'reject']);
-    for (const l of lists.approved) row(approvedList, l, l.self ? [] : ['revoke']);
+    counts.textContent = `${t('members.pending', { count: lists.pending.length })}  ${t('members.approved', { count: lists.approved.length })}`;
+    table.replaceChildren();
+    const header = el('div', 'member-row member-header', table);
+    header.setAttribute('role', 'row');
+    for (const [cls, key] of [
+      ['member-name', 'members.col.name'],
+      ['member-date', 'members.col.requested'],
+      ['member-status', 'members.col.status'],
+      ['member-actions', 'members.col.actions'],
+    ] as const)
+      el('div', `member-cell ${cls}`, header, t(key)).setAttribute('role', 'columnheader');
+    for (const l of lists.pending) row(l, 'pending', ['approve', 'reject']);
+    for (const l of lists.approved) row(l, 'approved', l.self ? [] : ['revoke']);
+    if (lists.pending.length + lists.approved.length === 0)
+      el('div', 'member-empty', table, t('members.empty'));
     reload.disabled = busy;
   }
 

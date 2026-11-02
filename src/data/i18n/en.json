@@ -1013,7 +1013,7 @@
     "signIn": "Sign In",
     "reenterEmail": "Change Email",
     "recheck": "Recheck",
-    "nameHint": "This name is shown in rankings and the member list",
+    "nameHint": "Rankings and the member list show your pilot name \"{name}\" (change it under Pilot Name)",
     "signOut": "Sign Out",
     "checkEmail": "Check your email address",
     "sending": "Sending…",
@@ -1131,7 +1131,17 @@
     "pending": "Pending ({count})",
     "approved": "Approved ({count})",
     "empty": "None",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "col": {
+      "name": "Name",
+      "requested": "Requested",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved"
+    }
   },
   "info": {
     "title": "About",

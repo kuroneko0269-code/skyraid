@@ -260,7 +260,8 @@ export interface MissionDef {
    */
   readonly practice?: boolean;
   /**
-   * ミサイルの補充（8-6b。M1 だけ）: 撃ち尽くして（自機が飛んでいる間に）この秒数たつと満タンに戻す。省略は補充なし
+   * ミサイルの補充（8-6b。8-6d でキャンペーン M1〜M5 共通）: 撃ち尽くして（自機が飛んでいる間に）この秒数たつと満タンに戻す。
+   * 省略は補充なし（レイド）
    */
   readonly missileResupplySeconds?: number;
 }
