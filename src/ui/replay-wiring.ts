@@ -1,5 +1,7 @@
 // リプレイ（7-B）の部品を組み立てる（main.ts が 300 行を超えないよう分けた）: 再生のカメラ（自由カメラはフォトモードの
-// 操作を流用）・再生中の操作・一覧と保存の配線
+// 操作を流用）・再生中の操作・一覧と保存の配線。
+// 8-2: 一覧と再生中の操作（replay-ui.ts）は別のチャンクにし、一覧を開くときに読む。再生のカメラ（作るときのカメラの
+// 画角を覚える）と記録・保存は起動時のまま。replay.css はリザルトの「リプレイを保存」も使うので起動時に読む（並びも 7-B と同じ位置）
 import type { PerspectiveCamera } from 'three';
 import type { GameAudio } from '../audio/game-audio';
 import type { CommonKeys } from '../core/common-keys';
@@ -18,8 +20,10 @@ import type { WeatherView } from '../render/weather/weather-view';
 import type { ReplayHub } from '../replay/hub';
 import type { SimWorld } from '../replay/sim';
 import { attachPhotoGestures } from './photo/photo-gestures';
-import { createReplayLink, type ReplayLink } from './replay-link';
-import { ReplayPlayback } from './replay-playback';
+import { lazyChunk } from '../core/lazy-chunk';
+import { loadChunk } from './lazy-load';
+import { createReplayLink, PlaybackSlot, type ReplayLink } from './replay-link';
+import './replay.css';
 
 export interface ReplayWiringParts {
   readonly game: GameState;
@@ -46,11 +50,17 @@ export interface ReplayWiringParts {
 
 export function createReplayWiring(p: ReplayWiringParts): {
   link: ReplayLink;
-  playback: ReplayPlayback;
+  playback: PlaybackSlot;
 } {
   const session = p.world.play.session;
   const cameras = new ReplayCameras(p.camera, p.playerView.mesh, session, p.groundHeight);
-  const playback = new ReplayPlayback({ ...p, cameras });
+  const playback = new PlaybackSlot();
+  const chunk = lazyChunk(() => import('./replay-ui'));
+  const loadUi = async (): Promise<Awaited<ReturnType<typeof chunk>> | null> => {
+    const ui = await loadChunk(chunk);
+    if (ui) playback.impl ??= new ui.ReplayPlayback({ ...p, cameras });
+    return ui;
+  };
   // 自由カメラ: フォトモードと同じ操作（ドラッグで回転・2 本指 / 右ドラッグで平行移動・ピンチ / ホイールで寄る）
   attachPhotoGestures(
     p.canvas,
@@ -78,6 +88,7 @@ export function createReplayWiring(p: ReplayWiringParts): {
     world: p.world,
     save: p.save,
     playback,
+    loadUi,
     resultExtras: p.resultExtras,
   });
   return { link, playback };

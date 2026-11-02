@@ -10,6 +10,7 @@
     "check": "tsc --noEmit && eslint .",
     "test": "vitest run",
     "bench": "node scripts/bench.js",
+    "perf": "npm run build && node scripts/perf.js",
     "unused": "knip",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -27,6 +28,7 @@
     "fake-indexeddb": "^6.2.7",
     "jsqr": "^1.4.0",
     "knip": "^6.44.1",
+    "lighthouse": "^13.6.0",
     "prettier": "^3.9.10",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",

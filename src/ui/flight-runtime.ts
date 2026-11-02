@@ -11,7 +11,7 @@ import type { DefenseLink } from './defense-link';
 import { linkFlightLoop, type FlightLoopParts } from './flight-loop';
 import { createFlightStarter, type FlightStartParts } from './flight-start';
 import type { KaijuHudLink } from '../render/kaiju-hud-link';
-import { createPhotoMode, type PhotoLink } from './photo/photo-link';
+import { createPhotoMode, type PhotoEntry } from './photo/photo-entry';
 import type { RaceLink } from './race-link';
 import { createReplayWiring } from './replay-wiring';
 
@@ -31,7 +31,7 @@ export type FlightRuntimeParts = Omit<FlightStartParts, 'world' | 'replay' | 'ra
     readonly simWorld: SimWorld & { pristine: StateSnapshot | null };
   };
 
-export function startFlightRuntime(p: FlightRuntimeParts): { photo: PhotoLink } {
+export function startFlightRuntime(p: FlightRuntimeParts): { photo: PhotoEntry } {
   const { game, screens, race, defense, replayHub, simWorld, pvp, touch } = p;
   const startFlight = createFlightStarter({
     ...p,
@@ -70,26 +70,34 @@ export function startFlightRuntime(p: FlightRuntimeParts): { photo: PhotoLink } 
   p.aircraftMesh.visible = false;
   const frame = new FlightFrame({ ...p, touch: p.touchControls });
   // フォトモード（7-A）: ポーズメニュー・P キー。フリーフライト・キャンペーン・ソロのレイド（7-B: リプレイも）だけ（時間は止める）
-  const photo = createPhotoMode({
-    game,
-    canvas: p.canvas,
-    camera: p.camera,
-    pipeline: p.pipeline,
-    playerView: p.playerView,
-    views: p.views,
-    pause: screens.pause,
-    groundHeight: p.groundHeight,
-    weather: p.world.weather,
-    audio: p.audio,
-    save: p.save,
-    allowed: () => !pvp.flying && !screens.inTutorial,
-    simulate,
-    stepSeconds: loop.stepSeconds,
-    refreshTouch: () => {
-      touch.refresh();
+  const photo = createPhotoMode(
+    {
+      game,
+      canvas: p.canvas,
+      camera: p.camera,
+      pipeline: p.pipeline,
+      playerView: p.playerView,
+      views: p.views,
+      pause: screens.pause,
+      groundHeight: p.groundHeight,
+      weather: p.world.weather,
+      audio: p.audio,
+      save: p.save,
+      allowed: () => !pvp.flying && !screens.inTutorial,
+      simulate,
+      stepSeconds: loop.stepSeconds,
+      refreshTouch: () => {
+        touch.refresh();
+      },
     },
+    frame,
+  );
+  // 8-2: モード選択を開いたら、遅延読み込みのフォトモードと怪獣のモデルを先に読んでおく（タイトルの表示を遅らせない）
+  game.onChange(({ to }) => {
+    if (to !== 'mode_select') return;
+    photo.prefetch();
+    p.views.prefetchKaiju();
   });
-  frame.photo = photo;
   // リプレイ（7-B）: 一覧・再生・保存
   const replay = createReplayWiring({
     ...p,

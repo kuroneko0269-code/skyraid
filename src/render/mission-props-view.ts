@@ -1,6 +1,8 @@
 // ミッションの出現物（2-5）の描画: 輸送機（4-3 の機体モデルの生成器。太い胴体・高翼・4 発）と怪獣（6-1。
 // 手続き生成のモデル kaiju-model/。部位 6 + 熱線 + 岩で draw call 8）。出ていないものは描かない。
-// 怪獣の表示元は差し替えられる（協力のクライアントはホストの状態の写し。6-2）。地上目標（2-6）は ground-target-view.ts
+// 怪獣の表示元は差し替えられる（協力のクライアントはホストの状態の写し。6-2）。地上目標（2-6）は ground-target-view.ts。
+// 8-2: 怪獣のモデル（kaiju-model/）は別のチャンクにし、モード選択を開いたとき（prefetchKaiju）か、怪獣が出たときに読んで作る
+// （作るまでの演出の時間はためておき、作った最初のフレームで渡す。読み込みの表示と失敗の扱いは ui/lazy-load.ts）
 import {
   Color,
   DynamicDrawUsage,
@@ -8,8 +10,11 @@ import {
   Matrix4,
   Vector3,
   type BufferGeometry,
+  type Object3D,
   type Scene,
 } from 'three';
+import { lazyChunk } from '../core/lazy-chunk';
+import { loadChunk } from '../ui/lazy-load';
 import type { KaijuBodyView, KaijuEffectsView } from '../entities/kaiju-display';
 import type { MissionProps } from '../missions/mission-props';
 import type { AircraftDetail } from '../data/aircraft-model';
@@ -17,7 +22,10 @@ import { TRANSPORT_SHAPE } from '../data/aircraft-shapes';
 import { hitFlashScale } from './aircraft-model/accumulator';
 import { buildAircraft } from './aircraft-model/build';
 import { createPaintMaterial } from './aircraft-model/material';
-import { KaijuObject } from './kaiju-model/kaiju-object';
+import type { KaijuObject } from './kaiju-model/kaiju-object';
+
+/** 怪獣のモデルのチャンク（8-2） */
+const kaijuModelChunk = lazyChunk(() => import('./kaiju-model/kaiju-object'));
 
 const WHITE = new Color(0xffffff);
 const FLASH = 0.75;
@@ -47,15 +55,21 @@ function createInstanced(geometry: BufferGeometry, hex: number, count: number): 
 
 export class MissionPropsView {
   private readonly transports: InstancedMesh;
-  private readonly kaiju: KaijuObject;
+  /** 怪獣のモデル（8-2: 読み込むまで null） */
+  private kaiju: KaijuObject | null = null;
+  /** 怪獣のモデルを作るまでにたまった演出の時間（秒） */
+  private kaijuPendingSeconds = 0;
+  private kaijuRequested = false;
   /** 怪獣の表示元（null はミッションの怪獣） */
   private kaijuSource: { body: KaijuBodyView; fx: KaijuEffectsView | null } | null = null;
   private detail: AircraftDetail = 'high';
   private lastMs: number | null = null;
 
   constructor(
-    scene: Scene,
+    private readonly scene: Scene,
     private readonly props: MissionProps,
+    /** フォトモードの「敵・怪獣」の表示の切替の組（後から作る怪獣のモデルもここに入れる） */
+    private readonly photoGroup: Object3D[],
   ) {
     // 色は頂点の色（TRANSPORT_SHAPE）。インスタンスの色は被弾の光だけ
     this.transports = createInstanced(
@@ -63,8 +77,30 @@ export class MissionPropsView {
       0xffffff,
       props.transports.length,
     );
-    this.kaiju = new KaijuObject('high');
-    scene.add(this.transports, ...this.kaiju.objects);
+    scene.add(this.transports);
+  }
+
+  /** 怪獣のモデルを先に読んで作っておく（表示なし。失敗しても怪獣が出たときにやり直す） */
+  prefetchKaiju(): void {
+    kaijuModelChunk().then(
+      () => {
+        this.createKaiju();
+      },
+      () => undefined,
+    );
+  }
+
+  /** 読み込み済みなら怪獣のモデルを作ってシーンに足す（7-A までと同じく 'high' で作ってから今の画質に） */
+  private createKaiju(): KaijuObject | null {
+    if (this.kaiju) return this.kaiju;
+    const m = kaijuModelChunk.loaded();
+    if (!m) return null;
+    const kaiju = new m.KaijuObject('high');
+    if (this.detail !== 'high') kaiju.setDetail(this.detail);
+    this.scene.add(...kaiju.objects);
+    this.photoGroup.push(...kaiju.objects);
+    this.kaiju = kaiju;
+    return kaiju;
   }
 
   /** 画質（「低」は LOD）。変わったら輸送機のジオメトリを作り直す */
@@ -73,7 +109,7 @@ export class MissionPropsView {
     this.detail = detail;
     this.transports.geometry.dispose();
     this.transports.geometry = createTransportGeometry(detail);
-    this.kaiju.setDetail(detail);
+    this.kaiju?.setDetail(detail);
   }
 
   /** 怪獣の表示元を差し替える（協力のクライアント。null でミッションの怪獣に戻す） */
@@ -118,8 +154,25 @@ export class MissionPropsView {
     const dt = this.lastMs === null ? 0 : Math.min(0.1, (now - this.lastMs) / 1000);
     this.lastMs = now;
     const src = this.kaijuSource;
-    if (src) this.kaiju.update(src.body, src.fx, alpha, dt);
-    else this.kaiju.update(this.props.kaiju, this.props.kaijuAi, alpha, dt);
+    const body = src ? src.body : this.props.kaiju;
+    const kaiju = this.kaiju ?? this.createKaiju();
+    if (!kaiju) {
+      this.kaijuPendingSeconds += dt;
+      // 怪獣が出たのにまだ読んでいない（先読みの前・失敗の後）: 表示付きで読む。読めたら次のフレームで作る
+      if (body.visible && !this.kaijuRequested) {
+        this.kaijuRequested = true;
+        void loadChunk(kaijuModelChunk).finally(() => {
+          this.kaijuRequested = false;
+        });
+      }
+      return;
+    }
+    if (this.kaijuPendingSeconds > 0) {
+      kaiju.advanceTime(this.kaijuPendingSeconds);
+      this.kaijuPendingSeconds = 0;
+    }
+    if (src) kaiju.update(src.body, src.fx, alpha, dt);
+    else kaiju.update(this.props.kaiju, this.props.kaijuAi, alpha, dt);
   }
 }
 

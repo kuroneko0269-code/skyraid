@@ -1,4 +1,5 @@
-// 7-D: 「情報」画面の中身をビルド時に作る仮想モジュール virtual:app-info（版と使用ライブラリのライセンス一覧）。
+// 7-D: 「情報」画面の中身をビルド時に作る仮想モジュール virtual:app-info（版・BGM の有無）と virtual:app-licenses
+// （使用ライブラリのライセンス一覧。8-2 で分けた: 本文が大きいので、情報画面を開いたときに読むチャンクにだけ入れる）。
 // 版は package.json の version。ライセンスは package.json の dependencies から依存をたどり（実行時に配信される JS に入るもの）、
 // Service Worker（vite-plugin-pwa の generateSW）が埋め込む workbox を足す。各パッケージの package.json と LICENSE を読む
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -14,6 +15,8 @@ export interface LicenseEntry {
 
 const VIRTUAL_ID = 'virtual:app-info';
 const RESOLVED_ID = `\0${VIRTUAL_ID}`;
+const LICENSES_ID = 'virtual:app-licenses';
+const RESOLVED_LICENSES_ID = `\0${LICENSES_ID}`;
 /** Service Worker に入る workbox（generateSW の出力が import するもの） */
 export const SW_PACKAGES = [
   'workbox-core',
@@ -107,14 +110,16 @@ export function appInfo(root: string): Plugin {
   return {
     name: 'skyraid-app-info',
     resolveId(id) {
-      return id === VIRTUAL_ID ? RESOLVED_ID : null;
+      if (id === VIRTUAL_ID) return RESOLVED_ID;
+      return id === LICENSES_ID ? RESOLVED_LICENSES_ID : null;
     },
     load(id) {
+      if (id === RESOLVED_LICENSES_ID)
+        return `export const LICENSES = ${JSON.stringify(collectLicenses(root))};`;
       if (id !== RESOLVED_ID) return null;
       const version = str(readJson(`${root}/package.json`).version);
       return [
         `export const APP_VERSION = ${JSON.stringify(version)};`,
-        `export const LICENSES = ${JSON.stringify(collectLicenses(root))};`,
         `export const BGM_FILES = ${JSON.stringify(listPublic(root, 'audio/bgm'))};`,
       ].join('\n');
     },

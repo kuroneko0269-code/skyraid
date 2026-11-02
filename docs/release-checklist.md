@@ -10,6 +10,7 @@ npm ci
 npm run check && npm test && npm run build     # 型・lint・テスト・本番ビルド
 npm run bench                                  # 時間の計測（スキンの生成 50ms 以内）
 npm run unused                                 # 使われていないコード・依存（knip）
+npm run perf                                   # チャンク一覧・起動時間・Lighthouse（8-2。docs/perf.md）
 node scripts/ui-audit.js <出力先> --release    # 本番ビルド（dist）を _headers 付きで配信して点検（Playwright）
 npm run dev & node scripts/ui-audit.js <出力先> # 3 サイズの UI の点検（開発サーバー）
 ```
@@ -32,6 +33,7 @@ npm run dev & node scripts/ui-audit.js <出力先> # 3 サイズの UI の点検
 | 10 | UI の 3 サイズ | `scripts/ui-audit.js`（568×320・844×390・1920×1080） | ✅ 折り返し・はみ出し・重なり 0。568×320 のモード選択のカードの説明が「…」で切れる警告は 7-D からのもの |
 | 11 | 依存の脆弱性 | `npm audit --omit=dev` | ✅ 配信する依存は 0 件（開発用の eslint・workbox-build に moderate 21 件。配信物には入らない） |
 | 12 | 時間の計測 | `npm run bench` | ✅ スキンの生成 最大 約 40ms（上限 50ms） |
+| 13 | 容量（8-2） | `npm run build` の 500KB 超の警告・`npm run perf` | ✅ 警告なし（最大 `three-webgl` 371KB）。タイトルまでの JS・CSS は gzip 393KB（8-1 は 412KB） |
 
 ## 実機で確認（クラウドでは確かめられない）
 
@@ -42,7 +44,7 @@ npm run dev & node scripts/ui-audit.js <出力先> # 3 サイズの UI の点検
 | P2P の実通信 | 別々の端末・回線で PvP・協力レイド・協力防衛戦の部屋を作って参加し、飛行・撃墜・リザルトまで（PeerJS のシグナリングと WebRTC） | 実機で確認 |
 | ホーム画面に追加 | iOS の Safari の「ホーム画面に追加」・Android の Chrome のインストールで全画面・横向きで起動し、アイコンが正しい。機内モードでも起動する | 実機で確認 |
 | 更新の知らせ | 新しい版をデプロイした後、開いているアプリに「新しいバージョンがあります」が出て、次の起動で切り替わる | 実機で確認 |
-| 実機の性能 | ノート PC の内蔵 GPU で 60fps・スマホで 30fps（8-2 で詳しく） | 実機で確認 |
+| 実機の性能 | ノート PC の内蔵 GPU で 60fps・スマホで 30fps、起動時間（クラウドの値は参考値。`docs/perf.md`） | 実機で確認 |
 | 振動・タッチ | Android の振動、iPhone のタッチ操作とセーフエリア | 実機で確認 |
 
 ## 見つかったこと（今回は直していない）

@@ -2,7 +2,6 @@
 // 3 つのリザルト（ミッション・レース・防衛戦）にそれぞれ置き、中身は ui/replay-link.ts が入れる
 import { REPLAY_CONFIG } from '../data/replay';
 import { el } from './hud-dom';
-import { stopKeys } from './replay-list';
 import { createButton } from './screen';
 
 export class ReplaySaveBox {
@@ -47,4 +46,11 @@ export class ReplaySaveBox {
     this.name.value = defaultName;
     this.note.textContent = '';
   }
+}
+
+/** 文字の入力欄のキーを飛行・メニューの操作（H・P など）に渡さない（Esc は戻るに使う） */
+export function stopKeys(input: HTMLInputElement): void {
+  input.addEventListener('keydown', (e) => {
+    if (e.code !== 'Escape') e.stopPropagation();
+  });
 }

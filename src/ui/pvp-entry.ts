@@ -1,5 +1,8 @@
 // PvP（5-1）の入口。main.ts が静的に読むのはこのファイルだけで、通信（src/net/・peerjs）とロビーは
-// PvP を選んだとき・?room のときに import() で別のチャンクとして読む（シングルプレイの読み込みと性能に影響しない）
+// PvP を選んだとき・?room のときに import() で別のチャンクとして読む（シングルプレイの読み込みと性能に影響しない）。
+// 8-2: 読み込み中の表示と失敗（オフライン・古いチャンク）のお知らせは ui/lazy-load.ts。失敗したら今の画面のまま
+import { lazyChunk } from '../core/lazy-chunk';
+import { loadChunk } from './lazy-load';
 import { DEFAULT_WEATHER_ID } from '../data/weather';
 import type { AircraftDetail } from '../data/aircraft-model';
 import type { Loadout } from '../progression/loadout';
@@ -53,7 +56,7 @@ export function parseNetDebug(search: string): boolean {
 
 export class PvpEntry {
   private link: PvpLink | null = null;
-  private loading: Promise<PvpLink> | null = null;
+  private readonly chunk = lazyChunk(() => import('./pvp-link'));
   private detail: AircraftDetail = 'high';
   private readonly deps: Omit<PvpDeps, 'aircraftDetail'>;
   private readonly room: string | null;
@@ -91,12 +94,12 @@ export class PvpEntry {
     screens.setPvpHandlers({
       onSelect: (raid) => {
         void this.load().then((l) => {
-          l.openLobby(undefined, raid);
+          l?.openLobby(undefined, raid);
         });
       },
       onDefense: (mapId, hard) => {
         void this.load().then((l) => {
-          l.openLobby(undefined, false, { mapId, hard });
+          l?.openLobby(undefined, false, { mapId, hard });
         });
       },
       onBack: () => this.link?.back(),
@@ -104,13 +107,12 @@ export class PvpEntry {
     });
   }
 
-  /** PvP の部分を読み込む（2 回目からは読み込み済みのもの） */
-  load(): Promise<PvpLink> {
-    this.loading ??= import('./pvp-link').then((m) => {
-      this.link = m.createPvpLink({ ...this.deps, aircraftDetail: this.detail });
-      return this.link;
-    });
-    return this.loading;
+  /** PvP の部分を読み込む（2 回目からは読み込み済みのもの）。読み込めなければ null（お知らせは lazy-load が出す） */
+  async load(): Promise<PvpLink | null> {
+    const m = await loadChunk(this.chunk);
+    if (!m) return null;
+    this.link ??= m.createPvpLink({ ...this.deps, aircraftDetail: this.detail });
+    return this.link;
   }
 
   private readonly needsPilotName: () => boolean;
@@ -124,7 +126,7 @@ export class PvpEntry {
     if (!code) return;
     const open = (): void => {
       void this.load().then((l) => {
-        l.openLobby(code);
+        l?.openLobby(code);
       });
     };
     if (!this.needsPilotName()) {

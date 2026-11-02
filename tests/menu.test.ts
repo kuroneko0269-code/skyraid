@@ -1,6 +1,7 @@
 // 7-D: メニューの再設計（自己ベスト（セーブ v9）・カードの進捗・更新履歴・情報画面の版とライセンス）。設定画面の戻り先は tests/game-state.test.ts
 import { describe, expect, it } from 'vitest';
-import { APP_VERSION, LICENSES } from 'virtual:app-info';
+import { APP_VERSION } from 'virtual:app-info';
+import { LICENSES } from 'virtual:app-licenses';
 import changelogText from '../docs/changelog.md?raw';
 import packageText from '../package.json?raw';
 import { parseChangelog } from '../src/core/changelog';

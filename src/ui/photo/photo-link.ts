@@ -1,6 +1,7 @@
 // フォトモード（7-A）の配線: ポーズメニューの「フォトモード」・P キーで入り、Esc / 閉じる / P で飛行へ戻る。
 // 入っている間は固定ステップを止めたまま（コマ送りで 1 回だけ進める）、カメラ・画面の調整・天候・表示を一時的に上書きし、
-// 出るときに戻す。フリーフライト・キャンペーン・ソロのレイドだけ（PvP・協力・チュートリアルは無効）
+// 出るときに戻す。フリーフライト・キャンペーン・ソロのレイドだけ（PvP・協力・チュートリアルは無効）。
+// 8-2: このファイル以下は別のチャンク（初めて入るときに読む）。入口は photo-entry.ts
 import type { Object3D, PerspectiveCamera } from 'three';
 import type { GameAudio } from '../../audio/game-audio';
 import type { GameState } from '../../core/game-state';
@@ -54,18 +55,6 @@ export interface PhotoLinkParts {
   readonly refreshTouch: () => void;
 }
 
-/** フォトモードを作り、ポーズメニューの「フォトモード」をつなぐ（P キーは common-keys の toggle） */
-export function createPhotoMode(p: PhotoLinkParts): PhotoLink {
-  const photo = new PhotoLink(p);
-  p.pause.onPhoto = () => {
-    if (photo.canEnter) p.game.transition('photo');
-  };
-  p.game.onChange(({ to }) => {
-    if (to === 'pause') p.pause.setPhotoAvailable(p.allowed());
-  });
-  return photo;
-}
-
 export class PhotoLink implements PhotoFrameHook {
   private readonly aircraft: Object3D;
   private readonly toolbar: PhotoToolbar;
@@ -109,23 +98,12 @@ export class PhotoLink implements PhotoFrameHook {
         if (this.uiHidden) this.setUiHidden(false);
       },
     });
-    p.game.onChange(({ from, to }) => {
-      if (to === 'photo') this.enter();
-      else if (from === 'photo') this.exit();
-    });
   }
 
-  /** フォトモードに入れるか（飛行中・ポーズ中で、許された遊び方） */
-  get canEnter(): boolean {
-    const s = this.p.game.state;
-    return (s === 'flight' || s === 'pause') && this.p.allowed();
-  }
-
-  /** P キー: 入る / 出る */
-  toggle(): void {
-    const game = this.p.game;
-    if (game.state === 'photo') game.transition('flight');
-    else if (this.canEnter) game.transition('photo');
+  /** 画面の状態が変わった（入る・出る）。8-2: 遅延読み込みのため、つなぎは photo-entry.ts が起動時に付けて呼ぶ */
+  changed(from: string, to: string): void {
+    if (to === 'photo') this.enter();
+    else if (from === 'photo') this.exit();
   }
 
   /** タッチ操作をフォトモードで出すか */
