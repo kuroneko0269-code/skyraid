@@ -1,6 +1,12 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["scripts/*.js", "scripts/bench-*.ts", "tests/state-dump.ts", "src/ui/card/og-image.ts"],
+  "entry": [
+    "scripts/*.js",
+    "scripts/bench-*.ts",
+    "scripts/replay-analysis/main.ts",
+    "tests/state-dump.ts",
+    "src/ui/card/og-image.ts"
+  ],
   "project": ["src/**/*.ts", "scripts/**/*.{ts,js}", "tests/**/*.ts"],
   "ignoreExportsUsedInFile": true,
   "ignoreUnresolved": [

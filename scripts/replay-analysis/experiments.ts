@@ -1,0 +1,197 @@
+// 9-1 操作の診断: 9-2（スティック）・9-3（自動追尾・自動射撃）の推奨値を決める実験。
+// 「模擬の人」に同じミッションを飛ばし、スティックのカーブ・感度・エイムアシストの強さ・自動射撃を 1 つずつ変えて比べる。
+// ゲームの数値（src/data）は変えず、この実験の中だけで差し替える
+import { AIM_ASSIST_CONFIG } from '../../src/data/assist';
+import { BEGINNER_SKILL, findRole, flyMission, type FlightTweaks } from './flight';
+import { DEFAULT_HANDS } from './hands';
+import { ControlAnalyzer } from './metrics';
+import { median, Totals } from './totals';
+
+export interface Experiment {
+  readonly id: string;
+  readonly label: string;
+  readonly tweaks: FlightTweaks;
+}
+
+const A = AIM_ASSIST_CONFIG;
+const hands = (o: Partial<typeof DEFAULT_HANDS>): typeof DEFAULT_HANDS => ({
+  ...DEFAULT_HANDS,
+  ...o,
+});
+
+/**
+ * 難しさの原因の分解: 初心者役のボットから 1 つずつ人の条件を足す（最後が「模擬の人」と同じ）
+ */
+const NO_HANDS = hands({ noise: 0, delay: 0, yaw: true });
+export const DECOMPOSE: readonly Experiment[] = [
+  { id: 'd0', label: '初心者役のボット', tweaks: { skill: BEGINNER_SKILL, hands: null } },
+  {
+    id: 'd1',
+    label: '+ 円いスティック（ピッチとロールの合成が 1 で頭打ち）',
+    tweaks: { skill: BEGINNER_SKILL, hands: NO_HANDS },
+  },
+  {
+    id: 'd2',
+    label: '+ ヨーを使わない（タッチのヨーはボタン）',
+    tweaks: { skill: BEGINNER_SKILL, hands: { ...NO_HANDS, yaw: false } },
+  },
+  {
+    id: 'd3',
+    label: '+ 反応の遅れ 0.2 秒',
+    tweaks: { skill: BEGINNER_SKILL, hands: { ...NO_HANDS, yaw: false, delay: 0.2 } },
+  },
+  { id: 'd4', label: '+ 指のぶれ 0.12', tweaks: { skill: BEGINNER_SKILL, hands: DEFAULT_HANDS } },
+  { id: 'd5', label: '+ 狙いのずれ 4°・9° で撃つ（= 模擬の人）', tweaks: {} },
+];
+
+export const EXPERIMENTS: readonly Experiment[] = [
+  { id: 'base', label: '今の操作（直線・感度 1.0・アシスト 8°/0.25）', tweaks: {} },
+  // 9-2: スティック
+  { id: 'curve1.5', label: 'カーブ 1.5', tweaks: { hands: hands({ curve: 1.5 }) } },
+  { id: 'curve2', label: 'カーブ 2.0', tweaks: { hands: hands({ curve: 2 }) } },
+  { id: 'sens0.8', label: '感度 0.8（直線）', tweaks: { hands: hands({ sensitivity: 0.8 }) } },
+  { id: 'sens0.6', label: '感度 0.6（直線）', tweaks: { hands: hands({ sensitivity: 0.6 }) } },
+  { id: 'sens1.3', label: '感度 1.3（直線）', tweaks: { hands: hands({ sensitivity: 1.3 }) } },
+  {
+    id: 'calm',
+    label: '（参考）ぶれ半分・遅れ 0.1 秒',
+    tweaks: { hands: hands({ noise: 0.1, delay: 0.1 }) },
+  },
+  { id: 'direct', label: '方式: 画面の上の方向へ倒す', tweaks: { direct: true } },
+  {
+    id: 'direct1.5',
+    label: '方式: 方向へ倒す・カーブ 1.5',
+    tweaks: { direct: true, hands: hands({ curve: 1.5 }) },
+  },
+  // 9-3: 自動追尾（エイムアシストの円錐と補正の強さ）・自動射撃・判定の拡大
+  {
+    id: 'assist12',
+    label: 'アシスト 12°/0.4',
+    tweaks: { assist: { ...A, coneDeg: 12, maxCorrection: 0.4, fullCorrectionDeg: 5 } },
+  },
+  {
+    id: 'assist15',
+    label: 'アシスト 15°/0.5',
+    tweaks: { assist: { ...A, coneDeg: 15, maxCorrection: 0.5, fullCorrectionDeg: 6 } },
+  },
+  {
+    id: 'assist20',
+    label: 'アシスト 20°/0.7',
+    tweaks: { assist: { ...A, coneDeg: 20, maxCorrection: 0.7, fullCorrectionDeg: 8 } },
+  },
+  {
+    id: 'track',
+    label: '追尾 15°/0.5・1.5° で最大（機首の近くで強く合わせる）',
+    tweaks: { assist: { ...A, coneDeg: 15, maxCorrection: 0.5, fullCorrectionDeg: 1.5 } },
+  },
+  {
+    id: 'track10',
+    label: '追尾 10°/0.35・1.5° で最大',
+    tweaks: { assist: { ...A, coneDeg: 10, maxCorrection: 0.35, fullCorrectionDeg: 1.5 } },
+  },
+  {
+    id: 'track8',
+    label: '追尾 8°/0.25・1.5° で最大（今の円錐と強さのまま）',
+    tweaks: { assist: { ...A, fullCorrectionDeg: 1.5 } },
+  },
+  {
+    id: 'track-auto',
+    label: '追尾 15°/0.5・1.5° で最大 + 自動射撃',
+    tweaks: {
+      assist: { ...A, coneDeg: 15, maxCorrection: 0.5, fullCorrectionDeg: 1.5 },
+      autoFireScale: 1,
+    },
+  },
+  {
+    id: 'hit1.7',
+    label: '判定の拡大 ×1.7（P-3 の案 B）',
+    tweaks: { assist: { ...A, gunHitRadiusScale: 1.7 } },
+  },
+  { id: 'auto1', label: '自動射撃（当たる範囲）', tweaks: { autoFireScale: 1 } },
+  { id: 'auto2', label: '自動射撃（当たる範囲 ×2）', tweaks: { autoFireScale: 2 } },
+  {
+    id: 'combo',
+    label: '組み合わせ（カーブ 1.5・アシスト 15°/0.5・自動射撃）',
+    tweaks: {
+      hands: hands({ curve: 1.5 }),
+      assist: { ...A, coneDeg: 15, maxCorrection: 0.5, fullCorrectionDeg: 6 },
+      autoFireScale: 1,
+    },
+  },
+  {
+    id: 'direct-combo',
+    label: '組み合わせ（方向へ倒す・カーブ 1.5・追尾 15°/0.5/1.5°・自動射撃）',
+    tweaks: {
+      direct: true,
+      hands: hands({ curve: 1.5 }),
+      assist: { ...A, coneDeg: 15, maxCorrection: 0.5, fullCorrectionDeg: 1.5 },
+      autoFireScale: 1,
+    },
+  },
+];
+
+const pct = (n: number, d: number): string => (d > 0 ? `${((100 * n) / d).toFixed(1)}%` : '-');
+
+/** 実験を走らせて表にする。only を渡せばその id だけ */
+export function runExperiments(
+  missions: readonly string[],
+  seeds: number,
+  progress: (line: string) => void,
+  only: readonly string[] = [],
+  set: 'tune' | 'decompose' = 'tune',
+): string {
+  const role = findRole('human');
+  const rows: string[] = [
+    [
+      '実験',
+      ...missions.map((m) => `${m} 成功`),
+      '命中率',
+      '照準の円',
+      'ずれ≤5°',
+      '画面外',
+      '行き過ぎ/分',
+      '往復/分',
+      '端',
+      '見失い→戻す秒',
+      '被撃墜',
+    ].join(' | '),
+  ];
+  for (const ex of set === 'decompose' ? DECOMPOSE : EXPERIMENTS) {
+    if (only.length > 0 && !only.includes(ex.id)) continue;
+    const total = new Totals();
+    const ok: number[] = [];
+    for (const m of missions) {
+      let n = 0;
+      for (let seed = 1; seed <= seeds; seed++) {
+        const box: { a: ControlAnalyzer | null } = { a: null };
+        const r = flyMission(m, seed, role, {
+          tweaks: ex.tweaks,
+          analyzer: (play) =>
+            (box.a = new ControlAnalyzer(play, { aspect: 2.16, assist: ex.tweaks.assist })),
+        });
+        if (r.status === 'success') n++;
+        if (box.a) total.merge(box.a.finish());
+      }
+      ok.push(n);
+    }
+    const t = total;
+    const quick = t.quickReversals.pitch + t.quickReversals.roll;
+    rows.push(
+      [
+        `${ex.id}（${ex.label}）`,
+        ...ok.map((n) => `${n}/${seeds}`),
+        pct(t.hits, t.shots),
+        pct(t.fire.inHitCone, t.fireSteps),
+        pct((t.angleBins[0] ?? 0) + (t.angleBins[1] ?? 0), t.engagedSteps),
+        pct(t.offScreenSteps, t.engagedSteps),
+        (t.crossings / Math.max(1e-9, t.nearSteps / 3600)).toFixed(1),
+        (quick / Math.max(1e-9, t.aliveMinutes)).toFixed(1),
+        pct(t.stick.edge, t.aliveSteps),
+        median(t.reacquire).toFixed(1),
+        String(t.downs),
+      ].join(' | '),
+    );
+    progress(rows[rows.length - 1] ?? '');
+  }
+  return rows.join('\n');
+}

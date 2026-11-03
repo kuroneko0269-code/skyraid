@@ -10,6 +10,7 @@
     "check": "tsc --noEmit && eslint .",
     "test": "vitest run",
     "bench": "node scripts/bench.js",
+    "analyze-replay": "node scripts/analyze-replay.js",
     "perf": "npm run build && node scripts/perf.js",
     "unused": "knip",
     "format": "prettier --write .",

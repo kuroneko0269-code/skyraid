@@ -1,6 +1,6 @@
 // エイムアシスト（4-12、Three.js 非依存）: 選択中の対象が機首の近くにあるとき、操縦の入力を対象の側へ少しだけ足す。
 // 飛行モデルの数値は変えず、入力だけを補う。操縦の入力が 0 なら何もしない（勝手に追わない）
-import { AIM_ASSIST_CONFIG } from '../data/assist';
+import { AIM_ASSIST_CONFIG, type AimAssistSpec } from '../data/assist';
 import type { AircraftControls } from '../entities/aircraft';
 import { clamp, inverseRotateVec3, smoothstep, type Quat, type Vec3 } from '../flight/math';
 
@@ -17,7 +17,7 @@ export function applyAimAssist(
   orientation: Readonly<Quat>,
   aim: Readonly<Vec3>,
   invertPitch: boolean,
-  c: typeof AIM_ASSIST_CONFIG = AIM_ASSIST_CONFIG,
+  c: AimAssistSpec = AIM_ASSIST_CONFIG,
 ): boolean {
   const input = Math.max(Math.abs(controls.pitch), Math.abs(controls.roll), Math.abs(controls.yaw));
   if (input === 0) return false;
