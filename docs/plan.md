@@ -101,7 +101,7 @@
 - [x] 8-6d 実機確認の修正 その 2（横向きの起動の黒い余白（ルート要素の大きさ・?debug=viewport）・ダイアログのフォント・キャンペーン共通のミサイルの補充・パイロット名の変更を 1 か所に・メンバー管理の 1 人 1 行の表・横スクロールの点検） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/77a4aef9a28338d34b80803f1b56508e939affbf
 - [x] 8-6e 横向きの起動の黒い余白（実機の ?debug=viewport の値から: 描かれる大きさに合わせる・viewport-fit の切り替えで測り直させる試み） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/286b8ebe03bc4f35b5001ab4403cb59a13046402
 - [x] 8-6f 測り直しの間のチラつき（viewport-fit の切り替えの間は黒い幕で隠す・試みを順番に） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/01da045e025656f85eea209b2b94a3a1c990aac4
-- [ ] 8-7 v1.0.0 公開
+- [x] 8-7 v1.0.0 公開（版 1.0.0・changelog・README の整理・公開前の点検のやり直し（docs/release-checklist.md）・knip の指摘の解消・公開後の候補・タグ v1.0.0、事前修正: リプレイの版の断り・ロビーの「補正」の英訳 Modifiers・起動時の幕のロゴ） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/9bbfa37ad0d23b52a3af9871572b6d73c40f6b53（事前修正 https://github.com/kuroneko0269-code/skyraid/commit/5ca6567e28b92f8bf1fedafda18534213fd5b70f）
 
 フェーズ 8 は 8-7（v1.0.0 の公開）で閉じる。以後の作業は下の候補から選び、指示を受けてから 1 タスクずつ行う。
 
