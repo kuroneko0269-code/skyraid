@@ -36,3 +36,17 @@ export function sliderValueFromY(clientY: number, top: number, height: number): 
   const t = 1 - (clientY - top) / height;
   return Math.min(1, Math.max(0, t));
 }
+
+/**
+ * 感度のカーブ（9-2）: 倒し具合（長さ 0〜1）を 長さ^curve にする。方向は保つ。curve 1 はそのまま（9-1 までと同じ）。
+ * 中央付近が細かくなり、端まで倒したときの値は変わらない
+ */
+export function applyStickCurve(v: Vec2Out, curve: number): Vec2Out {
+  if (curve === 1) return v;
+  const len = Math.hypot(v.x, v.y);
+  if (len === 0) return v;
+  const k = Math.pow(Math.min(1, len), curve) / len;
+  v.x *= k;
+  v.y *= k;
+  return v;
+}

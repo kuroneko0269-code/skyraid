@@ -35,7 +35,8 @@ export type UpgradeLevels = Record<UpgradeKind, number>;
 /**
  * 一度だけの案内の記録（4-11。v5 から）。tutorialOffered: 初回の「チュートリアルを始めますか？」を出した /
  * tutorialDone: チュートリアルを完了した（報酬は初回だけ）/ hintsFree・hintsMission: タッチ操作のヒントを出した /
- * raidBriefing: 協力レイドのブリーフィングを一度見た（6-6。2 回目からスキップできる。版は上げない: 無い旗は false）
+ * raidBriefing: 協力レイドのブリーフィングを一度見た（6-6。2 回目からスキップできる。版は上げない: 無い旗は false）/
+ * steerNotice: 「操作方法が新しくなりました」（9-2）を出した、または出さなくてよい（初回起動の人）
  */
 export const SAVE_FLAGS = [
   'tutorialOffered',
@@ -43,6 +44,7 @@ export const SAVE_FLAGS = [
   'hintsFree',
   'hintsMission',
   'raidBriefing',
+  'steerNotice',
 ] as const;
 export type SaveFlag = (typeof SAVE_FLAGS)[number];
 export type SaveFlags = Record<SaveFlag, boolean>;
@@ -54,6 +56,7 @@ export function defaultFlags(): SaveFlags {
     hintsFree: false,
     hintsMission: false,
     raidBriefing: false,
+    steerNotice: false,
   };
 }
 

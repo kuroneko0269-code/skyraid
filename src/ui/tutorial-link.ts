@@ -10,6 +10,10 @@ import type { TouchLink } from './touch-link';
 import { TouchHints } from './touch-hints';
 import { TutorialHud } from './tutorial-hud';
 import { tutorialStrings } from './tutorial-text';
+import { showToast } from './toast';
+import { t } from '../core/i18n';
+import { STEER_DEFAULTS } from '../data/steer';
+import { markSteerNoticeForNewPilot, takeSteerNotice } from '../progression/steer-notice';
 
 export class TutorialLink {
   private readonly hud: TutorialHud;
@@ -36,8 +40,11 @@ export class TutorialLink {
         touch.controls.highlight(parts);
       },
       onAbort,
+      () => save.settings.controls.steerMode === 'classic',
     );
     this.hints = new TouchHints(parent, gameHud.root, tutorialStrings().hints);
+    // 9-2: 初回起動の人（名前がまだ）は新しい操作から始めるので、「操作方法が新しくなりました」は出さない
+    markSteerNoticeForNewPilot(save);
   }
 
   /** このチュートリアルで払ったクレジット（リザルト。初回だけ 500） */
@@ -60,6 +67,9 @@ export class TutorialLink {
   onFlightStart(kind: 'free' | 'mission' | 'tutorial'): void {
     this.hints.stop();
     if (kind === 'tutorial' || !this.touch.controls.isVisible) return;
+    // 9-2: 今の利用者に一度だけ（タッチ操作を出した最初の飛行の始め）
+    if (takeSteerNotice(this.save))
+      showToast(t('controls.steer.notice'), { seconds: STEER_DEFAULTS.noticeSeconds });
     const flag = kind === 'free' ? 'hintsFree' : 'hintsMission';
     if (this.save.flag(flag)) return;
     this.save.setFlag(flag);

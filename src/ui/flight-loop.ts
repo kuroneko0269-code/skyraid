@@ -15,6 +15,7 @@ import {
 import type { GameLoop } from '../core/loop';
 import type { Input } from '../core/input';
 import type { AssistControl } from '../core/assist-control';
+import { SteerControl } from '../core/steer-control';
 import type { WeaponInput } from '../core/weapon-input';
 import type { MissionDef } from '../missions/types';
 import type { ActiveMap } from '../missions/active-map';
@@ -86,6 +87,8 @@ function createFlightUpdate(p: FlightLoopParts): {
   simulate: (dt: number) => void;
 } {
   const { input, game, pvp, play } = p;
+  // 9-2: タッチのスティックの「方向へ倒す」方式（低空の安全は今のマップの地面・海面。PvP も同じ自機）
+  const steer = new SteerControl(input, p.session.aircraft, p.activeMap.ground);
   const simulate = (dt: number): void => {
     if (pvp.flying) {
       pvp.step(p.controls, p.combatInput, dt);
@@ -121,6 +124,7 @@ function createFlightUpdate(p: FlightLoopParts): {
       return;
     }
     readFlightControls(input, p.controls);
+    steer.apply(p.controls);
     p.assist.apply(p.controls);
     p.weaponInput.read(input, p.combatInput, dt);
     simulate(dt);

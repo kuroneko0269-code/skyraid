@@ -71,7 +71,8 @@
     "back": "Mode select",
     "steps": {
       "rings": {
-        "touch": "Tilt with the stick (bottom left) and pull to turn. Fly through the 3 yellow rings",
+        "touch": "Push the stick (bottom left) toward where you want to go: right turns right, up climbs. Fly through the 3 yellow rings",
+        "touchClassic": "Tilt with the stick (bottom left) and pull to turn. Fly through the 3 yellow rings",
         "keys": "Bank with {rollLeft}/{rollRight} and pull with {pitchUp} to turn ({pitchDown} pitches down). Fly through the 3 yellow rings",
         "pad": "Bank with the left stick and pull it back to turn. Fly through the 3 yellow rings"
       },
@@ -709,7 +710,22 @@
     "pressKey": "Press a key… (Esc to cancel)",
     "conflict": "⚠ Conflicts with {names}",
     "listSeparator": ", ",
-    "resetKeys": "Reset to defaults"
+    "resetKeys": "Reset to defaults",
+    "steer": {
+      "mode": "Steering (touch)",
+      "curve": "Response curve (touch)",
+      "position": "Stick position (touch)",
+      "curveLinear": "1.0 (linear)",
+      "modes": {
+        "direct": "Point to steer",
+        "classic": "Pitch & roll (classic)"
+      },
+      "positions": {
+        "floating": "Under your thumb",
+        "fixed": "Fixed (bottom left)"
+      },
+      "notice": "The touch controls have changed. You can switch back to the classic controls in Settings"
+    }
   },
   "settings": {
     "enemies": "Enemies",

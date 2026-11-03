@@ -63,6 +63,8 @@ export class Totals {
   hits = 0;
   kills = 0;
   downs = 0;
+  /** 地面・海面に当たった回数（9-2: 低空の安全の確認） */
+  crashes = 0;
   missiles = 0;
   missilesLocked = 0;
   missileDetonations = 0;
@@ -116,6 +118,7 @@ export class Totals {
       'hits',
       'kills',
       'downs',
+      'crashes',
       'missiles',
       'missilesLocked',
       'missileDetonations',

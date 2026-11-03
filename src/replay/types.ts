@@ -83,6 +83,19 @@ export interface ReplayOutcome {
   readonly result?: ReplayResult;
 }
 
+/**
+ * 記録したときの操作の設定（9-2。見た目・解析用で、判定には使わない: 記録は組み立てた後の入力なので、方式によらず同じ結果で再生する）。
+ * device は始めた時点で最後に操作した入力系統。9-2 より前の記録には無い
+ */
+export interface ReplayControls {
+  readonly device: 'keyboard' | 'touch' | 'gamepad';
+  readonly steerMode: string;
+  readonly stickCurve: number;
+  readonly stickPosition: string;
+  readonly sensitivity: number;
+  readonly deadzone: number;
+}
+
 /** 記録のヘッダ（JSON で保存） */
 export interface ReplayHeader extends ReplayStart {
   /** 記録の形式の版 */
@@ -104,6 +117,8 @@ export interface ReplayHeader extends ReplayStart {
   readonly outcome: ReplayOutcome | null;
   /** 飛行を始めた直後の状態ハッシュ（再生で同じ世界から始められたかの確認） */
   readonly startHash: string;
+  /** 記録したときの操作の設定（9-2 から） */
+  readonly controls?: ReplayControls;
 }
 
 /**
@@ -168,4 +183,22 @@ export function replayGameVersion(header: ReplayHeader): string | null {
 /** 今の版と違う版（版を持たない古い記録を含む）の記録か */
 export function isOtherGameVersion(header: ReplayHeader, current: string): boolean {
   return replayGameVersion(header) !== current;
+}
+
+/** 記録したときの操作の設定（無い・形が違えば null。インポートしたファイルは信用しない） */
+export function replayControls(header: ReplayHeader): ReplayControls | null {
+  const c: unknown = header.controls;
+  if (typeof c !== 'object' || c === null) return null;
+  const r = c as Record<string, unknown>;
+  const num = (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v);
+  if (
+    !['keyboard', 'touch', 'gamepad'].includes(String(r.device)) ||
+    typeof r.steerMode !== 'string' ||
+    typeof r.stickPosition !== 'string' ||
+    !num(r.stickCurve) ||
+    !num(r.sensitivity) ||
+    !num(r.deadzone)
+  )
+    return null;
+  return c as ReplayControls;
 }

@@ -41,6 +41,11 @@ export interface StepInput {
   readonly input: Readonly<CombatInput>;
   /** エイムアシスト（判定の拡大）が効いていたか（記録の flags の 4） */
   readonly assist: boolean;
+  /**
+   * スティックの値（右・上が正）。「方向へ倒す」方式（9-2）の模擬では、記録の値（組み立てた後の操縦）ではなくこちらで
+   * 倒し具合・往復を数える（省略は記録の値から）
+   */
+  readonly stick?: { readonly x: number; readonly y: number } | null;
 }
 
 const curveAt = (curve: readonly { speed: number; value: number }[], speed: number): number => {
@@ -101,6 +106,7 @@ export class ControlAnalyzer {
   private hits0: number;
   private kills0: number;
   private downs0: number;
+  private crashes0: number;
   private missilesBefore = 0;
   private launchLocked = false;
   private launchAngle = -1;
@@ -118,6 +124,7 @@ export class ControlAnalyzer {
     this.hits0 = s.combat.gun.hitCount;
     this.kills0 = s.combat.kills;
     this.downs0 = s.player.downCount;
+    this.crashes0 = s.aircraft.crashCount;
     this.reversals = (['pitch', 'roll', 'yaw'] as const).map(
       (axis) =>
         new ReversalCounter((quick) => {
@@ -183,17 +190,22 @@ export class ControlAnalyzer {
       }
     }
     if (c.pitch !== Math.round(c.pitch) || c.roll !== Math.round(c.roll)) t.analogSteps++;
-    const mag = Math.min(1, Math.hypot(pitch, c.roll));
+    let roll = c.roll;
+    if (f.stick) {
+      pitch = f.stick.y;
+      roll = f.stick.x;
+    }
+    const mag = Math.min(1, Math.hypot(pitch, roll));
     if (mag < 0.02) t.stick.zero++;
     else if (mag < STICK_LOW) t.stick.low++;
     else if (mag < STICK_EDGE) t.stick.mid++;
     else t.stick.edge++;
     if (Math.abs(pitch) >= STICK_EDGE) t.pitchEdge++;
-    if (Math.abs(c.roll) >= STICK_EDGE) t.rollEdge++;
+    if (Math.abs(roll) >= STICK_EDGE) t.rollEdge++;
     if (mag >= STICK_EDGE) this.edgeRun++;
     else this.endEdgeRun();
     this.reversals[0]?.push(pitch, this.time);
-    this.reversals[1]?.push(c.roll, this.time);
+    this.reversals[1]?.push(roll, this.time);
     this.reversals[2]?.push(yaw, this.time);
     // 射撃（照準の判定は after で、判定後の向きで）
     this.triggerNow = f.input.trigger;
@@ -330,6 +342,7 @@ export class ControlAnalyzer {
     t.hits = s.combat.gun.hitCount - this.hits0;
     t.kills = s.combat.kills - this.kills0;
     t.downs = s.player.downCount - this.downs0;
+    t.crashes = s.aircraft.crashCount - this.crashes0;
     t.files = 1;
     const status = this.play.runner?.status;
     if (status === 'success') t.successes = 1;

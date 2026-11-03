@@ -23,7 +23,7 @@ import {
 import type { ReplayData, ReplayStart } from '../../src/replay/types';
 import { getGroundHeight } from '../../src/render/terrain-height';
 import { AVERAGE, BEGINNER, PilotBot } from '../../tests/ai-sim';
-import { BoundsGuard, WaypointBot } from '../../tests/mission-bots';
+import { BoundsGuard, ISLAND_CENTER_SKY, WaypointBot } from '../../tests/mission-bots';
 import { createWorld } from '../../tests/replay-helpers';
 import { DirectStick } from './direct';
 import { Hands, DEFAULT_HANDS, type HandsSpec } from './hands';
@@ -73,14 +73,21 @@ export interface FlightTweaks {
   readonly autoFireScale?: number;
   /** 人の手（省略は役の値。null は無し = ボットの操縦をそのまま） */
   readonly hands?: HandsSpec | null;
-  /** 9-2 の案「画面の上の方向へ倒す」スティック（direct.ts。人の手が無い役では無視） */
-  readonly direct?: boolean;
+  /**
+   * 「方向へ倒す」方式（9-2。direct.ts。人の手が無い役では無視）。true は地平線を基準に向きを読む人、'screen' は画面（≒機体の向き）
+   * の上の方向で読む人
+   */
+  readonly direct?: boolean | 'screen';
   /** 腕前（省略は役の値） */
   readonly skill?: DifficultySpec;
 }
 
 export interface FlightResult {
   readonly status: string;
+  /** 失敗の理由（playerDown・timeUp・outOfBounds。成功・時間切れ前の打ち切りは null） */
+  readonly reason: string | null;
+  /** 飛んだ秒数 */
+  readonly seconds: number;
   readonly data: ReplayData | null;
 }
 
@@ -131,7 +138,8 @@ export function flyMission(
     seed: 9100 + seed,
     weatherId: 'clear',
   };
-  const w = createWorld();
+  // 本番と同じく、起動のときの敵の設定を入れた世界（analyze.ts と同じ）
+  const w = createWorld({ enemies: start.enemies });
   startFromHeader(w, start);
   const play = w.play;
   const s = play.session;
@@ -159,30 +167,37 @@ export function flyMission(
   const idle = createCombatInput();
   const handsSpec = opts.tweaks?.hands === undefined ? role.hands : opts.tweaks.hands;
   const hands = handsSpec ? new Hands(handsSpec, createRandom(7000 + seed)) : null;
-  const direct = hands && opts.tweaks?.direct ? new DirectStick(hands) : null;
+  const direct =
+    hands && opts.tweaks?.direct
+      ? new DirectStick(hands, w.map.ground, opts.tweaks.direct === 'screen' ? 'screen' : 'horizon')
+      : null;
   const assist = opts.tweaks?.assist ?? AIM_ASSIST_CONFIG;
   const autoScale = opts.tweaks?.autoFireScale ?? 0;
   const out: AircraftControls = { ...pilot.controls };
   const input = createCombatInput();
   const analyzer = opts.analyzer?.(play) ?? null;
-  const step = { controls: w.controls, input, assist: true };
+  const step = { controls: w.controls, input, assist: true, stick: direct?.stick ?? null };
   let lastSel = s.combat.targeting.selected;
+  let steps = 0;
   for (let i = 0; i < MAX_SECONDS * 60 && runner.running; i++) {
+    steps++;
     const ring = runner.activeRings?.next;
     let intent: Readonly<AircraftControls>;
     let combat = idle;
     /**
-     * 人が見て向かう点（「画面の上の方向へ倒す」スティックの模擬。戦闘中だけ。リング・戦域外から戻る区間は
-     * 模擬に地面の回避が無く低空のリングで落ちるので、今のスティックの模擬のまま）
+     * 人が見て向かう点（「方向へ倒す」方式の模擬）: リング・戦域の中央（戦域外から戻る）・戦闘中は選んだ敵（射程内は予測照準点）。
+     * 9-2 で低空の安全を入れたので、9-1 の実験と違ってリング・戻る区間もこの方式で飛ぶ
      */
     let goal: Readonly<Vec3> | null = null;
     if (ring) {
       wp.fly(ring.position);
       intent = wp.controls;
+      goal = ring.position;
     } else {
       pilot.think(DT);
       if (guard.check()) {
         intent = guard.controls;
+        goal = ISLAND_CENTER_SKY;
       } else {
         intent = pilot.controls;
         combat = pilot.input;
@@ -194,7 +209,7 @@ export function flyMission(
     const sel = s.combat.targeting.selected;
     if (sel !== lastSel)
       rec?.command({ kind: 'select', target: sel ? s.combat.allTargets.indexOf(sel) : -1 });
-    if (direct && goal) direct.apply(s, goal, intent, out);
+    if (direct) direct.apply(s, goal, intent, out);
     else if (hands) hands.apply(intent, out);
     else Object.assign(out, intent);
     Object.assign(input, combat);
@@ -220,5 +235,5 @@ export function flyMission(
   }
   const status = runner.status;
   const data = rec?.finish({ label: status, success: status === 'success' }) ?? null;
-  return { status, data };
+  return { status, data, reason: runner.failReason ?? null, seconds: steps / 60 };
 }

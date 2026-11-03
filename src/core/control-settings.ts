@@ -9,7 +9,18 @@ import {
 } from '../data/controls';
 import { t } from './i18n';
 import { FLIGHT_CONFIG } from '../data/flight';
+import {
+  STEER_DEFAULTS,
+  STEER_MODES,
+  STICK_CURVES,
+  STICK_POSITIONS,
+  type SteerMode,
+  type StickCurve,
+  type StickPosition,
+} from '../data/steer';
 import { ACTIONS, DEFAULT_KEYBINDS, type Action, type KeyBindings } from '../data/keybinds';
+import type { ReplayControls } from '../replay/types';
+import type { InputDevice } from './input';
 
 export interface ControlSettings {
   /** スティック感度（0.6〜1.6） */
@@ -23,11 +34,17 @@ export interface ControlSettings {
   /** 振動（Android のみ） */
   vibration: boolean;
   buttonSize: ButtonSize;
+  /** タッチのスティックの操縦の方式（9-2。初期値は「方向へ倒す」。今の利用者にも初期値を当てる） */
+  steerMode: SteerMode;
+  /** タッチのスティックの感度のカーブ（9-2。倒し具合 ^ 指数） */
+  stickCurve: StickCurve;
+  /** タッチのスティックの位置（9-2） */
+  stickPosition: StickPosition;
   /** キー割当の変更（アクション → 主キーの KeyboardEvent.code）。ないアクションは初期の割当 */
   keys: Partial<Record<RemappableAction, string>>;
 }
 
-/** 初期値（4-10 までの挙動と同じ） */
+/** 初期値（4-10 までの挙動と同じ。9-2 のスティックの方式・カーブは新しい初期値） */
 export function defaultControls(): ControlSettings {
   return {
     sensitivity: CONTROL_SETTINGS.sensitivity.default,
@@ -37,6 +54,9 @@ export function defaultControls(): ControlSettings {
     swapSides: false,
     vibration: false,
     buttonSize: CONTROL_SETTINGS.defaultButtonSize,
+    steerMode: STEER_DEFAULTS.mode,
+    stickCurve: STEER_DEFAULTS.curve,
+    stickPosition: STEER_DEFAULTS.position,
     keys: {},
   };
 }
@@ -67,6 +87,13 @@ export function normalizeControls(raw: unknown): ControlSettings {
   }
   if ((BUTTON_SIZES as readonly unknown[]).includes(r.buttonSize))
     c.buttonSize = r.buttonSize as ButtonSize;
+  // 9-2: 無い（9-1 までのセーブ）・不正なら初期値（今の利用者にも新しい初期値）
+  if ((STEER_MODES as readonly unknown[]).includes(r.steerMode))
+    c.steerMode = r.steerMode as SteerMode;
+  if ((STICK_CURVES as readonly unknown[]).includes(r.stickCurve))
+    c.stickCurve = r.stickCurve as StickCurve;
+  if ((STICK_POSITIONS as readonly unknown[]).includes(r.stickPosition))
+    c.stickPosition = r.stickPosition as StickPosition;
   const keys = r.keys;
   if (typeof keys === 'object' && keys !== null) {
     for (const a of REMAPPABLE_ACTIONS) {
@@ -165,4 +192,19 @@ export function keyLabel(code: string): string {
   if (/^Digit[0-9]$/.test(code)) return code.slice(5);
   if (/^Numpad/.test(code)) return `Num${code.slice(6)}`;
   return code;
+}
+
+/** リプレイのヘッダに残す操作の設定（9-2。device は始めた時点で最後に操作した入力系統） */
+export function replayControlsOf(
+  c: Readonly<ControlSettings>,
+  device: InputDevice,
+): ReplayControls {
+  return {
+    device,
+    steerMode: c.steerMode,
+    stickCurve: c.stickCurve,
+    stickPosition: c.stickPosition,
+    sensitivity: c.sensitivity,
+    deadzone: c.deadzone,
+  };
 }

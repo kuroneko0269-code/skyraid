@@ -87,6 +87,7 @@ export function createReplayWiring(p: ReplayWiringParts): {
     play: p.world.play,
     world: p.world,
     save: p.save,
+    input: p.input,
     playback,
     loadUi,
     resultExtras: p.resultExtras,

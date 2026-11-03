@@ -36,7 +36,7 @@ class FakeStorage implements SaveStorage {
 }
 
 describe('感度とデッドゾーンの変換', () => {
-  it('初期値は 4-10 までの挙動と同じ（感度 1.0・デッドゾーン 12%・反転なし・オートレベル ON・中）', () => {
+  it('初期値は 4-10 までの挙動と同じ（感度 1.0・デッドゾーン 12%・反転なし・オートレベル ON・中）。9-2 のスティックは方向へ倒す・カーブ 1.5・親指の場所', () => {
     const c = defaultControls();
     expect(c).toEqual({
       sensitivity: 1,
@@ -46,6 +46,9 @@ describe('感度とデッドゾーンの変換', () => {
       swapSides: false,
       vibration: false,
       buttonSize: 'medium',
+      steerMode: 'direct',
+      stickCurve: 1.5,
+      stickPosition: 'floating',
       keys: {},
     });
     expect(CONTROL_SETTINGS.buttonScale[c.buttonSize]).toBe(1);
@@ -195,6 +198,7 @@ describe('セーブ v5（操作設定と案内の記録）', () => {
       hintsFree: false,
       hintsMission: false,
       raidBriefing: false,
+      steerNotice: false,
     });
     expect(save?.settings.hud).toBe(false);
     expect(save?.settings.difficulty).toBe('hard');

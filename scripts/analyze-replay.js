@@ -8,6 +8,7 @@
 //   --make-bots <出力先>  ボット（平均的・初心者役・模擬の人）のリプレイを作る（--missions training,first-sortie --seeds 4 --roles ...）
 //   --experiment         模擬の人で 9-2・9-3 の案を比べる（--missions・--seeds・--only base,curve2）
 //   --decompose          難しさの原因の分解（初心者役のボットに人の条件を 1 つずつ足す。--missions・--seeds）
+//   --compare            9-2 のスティックの変更前後（今の操作 / 方向へ倒す・カーブ 1.5 など。--missions・--seeds）
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { runnerImport } from 'vite';
@@ -18,7 +19,8 @@ const inputs = [];
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
   if (!a.startsWith('--')) inputs.push(a);
-  else if (['--each', '--timeline', '--experiment', '--decompose'].includes(a)) flags.set(a, true);
+  else if (['--each', '--timeline', '--experiment', '--decompose', '--compare'].includes(a))
+    flags.set(a, true);
   else flags.set(a, args[++i]);
 }
 const list = (key, fallback) => (flags.get(key) ? String(flags.get(key)).split(',') : fallback);
@@ -41,8 +43,8 @@ if (flags.get('--make-bots')) {
     writeFileSync(p, f.bytes);
   }
   console.log(`${files.length} 本を ${outDir} に書いた`);
-} else if (flags.get('--experiment') || flags.get('--decompose')) {
-  const set = flags.get('--decompose') ? 'decompose' : 'tune';
+} else if (flags.get('--experiment') || flags.get('--decompose') || flags.get('--compare')) {
+  const set = flags.get('--decompose') ? 'decompose' : flags.get('--compare') ? 'compare' : 'tune';
   console.log(m.runExperiments(missions, seeds, (l) => console.error(l), list('--only', []), set));
 } else {
   if (inputs.length === 0) {

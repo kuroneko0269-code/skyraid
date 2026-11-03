@@ -8,8 +8,15 @@ import {
   startFromHeader,
   stepWorld,
 } from '../../src/replay/sim';
-import { createFrame, FRAME_CHANNELS, type ReplayData } from '../../src/replay/types';
-import { createWorld } from '../../tests/replay-helpers';
+import {
+  createFrame,
+  FRAME_CHANNELS,
+  type ReplayData,
+  type ReplayHeader,
+} from '../../src/replay/types';
+import type { Locale } from '../../src/core/locale';
+import { useLocale } from '../../tests/i18n-helpers';
+import { createWorld, type TestWorld } from '../../tests/replay-helpers';
 import { ControlAnalyzer, type AnalyzerOptions } from './metrics';
 import type { Totals } from './totals';
 
@@ -31,9 +38,7 @@ export function analyzeBytes(bytes: Uint8Array, options: AnalyzerOptions): Repla
 
 export function analyzeData(data: ReplayData, options: AnalyzerOptions): ReplayAnalysis {
   const h = data.header;
-  const w = createWorld();
-  startFromHeader(w, h);
-  const startMatches = simHash(w) === h.startHash;
+  const { w, startMatches } = startWorld(h);
   const play = w.play;
   const analyzer = new ControlAnalyzer(play, options);
   const input = createCombatInput();
@@ -68,4 +73,25 @@ export function analyzeData(data: ReplayData, options: AnalyzerOptions): ReplayA
     outcomeMatches:
       recorded === undefined || h.mode !== 'mission' ? null : recorded === (status === 'success'),
   };
+}
+
+/** 記録した言語の候補（部位の名前などの文言が状態に入るので、ハッシュは記録した言語でないと合わない。言語は記録に無い） */
+const LOCALES: readonly Locale[] = ['ja', 'en'];
+
+/**
+ * 本番と同じ形の世界で始める（9-2 の事前修正）: 爆弾・ロケットの建物への当たり（ui/mission-wiring.ts）と、起動のときの
+ * 敵の設定（セーブの設定。記録のヘッダの値で代える）を入れ、記録した言語を候補から探す。どれも合わなければ日本語のまま。
+ * それでも合わないのは、ブラウザと Node.js で Math.exp・Math.cos の結果が最後の桁で違うため（地形の高さに効く。docs/control-analysis.md）
+ */
+function startWorld(h: ReplayHeader): { w: TestWorld; startMatches: boolean } {
+  for (const locale of LOCALES) {
+    useLocale(locale);
+    const w = createWorld({ enemies: h.enemies });
+    startFromHeader(w, h);
+    if (simHash(w) === h.startHash) return { w, startMatches: true };
+  }
+  useLocale('ja');
+  const w = createWorld({ enemies: h.enemies });
+  startFromHeader(w, h);
+  return { w, startMatches: false };
 }

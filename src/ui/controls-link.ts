@@ -1,4 +1,4 @@
-// 操作設定（4-11）の配線: 設定の値を入力（感度・キー割当）・タッチ操作（デッドゾーン・左右入替・大きさ）・
+// 操作設定（4-11）の配線: 設定の値を入力（感度・キー割当）・タッチ操作（デッドゾーン・左右入替・大きさ・9-2 の方式・カーブ・位置）・
 // 機体（ピッチ反転・オートレベル。URL の ?invert / ?autolevel があればそちらを優先）・振動に効かせる
 import { buildKeyBindings, type ControlSettings } from '../core/control-settings';
 import type { FlightControlOptions } from '../core/flight-options';
@@ -42,7 +42,11 @@ export function createControlsLink(
       keys = nextKeys;
       input.setBindings(buildKeyBindings(c.keys));
     }
-    touch.configure(c.deadzone, c.swapSides, CONTROL_SETTINGS.buttonScale[c.buttonSize]);
+    touch.configure(c.deadzone, c.swapSides, CONTROL_SETTINGS.buttonScale[c.buttonSize], {
+      direct: c.steerMode === 'direct',
+      curve: c.stickCurve,
+      fixed: c.stickPosition === 'fixed',
+    });
     const options = session.aircraft.flight.options;
     options.invertPitch = urlOverrides.invertPitch ?? c.invertPitch;
     options.autoLevel = urlOverrides.autoLevel ?? c.autoLevel;

@@ -1,9 +1,10 @@
 import './touch-controls.css';
 import { FloatingStick } from '../core/touch-stick';
-import { sliderValueFromY } from '../core/analog';
+import { applyStickCurve, sliderValueFromY, type Vec2Out } from '../core/analog';
 import type { Input } from '../core/input';
 import type { Action } from '../data/keybinds';
 import { TOUCH_CONFIG } from '../data/touch';
+import { applyCssVariables } from './touch-controls-vars';
 import type { TouchPart } from '../data/tutorial';
 
 /**
@@ -43,6 +44,16 @@ function el(
   return div;
 }
 
+/** スティックの設定（9-2。操作設定）: 方式・感度のカーブ・位置 */
+export interface StickOptions {
+  /** 「方向へ倒す」方式（ピッチ・ロールのアクションへは分配せず Input.directStick に書く） */
+  readonly direct: boolean;
+  /** 感度のカーブの指数（1 = 直線） */
+  readonly curve: number;
+  /** 決まった位置（待機位置）に置いたまま（false は親指を置いた場所に出す） */
+  readonly fixed: boolean;
+}
+
 /** 長押しボタン。複数の指で押しても、全部離すまで押下が続く */
 interface HoldButton {
   readonly element: HTMLElement;
@@ -60,6 +71,8 @@ export class TouchControls {
   private readonly stick = new FloatingStick(TOUCH_CONFIG.stick);
   private readonly stickBase: HTMLDivElement;
   private readonly stickKnob: HTMLDivElement;
+  private stickOptions: StickOptions = { direct: false, curve: 1, fixed: false };
+  private readonly shaped: Vec2Out = { x: 0, y: 0 };
   private readonly holdButtons: HoldButton[] = [];
   private readonly throttleTrack: HTMLDivElement;
   private throttlePointer: number | null = null;
@@ -133,8 +146,10 @@ export class TouchControls {
   /**
    * 操作設定（4-11）: スティックのデッドゾーン・左右入替（スティックとボタン群・スロットル）・ボタンの大きさの倍率
    */
-  configure(deadzone: number, swapped: boolean, scale: number): void {
+  configure(deadzone: number, swapped: boolean, scale: number, stick: StickOptions): void {
     this.stick.setDeadzone(deadzone);
+    this.stickOptions = { ...stick };
+    this.input.directMode = stick.direct;
     this.root.classList.toggle('is-swapped', swapped);
     // ⏸ ボタン（ヨーボタンの隣）も合わせるので :root に置く
     document.documentElement.style.setProperty('--tc-scale', String(scale));
@@ -196,9 +211,21 @@ export class TouchControls {
   }
 
   private readonly onStickDown = (e: PointerEvent): void => {
-    if (!this.stick.start(e.pointerId, e.clientX, e.clientY)) return;
+    // 9-2: 決まった位置の方式は待機位置の中心が原点（触れた点まで倒した扱い）。触れた瞬間だけ位置を読む
+    let ox = e.clientX;
+    let oy = e.clientY;
+    if (this.stickOptions.fixed) {
+      const rect = this.stickBase.getBoundingClientRect();
+      ox = rect.left + rect.width / 2;
+      oy = rect.top + rect.height / 2;
+    }
+    if (!this.stick.start(e.pointerId, ox, oy)) return;
     if (e.currentTarget instanceof Element) e.currentTarget.setPointerCapture(e.pointerId);
     this.stickBase.classList.add('is-active');
+    if (this.stickOptions.fixed) {
+      this.stick.move(e.pointerId, e.clientX, e.clientY);
+      this.writeStick();
+    }
     this.renderStick();
   };
 
@@ -214,9 +241,20 @@ export class TouchControls {
     this.renderStick();
   };
 
-  /** スティックの値をアクションに分配する。画面の下へ倒す = 操縦桿を引く = 機首上げ */
+  /**
+   * スティックの値（感度のカーブの後。9-2）を書く。ピッチ・ロールの方式はアクションに分配する（画面の下へ倒す = 操縦桿を引く =
+   * 機首上げ）。「方向へ倒す」方式は Input.directStick（画面の上が正）
+   */
   private writeStick(): void {
-    const { x, y } = this.stick.value;
+    const v = this.shaped;
+    v.x = this.stick.value.x;
+    v.y = this.stick.value.y;
+    applyStickCurve(v, this.stickOptions.curve);
+    const { x, y } = v;
+    if (this.stickOptions.direct) {
+      this.input.setDirectStick(x, -y);
+      return;
+    }
     this.input.setAnalog('touch', 'rollRight', Math.max(0, x));
     this.input.setAnalog('touch', 'rollLeft', Math.max(0, -x));
     this.input.setAnalog('touch', 'pitchUp', Math.max(0, y));
@@ -225,10 +263,12 @@ export class TouchControls {
 
   private renderStick(): void {
     const base = this.stickBase;
-    if (this.stick.active) {
+    if (this.stick.active && !this.stickOptions.fixed) {
       // 原点（触れた位置）にスティックを出す。CSS の left/top（待機位置）をインラインで上書き
       base.style.left = `${this.stick.originX}px`;
       base.style.top = `${this.stick.originY}px`;
+      this.stickKnob.style.transform = `translate(${this.stick.knobX}px, ${this.stick.knobY}px)`;
+    } else if (this.stick.active) {
       this.stickKnob.style.transform = `translate(${this.stick.knobX}px, ${this.stick.knobY}px)`;
     } else {
       base.classList.remove('is-active');
@@ -262,26 +302,4 @@ export class TouchControls {
     this.input.setThrottleTarget(v);
     this.syncThrottle(v);
   }
-}
-
-/** data/touch.ts の数値を CSS 変数にする（配置は CSS 側で safe-area と合わせて計算） */
-function applyCssVariables(root: HTMLElement): void {
-  const c = TOUCH_CONFIG;
-  const vars: Record<string, string> = {
-    '--tc-margin': `${c.edgeMargin}px`,
-    '--tc-stick-size': `${c.stick.radius * 2}px`,
-    '--tc-knob-size': `${c.stick.knobSize}px`,
-    '--tc-zone-width': `${c.stick.zoneWidthRatio * 100}%`,
-    '--tc-zone-top': `${c.stick.zoneTopRatio * 100}%`,
-    // ボタン・スロットル・ヨーは操作設定の大きさ（--tc-scale。4-11）を掛ける
-    '--tc-button-size': `calc(${c.buttons.size}px * var(--tc-scale, 1))`,
-    '--tc-fire-size': `calc(${c.buttons.fireSize}px * var(--tc-scale, 1))`,
-    '--tc-gap': `${c.buttons.gap}px`,
-    '--tc-slider-gap': `${c.buttons.sliderGap}px`,
-    '--tc-throttle-width': `calc(${c.throttle.width}px * var(--tc-scale, 1))`,
-    '--tc-throttle-height': `min(${c.throttle.heightRatio * 100}vh, ${c.throttle.maxHeight}px)`,
-    '--tc-yaw-size': `calc(${c.yaw.size}px * var(--tc-scale, 1))`,
-    '--tc-yaw-top': `${c.yaw.top}px`,
-  };
-  for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value);
 }

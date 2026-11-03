@@ -29,12 +29,15 @@ export class TutorialHud {
   private step: TutorialStep | null = null;
   private complete = false;
   private device: InputDevice | null = null;
+  private classic = false;
 
   constructor(
     parent: HTMLElement,
     private readonly keyName: (action: Action) => string,
     private readonly highlight: (parts: readonly TouchPart[]) => void,
     onAbort: () => void,
+    /** タッチのスティックがピッチ・ロールの方式か（9-2。文を選ぶ） */
+    private readonly classicTouch: () => boolean = () => false,
   ) {
     const t = tutorialStrings();
     this.root = el('div', 'tutorial-hud', parent);
@@ -76,10 +79,12 @@ export class TutorialHud {
     if (active && isStep(active)) this.show(active);
   }
 
-  /** 描画フレームごと。入力系統が変わったら文を書き直す */
+  /** 描画フレームごと。入力系統・スティックの方式が変わったら文を書き直す */
   update(device: InputDevice): void {
-    if (this.root.hidden || device === this.device) return;
+    const classic = this.classicTouch();
+    if (this.root.hidden || (device === this.device && classic === this.classic)) return;
     this.device = device;
+    this.classic = classic;
     this.render();
   }
 
@@ -98,7 +103,7 @@ export class TutorialHud {
     this.text.textContent =
       this.complete || !this.step
         ? ''
-        : tutorialStepText(this.step, this.device ?? 'keyboard', this.keyName);
+        : tutorialStepText(this.step, this.device ?? 'keyboard', this.keyName, this.classic);
     this.text.hidden = this.text.textContent === '';
     // 練習の注意は最初の段階だけ
     this.note.hidden = this.complete || index !== 0;

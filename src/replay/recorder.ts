@@ -6,6 +6,7 @@ import {
   createFrame,
   FRAME_CHANNELS,
   type ReplayCommand,
+  type ReplayControls,
   type ReplayData,
   type ReplayFrame,
   type ReplayHeader,
@@ -23,6 +24,8 @@ export interface RecordMeta {
   readonly gameVersion: string;
   /** 始めた直後の状態ハッシュ */
   readonly startHash: string;
+  /** 操作の設定（9-2） */
+  readonly controls?: ReplayControls;
 }
 
 /** 待ち時間なく伸ばせる Int16 の列 */

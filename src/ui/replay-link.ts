@@ -4,7 +4,9 @@
 // 8-2: 一覧・再生の操作・書き出し / 読み込みは別のチャンク（replay-ui.ts）にし、一覧を開くときに読む（loadUi）。
 // 読めなければ（オフライン・古いチャンク）お知らせを出してモード選択へ戻る
 import { APP_VERSION } from 'virtual:app-info';
+import { replayControlsOf } from '../core/control-settings';
 import type { GameState } from '../core/game-state';
+import type { Input } from '../core/input';
 import { t } from '../core/i18n';
 import { REPLAY_CONFIG } from '../data/replay';
 import type { DefenseRunner } from '../missions/defense/runner';
@@ -58,6 +60,8 @@ export interface ReplayLinkParts {
   readonly play: GamePlay;
   readonly world: SimWorld;
   readonly save: SaveStore;
+  /** 記録の始めの入力系統と、タッチのスティックの方式（9-2。ヘッダの controls） */
+  readonly input: Pick<Input, 'lastDevice'>;
   readonly playback: PlaybackSlot;
   /** 一覧・再生の操作のチャンクを読む（読み込みの表示付き。読めなければ null。読めたら playback も作る） */
   readonly loadUi: () => Promise<typeof ReplayUi | null>;
@@ -268,6 +272,7 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
         date: new Date().toISOString(),
         gameVersion: APP_VERSION,
         startHash: simHash(p.world),
+        controls: replayControlsOf(p.save.settings.controls, p.input.lastDevice),
       });
     },
     unrecordedStarted() {

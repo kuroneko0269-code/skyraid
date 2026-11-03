@@ -55,6 +55,13 @@ export class Input {
   lastDevice: InputDevice = 'keyboard';
   /** スティック感度（4-11。操作設定）。タッチ・パッドのピッチ・ロールの値に掛け、1 で頭打ち。キーボードは ±1 のまま */
   stickSensitivity = 1;
+  /**
+   * 「方向へ倒す」方式（9-2）のタッチのスティック: 右・画面の上が正（-1〜+1。デッドゾーン・カーブの後、感度の前）。
+   * この方式ではスティックはピッチ・ロールのアクションに分配せず、ここに書く（組み立ては src/core/steer-control.ts）
+   */
+  readonly directStick = { x: 0, y: 0 };
+  /** タッチのスティックが「方向へ倒す」方式か（操作設定。タッチ操作を出しているときだけ true） */
+  directMode = false;
 
   constructor(bindings: KeyBindings = DEFAULT_KEYBINDS) {
     this.setBindings(bindings);
@@ -150,6 +157,14 @@ export class Input {
   clearAnalog(source: AnalogSource): void {
     this.analog[source].values.clear();
     this.analog[source].held.clear();
+    if (source === 'touch') this.directStick.x = this.directStick.y = 0;
+  }
+
+  /** 「方向へ倒す」方式のタッチのスティック（9-2）。0 でなければ最後に操作した系統をタッチにする */
+  setDirectStick(x: number, y: number): void {
+    this.directStick.x = Math.min(1, Math.max(-1, x));
+    this.directStick.y = Math.min(1, Math.max(-1, y));
+    if (x !== 0 || y !== 0) this.lastDevice = 'touch';
   }
 
   /** スロットル位置（0〜1）を直接指定する（タッチのスライダー）。次の takeThrottleTarget で受け取る */

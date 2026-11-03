@@ -186,4 +186,5 @@ export class BoundsGuard {
   }
 }
 
-const ISLAND_CENTER_SKY: Vec3 = { x: 0, y: 900, z: 0 };
+/** 戦域外から戻る先（島の中央の上空） */
+export const ISLAND_CENTER_SKY: Vec3 = { x: 0, y: 900, z: 0 };

@@ -3,7 +3,7 @@
 import { createCombatInput } from '../src/combat/combat-input';
 import { createRandom } from '../src/core/random';
 import { DEFENSE_CONFIG } from '../src/data/defense';
-import { FREE_FLIGHT_ENEMIES } from '../src/data/ai';
+import { FREE_FLIGHT_ENEMIES, type Difficulty } from '../src/data/ai';
 import { createControls, type AircraftControls } from '../src/entities/aircraft';
 import { ActiveMap } from '../src/missions/active-map';
 import { FlightSession } from '../src/missions/flight-session';
@@ -28,15 +28,33 @@ export interface TestWorld extends SimWorld {
   readonly controls: AircraftControls;
 }
 
-/** 本番の main.ts と同じ形の世界（敵の入れ物は防衛戦の数）。起動直後の写しも撮る */
-export function createWorld(): TestWorld {
+/** 本番の起動のときに世界へ入れるもの（写しを撮る前） */
+export interface WorldBoot {
+  /**
+   * 起動のときの敵の設定（本番はセーブの設定で、起動直後のフリーフライトの世界に敵を出す。その名残（止まった敵の位置など）が
+   * 起動直後の写しに入り、始めの状態のハッシュに効く。省略は出さない）
+   */
+  readonly enemies?: { readonly enabled: boolean; readonly difficulty: Difficulty };
+}
+
+/**
+ * 本番（app.ts・ui/mission-wiring.ts・ui/flight-runtime.ts）と同じ形の世界（敵の入れ物は防衛戦の数・爆弾とロケットは建物でも
+ * 起爆して建物を壊す）。起動直後の写しも撮る
+ */
+export function createWorld(boot: WorldBoot = {}): TestWorld {
   const map = new ActiveMap();
   const session = new FlightSession({
     groundHeight: map.ground,
     buildings: () => map.buildings,
     enemies: { ...FREE_FLIGHT_ENEMIES, maxCount: DEFENSE_CONFIG.hostFighterPool },
   });
+  // ui/mission-wiring.ts と同じ（9-2 の事前修正: 本番と同じ判定にする）
+  session.combat.ordnanceGround = map.ordnanceGround;
+  session.combat.onOrdnance((x, y, z, radius) => {
+    map.buildings?.hitSphere(x, y, z, radius, 'player');
+  });
   const play = new GamePlay(session);
+  if (boot.enemies) session.configureEnemies(boot.enemies.enabled, boot.enemies.difficulty);
   const base = {
     play,
     map,

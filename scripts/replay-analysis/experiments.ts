@@ -130,6 +130,39 @@ export const EXPERIMENTS: readonly Experiment[] = [
   },
 ];
 
+/**
+ * 9-2 の変更前後（`--compare`）: 今の操作（ピッチ・ロール・直線）と、9-2 の初期値（方向へ倒す・カーブ 1.5）と、設定で選べるほかの組み合わせ。
+ * 「方向へ倒す」はリング・戦域外から戻る区間も含めて全部この方式で飛ぶ（9-1 の実験はリング・戻る区間は今の方式だった）
+ */
+export const STICK_COMPARE: readonly Experiment[] = [
+  { id: 'before', label: '変更前: ピッチ・ロール・カーブ 1.0', tweaks: {} },
+  {
+    id: 'after',
+    label: '変更後: 方向へ倒す・カーブ 1.5',
+    tweaks: { direct: true, hands: hands({ curve: 1.5 }) },
+  },
+  {
+    id: 'after-screen',
+    label: '変更後・画面の上の方向で読む人（傾いた画面のまま倒す）',
+    tweaks: { direct: 'screen', hands: hands({ curve: 1.5 }) },
+  },
+  { id: 'direct1', label: '方向へ倒す・カーブ 1.0', tweaks: { direct: true } },
+  {
+    id: 'direct2',
+    label: '方向へ倒す・カーブ 2.0',
+    tweaks: { direct: true, hands: hands({ curve: 2 }) },
+  },
+  {
+    id: 'classic1.5',
+    label: 'ピッチ・ロール・カーブ 1.5',
+    tweaks: { hands: hands({ curve: 1.5 }) },
+  },
+  { id: 'classic2', label: 'ピッチ・ロール・カーブ 2.0', tweaks: { hands: hands({ curve: 2 }) } },
+];
+
+const SETS = { tune: EXPERIMENTS, decompose: DECOMPOSE, compare: STICK_COMPARE } as const;
+export type ExperimentSet = keyof typeof SETS;
+
 const pct = (n: number, d: number): string => (d > 0 ? `${((100 * n) / d).toFixed(1)}%` : '-');
 
 /** 実験を走らせて表にする。only を渡せばその id だけ */
@@ -138,7 +171,7 @@ export function runExperiments(
   seeds: number,
   progress: (line: string) => void,
   only: readonly string[] = [],
-  set: 'tune' | 'decompose' = 'tune',
+  set: ExperimentSet = 'tune',
 ): string {
   const role = findRole('human');
   const rows: string[] = [
@@ -154,9 +187,11 @@ export function runExperiments(
       '端',
       '見失い→戻す秒',
       '被撃墜',
+      '戦域外',
+      '墜落',
     ].join(' | '),
   ];
-  for (const ex of set === 'decompose' ? DECOMPOSE : EXPERIMENTS) {
+  for (const ex of SETS[set]) {
     if (only.length > 0 && !only.includes(ex.id)) continue;
     const total = new Totals();
     const ok: number[] = [];
@@ -189,6 +224,8 @@ export function runExperiments(
         pct(t.stick.edge, t.aliveSteps),
         median(t.reacquire).toFixed(1),
         String(t.downs),
+        pct(t.outsideSteps, t.aliveSteps),
+        String(t.crashes),
       ].join(' | '),
     );
     progress(rows[rows.length - 1] ?? '');
