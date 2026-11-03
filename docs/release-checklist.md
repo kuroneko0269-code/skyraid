@@ -33,7 +33,7 @@ npm run dev & node scripts/ui-audit.js <出力先> # 3 サイズの UI の点検
 | 7 | PWA: オフライン起動 | `--release`: Service Worker が制御した後にオフラインで読み直し → タイトル → フリーフライト | ✅ | ✅ |
 | 8 | 環境変数なしのビルドでオンライン機能が隠れる | `--release`: 「ランキング」のタイル・設定の「オンライン連携」が無い、connect-src に Supabase が無い、Supabase・online-app への通信 0 件 | ✅ | ✅ |
 | 9 | 情報画面 | `--release`: 版、更新履歴、ライセンス、データの扱い | ✅ 版 1.0.0・更新履歴 10 版（1.0.0〜0.1.0）・ライセンス 21 件（本文 20 件） | ✅ 0.8.0・8 版 |
-| 10 | UI の 3 サイズ | `scripts/ui-audit.js`（568×320・844×390・1920×1080。日本語と `--lang en`） | UI3SIZE | ✅（8-6d） |
+| 10 | UI の 3 サイズ | `scripts/ui-audit.js`（568×320・844×390・1920×1080。日本語と `--lang en`） | ✅ 折り返し・はみ出し・重なり・横スクロール・serif 0（日本語・英語）。「…」の警告は 568×320 のモード選択のカード 4 枚（7-D から）と、英語のハンガーの塗装の模様の名前 2 つ（Triple Diamond・Compass Star。844×390・1920×1080。下の「見つかったこと」） | ✅（8-6d） |
 | 11 | 依存の脆弱性 | `npm audit --omit=dev` | ✅ 0 件 | ✅ 0 件 |
 | 12 | 時間の計測 | `npm run bench` | ✅ スキンの生成 最大 35.5ms（上限 50ms） | ✅ 約 40ms |
 | 13 | 容量・起動（8-2） | `npm run build` の 500KB 超の警告・`npm run perf`（結果は `perf-report/perf.json`） | ✅ 警告なし（最大 `three-webgl` 371.4KB）。タイトルまでの JS・CSS 1,387.0KB（gzip 409.5KB。8-4 の言語のチャンク `ja` 16.4KB を含む）。タイトルまで 初回 2,644ms / 2 回目 2,886ms（中央値 5 回。クラウドの参考値）。2 回目にネットワークから取った JS・CSS 0 件。モードごとの追加の読み込みは PvP（`pvp-link`）・リプレイ（`replay-ui`）だけ。Lighthouse（モバイル）Performance 37・Accessibility 90・Best Practices 100・SEO 100、FCP 1,492ms・LCP 11,418ms・TBT 7,137ms・CLS 0（有効 3 回。TBT は SwiftShader の描画による） | ✅ gzip 393.3KB（8-2） |
@@ -65,3 +65,4 @@ npm run dev & node scripts/ui-audit.js <出力先> # 3 サイズの UI の点検
 - ~~レイド・防衛戦の「協力 2〜4人」から入るロビーの見出しが「PvP / 2〜4 人で同じ空を飛ぶ」のまま~~ → 8-2 の事前修正で「協力レイド」「協力防衛戦」に（`src/ui/lobby-text.ts`・i18n の `lobby`）
 - ~~Service Worker が環境変数なしのビルドでも `online-app`（約 250KB、Supabase を含む）をプリキャッシュする~~ → 8-2 の事前修正で、環境変数なしのビルドではプリキャッシュしない
 - ~~`public/brand/icon-source.png`（1254px・約 1.3MB）が `dist` に入って配信される~~ → 8-2 の事前修正で `assets-src/brand/` に移した（アイコン生成の入力としてリポジトリに残す）
+- 英語の画面のハンガーの「塗装」で、模様の名前 Triple Diamond・Compass Star がボタンの幅に収まらず「…」で切れる（844×390・1920×1080。日本語は収まる）。8-7 は見た目を変えない指示のため直していない（直すなら訳を短くするか、ボタンの最小幅）
