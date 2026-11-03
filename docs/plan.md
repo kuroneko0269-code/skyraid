@@ -103,6 +103,10 @@
 - [x] 8-6f 測り直しの間のチラつき（viewport-fit の切り替えの間は黒い幕で隠す・試みを順番に） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/01da045e025656f85eea209b2b94a3a1c990aac4
 - [x] 8-7 v1.0.0 公開（版 1.0.0・changelog・README の整理・公開前の点検のやり直し（docs/release-checklist.md）・knip の指摘の解消・公開後の候補・タグ v1.0.0、事前修正: リプレイの版の断り・ロビーの「補正」の英訳 Modifiers・起動時の幕のロゴ） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/9bbfa37ad0d23b52a3af9871572b6d73c40f6b53（事前修正 https://github.com/kuroneko0269-code/skyraid/commit/5ca6567e28b92f8bf1fedafda18534213fd5b70f）
 
+## 公開後の修正
+
+- [x] v1.0.1 公開後の修正（横向きの起動の下の余白の退行: 向きが遅れて決まる起動で幕と測り直しが動かなかった → 起動 8 秒の見張り・?debug=viewport の startup / cover / nudge の記録・ロゴの失敗で止めない・点検に縦 → 横の起動、公開 URL をリポジトリから外す、英語のデカール名を短く、テストの時間の判定を bench へ・時間切れの既定 60 秒、GitHub Actions のリリース（release.yml）とブランチの掃除（cleanup-branches.yml）、版 1.0.1） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/30750bb206197f8da7dfdedc0a5cb911e36d5e8a
+
 フェーズ 8 は 8-7（v1.0.0 の公開）で閉じる。以後の作業は下の候補から選び、指示を受けてから 1 タスクずつ行う。
 
 ## 公開後の候補（v1.0.0 の後。順番は未定・指示があるまで実装しない）
