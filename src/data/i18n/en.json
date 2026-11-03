@@ -183,7 +183,7 @@
       "map": "Map",
       "weather": "Weather",
       "rules": "Rules",
-      "options": "Handicaps",
+      "options": "Modifiers",
       "score": "Kill limit",
       "time": "Time limit",
       "mode": "Mode",
@@ -870,6 +870,8 @@
     },
     "status": {
       "startMismatch": "Start differs from this version",
+      "otherGameVersion": "Recorded on an earlier version (v{version}), so the result may differ",
+      "unknownGameVersion": "0.9.0 or earlier",
       "seeking": "Computing…",
       "ended": "End"
     },

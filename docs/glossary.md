@@ -115,10 +115,12 @@
 | 施設 / 対空砲 / 補給 | Facility / AA gun / Resupply |
 | 島（東岸の基地） / 港湾都市（港の基地） | Island (East Shore Base) / Harbor City (Port Base) |
 | 北東 / 東 / 南東 / 南西 / 南 | NE / E / SE / SW / S |
-| 初心者保護 / 補正 / 部屋コード | Rookie boost / Handicaps / Room code |
+| 初心者保護 / 補正 / 部屋コード | Rookie boost / Modifiers / Room code |
 | 準備OK / ちょっと待って / もう一戦 / よろしく / ナイス！ / ありがとう（定型文） | Ready / Wait / Rematch / GL HF / Nice! / Thanks |
 | 時間 止める / 流れる | Fixed / Flowing |
 
+
+「補正」（ロビーの欄）は「強化を無効にする」（全員に効くルールの変更）と「初心者保護」（最下位の人だけの強さの調整）の 2 つをまとめた欄なので、8-7 で Handicaps（プレイヤーごとの調整だけを指す）から Modifiers に変えた。
 ## リプレイ・フォトモード
 
 | 日本語 | English |

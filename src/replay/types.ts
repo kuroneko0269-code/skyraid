@@ -91,6 +91,11 @@ export interface ReplayHeader extends ReplayStart {
   readonly simVersion: number;
   /** 記録した時刻（ISO 8601） */
   readonly date: string;
+  /**
+   * 記録したゲームの版（package.json の version。8-7 から。それより前の記録には無い）。
+   * 数値の調整で再生の結果が変わることがあるので、今の版と違えば再生の始めに断る
+   */
+  readonly gameVersion?: string;
   readonly pilotName: string;
   /** 一覧に出す題（ミッション名・コース名など） */
   readonly title: string;
@@ -152,4 +157,15 @@ export interface ReplayData {
   /** チャンネルごとのステップの値（FRAME_CHANNELS の順。長さは header.steps） */
   readonly channels: readonly Int16Array[];
   readonly commands: readonly ReplayCommand[];
+}
+
+/** 記録したゲームの版（無い・形が違えば null。インポートしたファイルは信用しない） */
+export function replayGameVersion(header: ReplayHeader): string | null {
+  const v: unknown = header.gameVersion;
+  return typeof v === 'string' && /^\d+\.\d+\.\d+$/.test(v) ? v : null;
+}
+
+/** 今の版と違う版（版を持たない古い記録を含む）の記録か */
+export function isOtherGameVersion(header: ReplayHeader, current: string): boolean {
+  return replayGameVersion(header) !== current;
 }

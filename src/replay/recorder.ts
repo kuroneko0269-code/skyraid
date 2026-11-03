@@ -19,6 +19,8 @@ export interface RecordMeta {
   readonly pilotName: string;
   /** 記録した時刻（ISO 8601） */
   readonly date: string;
+  /** 記録したゲームの版（8-7） */
+  readonly gameVersion: string;
   /** 始めた直後の状態ハッシュ */
   readonly startHash: string;
 }

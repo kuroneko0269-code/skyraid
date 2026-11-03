@@ -86,9 +86,41 @@
         background: #000;
         pointer-events: none;
         transition: opacity 0.25s ease;
+        /* 8-7: 真っ黒のままだと固まったように見えるので、中央にタイトルのロゴ（読めなければ「SkyRaid」の文字） */
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .viewport-cover.is-hiding {
         opacity: 0;
+      }
+      .viewport-cover-logo {
+        display: block;
+        width: min(46vw, 760px);
+        height: auto;
+        max-height: 24vh;
+        object-fit: contain;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+      .viewport-cover-logo.is-loaded {
+        opacity: 1;
+      }
+      .viewport-cover-text {
+        display: none;
+        font:
+          italic 600 clamp(48px, 12vw, 120px) / 1 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        letter-spacing: 0.02em;
+        color: #e6fbff;
+      }
+      .viewport-cover.is-text .viewport-cover-logo {
+        display: none;
+      }
+      .viewport-cover.is-text .viewport-cover-text {
+        display: block;
       }
       /* 起動できないときの案内（8-3。src/ui/compat-notice.ts と src/legacy/legacy-check.js）。アプリの CSS が読めなくても出す */
       .compat-notice {

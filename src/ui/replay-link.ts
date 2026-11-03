@@ -3,6 +3,7 @@
 // .skyreplay の書き出し・読み込み。再生中の操作は ui/replay-playback.ts。
 // 8-2: 一覧・再生の操作・書き出し / 読み込みは別のチャンク（replay-ui.ts）にし、一覧を開くときに読む（loadUi）。
 // 読めなければ（オフライン・古いチャンク）お知らせを出してモード選択へ戻る
+import { APP_VERSION } from 'virtual:app-info';
 import type { GameState } from '../core/game-state';
 import { t } from '../core/i18n';
 import { REPLAY_CONFIG } from '../data/replay';
@@ -265,6 +266,7 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
         title: lastTitle,
         pilotName: p.save.pilotName ?? '',
         date: new Date().toISOString(),
+        gameVersion: APP_VERSION,
         startHash: simHash(p.world),
       });
     },

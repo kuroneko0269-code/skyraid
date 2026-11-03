@@ -1,10 +1,16 @@
 // リプレイの一覧（7-B）: モード選択の「リプレイ」から。左に一覧（モード・日付・時間・結果。自動保存は「自動」、名前を付けた
 // 保存は名前）、右に選んだ記録の詳細と操作（再生・名前を付けて保存・名前の変更・書き出し・削除）。下に容量と読み込み・戻る
+import { APP_VERSION } from 'virtual:app-info';
 import { formatDateTime } from '../core/format';
 import { t } from '../core/i18n';
 import { REPLAY_CONFIG } from '../data/replay';
 import { findAircraftModel } from '../data/aircraft';
-import { formatClock, replayOutcomeLabel, replayTitle } from '../replay/outcome';
+import {
+  formatClock,
+  replayOutcomeLabel,
+  replayTitle,
+  replayVersionNotice,
+} from '../replay/outcome';
 import type { ReplayEntry, ReplayUsage } from '../replay/store';
 import { REPLAY_MODE_LABELS } from '../replay/types';
 import { el } from './hud-dom';
@@ -143,8 +149,11 @@ export class ReplayListScreen {
     fact(t('replay.list.factAircraft'), findAircraftModel(hd.aircraftId)?.name ?? hd.aircraftId);
     fact(t('replay.list.factPilot'), hd.pilotName);
     fact(t('replay.list.factSize'), formatBytes(e.size));
-    if (hd.simVersion !== REPLAY_CONFIG.simVersion)
-      el('p', 'replay-warn', d, t('replay.list.oldVersion'));
+    const versionNote =
+      hd.simVersion !== REPLAY_CONFIG.simVersion
+        ? t('replay.list.oldVersion')
+        : replayVersionNotice(hd, APP_VERSION);
+    if (versionNote) el('p', 'replay-warn', d, versionNote);
     const name = el('input', 'ui-field replay-name', d);
     name.type = 'text';
     name.maxLength = REPLAY_CONFIG.nameMax;
