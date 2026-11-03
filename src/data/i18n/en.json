@@ -591,14 +591,14 @@
     "decal": {
       "chevron": "Chevron",
       "hexring": "Hex Ring",
-      "diamonds": "Triple Diamond",
+      "diamonds": "Diamonds",
       "star": "Star",
       "bolt": "Bolt",
       "bird": "Swallow",
       "number": "Number",
       "checker": "Checker",
       "claws": "Claws",
-      "compass": "Compass Star"
+      "compass": "Compass"
     },
     "unlock": {
       "allMissionsS": "Unlock: S rank on all missions",

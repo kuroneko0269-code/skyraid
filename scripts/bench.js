@@ -8,7 +8,12 @@ const { module } = await runnerImport('/scripts/bench-skins.ts', {
   configFile: false,
   logLevel: 'error',
 });
-const results = [module.benchSkins()];
+// v1.0.1: 地形の浸食（tests/terrain-gen.test.ts から移した）
+const { module: terrain } = await runnerImport('/scripts/bench-terrain.ts', {
+  configFile: false,
+  logLevel: 'error',
+});
+const results = [module.benchSkins(), terrain.benchTerrain()];
 let failed = false;
 for (const r of results) {
   const ok = r.worstMs < r.limitMs;

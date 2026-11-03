@@ -68,12 +68,12 @@ try {
           await canvas.waitForCardFonts();
           const m = model.buildCardModel(
             { ...source, paint: p },
-            { includePilot: true, url: 'https://skyraid.pages.dev/' },
+            { includePilot: true, url: 'https://skyraid.example.com/' },
           );
           const { canvas: c } = canvas.drawCard(m, card.CARD_SIZES[card.CARD_SIZE], null);
           return {
             png: c.toDataURL('image/png'),
-            text: model.cardShareText(m, 'https://skyraid.pages.dev/'),
+            text: model.cardShareText(m, 'https://skyraid.example.com/'),
           };
         },
         [lang, { ...common, ...s }],

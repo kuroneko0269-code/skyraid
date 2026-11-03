@@ -101,7 +101,7 @@
 | 基本色 / アクセント / マーキング | Base / Accent / Marking |
 | 単色 / 森林迷彩 / 砂漠迷彩 / 海洋迷彩 / 2 トーン / スプリッター / ストライプ / 金属地 | Solid / Forest Camo / Desert Camo / Ocean Camo / Two-Tone / Splinter / Stripes / Bare Metal |
 | 灰青 / 朱 / 銀灰 / 青 / オリーブ / 金 / ガンメタル / 白 / 黒 / 紺 / 砂 / 紫 | Slate / Vermilion / Silver / Blue / Olive / Gold / Gunmetal / White / Black / Navy / Sand / Purple |
-| シェブロン / 六角環 / 三連ダイヤ / 星 / 稲妻 / 燕 / 数字 / チェッカー / 爪痕 / 方位星 | Chevron / Hex Ring / Triple Diamond / Star / Bolt / Swallow / Number / Checker / Claws / Compass Star |
+| シェブロン / 六角環 / 三連ダイヤ / 星 / 稲妻 / 燕 / 数字 / チェッカー / 爪痕 / 方位星 | Chevron / Hex Ring / Diamonds / Star / Bolt / Swallow / Number / Checker / Claws / Compass（v1.0.1: Triple Diamond・Compass Star はボタンに収まらず「…」で切れたので短くした） |
 | セーブデータ / キー割当 | Save Data / Key Bindings |
 
 ## レース・防衛戦・PvP

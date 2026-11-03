@@ -1,0 +1,52 @@
+# v1.0.1: 更新の無い claude/* のブランチを消す（クラウドセッションが作る作業ブランチ。main への squash マージの後も残る）。
+# 毎日 1 回。消すのは「最後のコミットが DAYS 日より前」で「開いている PR が無い」もの。消したブランチの名前と先頭の SHA は
+# ログに出す（戻すときは `git push origin <SHA>:refs/heads/<名前>`）。手で動かすとき（Run workflow）は日数と試し（消さずに一覧だけ）を選べる。
+# feat/* fix/* main は触らない。権限は GITHUB_TOKEN の contents: write だけ（PR は読むだけ）
+name: cleanup-branches
+
+on:
+  schedule:
+    - cron: '17 18 * * *' # 毎日 3:17（日本時間）
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 最後のコミットからこの日数より前の claude/* を消す
+        default: '7'
+      dry_run:
+        description: 消さずに一覧だけ出す
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: cleanup-branches
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 古い claude/* を消す
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DAYS: ${{ inputs.days || '7' }}
+          DRY_RUN: ${{ inputs.dry_run || false }}
+        run: |
+          set -euo pipefail
+          case "$DAYS" in ''|*[!0-9]*) echo "days は整数で: $DAYS"; exit 1;; esac
+          cutoff=$(date -u -d "-${DAYS} days" +%s)
+          default=$(gh api "repos/${GITHUB_REPOSITORY}" --jq .default_branch)
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/branches?per_page=100" --jq '.[] | select(.name | startswith("claude/")) | [.name, .commit.sha, (.protected | tostring)] | @tsv' |
+          while IFS=$'\t' read -r name sha protected; do
+            if [ "$name" = "$default" ] || [ "$protected" = "true" ]; then echo "残す（保護・既定）: $name"; continue; fi
+            date=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}" --jq .commit.committer.date)
+            if [ "$(date -u -d "$date" +%s)" -gt "$cutoff" ]; then echo "残す（${date} に更新）: $name"; continue; fi
+            prs=$(gh api "repos/${GITHUB_REPOSITORY}/pulls?state=open&head=${GITHUB_REPOSITORY_OWNER}:${name}" --jq length)
+            if [ "$prs" != "0" ]; then echo "残す（開いている PR）: $name"; continue; fi
+            if [ "$DRY_RUN" = "true" ]; then echo "消す（試し）: $name $sha（${date}）"; continue; fi
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${name}"
+            echo "消した: $name $sha（${date}）"
+          done

@@ -1,15 +1,13 @@
 # SkyRaid: Titan Skies
 
 > **English:** SkyRaid: Titan Skies is a 3D arcade flight shooter that runs in your browser — no install needed.
-> **Play: https://skyraid.pages.dev/** — Fly the campaign and ring races, battle friends in 2–4 player PvP, or team up
+> Fly the campaign and ring races, battle friends in 2–4 player PvP, or team up
 > (1–4 players) to defend your base and take down the giant monster Vorgas. Works on PCs and phones (touch, keyboard and
 > gamepad). The game is available in English and Japanese: it follows your browser's language on first launch, and you
 > can switch in Settings → Display → Language. Requires a browser with WebGL 2 (iOS 16.4+, Chrome/Edge 105+,
 > Safari 16.4+, Firefox 121+). Online Link (cloud save and rankings) is optional and limited to approved members.
 
-ブラウザで動く 3D フライトシューティング（v1.0.0）。インストール不要で、パソコンとスマホで遊べます。
-
-**遊ぶ: https://skyraid.pages.dev/**（ホーム画面に追加するとアプリのように全画面で起動し、PvP・協力以外はオフラインでも遊べます）
+ブラウザで動く 3D フライトシューティング（v1.0.1）。インストール不要で、パソコンとスマホで遊べます。ホーム画面に追加するとアプリのように全画面で起動し、PvP・協力以外はオフラインでも遊べます。
 
 ## 遊び方
 
@@ -72,8 +70,8 @@ npm run build   # 本番ビルド（dist/）
 
 - 技術: TypeScript・Vite・Three.js。物理は自前の簡易アーケード物理、P2P は PeerJS、オンライン連携は Supabase（任意）
 - 仕様は `docs/spec.md`、計画は `docs/plan.md`、決定の記録は `docs/decisions.md`、更新履歴は `docs/changelog.md`（アプリの「情報 → 更新履歴」に出る）。作業の決まりは `CLAUDE.md`
-- 公開: main に push すると Cloudflare Pages が `npm run build` して `dist/` を配信します（GitHub Actions は使いません）。公開前の点検は `docs/release-checklist.md`（`node scripts/ui-audit.js <出力先> --release` など）、性能の計測は `docs/perf.md`（`npm run perf`）
-- 版は `package.json` の version（タイトルの右下・情報画面に出る）。公開した版には git のタグ（`v1.0.0` など）を付けます
+- 公開: main に push すると Cloudflare Pages が `npm run build` して `dist/` を配信します（ビルドに GitHub Actions は使いません。main の package.json の版が上がると、GitHub Actions がタグ vX.Y.Z と更新履歴を本文にしたリリースを作ります。更新の無い claude/* のブランチは毎日掃除します）。公開前の点検は `docs/release-checklist.md`（`node scripts/ui-audit.js <出力先> --release` など）、性能の計測は `docs/perf.md`（`npm run perf`）
+- 版は `package.json` の version（タイトルの右下・情報画面に出る）。公開した版には git のタグ（`v1.0.1` など）が付きます（GitHub Actions の release。v1.0.1 から）
 
 ---
 

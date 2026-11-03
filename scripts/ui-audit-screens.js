@@ -140,7 +140,7 @@ export async function auditMoreScreens(page, base, size, shot, shown) {
   await page.click(`.hangar-tabs .ui-seg-item:text-is("${L('塗装')}")`);
   await shot('hangar-paint', '.hangar-screen');
   // 「尾翼」の小タブは今の画面に無い（文言の表にも無い）ので、訳が無ければ飛ばす（8-7: --lang en で止まっていた）
-  let finLabel = null;
+  let finLabel;
   try {
     finLabel = L('尾翼');
   } catch {
