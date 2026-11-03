@@ -28,7 +28,7 @@ npm run dev & node scripts/ui-audit.js <出力先> # 3 サイズの UI の点検
 | 2 | console エラー 0 | `--release` の全画面で console の error・ページの例外・HTTP 400 以上 | ✅ 0 件 | ✅ 0 件 |
 | 3 | CSP 違反 0 | `dist/_headers` の CSP をそのまま付けて配信し、`securitypolicyviolation` を数える | ✅ 0 件 | ✅ 0 件 |
 | 4 | 空の状態からの初回起動 | 新しいブラウザのコンテキストで、localStorage 0 件・IndexedDB 0 個 → タイトル → パイロット名 → チュートリアルの案内 | ✅ 起動後は `skyraid.save`（版 9）・`skyraid.launches` と IndexedDB の `skyraid-replays` だけ | ✅ |
-| 5 | セーブ v1〜v9 の移行 | `npm test` の `tests/save-migration-chain.test.ts` と各段のテスト | ✅ 全部通る（テスト 131 ファイル・1219 件） | ✅ |
+| 5 | セーブ v1〜v9 の移行 | `npm test` の `tests/save-migration-chain.test.ts` と各段のテスト | ✅ 全部通る（テスト 130 ファイル・1216 件） | ✅ |
 | 6 | PWA: manifest・アイコン | `--release`: manifest（standalone・landscape）、アイコン 192 / 512 / maskable 512 の実寸、apple-touch-icon | ✅ | ✅ |
 | 7 | PWA: オフライン起動 | `--release`: Service Worker が制御した後にオフラインで読み直し → タイトル → フリーフライト | ✅ | ✅ |
 | 8 | 環境変数なしのビルドでオンライン機能が隠れる | `--release`: 「ランキング」のタイル・設定の「オンライン連携」が無い、connect-src に Supabase が無い、Supabase・online-app への通信 0 件 | ✅ | ✅ |
