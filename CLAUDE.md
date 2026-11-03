@@ -24,6 +24,7 @@ npm run check   # tsc --noEmit && eslint .
 npm test        # vitest
 npm run bench   # 時間の計測（テストには時間の判定を入れず、ここで測る。8-1）
 npm run unused  # 使われていないコード・依存の検出（knip。8-1）
+npm run analyze-replay -- <.skyreplay かフォルダ>  # リプレイの操作の診断（9-1。docs/control-analysis.md）
 npm run perf    # 本番ビルドのチャンク一覧・起動時間・Lighthouse（8-2。結果は perf-report/。docs/perf.md）
 node scripts/ui-audit.js <出力先> --release [--browser all]  # 公開前の点検（build の後。docs/release-checklist.md。互換性は docs/compat.md）
 node scripts/ui-audit-device.js <出力先>  # 実機確認の修正の点検（8-6。タップのずれ・画面の端・メンバー管理の行・排気口）
@@ -94,7 +95,9 @@ tests/               vitest
 
 - 遊ぶ人に見える変更（機能・画面・文言・数値の変更、不具合の修正）は、タスクごとに `docs/changelog.md` の今の版の項に「- 」で追記する（アプリの「情報 → 更新履歴」に出る）。内部だけの変更（リファクタ・テスト・ドキュメント）は書かない
 - 書式は「## 版（日付）」の見出しと「- 」の箇条書きだけ（`src/core/changelog.ts` が読む）。新しい版は上に足す
-- 版はフェーズの番号（0.N.0 = フェーズ N）。新しいフェーズの最初のタスクで `package.json` の version を上げ、新しい項を作る（`npm version 0.N.0 --no-git-tag-version`）
+- 1.0.0 より前の版はフェーズの番号（0.N.0 = フェーズ N）。新しいフェーズの最初のタスクで `package.json` の version を上げ、新しい項を作る（`npm version 0.N.0 --no-git-tag-version`）
+- 1.0.0 の後（フェーズ 9 から）: 遊ぶ人に見える変更を含むタスクごとに 1.0.x を 1 つ上げ（`npm version patch --no-git-tag-version`）、changelog に新しい項を作る。ツール・文書・テストだけのタスクと、未完成で隠している機能だけのタスクは上げない。フェーズ 9 の完了（9-11）で 1.1.0
+- 未完成の機能は `?dev=<名前>` の URL フラグの裏に隠す（フラグが無ければ遊ぶ人には見えない。changelog には出す時に書く）
 - 1 つの版は 3〜5 行を目安に、細かい修正はまとめる
 
 ## やってはいけないこと

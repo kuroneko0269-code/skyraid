@@ -52,6 +52,9 @@ export const AIM_ASSIST_CONFIG = {
   gunHitRadiusScale: 1.3,
 } as const;
 
+/** エイムアシストの数値の形（9-1 の実験で差し替える） */
+export type AimAssistSpec = { readonly [K in keyof typeof AIM_ASSIST_CONFIG]: number };
+
 /**
  * ターゲットカメラ（追従カメラのときだけ）。選択中の対象が画面の端に近づく（視線から「画面の半分の画角 − startMarginDeg」を超える）と、
  * 注視点を対象の側へ回し、「半分の画角 + fullMarginDeg」で最大 maxShiftDeg。自機は画面の端から aircraftMarginDeg 内側に残す。
