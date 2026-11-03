@@ -102,6 +102,11 @@ export default defineConfig(({ mode }) => ({
     include: ['tests/**/*.test.ts'],
     setupFiles: ['tests/i18n-setup.ts'],
     environment: 'node',
+    // v1.0.1: 既定の 5 秒では、ほかの処理と同時に走らせたときに重いテスト（地形の三角形・放置の失敗・日本語の直書き・
+    // 塗装の全組み合わせ・マップの描画の作り直し。単独で 1〜3 秒、負荷で 7〜9 秒）が時間切れになった。テストは結果を見るもので、
+    // 時間は npm run bench で測る。上限は止まった（無限ループ）ときに止めるためだけのもの
+    testTimeout: 60000,
+    hookTimeout: 60000,
     // テーマのテスト（tests/theme.test.ts）が UI の CSS を ?raw で読むため、CSS を空にしない
     css: { include: [/src\/ui\/.+\.css/] },
   },

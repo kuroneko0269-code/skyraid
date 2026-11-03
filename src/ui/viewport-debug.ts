@@ -1,9 +1,11 @@
 // ?debug=viewport・タイトルの版の表示を 5 回押す（8-6d。viewport-debug-toggle.ts）: 画面の左上に、画面の大きさに関わる値を出す（実機の iPhone で撮って送ってもらうため）。
 // innerWidth / innerHeight・visualViewport・screen・documentElement.clientWidth / clientHeight・100vh / dvh / svh / lvh・
 // html / body / #app / canvas の実寸と描画バッファ・安全領域（env(safe-area-inset-*)）・ホーム画面からの起動かと、
-// 起動からの値の変化の記録（ルート要素を合わせたときの測った値（起動直後から最新 10 件）と、この表示の値（最新 4 件））。0.5 秒ごとに書き直す。触っても下の画面に届く（pointer-events: none）
+// 起動からの値の変化の記録（ルート要素を合わせたときの測った値（起動直後から最新 10 件）と、この表示の値（最新 4 件））、
+// v1.0.1: 起動時の見張り・黒い幕とロゴ・測り直しの試みの記録（startup / cover / nudge の行）。0.5 秒ごとに書き直す。触っても下の画面に届く（pointer-events: none）
 import './viewport-debug.css';
 import { fitHistory, rootSize } from '../core/viewport-fit';
+import { startupSummary } from '../core/viewport-log';
 import { viewport } from '../core/viewport';
 
 interface NavigatorStandalone {
@@ -81,6 +83,10 @@ export function showViewportDebug(): () => void {
       `body    ${rect(document.body)}`,
       `#app    ${rect(document.getElementById('app'))}`,
       `canvas  ${rect(canvas)} buf ${canvas ? size(canvas.width, canvas.height) : '-'} view ${size(viewport.width, viewport.height)}`,
+      // v1.0.1: 起動時の見張り・幕（ロゴ）・測り直しの試みが動いたか（viewport-log.ts。値の記録に押し出されない）
+      `startup ${startupSummary('startup')}`,
+      `cover   ${startupSummary('cover')}`,
+      `nudge   ${startupSummary('nudge')}`,
       'fit (viewport-fit.ts, since load):',
       ...fitHistory,
       'shown:',

@@ -8,7 +8,7 @@
 // - members: メンバー管理の行の高さが自分の行（ボタンなし）とほかの人の行でそろう（8-6d: 1 人 1 行の表）
 // - nozzle: 戦闘機 4 機種の排気と噴流（画質 3 × アフターバーナーの有無、横と斜め後ろ）を PNG に。噴流の後ろの黒い画素と
 //   HalfFloat の描画先の NaN を数える（8-6b。scripts/ui-audit-device-nozzle.js）
-// 使い方: `node scripts/ui-audit-device.js <出力先>`。結果は <出力先>/device.json と PNG
+// 使い方: `node scripts/ui-audit-device.js <出力先> [--only viewport,debug]`。結果は <出力先>/device.json と PNG
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createServer } from 'vite';
@@ -16,7 +16,12 @@ import { auditNozzles } from './ui-audit-device-nozzle.js';
 import { auditViewport, auditViewportDebug } from './ui-audit-device-viewport.js';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
-const out = process.argv[2] ?? 'device-audit';
+// --only viewport,debug: 一部の組だけ（v1.0.1。組の名前は下の result のキー）
+const onlyAt = process.argv.indexOf('--only');
+const only = onlyAt > 0 ? (process.argv[onlyAt + 1] ?? '').split(',') : null;
+const out =
+  process.argv.slice(2).find((a, i, all) => !a.startsWith('--') && all[i - 1] !== '--only') ??
+  'device-audit';
 mkdirSync(out, { recursive: true });
 
 const VIEW = { width: 844, height: 390 };
@@ -226,13 +231,16 @@ const browser = await chromium.launch({
 let failed = 0;
 const env = { browser, base, out, view: VIEW, touchContext, toTitle };
 try {
-  const result = {
-    tap: await auditTap(browser, base),
-    viewport: await auditViewport(env),
-    debug: await auditViewportDebug(env),
-    members: await auditMembers(browser, base),
-    nozzle: await auditNozzles(browser, base, out),
+  const groups = {
+    tap: () => auditTap(browser, base),
+    viewport: () => auditViewport(env),
+    debug: () => auditViewportDebug(env),
+    members: () => auditMembers(browser, base),
+    nozzle: () => auditNozzles(browser, base, out),
   };
+  const result = {};
+  for (const [name, run] of Object.entries(groups))
+    if (!only || only.includes(name)) result[name] = await run();
   writeFileSync(`${out}/device.json`, JSON.stringify(result, null, 2));
   for (const [group, rows] of Object.entries(result))
     for (const r of rows) {

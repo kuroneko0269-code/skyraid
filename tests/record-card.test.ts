@@ -281,7 +281,7 @@ describe('記録カードの配置', () => {
   });
 
   it('遊べる URL の表示は https:// と末尾の / を外す', () => {
-    expect(displayUrl('https://skyraid.pages.dev/')).toBe('skyraid.pages.dev');
+    expect(displayUrl('https://skyraid.example.com/')).toBe('skyraid.example.com');
     expect(displayUrl('http://localhost:4174/')).toBe('localhost:4174');
   });
 });

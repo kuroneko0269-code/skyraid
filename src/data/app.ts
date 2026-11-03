@@ -70,6 +70,15 @@ export const VIEWPORT_CONFIG = {
      */
     coverMaxMs: 6000,
     coverFadeMs: 250,
+    /**
+     * v1.0.1: 描かれる高さが足りない状態を見張る時間（ms。起動から）。実機では起動直後は縦の値（402×812）で、横の短い値（812×340）に
+     * なったのは 1.3 秒後だった（atMs[0] の判定より後）。見張る間に短くなったら、その時に幕を出して試みを始める
+     */
+    watchMs: 8000,
+    /** v1.0.1: 短くなったのを見つけてから 1 回目の試みまでの最短の間（ms。向きの変更の値が落ち着くのを待つ。起動直後に見つけたときは atMs[0] のまま） */
+    settleMs: 400,
+    /** v1.0.1: 幕のロゴがこの時間で読めなければ「SkyRaid」の文字にする（ms。幕の出し入れ・試みとは関係なく進む） */
+    logoTimeoutMs: 1500,
   },
   debugToggle: { tapCount: 5, tapWindowMs: 3000, storageKey: 'skyraid.debugViewport' },
 } as const;

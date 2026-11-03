@@ -24,11 +24,11 @@ function decode(qr: QrCode): string | null {
 
 describe('QR コード（5-4。ロビーの参加用 URL）', () => {
   it.each([
-    'https://skyraid.pages.dev/?room=ABCDEF',
+    'https://skyraid.example.com/?room=ABCDEF',
     'http://localhost:5173/?room=Z9K2QX',
     'A',
     'https://example.com/' + 'x'.repeat(60) + '?room=HJKLMN',
-    'https://skyraid-preview-branch-name.skyraid.pages.dev/?room=PQRSTU&net=local',
+    'https://skyraid-preview-branch-name.preview.example.com/?room=PQRSTU&net=local',
   ])('作った QR コードを読むと元の文字列になる: %s', (text) => {
     const qr = encodeQr(text);
     expect(qr).not.toBeNull();

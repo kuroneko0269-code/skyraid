@@ -12,7 +12,7 @@
 - 通信（フェーズ5以降）: PeerJS による P2P。ホストがゲーム状態の正（authoritative）
 - セーブ: localStorage（フェーズ3）→ Supabase（フェーズ7以降、指示があるまで入れない）
 - テスト: Vitest（ロジックのみ。描画はテストしない）
-- 公開: Cloudflare Pages（`npm run build` → `dist/`）。GitHub Actions は使わない
+- 公開: Cloudflare Pages（`npm run build` → `dist/`）。ビルド・テスト・公開に GitHub Actions は使わない（v1.0.1 からタグ・リリース・claude/* のブランチの掃除だけ `.github/workflows/` に任せる）
 
 ## コマンド
 
@@ -99,7 +99,7 @@ tests/               vitest
 
 ## やってはいけないこと
 
-- GitHub Actions のワークフロー追加
+- GitHub Actions のワークフロー追加（v1.0.1 の release.yml・cleanup-branches.yml を除く。直すのは指示があったときだけ）
 - 秘密情報（APIキー等）のコミット。`.env` は `.gitignore` 済み
 - 指示のないフェーズの機能を先回りして実装すること
 - 既存の操作感（飛行モデルの数値）を無断で変えること。変える場合はコミット本文と完了報告に理由と変更前後の値を書く

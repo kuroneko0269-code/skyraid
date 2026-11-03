@@ -11,8 +11,8 @@ describe('OGP', () => {
     expect(ogImageUrl('https://skyraid.example.com/')).toBe(
       'https://skyraid.example.com/brand/og-image.jpg',
     );
-    expect(ogImageUrl('https://abc123.skyraid.pages.dev')).toBe(
-      'https://abc123.skyraid.pages.dev/brand/og-image.jpg',
+    expect(ogImageUrl('https://abc123.preview.example.com')).toBe(
+      'https://abc123.preview.example.com/brand/og-image.jpg',
     );
     expect(ogImageUrl(undefined)).toBe(OG_IMAGE_PATH);
     expect(ogImageUrl('')).toBe(OG_IMAGE_PATH);

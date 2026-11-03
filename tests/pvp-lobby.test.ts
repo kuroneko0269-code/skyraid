@@ -159,14 +159,14 @@ describe('ロビー（5-4。インメモリ transport）', () => {
   });
 
   it('参加用 URL は ?room=コード（?net=local だけ残す）。読み込み後は ?room を消す', () => {
-    expect(buildJoinUrl('https://x.pages.dev/?netdebug#a', 'ABCDEF')).toBe(
-      'https://x.pages.dev/?room=ABCDEF',
+    expect(buildJoinUrl('https://x.example.com/?netdebug#a', 'ABCDEF')).toBe(
+      'https://x.example.com/?room=ABCDEF',
     );
     expect(buildJoinUrl('http://localhost:5173/?net=local&room=OLDOLD', 'ZZZZZZ')).toBe(
       'http://localhost:5173/?room=ZZZZZZ&net=local',
     );
-    expect(withoutRoomParam('https://x.pages.dev/?room=ABCDEF&netdebug')).toBe(
-      'https://x.pages.dev/?netdebug',
+    expect(withoutRoomParam('https://x.example.com/?room=ABCDEF&netdebug')).toBe(
+      'https://x.example.com/?netdebug',
     );
   });
 });
