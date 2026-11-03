@@ -203,9 +203,8 @@ export const KAIJU_ATTACK_CONFIG = {
   },
 } as const;
 
-/** 攻撃ごとの予兆・攻撃・硬直（型の確認用。KAIJU_ATTACK_CONFIG が型に合うかをコンパイル時に確かめる。8-1 の knip では残す） @public */
-export const KAIJU_ATTACK_TIMINGS: Readonly<Record<KaijuAttack, KaijuAttackSpec>> =
-  KAIJU_ATTACK_CONFIG;
+// 攻撃ごとの予兆・攻撃・硬直が型に合うかをコンパイル時に確かめる（8-7: 別名の export は knip が重複と見るので型だけに）
+KAIJU_ATTACK_CONFIG satisfies Readonly<Record<KaijuAttack, KaijuAttackSpec>>;
 
 /**
  * レイドの怪獣の出現と開始位置（6-4 から港湾都市に固定。6-2 の島の値は src/data/maps.ts の ISLAND_MAP）。

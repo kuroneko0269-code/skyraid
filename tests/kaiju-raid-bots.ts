@@ -24,7 +24,7 @@ import {
   type SkillSpec,
 } from './raid-bot-skills';
 
-export type { RaidBotOptions, RaidBotResult, RaidBotSkill } from './raid-bot-skills';
+export type { RaidBotOptions, RaidBotResult } from './raid-bot-skills';
 
 // 6-4: レイドは港湾都市（地形は 1 回だけ作る）
 const getGroundHeight = createHeightField(HARBOR_TERRAIN).getGroundHeight;

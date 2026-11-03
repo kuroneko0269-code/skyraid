@@ -139,8 +139,15 @@ export async function auditMoreScreens(page, base, size, shot, shown) {
   await shot('hangar-perf', '.hangar-screen');
   await page.click(`.hangar-tabs .ui-seg-item:text-is("${L('塗装')}")`);
   await shot('hangar-paint', '.hangar-screen');
-  const fin = page.locator(`.hangar-screen .ui-seg-item:text-is("${L('尾翼')}")`);
-  if (await fin.count()) {
+  // 「尾翼」の小タブは今の画面に無い（文言の表にも無い）ので、訳が無ければ飛ばす（8-7: --lang en で止まっていた）
+  let finLabel = null;
+  try {
+    finLabel = L('尾翼');
+  } catch {
+    finLabel = null;
+  }
+  const fin = page.locator(`.hangar-screen .ui-seg-item:text-is("${finLabel ?? '尾翼'}")`);
+  if (finLabel !== null && (await fin.count())) {
     await fin.first().click();
     await shot('hangar-paint-fin', '.hangar-screen');
   }

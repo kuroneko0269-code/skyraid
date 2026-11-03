@@ -1,21 +1,47 @@
 # SkyRaid: Titan Skies
 
 > **English:** SkyRaid: Titan Skies is a 3D arcade flight shooter that runs in your browser — no install needed.
-> Fly the campaign and ring races, battle friends in 2–4 player PvP, or team up (1–4 players) to defend your base
-> and take down the giant monster Vorgas. Works on PCs and phones (touch, keyboard and gamepad). The game is available in
-> English and Japanese: it follows your browser's language on first launch, and you can switch in
-> Settings → Display → Language. Requires a browser with WebGL 2 (iOS 16.4+, Chrome/Edge 105+, Safari 16.4+, Firefox 121+).
+> **Play: https://skyraid.pages.dev/** — Fly the campaign and ring races, battle friends in 2–4 player PvP, or team up
+> (1–4 players) to defend your base and take down the giant monster Vorgas. Works on PCs and phones (touch, keyboard and
+> gamepad). The game is available in English and Japanese: it follows your browser's language on first launch, and you
+> can switch in Settings → Display → Language. Requires a browser with WebGL 2 (iOS 16.4+, Chrome/Edge 105+,
+> Safari 16.4+, Firefox 121+). Online Link (cloud save and rankings) is optional and limited to approved members.
 
-ブラウザで動く3Dフライトシューティング。表示は日本語と英語（初回はブラウザの言語。設定 → 表示 → 言語で切り替え）。
+ブラウザで動く 3D フライトシューティング（v1.0.0）。インストール不要で、パソコンとスマホで遊べます。
 
-```
-npm ci
-npm run dev
-```
+**遊ぶ: https://skyraid.pages.dev/**（ホーム画面に追加するとアプリのように全画面で起動し、PvP・協力以外はオフラインでも遊べます）
 
-仕様は `docs/spec.md`、計画は `docs/plan.md` を参照。
+## 遊び方
 
-## 動作環境（8-3）
+タイトル →「モード選択」の「遊ぶ」から選びます。初めてのときはチュートリアル（5 段階・撃墜されない練習）を勧めます。
+
+| モード | 人数 | 内容 |
+| --- | --- | --- |
+| チュートリアル | ソロ | 旋回・加速・機銃・ミサイル・フレアの練習 |
+| キャンペーン | ソロ | 5 ミッション（訓練 → 怪獣の出現）。報酬のクレジットで機体の購入・強化・塗装 |
+| フリーフライト | ソロ | マップ・天候・時間帯を選んで自由に飛ぶ（敵機の有無・難易度も選べる） |
+| リングレース | ソロ | 4 コース。ゴーストと競ってタイムとランク |
+| PvP | 2〜4 人 | 部屋コード・共有 / QR で集まって個人戦・チーム戦（2 対 2） |
+| レイド | 1〜4 人 | 港湾都市に上陸する怪獣ヴォルガスを部位を壊して倒す（通常 / 高難度） |
+| 防衛戦 | 1〜4 人 | 基地を全 10 波の攻撃から守る |
+
+「管理」からハンガー（機体・強化・塗装）・リプレイ（記録の再生・書き出し）・設定・情報（版・更新履歴・ライセンス・データの扱い）を開けます。結果画面の「記録カード」で結果を画像にして共有できます。
+
+### 操作（主なもの）
+
+| 動作 | キーボード | ゲームパッド | タッチ |
+| --- | --- | --- | --- |
+| 機首の上げ下げ・傾け | WASD / 矢印 | 左スティック | 左下のスティック |
+| ヨー | Q / E | LT / RT | 左上・右上の ◀ ▶ |
+| スロットル | Shift / Z | 右スティック上下 | 右端のスライダー |
+| 機銃 / ミサイル | Space / F | RB / A | GUN / MSL |
+| アフターバーナー / フレア | R / X | LB / B | AB / FLR |
+| ターゲット切替 | Tab | Y | HUD の対象をタップ |
+| ポーズ | Esc | Start | 右上の ⏸ |
+
+キーの割り当て・感度・操作補助（エイムアシストなど）は設定で変えられます。全部の操作は `docs/spec.md` の「操作」。
+
+## 動作環境
 
 | 端末 | 最低の版 |
 | --- | --- |
@@ -23,9 +49,35 @@ npm run dev
 | Android | Chrome 105 以降 |
 | パソコン | Chrome / Edge 105 以降・Safari 16.4 以降・Firefox 121 以降 |
 
-- WebGL 2 が必要（ブラウザのハードウェア アクセラレーションを ON）。推奨はノートパソコンの内蔵 GPU 以上・2020 年以降のスマホ
+- WebGL 2 が必要（ブラウザのハードウェア アクセラレーションを ON）。推奨はノートパソコンの内蔵 GPU 以上・2020 年以降のスマホ。スマホは横画面で遊びます
 - 下限はビルドの出力（three の class の static ブロック = ES2022）と WebGL 2 で決まる。決め方と各機能の確認結果は `docs/compat.md`
 - WebGL が使えない・古いブラウザでは真っ黒にせず案内画面を出す。文面と表は `src/data/i18n/ja.json` / `en.json` の `compat`（`src/legacy/legacy-check.js` にはビルド時に埋め込む）
+
+## セーブとオンライン連携
+
+- 進み具合・設定はブラウザの中（localStorage、リプレイは IndexedDB）に保存します。アカウントは要りません。別の端末へは設定 → データの「セーブデータをコピー」→「貼り付けて復元」で移せます
+- **オンライン連携（クラウドセーブ・メンバー内のランキング）は、持ち主が承認したメンバーだけの任意の機能**です。使わなくても全モードを遊べます。メールのコードでログインし、承認されると「連携中」になります（サーバーに送るのはセーブのバックアップと記録、個人の情報はメールアドレスとパイロット名だけ。詳しくは情報画面の「データの扱い」）
+- 公開のビルドに Supabase の環境変数が無ければ、連携の UI は出ず通信もしません（準備の手順は下の「オンライン連携の準備」）
+- PvP・協力は端末どうしを直接つなぐ P2P（PeerJS）なので、相手に IP アドレスが見えます
+
+## 開発
+
+```
+npm ci          # 依存のインストール
+npm run dev     # 開発サーバー（http://localhost:5173/）
+npm run check   # 型と lint
+npm test        # テスト（Vitest）
+npm run build   # 本番ビルド（dist/）
+```
+
+- 技術: TypeScript・Vite・Three.js。物理は自前の簡易アーケード物理、P2P は PeerJS、オンライン連携は Supabase（任意）
+- 仕様は `docs/spec.md`、計画は `docs/plan.md`、決定の記録は `docs/decisions.md`、更新履歴は `docs/changelog.md`（アプリの「情報 → 更新履歴」に出る）。作業の決まりは `CLAUDE.md`
+- 公開: main に push すると Cloudflare Pages が `npm run build` して `dist/` を配信します（GitHub Actions は使いません）。公開前の点検は `docs/release-checklist.md`（`node scripts/ui-audit.js <出力先> --release` など）、性能の計測は `docs/perf.md`（`npm run perf`）
+- 版は `package.json` の version（タイトルの右下・情報画面に出る）。公開した版には git のタグ（`v1.0.0` など）を付けます
+
+---
+
+以下は持ち主・開発者向けの運用の手順です。
 
 ## ブランド素材の差し替え
 

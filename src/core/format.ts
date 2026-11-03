@@ -24,13 +24,6 @@ function dateFormat(opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
   return f;
 }
 
-/** 数（3 桁区切り）。digits は小数の桁数（省略は整数に丸めず Intl の既定: 最大 3 桁） */
-export function formatNumber(n: number, digits?: number): string {
-  return numberFormat(
-    digits === undefined ? {} : { minimumFractionDigits: digits, maximumFractionDigits: digits },
-  ).format(n);
-}
-
 /** 整数（四捨五入して 3 桁区切り） */
 export function formatInteger(n: number): string {
   return numberFormat({ maximumFractionDigits: 0 }).format(Math.round(n));
@@ -39,11 +32,6 @@ export function formatInteger(n: number): string {
 /** クレジット「1,500 CR」 */
 export function formatCredits(n: number): string {
   return `${formatInteger(n)} CR`;
-}
-
-/** 割合（0〜1 → 「42%」） */
-export function formatPercent(ratio: number): string {
-  return numberFormat({ style: 'percent', maximumFractionDigits: 0 }).format(ratio);
 }
 
 function toDate(d: Date | number | string): Date {
@@ -69,12 +57,6 @@ export function formatDateTime(d: Date | number | string): string {
   return Number.isNaN(date.getTime())
     ? '—'
     : dateFormat({ ...DATE_OPTS, ...TIME_OPTS }).format(date);
-}
-
-/** 時刻（「13:05」） */
-export function formatTimeOfDay(d: Date | number | string): string {
-  const date = toDate(d);
-  return Number.isNaN(date.getTime()) ? '—' : dateFormat(TIME_OPTS).format(date);
 }
 
 /** 並べ替え用の比較（名前など。今の言語の照合順序） */
