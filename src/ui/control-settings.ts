@@ -66,6 +66,7 @@ export function createControlSettings(
       return c[key];
     });
     t.button.disabled = !enabled;
+    t.button.dataset.key = key;
     return t.sync;
   };
   toggle('invertPitch', CONTROL_LABELS.invertPitch);

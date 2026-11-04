@@ -1,5 +1,5 @@
 // 9-6a: ネフィルガの形の生成の数値。生成器は src/render/kaiju2-model/。画像ファイルは使わない（手続き生成）。
-// 三角形は「高」15,000 以下・「低」5,000 以下（tests/kaiju2.test.ts）。ヴォルガス（高 約 34,000・低 約 6,900）より軽くする
+// 三角形は「高」15,000 以下・「低」5,000 以下（tests/kaiju2.test.ts）。ヴォルガス（高 18,532・低 3,934。9-6a の計測）より軽くする
 
 export interface Kaiju2DetailSpec {
   /** 管（胴・首・尾・翼の骨・脚）の断面の分割数 */
@@ -31,8 +31,18 @@ export const KAIJU2_MODEL_CONFIG = {
   },
   /** 発光: 目の明るさ・膜の筋の常時と予兆の最大・喉の袋の常時と最大 */
   glow: { eye: 2.2, veinIdle: 0.35, veinMax: 3.2, throatIdle: 0.2, throatMax: 6 },
-  /** 羽ばたきの振れ幅（ラジアン）・たたむ量・掲げる量 */
-  flap: { amplitude: 0.62, foldElbow: 2.0, foldShoulder: 0.9, raise: 0.9 },
+  /**
+   * 羽ばたきの振れ幅（ラジアン）・掲げる量と、たたむ量（9-6b で整えた。骨ごとの水平の回転: 上腕を後ろへ 38°・前腕を前へ 79°・
+   * 指を後ろへ 124° 折り返し、上から見て上腕 50° 後ろ・前腕 60° 前・指 125° 後ろの「Z」で体の横に寄せる。lift は上への持ち上げ）
+   */
+  flap: {
+    amplitude: 0.62,
+    raise: 0.9,
+    foldShoulder: 0.66,
+    foldElbow: 1.38,
+    foldWrist: 2.16,
+    foldLift: 0.18,
+  },
   /** 雷球の見た目の半径（判定の半径の倍率）・突風の輪の不透明度 */
   orbScale: 0.55,
   gustOpacity: 0.35,

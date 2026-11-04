@@ -84,9 +84,11 @@ export function animateKaiju2(s: Kaiju2Skeleton, p: Readonly<Kaiju2Pose>, time: 
   for (const side of [-1, 1] as const) {
     const n = side < 0 ? 'L' : 'R';
     // 右翼（side 1）は −Z 回りで下がる向きが正の beat
-    get(`wing${n}0`).rotation.set(0, -side * fold * F.foldShoulder * 0.6, side * (beat + raise));
-    get(`wing${n}1`).rotation.set(0, side * fold * F.foldElbow * 0.55, side * lag * 0.8);
-    get(`wing${n}2`).rotation.set(0, -side * fold * F.foldElbow * 0.6, side * lag * 0.6);
+    // 9-6b: たたむ形を整えた（上腕を後ろへ・前腕を前へ・指を後ろへ折り返して、体の横に「Z」の形で寄せる。上へ少し持ち上げる）
+    const lift = fold * F.foldLift;
+    get(`wing${n}0`).rotation.set(0, -side * fold * F.foldShoulder, side * (beat + raise - lift));
+    get(`wing${n}1`).rotation.set(0, side * fold * F.foldElbow, side * lag * 0.8 * (1 - fold));
+    get(`wing${n}2`).rotation.set(0, -side * fold * F.foldWrist, side * lag * 0.6 * (1 - fold));
   }
   // 胴: 羽ばたきで少し上下に揺れる
   get('chest').rotation.set(Math.sin(ph + 1.2) * 0.04 * p.flapAmount, 0, 0);
