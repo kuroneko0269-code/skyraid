@@ -101,6 +101,14 @@ export class SkyKaiju {
   readonly diveTarget = vec3();
   /** この攻撃で当てたか（1 回の攻撃で 1 回だけ当てる） */
   attackHit = false;
+  /** 9-6b: 今の雷球の扇で当たった数（attacks.orbs.maxHits で残りを消す） */
+  orbVolleyHits = 0;
+  /** 9-6b: 難易度（レイド）: 予兆の秒数・攻撃の間隔・当たりのダメージの倍率。確かめる場は 1 */
+  windupScale = 1;
+  intervalScale = 1;
+  damageScale = 1;
+  /** 9-6b: 見えている（レイドの撃破の後は落ちて消える。確かめる場は常に true） */
+  visible = true;
   readonly orbs: Kaiju2Orb[] = Array.from({ length: MAX_ORBS }, newOrb);
   readonly pose: Kaiju2Pose = {
     flapPhase: 0,
@@ -289,7 +297,8 @@ export class SkyKaiju {
     // 天井は海面からの高さ。高い山の上でも床（巡航の最小）より下にはしない
     const top = Math.max(this.ceiling, ground + C.bodyClearance + 60);
     if (p.y > top && this.state !== 'perched') {
-      p.y = top;
+      // 9-6b: 翼が壊れて天井が下がったときに瞬間移動しないよう、上から外れた分は ceilingDrop m/s で下げる
+      p.y = Math.max(top, p.y - C.ceilingDrop * dt);
       if (this.forward.y > 0) this.levelOff();
     }
     this.updateBank(dt);

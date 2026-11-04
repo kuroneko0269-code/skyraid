@@ -31,3 +31,40 @@
 .kaiju2-dev .is-warn {
   color: #ffd27a;
 }
+
+/* 9-6b: レイドのブリーフィング（出撃の直後に画面の下。タップで閉じる） */
+.kaiju2-briefing {
+  position: fixed;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(640px, calc(100vw - 32px));
+  max-height: 46vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  pointer-events: auto;
+}
+
+.kaiju2-briefing[hidden] {
+  display: none;
+}
+
+.kaiju2-briefing-lines {
+  margin: 6px 0 4px;
+  padding-left: 1.2em;
+}
+
+.kaiju2-briefing-tap {
+  font-size: 11px;
+  opacity: 0.7;
+  text-align: right;
+}
+
+/* レイドの HUD の部位の一覧（ヴォルガスの協力の部品を流用。ロック中は枠） */
+.kaiju2-hud .kaiju-coop-part.is-own {
+  border-color: rgba(110, 240, 255, 0.85);
+}

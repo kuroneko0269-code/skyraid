@@ -13,7 +13,8 @@ export function updateKaiju2Pose(k: SkyKaiju, dt: number): void {
   const toward = (v: number, goal: number, rate: number): number =>
     v + (goal - v) * Math.min(1, dt * rate);
   const diving =
-    a === 'dive' && (s === 'attack' || (s === 'windup' && k.stateTime > A.dive.windup - 0.8));
+    a === 'dive' &&
+    (s === 'attack' || (s === 'windup' && k.stateTime > A.dive.windup * k.windupScale - 0.8));
   const perched = s === 'perched' || (s === 'landing' && k.position.y - k.perch.y < 60);
   p.wingFold = toward(p.wingFold, diving ? 0.85 : perched ? 1 : 0, 3);
   p.legsDown = toward(p.legsDown, perched || s === 'takeoff' ? 1 : 0, 2);

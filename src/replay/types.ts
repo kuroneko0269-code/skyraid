@@ -40,6 +40,8 @@ export interface ReplayStart {
   readonly missionId?: string;
   /** ソロレイドの難易度（raid のとき） */
   readonly raidDifficulty?: RaidDifficulty;
+  /** 9-6b: ヴォルガス以外のレイドの怪獣（raid のとき。省略はヴォルガス。src/missions/raid-variants.ts） */
+  readonly raidKaiju?: string;
   /** レースのコース id と、ベストの各リングのタイム（race のとき。ゴーストとの差の表示だけに使う） */
   readonly courseId?: string;
   readonly raceReference?: readonly number[] | null;

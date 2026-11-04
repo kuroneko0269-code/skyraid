@@ -91,7 +91,7 @@ export class ModeSelectScreen {
       onBack: () => void;
       /** レイドの人数を選んだ（6-2）: solo はすぐ出撃、coop は PvP のロビーへ */
       /** difficulty はソロの難易度（6-6。協力はロビーでホストが選ぶ） */
-      onRaid: (kind: 'solo' | 'coop', difficulty: RaidDifficulty) => void;
+      onRaid: (kind: 'solo' | 'coop', difficulty: RaidDifficulty, kaiju?: string) => void;
       /** 防衛戦（7-2）: solo はすぐ出撃、coop は PvP のロビーへ（マップと難易度はホストの初期設定） */
       onDefense: (kind: 'solo' | 'coop', mapId: string, difficulty: DefenseDifficulty) => void;
     },

@@ -115,7 +115,9 @@ export class GamePlay {
     this.setRace(null);
     this.setDefense(null);
     this.session.startMission(def.start, def.practice === true);
-    const runner = new MissionRunner(def, this.session);
+    // 9-6b: ?dev=kaiju2 のレイドの怪獣は差し込み口が引き受ける（付けていなければ今までと同じ）
+    const world = freeExtraOf(this)?.startMission?.(def) ?? this.session;
+    const runner = new MissionRunner(def, world);
     this.setRunner(runner);
     runner.start();
     return runner;
@@ -220,8 +222,9 @@ export class GamePlay {
     }
     this.session.step(controls, input, dt);
     this.runner?.step(dt);
-    // 9-6a: フリーフライトの開発中の物（?dev=kaiju2 のときだけ付いている）
-    if (this.runner === null && this.defense === null) freeExtraOf(this)?.step(dt);
+    // 9-6a: フリーフライトの開発中の物（?dev=kaiju2 のときだけ付いている）。9-6b: 引き受けたミッションでも動く
+    // （ほかのミッション・防衛戦などを始めると stop されて止まっている）
+    if (this.defense === null) freeExtraOf(this)?.step(dt);
     this.stepResupply(dt);
     const d = this.defense;
     if (d) {

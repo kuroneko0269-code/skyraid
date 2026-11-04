@@ -34,6 +34,8 @@ export const KAIJU2_CONFIG = {
   arena: { soft: 4300, hard: 5000 },
   /** 高さの上限（海面から）。翼が壊れると下がる */
   ceiling: { normal: 1700, wingBroken: 550 },
+  /** 9-6b: 天井より上にいるとき下げる速さ（m/s。翼が壊れたとき） */
+  ceilingDrop: 70,
   /** 巡航: 周回の半径・地面からの高さ・速さ・旋回の角速度（度/秒）・加速度 */
   cruise: {
     orbitRadius: 900,
@@ -69,6 +71,8 @@ export const KAIJU2_CONFIG = {
     standHeight: 22,
     landingSpeed: 55,
     takeoffSeconds: 3,
+    /** 9-6b: 急降下の引き起こしの後、スタミナがこの割合より少なければそのまま止まり木へ（隙をつなげる） */
+    perchAfterDive: 0.4,
   },
   /** 部位が壊れたときの動きの変化 */
   broken: {
@@ -92,7 +96,9 @@ export const KAIJU2_CONFIG = {
       turnDegPerSec: 28,
       lifetime: 10,
       radius: 25,
-      damage: 35,
+      /** 9-6b: 35 → 30。1 回の攻撃（扇の 3〜5 個）で当たるのは maxHits 個まで（Swift の HP 140 で一撃で落ちない） */
+      damage: 30,
+      maxHits: 2,
       /** 使う距離（m） */
       minRange: 400,
       maxRange: 2600,
@@ -107,9 +113,10 @@ export const KAIJU2_CONFIG = {
       /** 前方の円錐: 長さ・半分の角度（度） */
       range: 700,
       halfAngleDeg: 30,
-      damage: 30,
-      /** 煽られて操作できない秒数（咆哮のスタンの仕組みを使う） */
-      stun: 1.0,
+      /** 9-6b: 30 → 25 */
+      damage: 25,
+      /** 煽られて操作できない秒数（咆哮のスタンの仕組みを使う）。9-6b: 1.0 → 0.6（短めに） */
+      stun: 0.6,
       /** 使う条件: 前方 maxRange 以内・中心から pickAngle 以内 */
       pickRange: 900,
       pickAngleDeg: 45,
@@ -131,7 +138,8 @@ export const KAIJU2_CONFIG = {
       turnDegPerSec: 8,
       lead: 1.0,
       hitRadius: 50,
-      damage: 80,
+      /** 9-6b: 80 → 70（高難度 ×1.15 で 80。Swift の HP 140 の 6 割弱） */
+      damage: 70,
       /** 引き起こし（攻める隙）: 秒数と速さ */
       recover: 5,
       recoverSpeed: 70,
@@ -153,7 +161,8 @@ export const KAIJU2_CONFIG = {
       /** 尾の先の振りの判定の球（半径）と尾の長さ */
       hitRadius: 140,
       reach: 110,
-      damage: 50,
+      /** 9-6b: 50 → 45 */
+      damage: 45,
     },
   },
   /** 攻撃を選ぶ: 同じ攻撃を続ける上限 */

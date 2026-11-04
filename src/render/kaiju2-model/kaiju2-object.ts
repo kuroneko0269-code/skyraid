@@ -23,7 +23,12 @@ import { KAIJU2_MODEL_CONFIG } from '../../data/kaiju2-model';
 import { MAX_ORBS, type SkyKaiju } from '../../entities/kaiju2/sky-kaiju';
 import { createKaiju2Materials, type Kaiju2Materials } from './material';
 import { buildKaiju2Membrane, buildKaiju2Skin } from './parts';
-import { animateKaiju2, createKaiju2Skeleton, type Kaiju2Skeleton } from './skeleton';
+import {
+  animateKaiju2,
+  applyKaiju2Broken,
+  createKaiju2Skeleton,
+  type Kaiju2Skeleton,
+} from './skeleton';
 
 const M = KAIJU2_MODEL_CONFIG;
 
@@ -134,8 +139,8 @@ export class Kaiju2Object {
     }
   }
 
-  /** 描画フレームごと。前ステップとの間を alpha で補間し、骨を動かす */
-  update(k: SkyKaiju, alpha: number, dt: number): void {
+  /** 描画フレームごと。前ステップとの間を alpha で補間し、骨を動かす。flash は被弾で白く光る残り（0〜1。9-6b） */
+  update(k: SkyKaiju, alpha: number, dt: number, flash = 0): void {
     this.time += dt;
     if (!this.group.visible) return;
     const p = k.position;
@@ -165,11 +170,13 @@ export class Kaiju2Object {
     roll.setFromAxisAngle(zAxis, -bank);
     this.group.quaternion.copy(quat).multiply(roll);
     animateKaiju2(this.rig, k.pose, this.time);
+    applyKaiju2Broken(this.rig, k.broken);
     this.materials.setGlow(
       k.pose.throatGlow,
       k.attack === 'orbs' ? k.pose.throatGlow : 0,
       this.time,
     );
+    this.materials.setFlash(Math.min(1, flash), k.broken.head);
     this.updateOrbs(k, alpha);
     this.updateGust(k);
   }

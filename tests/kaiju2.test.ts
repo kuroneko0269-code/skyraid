@@ -272,7 +272,7 @@ describe('?dev=kaiju2 の確かめる場（9-6a）', () => {
       ground: w2.map.ordnanceGround,
       map: () => w2.map.def,
     });
-    expect(dev.stateRoot).toBe(dev.body);
+    expect(dev.stateRoot).toBe(dev.raid);
     attachFreeExtra(w2.play, null);
     expect(record(w2, BASE_START, { seconds: 3, hashes: true }).hashes).toEqual(plain);
   });

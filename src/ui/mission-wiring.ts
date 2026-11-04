@@ -55,7 +55,13 @@ export function linkMissionEvents(p: MissionWiringParts): void {
     });
     // 成功の記録と報酬をセーブへ（3-2）。チュートリアルの報酬は初回だけ（TutorialLink）
     // 7-B: 再生中は記録・報酬を入れない
-    if (runner && !inTutorial && !replaying) {
+    const variant = runner?.def.reward.raid?.kaiju !== undefined;
+    // 9-6b: ヴォルガス以外のレイド（?dev=kaiju2 の開発中の怪獣）は報酬だけ。クリアの記録・自己ベスト・ランキングには入れない
+    if (runner && variant && !replaying)
+      runner.bus.on('mission:reward', ({ credits }) => {
+        if (credits > 0) p.save.addCredits(credits);
+      });
+    if (runner && !inTutorial && !replaying && !variant) {
       bindMissionRewards(runner.bus, p.save, screens.progress);
       // 7-4: ソロのレイドのクリアをオンライン連携の記録に（連携していなければ何もしない）
       const raid = runner.def.reward.raid;

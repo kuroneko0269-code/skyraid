@@ -328,7 +328,8 @@ export function startApp(renderer: WebGLRenderer): void {
   });
 
   // 9-6a: ?dev=<名前> の開発中の機能（遅延チャンク。付けなければ読まない）
-  linkDevFeatures({ search, play, scene, activeMap, game, quality, pvp, ...runtime });
+  const dev = { search, play, scene, activeMap, game, quality, pvp, hud, audio, camera };
+  linkDevFeatures({ ...dev, ...runtime });
 
   // 8-3: WebGL のコンテキストを失ったら、ソロの飛行中はポーズ（リプレイの再生・PvP・協力は止めない）
   linkContextLoss(renderer.domElement, {

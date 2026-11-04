@@ -20,6 +20,7 @@ import type { GamePlay } from '../missions/game-play';
 import type { MissionDef } from '../missions/types';
 import { resolveLoadout, type Loadout } from '../progression/loadout';
 import { freeExtraOf } from '../missions/free-extra';
+import { findRaidVariant } from '../missions/raid-variants';
 import { hashState, hashStateRounded, type StateSnapshot, type WalkSkip } from './state-walk';
 import type { ReplayCommand, ReplayFrame, ReplayStart } from './types';
 
@@ -62,9 +63,14 @@ export function simCheckHash(w: Pick<SimWorld, 'play' | 'buildings'>): string {
 }
 
 export function missionFor(
-  s: Pick<ReplayStart, 'mode' | 'missionId' | 'raidDifficulty'>,
+  s: Pick<ReplayStart, 'mode' | 'missionId' | 'raidDifficulty' | 'raidKaiju'>,
 ): MissionDef | null {
-  if (s.mode === 'raid') return raidMission(s.raidDifficulty ?? 'normal');
+  if (s.mode === 'raid') {
+    // 9-6b: ほかの怪獣は登録されているときだけ（?dev=kaiju2 の遅延チャンク）
+    if (s.raidKaiju !== undefined)
+      return findRaidVariant(s.raidKaiju)?.mission(s.raidDifficulty ?? 'normal') ?? null;
+    return raidMission(s.raidDifficulty ?? 'normal');
+  }
   if (s.mode !== 'mission') return null;
   return MISSIONS.find((m) => m.id === s.missionId) ?? null;
 }

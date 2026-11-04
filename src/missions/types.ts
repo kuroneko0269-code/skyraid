@@ -235,7 +235,11 @@ export interface RewardDef {
    * レイドの報酬の式（6-6。src/progression/raid-reward.ts）: ランクの倍率ではなく、基礎額 × 時間ボーナス（× 高難度）、
    * 失敗でも 300。省略は通常のミッション
    */
-  readonly raid?: { readonly difficulty: RaidDifficulty };
+  readonly raid?: {
+    readonly difficulty: RaidDifficulty;
+    /** 9-6b: ヴォルガス以外の怪獣（src/missions/raid-variants.ts の id。?dev=kaiju2 のときだけ）。省略はヴォルガス */
+    readonly kaiju?: string;
+  };
 }
 
 export interface MissionDef {

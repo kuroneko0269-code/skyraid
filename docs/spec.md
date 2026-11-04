@@ -596,6 +596,7 @@
 - 嵐をまとう翼竜（翼開長 240m）。自機の近くを周回して飛び（115 m/s）、雷球・翼の突風・急降下（段階 2 から）・尾の打ち払いの 4 種（予兆と見た目まで。数値は仮）。55 秒飛ぶと陸の高い所に降りて休む（攻める隙）。部位（左右の翼・頭・尾）が壊れると動きが変わる（9-6a は URL で始めから壊す）
 - 決まった計算（乱数は飛行のシードから）で、リプレイで同じ結果。地形・海・建物の屋根から体の中心 45m（止まり木 22m）より下に行かず、戦域の中心から 5000m を超えない
 - `?dev=kaiju2` を付けたときだけ遅延チャンク（kaiju2-dev。プリキャッシュしない）を読み、フリーフライトに出す。付けないときは読み込み・挙動・リプレイのハッシュとも今までと同じ
+- 9-6b: ソロのレイド（`?dev=kaiju2` の裏だけ。レイドのダイアログで怪獣を選ぶ。通常・高難度。数値は `src/data/kaiju2-raid.ts`、進め方は `src/missions/kaiju2-raid.ts`・`kaiju2-mission.ts`、HUD・ブリーフィングは `src/ui/kaiju2-hud.ts`・`kaiju2-briefing.ts`、音は `src/audio/sfx/kaiju2-sounds.ts`、文言は `src/data/kaiju2-text.ts`、ボットは `tests/kaiju2-raid-bots.ts`）。撃てる部位は胴（壊れない・×0.6）・左右の翼・頭・尾。全体 HP 通常 4,200・高難度 ×1.55。止まり木の間 ×1.25。負けは嵐（40% 以下）から 4.5 分（高難度 4 分）・全体 12 分（10 分）・戦域離脱。1 回の攻撃は最大 80.5（Swift の HP 140 未満）。報酬はヴォルガスと同じ式、記録・ランキングには入れない。本体には差し込み口だけ（`GamePlay.startMission` を引き受ける・`CombatSystem.addTargets`・`src/missions/raid-variants.ts`・リプレイのヘッダ `raidKaiju`）。詳しくは `docs/kaiju2.md` の 9-6b
 
 #### 港湾都市と破壊される建物（6-4。マップは `src/data/maps.ts`、地形は `src/data/terrain-harbor.ts` / `src/render/terrain-gen/harbor-shape.ts`、街は `src/data/city.ts` / `src/render/city/`、建物の判定は `src/combat/buildings.ts` / `city-damage.ts`、今のマップは `src/missions/active-map.ts`。決定は `docs/decisions.md` の 6-4）
 

@@ -2,6 +2,7 @@
 import { formatCredits as formatCreditsText } from '../core/format';
 import { hasMessage, t, tList } from '../core/i18n';
 import { DIFFICULTIES, DIFFICULTY_SHORT_LABELS, type Difficulty } from '../data/ai';
+import { raidVariantByMission } from '../missions/raid-variants';
 import type { FailCondition, MissionDef, ObjectiveDef, ObjectiveType } from '../missions/types';
 
 /** 言語ごとの文（src/data/i18n/*.json）。ミッションの文は missions[id] */
@@ -12,7 +13,8 @@ export interface MissionStrings {
 
 /** ミッションのタイトルとブリーフィング文（今の言語。なければ id） */
 export function missionStrings(id: string): MissionStrings {
-  if (!hasMessage(`missions.${id}.title`)) return { title: id, briefing: [] };
+  if (!hasMessage(`missions.${id}.title`))
+    return raidVariantByMission(id)?.strings() ?? { title: id, briefing: [] };
   return { title: t(`missions.${id}.title`), briefing: tList(`missions.${id}.briefing`) };
 }
 

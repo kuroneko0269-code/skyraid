@@ -1,14 +1,20 @@
 // 9-6a: 確かめる場（?dev=kaiju2）の判定の側（Three.js・DOM 非依存）: フリーフライトに空の怪獣ネフィルガだけを出す。
 // GamePlay の差し込み口（free-extra.ts）に付け、飛行の始めのシードから怪獣の種を作るので、リプレイでも同じに動く。
-// 当たり（数値は仮）は自機に入れる（ダメージ・突風の操作不能は咆哮のスタンの仕組み）
+// 9-6b: ソロのレイド（ミッション raidNephirga）も引き受ける（体力・部位・段階・制限時間は kaiju2-raid.ts）。
+// 部位は CombatSystem の撃てる対象の末尾に足すので、機銃・ミサイル・ロケット・爆弾で減らせる（フリーフライトでは倒れない）
 import { TEAM_ENEMY } from '../combat/target';
 import { KAIJU2_CONFIG, KAIJU2_DEV_CONFIG, KAIJU2_PARTS, type Kaiju2Part } from '../data/kaiju2';
+import { KAIJU2_RAID_CONFIG } from '../data/kaiju2-raid';
 import type { MapDef } from '../data/maps';
-import { Kaiju2Ai, type Kaiju2Target } from '../ai/kaiju2-ai';
-import { SkyKaiju } from '../entities/kaiju2/sky-kaiju';
+import type { Kaiju2Ai, Kaiju2Target } from '../ai/kaiju2-ai';
+import type { SkyKaiju } from '../entities/kaiju2/sky-kaiju';
 import { vec3, type Vec3 } from '../flight/math';
 import { attachFreeExtra, type FreeExtra } from './free-extra';
 import type { GamePlay } from './game-play';
+import { NEPHIRGA_ID } from './kaiju2-mission';
+import { Kaiju2Raid } from './kaiju2-raid';
+import type { MissionDef } from './types';
+import type { MissionWorld } from './world';
 
 /** URL で決める始めの状態（?k2hp=<0〜100>・?k2break=wingL,tail）。再生でも同じ URL なら同じになる */
 export interface Kaiju2DevOptions {
@@ -35,20 +41,21 @@ export interface Kaiju2DevEnv {
   readonly map: () => Pick<MapDef, 'center'>;
 }
 
+/** 動かしている場面: 止めている / フリーフライト（確かめる場）/ ソロのレイド */
+export type Kaiju2Mode = 'off' | 'free' | 'raid';
+
 export class Kaiju2Dev implements FreeExtra {
-  readonly body: SkyKaiju;
-  readonly ai: Kaiju2Ai;
+  readonly raid: Kaiju2Raid;
   private readonly target: Kaiju2Target & { position: { x: number; y: number; z: number } };
   private seed = 1;
-  /** フリーフライトで動かしている（ほかのモードを始めたら止める） */
-  private running = false;
+  mode: Kaiju2Mode = 'off';
   /** 飛行の途中から出した（読み込みが遅れた。リプレイの記録と合わない） */
   lateStart = false;
   /** 自機の速度（前のステップの位置との差から） */
   private readonly velocity = vec3();
-  /** 走査の根（本体だけ。AI の hooks は関数なので入れない） */
+  /** 走査の根（怪獣の本体・体力・部位。AI の hooks は関数なので値は入らない） */
   get stateRoot(): object {
-    return this.body;
+    return this.raid;
   }
 
   constructor(
@@ -57,8 +64,7 @@ export class Kaiju2Dev implements FreeExtra {
     private readonly env: Kaiju2DevEnv,
   ) {
     const session = play.session;
-    this.body = new SkyKaiju(env.ground);
-    this.ai = new Kaiju2Ai(this.body, {
+    this.raid = new Kaiju2Raid(env.ground, {
       hit: (_a, damage, stun) => {
         if (!session.player.active) return;
         session.combat.dealDamage(session.player, damage, TEAM_ENEMY);
@@ -76,16 +82,22 @@ export class Kaiju2Dev implements FreeExtra {
     };
   }
 
+  get body(): SkyKaiju {
+    return this.raid.body;
+  }
+
+  get ai(): Kaiju2Ai {
+    return this.raid.ai;
+  }
+
   /** フリーフライトで出ている */
   get freeFlying(): boolean {
-    const play = this.play;
-    return (
-      this.running &&
-      play.runner === null &&
-      play.race === null &&
-      play.defense === null &&
-      play.practice === null
-    );
+    return this.mode === 'free' && this.play.runner === null;
+  }
+
+  /** レイドで出ている（終わった後の結果の画面まで） */
+  get raiding(): boolean {
+    return this.mode === 'raid';
   }
 
   /** 自機の位置（値の表示） */
@@ -94,33 +106,51 @@ export class Kaiju2Dev implements FreeExtra {
   }
 
   stop(): void {
-    this.running = false;
+    this.mode = 'off';
+    // 部位は撃てる対象に残るので、止めている間は撃てない・見えない
+    this.body.visible = false;
   }
 
   reseed(seed: number): void {
     this.seed = (seed ^ KAIJU2_DEV_CONFIG.seedSalt) >>> 0;
   }
 
-  /** フリーフライトの始め: 開始位置の前方に出す（戦域はそのマップ） */
+  /** フリーフライトの始め: 開始位置の前方に出す（戦域はそのマップ）。体力・壊れた部位は URL から */
   start(): void {
-    this.running = true;
+    this.mode = 'free';
     this.lateStart = false;
+    this.raid.reset(false, 'normal');
+    this.raid.setStart(this.options.hpPercent / 100, this.options.broken);
+    this.spawnAhead(KAIJU2_DEV_CONFIG.spawnAhead, KAIJU2_DEV_CONFIG.spawnAltitude);
+  }
+
+  /** 9-6b: ネフィルガのレイドなら引き受ける（体力・難易度・出す位置）。ランナーが読む世界を返す */
+  startMission(def: MissionDef): MissionWorld | null {
+    const r = def.reward.raid;
+    if (r?.kaiju !== NEPHIRGA_ID) return null;
+    this.mode = 'raid';
+    this.lateStart = false;
+    this.raid.reset(true, r.difficulty);
+    this.spawnAhead(KAIJU2_RAID_CONFIG.spawnAhead, KAIJU2_RAID_CONFIG.spawnAltitude);
+    this.body.attackCooldown = KAIJU2_RAID_CONFIG.firstAttackDelay;
+    return raidWorld(this.play, this.raid);
+  }
+
+  private spawnAhead(ahead: number, altitude: number): void {
     const s = this.play.session;
+    s.combat.addTargets(this.raid.targets);
     const k = this.body;
     const map = this.env.map();
     k.center.x = map.center.x;
     k.center.z = map.center.z;
-    for (const p of KAIJU2_PARTS) k.broken[p] = this.options.broken.includes(p);
-    k.setHpRatio(this.options.hpPercent / 100);
     const p = s.aircraft.state.position;
     // 自機の水平の向き（前方 −Z を回した向き）の先に、自機の方を向けて出す
     const q = s.aircraft.state.orientation;
     const fx = -2 * (q.x * q.z + q.w * q.y);
     const fz = -(1 - 2 * (q.x * q.x + q.y * q.y));
     const h = Math.hypot(fx, fz) || 1;
-    const d = KAIJU2_DEV_CONFIG.spawnAhead;
-    let x = p.x + (fx / h) * d;
-    let z = p.z + (fz / h) * d;
+    let x = p.x + (fx / h) * ahead;
+    let z = p.z + (fz / h) * ahead;
     const r = Math.hypot(x - map.center.x, z - map.center.z);
     const lim = KAIJU2_CONFIG.arena.soft;
     if (r > lim) {
@@ -128,7 +158,8 @@ export class Kaiju2Dev implements FreeExtra {
       z = map.center.z + ((z - map.center.z) / r) * lim;
     }
     const heading = Math.atan2(p.x - x, -(p.z - z));
-    this.ai.spawn(x, KAIJU2_DEV_CONFIG.spawnAltitude, z, heading, this.seed);
+    this.ai.spawn(x, altitude, z, heading, this.seed);
+    this.raid.placeTargets();
     this.velocity.x = 0;
     this.velocity.y = 0;
     this.velocity.z = 0;
@@ -141,15 +172,60 @@ export class Kaiju2Dev implements FreeExtra {
   }
 
   step(dt: number): void {
-    if (!this.running) return;
+    if (this.mode === 'off') return;
+    // 終わったレイドの後（結果の画面へ進むまで）も落ちる様子は続ける
     const a = this.play.session.aircraft;
     if (dt > 0) {
       this.velocity.x = (a.state.position.x - a.prevPosition.x) / dt;
       this.velocity.y = (a.state.position.y - a.prevPosition.y) / dt;
       this.velocity.z = (a.state.position.z - a.prevPosition.z) / dt;
     }
-    this.ai.step(dt, this.target, this.play.session.combat.flares.flares);
+    this.raid.step(dt, this.target, this.play.session.combat.flares.flares);
   }
+}
+
+/** ランナーが読む世界: 自機・戦域は飛行の世界のまま、怪獣の体力と「街に着いた」（嵐の制限時間）をネフィルガから */
+function raidWorld(play: GamePlay, raid: Kaiju2Raid): MissionWorld {
+  const s = play.session;
+  return {
+    get playerPosition() {
+      return s.playerPosition;
+    },
+    get playerPrevPosition() {
+      return s.playerPrevPosition;
+    },
+    get playerSpeed() {
+      return s.playerSpeed;
+    },
+    get playerActive() {
+      return s.playerActive;
+    },
+    get playerDowns() {
+      return s.playerDowns;
+    },
+    get playerDamageTaken() {
+      return s.playerDamageTaken;
+    },
+    get playerMaxHp() {
+      return s.playerMaxHp;
+    },
+    spawn: (def) => {
+      s.spawn(def);
+    },
+    destroyedCount: (kind, group) => s.destroyedCount(kind, group),
+    get escortLost() {
+      return s.escortLost;
+    },
+    escort: (group) => s.escort(group),
+    get kaijuDamageRatio() {
+      return raid.damageRatio;
+    },
+    get kaijuReachedCity() {
+      return raid.stormReached;
+    },
+    // 空の怪獣は建物を壊さないので、守れた建物は出さない
+    protectedBuildings: null,
+  };
 }
 
 /** GamePlay に付ける（?dev=kaiju2 の遅延チャンクから） */

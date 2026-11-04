@@ -108,10 +108,10 @@
   font-size: 13px;
 }
 
-/* 9-6b: 狭い画面（568×320 の英語）で 1 つの欄に収める: 名前は折り返し、選択肢の幅は欄の 6 割まで、長いボタンの文は折り返す */
+/* 9-6b: 狭い画面（568×320 の英語）で 1 つの欄に収める: 名前は折り返し、選択肢の幅は欄の 6 割まで。文の長いボタン（振動・傾きの許可）は
+   折り返さず（7-C）、2 列にまたがせる */
 .settings-grid .control-size,
-.settings-grid .control-tilt-note,
-.settings-grid .control-tilt-permit {
+.settings-grid .control-tilt-note {
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -123,7 +123,6 @@
 }
 
 .settings-grid .control-tilt-permit,
-.control-settings-toggles .settings-button {
-  min-width: 0;
-  white-space: normal;
+.control-settings-toggles [data-key='vibration'] {
+  grid-column: 1 / -1;
 }

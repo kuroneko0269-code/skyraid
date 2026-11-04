@@ -112,3 +112,21 @@ export function animateKaiju2(s: Kaiju2Skeleton, p: Readonly<Kaiju2Pose>, time: 
   get('legL').rotation.set(legs, 0, 0);
   get('legR').rotation.set(legs, 0, 0);
 }
+
+const B = KAIJU2_MODEL_CONFIG.broken;
+
+/** 9-6b: 壊れた部位の見た目: 翼は指の骨を縮めて（膜が裂けて短くなる）垂らし、尾は先を縮める。animateKaiju2 の後に呼ぶ */
+export function applyKaiju2Broken(
+  s: Kaiju2Skeleton,
+  broken: Readonly<Record<'wingL' | 'wingR' | 'head' | 'tail', boolean>>,
+): void {
+  for (const side of [-1, 1] as const) {
+    const n = side < 0 ? 'L' : 'R';
+    const on = side < 0 ? broken.wingL : broken.wingR;
+    const finger = s.bones[BONE2[`wing${n}2`]];
+    const arm = s.bones[BONE2[`wing${n}1`]];
+    finger?.scale.setScalar(on ? B.wingScale : 1);
+    if (on && arm) arm.rotation.z -= side * B.wingDroop;
+  }
+  s.bones[BONE2.tail3]?.scale.setScalar(broken.tail ? B.tailScale : 1);
+}

@@ -15,6 +15,8 @@ export interface Kaiju2Materials {
   readonly membrane: MeshStandardMaterial;
   /** throat: 喉の袋 0〜1、vein: 膜の筋の強まり 0〜1 */
   setGlow(throat: number, vein: number, time: number): void;
+  /** 9-6b: 被弾で白く光る（0〜1）・喉の袋が壊れて光が消える */
+  setFlash(flash: number, throatBroken: boolean): void;
 }
 
 function patch(
@@ -78,6 +80,11 @@ export function createKaiju2Materials(): Kaiju2Materials {
       skinU.uThroat.value = g.throatIdle + (g.throatMax - g.throatIdle) * throat;
       const pulse = 0.75 + 0.25 * Math.sin(time * 1.7);
       memU.uVein.value = (g.veinIdle + (g.veinMax - g.veinIdle) * vein) * pulse;
+    },
+    setFlash(flash, throatBroken) {
+      skin.emissive.setScalar(flash * M.hitFlash);
+      membrane.emissive.setScalar(flash * M.hitFlash * 0.6);
+      if (throatBroken) skinU.uThroat.value = 0;
     },
   };
 }
