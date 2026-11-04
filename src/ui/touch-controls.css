@@ -227,3 +227,29 @@
     box-shadow: 0 0 14px 4px rgba(255, 220, 90, 0.6);
   }
 }
+
+/* 9-4: 傾き・ドラッグの方式ではスティックを隠す（ドラッグは画面全体の面で、傾きは端末で操縦する） */
+.touch-controls[data-steer='tilt'] > .tc-stick-zone,
+.touch-controls[data-steer='tilt'] > .tc-stick-base,
+.touch-controls[data-steer='drag'] > .tc-stick-zone,
+.touch-controls[data-steer='drag'] > .tc-stick-base {
+  display: none;
+}
+
+/* 9-4: 傾きの「水平を合わせ直す」ボタン（スティックの待機位置。左右入替では右下） */
+.touch-controls > .tc-tilt-level {
+  display: none;
+  position: absolute;
+  left: calc(var(--tc-left) + var(--tc-stick-size) / 2 + 16px);
+  top: calc(100% - var(--tc-bottom) - var(--tc-stick-size) / 2 - 8px);
+  margin: calc(var(--tc-button-size) / -2) 0 0 calc(var(--tc-button-size) / -2);
+  font-size: 22px;
+}
+
+.touch-controls[data-steer='tilt'] > .tc-tilt-level {
+  display: flex;
+}
+
+.touch-controls.is-swapped > .tc-tilt-level {
+  left: calc(100% - var(--tc-right) - var(--tc-stick-size) / 2 - 16px);
+}

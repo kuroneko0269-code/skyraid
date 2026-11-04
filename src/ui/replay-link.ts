@@ -61,7 +61,7 @@ export interface ReplayLinkParts {
   readonly world: SimWorld;
   readonly save: SaveStore;
   /** 記録の始めの入力系統と、タッチのスティックの方式（9-2。ヘッダの controls） */
-  readonly input: Pick<Input, 'lastDevice'>;
+  readonly input: Pick<Input, 'lastDevice' | 'steerMode'>;
   readonly playback: PlaybackSlot;
   /** 一覧・再生の操作のチャンクを読む（読み込みの表示付き。読めなければ null。読めたら playback も作る） */
   readonly loadUi: () => Promise<typeof ReplayUi | null>;
@@ -272,8 +272,10 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
         date: new Date().toISOString(),
         gameVersion: APP_VERSION,
         startHash: simHash(p.world),
-        controls: replayControlsOf(p.save.settings.controls, p.input.lastDevice),
+        controls: replayControlsOf(p.save.settings.controls, p.input.lastDevice, p.input.steerMode),
       });
+      // 9-4: 始めた直後の丸めたハッシュ（再生でずれを見つける。[0]）
+      hub.checkpoint(p.world.buildings());
     },
     unrecordedStarted() {
       liveMode = null;

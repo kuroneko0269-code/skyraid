@@ -209,14 +209,18 @@ export function keyLabel(code: string): string {
   return code;
 }
 
-/** リプレイのヘッダに残す操作の設定（9-2。device は始めた時点で最後に操作した入力系統） */
+/**
+ * リプレイのヘッダに残す操作の設定（9-2。device は始めた時点で最後に操作した入力系統。9-4: steerMode は効いている方式
+ * （傾きの許可を待つ間は direct）。省略は設定の値）
+ */
 export function replayControlsOf(
   c: Readonly<ControlSettings>,
   device: InputDevice,
+  steerMode: SteerMode = c.steerMode,
 ): ReplayControls {
   return {
     device,
-    steerMode: c.steerMode,
+    steerMode,
     stickCurve: c.stickCurve,
     stickPosition: c.stickPosition,
     sensitivity: c.sensitivity,

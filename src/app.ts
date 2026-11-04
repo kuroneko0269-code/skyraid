@@ -53,6 +53,8 @@ import { linkOnline } from './ui/online-link';
 import { linkContextLoss } from './ui/context-loss';
 import { createLanguageSettings } from './ui/language-settings';
 import { watchViewport } from './core/viewport';
+import { linkTiltPause } from './ui/tilt-settings';
+import { screenRoll } from './render/screen-roll';
 
 /**
  * ゲーム本体を組み立てて起動する（8-3: main.ts が WebGL2 の描画を作れたときだけ呼ぶ。作れなければ案内画面）。
@@ -178,15 +180,9 @@ export function startApp(renderer: WebGLRenderer): void {
   );
   // 操作設定（4-11）: 感度・デッドゾーン・反転・オートレベル（URL の ?invert / ?autolevel が優先）・左右入替・振動・大きさ・キー割当
   const overrides = parseFlightOverrides(window.location.search);
-  createControlsLink(
-    settingsUi.slot('controls'),
-    save,
-    input,
-    touch.controls,
-    session,
-    fxEvents,
-    overrides,
-  );
+  createControlsLink(settingsUi.slot('controls'), save, input, touch, session, fxEvents, overrides);
+  // 9-4: ポーズの「傾きを合わせ直す」（傾き操作のときだけ）
+  linkTiltPause(game, screens.pause, touch);
   // チュートリアル（4-11）の指示と、タッチ操作のヒント。指示の「中断」はモード選択へ
   const tutorial = new TutorialLink(document.body, save, input, touch, hud, () => {
     screens.abortTutorial(game);
@@ -252,17 +248,24 @@ export function startApp(renderer: WebGLRenderer): void {
     () => assistFlags.hud,
   );
   // HUD の対象をタップ（クリック）すると選ぶ。スティック・ボタンの上は canvas に届かない
-  hudLink.bindTap(
-    renderer.domElement,
-    () => game.state === 'flight' && !replayHub.playing,
-    (t) => {
-      replayHub.select(t);
-    },
-  );
+  // 9-4: ドラッグ操作の面は canvas の上を覆うので、そこで押さえても同じように選ぶ（押さえた所へ機首も向ける）
+  for (const surface of [renderer.domElement, touch.controls.drag.root])
+    hudLink.bindTap(
+      surface,
+      () => game.state === 'flight' && !replayHub.playing,
+      (t) => {
+        replayHub.select(t);
+      },
+    );
 
   // 天候（7-5）: 飛行・メニュー・ブリーフィング・ロビーの天候、HUD のマーカーと夜の減光、環境音
   // エイムアシスト・自動射撃（9-3）と「方向へ倒す」方式（9-2）。部屋の補正と HUD の宙返りの速度不足も
   const inputAssist = createInputAssist(session, assistFlags, input, save, activeMap, hudLink, pvp);
+  // 9-4: ドラッグ操作は画面の傾きで地平線の基準に戻す（宙返りの間は読み直さない）
+  Object.assign(touch.controls.drag, {
+    screenRoll: () => screenRoll(camera),
+    looping: () => inputAssist.steer.looping,
+  });
   linkWeather(world.weather, { game, screens, pvp, hud, hudLink, audio, save });
   // リングレース（7-1）: コース一覧・HUD・リザルト・音・ゴースト（天候の配線の後: レースの天候で上書きする）
   const ghost = new GhostView(scene);

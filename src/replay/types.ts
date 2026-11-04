@@ -122,6 +122,19 @@ export interface ReplayHeader extends ReplayStart {
   readonly startHash: string;
   /** 記録したときの操作の設定（9-2 から） */
   readonly controls?: ReplayControls;
+  /**
+   * 数を丸めた状態のハッシュ（9-4 から。src/replay/state-walk.ts の hashStateRounded）: [0] は始めた直後、[k] は k 秒（60k ステップ）
+   * 進めた後。端末の違い（数学関数の最後の桁）では変わらないので、再生で違えば「ここから結果が変わることがある」と知らせる。
+   * 9-4 より前の記録には無い（始めは startHash で比べる）
+   */
+  readonly checkHashes?: readonly string[];
+}
+
+/** 毎秒の丸めたハッシュ（無い・形が違えば null。インポートしたファイルは信用しない） */
+export function replayCheckHashes(header: ReplayHeader): readonly string[] | null {
+  const v: unknown = header.checkHashes;
+  if (!Array.isArray(v) || v.length === 0) return null;
+  return v.every((x): x is string => typeof x === 'string') ? v : null;
 }
 
 /**

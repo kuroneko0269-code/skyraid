@@ -77,7 +77,7 @@ export interface FlightTweaks {
    * 「方向へ倒す」方式（9-2。direct.ts。人の手が無い役では無視）。true は地平線を基準に向きを読む人、'screen' は画面（≒機体の向き）
    * の上の方向で読む人
    */
-  readonly direct?: boolean | 'screen';
+  readonly direct?: boolean | 'screen' | 'screen-comp';
   /** 腕前（省略は役の値） */
   readonly skill?: DifficultySpec;
 }
@@ -165,7 +165,11 @@ export function flyMission(
   const hands = handsSpec ? new Hands(handsSpec, createRandom(7000 + seed)) : null;
   const direct =
     hands && opts.tweaks?.direct
-      ? new DirectStick(hands, w.map.ground, opts.tweaks.direct === 'screen' ? 'screen' : 'horizon')
+      ? new DirectStick(
+          hands,
+          w.map.ground,
+          opts.tweaks.direct === true ? 'horizon' : opts.tweaks.direct,
+        )
       : null;
   const assist = opts.tweaks?.assist ?? AIM_ASSIST_CONFIG;
   const autoScale = opts.tweaks?.autoFireScale ?? 0;

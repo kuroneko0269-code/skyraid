@@ -1,4 +1,5 @@
 import { ANALOG_INPUT } from '../data/input';
+import type { SteerMode } from '../data/steer';
 import { applySensitivity } from './control-settings';
 import { ACTIONS, DEFAULT_KEYBINDS, type Action, type KeyBindings } from '../data/keybinds';
 
@@ -62,6 +63,8 @@ export class Input {
   readonly directStick = { x: 0, y: 0 };
   /** タッチのスティックが「方向へ倒す」方式か（操作設定。タッチ操作を出しているときだけ true） */
   directMode = false;
+  /** 効いているタッチの操縦の方式（9-4。傾きの許可を待つ間は direct。リプレイのヘッダに残す） */
+  steerMode: SteerMode = 'direct';
 
   constructor(bindings: KeyBindings = DEFAULT_KEYBINDS) {
     this.setBindings(bindings);

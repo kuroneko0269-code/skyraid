@@ -4,11 +4,13 @@ import { decodeReplay } from '../../src/replay/codec';
 import {
   applyCommand,
   applyFrame,
+  simCheckHash,
   simHash,
   startFromHeader,
   stepWorld,
 } from '../../src/replay/sim';
 import {
+  replayCheckHashes,
   createFrame,
   FRAME_CHANNELS,
   type ReplayData,
@@ -88,7 +90,10 @@ function startWorld(h: ReplayHeader): { w: TestWorld; startMatches: boolean } {
     useLocale(locale);
     const w = createWorld({ enemies: h.enemies });
     startFromHeader(w, h);
-    if (simHash(w) === h.startHash) return { w, startMatches: true };
+    // 9-4 からの記録は数を丸めたハッシュで比べる（ブラウザと Node.js の最後の桁の違いでは変わらない）
+    const first = replayCheckHashes(h)?.[0];
+    if (first !== undefined ? simCheckHash(w) === first : simHash(w) === h.startHash)
+      return { w, startMatches: true };
   }
   useLocale('ja');
   const w = createWorld({ enemies: h.enemies });

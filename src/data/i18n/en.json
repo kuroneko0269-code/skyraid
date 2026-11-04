@@ -73,6 +73,8 @@
       "rings": {
         "touch": "Push the stick (bottom left) toward where you want to go: right turns right, up climbs (keep holding up at speed to loop). Fly through the 3 yellow rings",
         "touchClassic": "Tilt with the stick (bottom left) and pull to turn. Fly through the 3 yellow rings",
+        "touchTilt": "Tilt the device left or right to turn, toward you to climb (away to dive; keep it tilted well toward you at speed to loop). Fly through the 3 yellow rings",
+        "touchDrag": "Hold your finger where you want to go on the screen and the plane turns there (let go to level out; hold the top edge at speed to loop). Fly through the 3 yellow rings",
         "keys": "Bank with {rollLeft}/{rollRight} and pull with {pitchUp} to turn ({pitchDown} pitches down). Fly through the 3 yellow rings",
         "pad": "Bank with the left stick and pull it back to turn. Fly through the 3 yellow rings"
       },
@@ -447,6 +449,7 @@
     "heading": "Paused",
     "resume": "Resume",
     "photoMode": "Photo Mode",
+    "tiltLevel": "Re-center tilt",
     "allSettings": "All Settings",
     "abortMission": "Abort Mission",
     "toTitle": "Title"
@@ -722,13 +725,22 @@
       "curveLinear": "1.0 (linear)",
       "modes": {
         "direct": "Point to steer",
-        "classic": "Pitch & roll (classic)"
+        "classic": "Pitch & roll (classic)",
+        "tilt": "Tilt",
+        "drag": "Drag"
       },
       "positions": {
         "floating": "Under your thumb",
         "fixed": "Fixed (bottom left)"
       },
-      "notice": "The touch controls have changed. You can switch back to the classic controls in Settings"
+      "notice": "The touch controls have changed. You can switch back to the classic controls in Settings",
+      "tiltLevel": "Re-center tilt",
+      "tiltPermit": "Use tilt (allow motion & orientation access)",
+      "tiltWaiting": "Reading the tilt sensor…",
+      "tiltReady": "Steering by tilt. The way you hold the device at takeoff is level",
+      "tiltDenied": "Tilt access was not allowed. Switched back to your previous steering",
+      "tiltUnsupported": "This device (browser) cannot read tilt. Switched back to your previous steering",
+      "tiltLeveled": "Your current grip is now level"
     },
     "aimAssist": {
       "title": "Aim assist strength (touch)",
@@ -898,6 +910,8 @@
     "status": {
       "startMismatch": "Start differs from this version",
       "otherGameVersion": "Recorded on an earlier version (v{version}), so the result may differ",
+      "diverged": "Recorded on another device, so the result may differ from here ({seconds}s)",
+      "divergedVersion": "Recorded on an earlier version, so the result may differ from here ({seconds}s)",
       "unknownGameVersion": "0.9.0 or earlier",
       "seeking": "Computing…",
       "ended": "End"

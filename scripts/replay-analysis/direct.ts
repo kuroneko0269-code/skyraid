@@ -5,7 +5,8 @@
 import type { AircraftControls, GroundHeightFn } from '../../src/entities/aircraft';
 import { DIRECT_STEER_CONFIG } from '../../src/data/steer';
 import { DirectSteer, type SteerCommand } from '../../src/flight/direct-steer';
-import { inverseRotateVec3, type Vec3 } from '../../src/flight/math';
+import { inverseRotateVec3, rotateVec3, type Vec3 } from '../../src/flight/math';
+import { LOCAL_RIGHT, LOCAL_UP } from '../../src/flight/flight-model';
 import { stickToward } from '../../tests/direct-steer-bots';
 import type { FlightSession } from '../../src/missions/flight-session';
 import type { Hands } from './hands';
@@ -38,7 +39,7 @@ export class DirectStick {
   constructor(
     private readonly hands: Hands,
     private readonly ground: GroundHeightFn,
-    private readonly frame: 'horizon' | 'screen' = 'horizon',
+    private readonly frame: 'horizon' | 'screen' | 'screen-comp' = 'horizon',
   ) {}
 
   /** aim（ワールド。null は離す）の方向へ倒した操縦を out に書く（スロットル類は base から写す） */
@@ -70,6 +71,20 @@ export class DirectStick {
         if (len > 1) {
           this.v.x /= len;
           this.v.y /= len;
+        }
+        if (this.frame === 'screen-comp' && !this.steer.loop.active) {
+          // 9-4 のドラッグ: 本番は画面の傾き（カメラ）で地平線の基準に戻す（±90° まで・宙返りの間は戻さない）。ここでは機体のバンクで近似
+          const q = st.orientation;
+          const r = { x: 0, y: 0, z: 0 };
+          const u = { x: 0, y: 0, z: 0 };
+          rotateVec3(r, q, LOCAL_RIGHT);
+          rotateVec3(u, q, LOCAL_UP);
+          const bank = Math.atan2(-r.y, u.y);
+          const b = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, bank));
+          const x = this.v.x * Math.cos(b) + this.v.y * Math.sin(b);
+          const y = -this.v.x * Math.sin(b) + this.v.y * Math.cos(b);
+          this.v.x = x;
+          this.v.y = y;
         }
       }
       it.pitch = this.v.y;

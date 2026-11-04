@@ -142,10 +142,15 @@ describe('宙返り（上へ倒し続ける）', () => {
     expect(Math.abs(r.heading)).toBeLessThan(10);
   });
 
-  it('下へ倒し続けたときは今のまま（-80° で止まる）', () => {
+  it('下へ倒し続けたときは宙返りしない（9-4: 高度に余裕があれば真下まで。越えない）', () => {
     const r = runLoop(STARTER_AIRCRAFT, 250, () => -1, 3, 2500);
     expect(r.looped).toBe(false);
-    expect(r.elevation).toBeGreaterThan(-DIRECT_STEER_CONFIG.maxElevationDeg - 2);
+    expect(r.elevation).toBeGreaterThan(-DIRECT_STEER_CONFIG.maxDiveDeg - 2);
+  });
+
+  it('低空では下向きは低空の安全が先（9-4: 真下へ倒し続けても墜ちない）', () => {
+    const r = runLoop(STARTER_AIRCRAFT, 250, () => -1, 8, 300);
+    expect(r.elevation).toBeGreaterThan(-30);
   });
 
   it('機体 4 種（初期の強化）: 巡航の速さから失速せずに 1 回転する', () => {
@@ -170,11 +175,14 @@ describe('宙返り（上へ倒し続ける）', () => {
 });
 
 describe('アクロバットのコース（方向へ倒す方式のボット）', () => {
-  it('機体 4 種で墜落せずに完走する（宙返りのリングは宙返りで。真下向きのリングは飛ばして次へ回り込む）', () => {
+  it('機体 4 種で墜落せずに完走し、真下向きのリング（11 番）とその先のチェックポイント（12 番）を通る（9-4: 真下まで向けられる）', () => {
     for (const m of AIRCRAFT_MODELS) {
       const r = runDirectRace(ACRO_COURSE, m.id);
       expect(r.crashes, m.id).toBe(0);
       expect(r.result?.outcome, m.id).toBe('finished');
+      const status = r.sim.race.status;
+      expect(status[11], m.id).toBe('passed');
+      expect(status[12], m.id).toBe('passed');
     }
   });
 });

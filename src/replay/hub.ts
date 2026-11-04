@@ -6,7 +6,8 @@ import type { AircraftControls } from '../entities/aircraft';
 import type { GamePlay } from '../missions/game-play';
 import { toBase64, encodeReplay } from './codec';
 import { ReplayRecorder } from './recorder';
-import { applyCommand, applyFrame, captureFrame } from './sim';
+import { applyCommand, applyFrame, captureFrame, simCheckHash } from './sim';
+import type { BuildingField } from '../combat/buildings';
 import type { ReplayCommand, ReplayData } from './types';
 
 type CommandBody = ReplayCommand extends infer C
@@ -39,6 +40,15 @@ export class ReplayHub {
     const f = captureFrame(this.recorder.frame, controls, input, session);
     applyFrame(f, controls, input, session);
     this.recorder.push(f);
+  }
+
+  /**
+   * 9-4: 記録の始め（固定ステップの前）と、固定ステップの後に呼ぶ。1 秒ごとに丸めた状態のハッシュを残す
+   * （再生で端末の違いによるずれを見つける）
+   */
+  checkpoint(buildings: BuildingField | null): void {
+    if (!this.recording || !this.recorder.wantsCheck) return;
+    this.recorder.check(simCheckHash({ play: this.play, buildings: () => buildings }));
   }
 
   /** 外部の操作をその場で効かせ、記録中なら残す */

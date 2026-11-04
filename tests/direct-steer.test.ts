@@ -117,13 +117,13 @@ describe('倒し続ける・離す', () => {
     expect(at(half.heading, 4)).toBeLessThan(at(full.heading, 4));
   });
 
-  it('上へ倒し続けると上がり、上の角度は上限（80°）で止まる。下は -80° まで', () => {
+  it('上へ倒し続けると上がり、上の角度は上限（80°）で止まる。下は高度に余裕があれば真下（-90°）まで（9-4）', () => {
     const up = fly(plane(1000), 6, hold(0, 1));
     expect(Math.max(...up.pitch)).toBeLessThan(DIRECT_STEER_CONFIG.maxElevationDeg + 1.5);
     expect(at(up.pitch, 6)).toBeGreaterThan(DIRECT_STEER_CONFIG.maxElevationDeg - 3);
     const down = fly(plane(5000), 4, hold(0, -1));
-    expect(Math.min(...down.pitch)).toBeGreaterThan(-DIRECT_STEER_CONFIG.maxElevationDeg - 1.5);
-    expect(at(down.pitch, 4)).toBeLessThan(-60);
+    expect(at(down.pitch, 4)).toBeLessThan(-86);
+    expect(down.nan).toBe(false);
   });
 
   it('離すと、傾き・上下の角度とも水平に戻る（方位はそのまま）', () => {
@@ -147,7 +147,8 @@ describe('組み立てが不安定になりやすい場面', () => {
       for (const s of [hold(0, 0), hold(1, 0), hold(0, 1), hold(-0.7, -0.7)]) {
         const t = fly(plane(6000, pitch), 4, s);
         expect(t.nan).toBe(false);
-        expect(Math.abs(at(t.pitch, 4))).toBeLessThan(DIRECT_STEER_CONFIG.maxElevationDeg + 2);
+        // 9-4: 下は真下まで向けられる（上は上限の中へ戻る）
+        expect(at(t.pitch, 4)).toBeLessThan(DIRECT_STEER_CONFIG.maxElevationDeg + 2);
       }
     }
   });

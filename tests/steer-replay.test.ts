@@ -3,12 +3,13 @@
 // ゴースト（レース）も同じ
 import { describe, expect, it } from 'vitest';
 import { applyStickCurve } from '../src/core/analog';
+import { dragStick, TiltReader } from '../src/core/tilt';
 import { readFlightControls } from '../src/core/flight-input';
 import { Input } from '../src/core/input';
 import { SteerControl } from '../src/core/steer-control';
 import { createCombatInput } from '../src/combat/combat-input';
 import { COURSES } from '../src/data/courses';
-import type { SteerMode, StickCurve } from '../src/data/steer';
+import { DRAG_CONFIG, type SteerMode, type StickCurve } from '../src/data/steer';
 import { createControls } from '../src/entities/aircraft';
 import { decodeGhost, GhostSim } from '../src/missions/race/ghost';
 import { decodeReplay, encodeReplay, toBase64 } from '../src/replay/codec';
@@ -24,8 +25,43 @@ import {
 import { stickToward } from './direct-steer-bots';
 import { BASE_START, createWorld, replay, ScriptedPilot, type TestWorld } from './replay-helpers';
 
+/** 9-4: 傾き（人が x・y の分だけ端末を傾ける。横向き 90°・40° 寝かせた持ち方が中立）とドラッグ（中央から x・y の所を押さえる） */
+const tiltReader = new TiltReader();
+let tiltMs = 0;
+function tiltOrDrag(
+  input: Input,
+  mode: 'tilt' | 'drag',
+  curve: number,
+  x: number,
+  y: number,
+): void {
+  if (mode === 'drag') {
+    const v = dragStick(422 + x * 175, 195 - y * 175, 844, 390, DRAG_CONFIG.radiusRatio, {
+      x: 0,
+      y: 0,
+    });
+    input.setDirectStick(v.x, v.y);
+    return;
+  }
+  tiltReader.setOptions({ deadzone: 0.12, curve });
+  // 横向き 90°: 画面の右 = 端末の −y、画面の上 = 端末の +x
+  const b = ((40 - y * 25) * Math.PI) / 180;
+  const a = (x * 25 * Math.PI) / 180;
+  const sx = -Math.sin(a) * Math.cos(b);
+  const sy = Math.cos(a) * Math.cos(b);
+  const beta = (Math.asin(-sx) * 180) / Math.PI;
+  const gamma = (Math.atan2(-sy, Math.sin(b)) * 180) / Math.PI;
+  tiltMs += 1000 / 60;
+  tiltReader.read(beta, gamma, 90, tiltMs);
+  input.setDirectStick(tiltReader.value.x, tiltReader.value.y);
+}
+
 /** タッチのスティック（TouchControls.writeStick と同じ: カーブ → 方式ごとに Input へ） */
 function touchStick(input: Input, mode: SteerMode, curve: number, x: number, y: number): void {
+  if (mode === 'tilt' || mode === 'drag') {
+    tiltOrDrag(input, mode, curve, x, y);
+    return;
+  }
   const v = applyStickCurve({ x, y }, curve);
   if (mode === 'direct') {
     input.setDirectStick(v.x, v.y);
@@ -59,7 +95,8 @@ function recordTouch(
 ): Recorded {
   startFromHeader(w, start);
   const input = new Input();
-  input.directMode = mode === 'direct';
+  input.directMode = mode !== 'classic';
+  tiltReader.reset();
   input.stickSensitivity = 1.2;
   const steer = new SteerControl(input, w.play.session.aircraft, w.map.ground);
   const controls = createControls();
@@ -120,6 +157,9 @@ describe('方式・カーブによらず、記録は同じ結果で再生でき�
     ['direct', 2],
     ['classic', 1],
     ['classic', 1.5],
+    // 9-4: 傾き・ドラッグも同じ組み立てに入力を渡すだけ
+    ['tilt', 1.5],
+    ['drag', 1],
   ];
   for (const [mode, curve] of cases) {
     it(`${mode}・カーブ ${curve}: 別の世界で再生すると全ステップの状態ハッシュが一致し、ヘッダに設定が残る`, () => {

@@ -3,6 +3,7 @@ import type { InputDevice } from '../core/input';
 import { messageSubtree } from '../core/i18n';
 import { ACTIONS, type Action } from '../data/keybinds';
 import type { TutorialStep } from '../data/tutorial';
+import type { SteerMode } from '../data/steer';
 
 export type TutorialStrings = (typeof import('../data/i18n/ja.json'))['tutorial'];
 
@@ -21,23 +22,30 @@ const VARIANT: Record<InputDevice, 'touch' | 'keys' | 'pad'> = {
   gamepad: 'pad',
 };
 
+/** 方式ごとの文のキー（無ければ touch の文） */
+const STEER_TEXT: Readonly<Partial<Record<SteerMode, string>>> = {
+  classic: 'touchClassic',
+  tilt: 'touchTilt',
+  drag: 'touchDrag',
+};
+
 /**
  * 段階の指示。{pitchUp} のようなアクション名を keyName（今の割当のキーの表示名）で置き換える。
- * classicTouch: タッチのスティックがピッチ・ロールの方式（9-2。touchClassic の文がある段階だけ使う）。
+ * steer: タッチの操縦の方式（9-2 の classic は touchClassic、9-4 の tilt は touchTilt・drag は touchDrag の文がある段階だけ使う）。
  * autoFire: タッチの自動射撃が ON（9-3。touchAuto の文がある段階だけ使う）
  */
 export function tutorialStepText(
   step: TutorialStep,
   device: InputDevice,
   keyName: (action: Action) => string,
-  classicTouch = false,
+  steer: SteerMode = 'direct',
   autoFire = false,
 ): string {
   const texts: Readonly<Record<string, string>> = tutorialStrings().steps[step];
   const variant = VARIANT[device];
   const touch = variant === 'touch';
   const text =
-    (touch && classicTouch ? texts.touchClassic : undefined) ??
+    (touch ? texts[STEER_TEXT[steer] ?? ''] : undefined) ??
     (touch && autoFire ? texts.touchAuto : undefined) ??
     texts[variant] ??
     '';

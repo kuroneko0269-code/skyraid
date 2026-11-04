@@ -40,7 +40,8 @@ export class TutorialLink {
         touch.controls.highlight(parts);
       },
       onAbort,
-      () => save.settings.controls.steerMode === 'classic',
+      // 9-4: 効いている方式（傾きの許可を待つ間は「方向へ倒す」）
+      () => touch.controls.mode,
       () => save.settings.controls.autoFire,
     );
     this.hints = new TouchHints(parent, gameHud.root, tutorialStrings().hints);

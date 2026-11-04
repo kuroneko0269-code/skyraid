@@ -9,6 +9,7 @@ import { KeyframeStore } from './keyframes';
 import {
   applyCommand,
   applyFrame,
+  simCheckHash,
   simHash,
   simRoots,
   simSkip,
@@ -16,10 +17,12 @@ import {
   stepWorld,
   type SimWorld,
 } from './sim';
-import { createFrame, FRAME_CHANNELS, type ReplayData } from './types';
+import { createFrame, FRAME_CHANNELS, replayCheckHashes, type ReplayData } from './types';
 
 export const STEP_SECONDS = 1 / 60;
 const KEY_STEPS = Math.round(REPLAY_CONFIG.keyframeSeconds * 60);
+/** 丸めたハッシュの間隔（9-4。記録と同じ 1 秒） */
+const CHECK_STEPS = 60;
 
 export class ReplayPlayer {
   readonly controls: AircraftControls;
@@ -32,8 +35,16 @@ export class ReplayPlayer {
   private readonly frame = createFrame();
   /** 始めた直後の状態が記録と同じだったか（違えば判定の版が違うなどで再現できないかもしれない） */
   startMatches = true;
+  /**
+   * 9-4: 記録の毎秒の丸めたハッシュと最初に違った秒（null はまだ違っていない・記録にハッシュが無い）。
+   * 端末の違い（数学関数の最後の桁）では変わらないので、違えばそこから結果が変わることがある
+   */
+  divergedAt: number | null = null;
+  /** 最初に違ったとき（秒）。1 回の再生で 1 度だけ（シークで同じ所を通り直しても出さない） */
+  onDiverge: ((seconds: number) => void) | null = null;
   /** 1 ステップ進めるたび（ステップ数）。テストの状態ハッシュ・演出のきっかけ */
   onStep: ((tick: number) => void) | null = null;
+  private readonly checks: readonly string[] | null;
 
   constructor(
     private readonly world: SimWorld,
@@ -43,6 +54,7 @@ export class ReplayPlayer {
     private readonly withKeyframes = true,
   ) {
     this.controls = controls;
+    this.checks = replayCheckHashes(data.header);
     this.keyframes = new KeyframeStore(() => simRoots(world), simSkip(world.play));
   }
 
@@ -74,7 +86,13 @@ export class ReplayPlayer {
   /** 世界を初期状態にして 0 ステップ目から（キーフレームも撮り直す）。started は世界をもう作ってあるとき（本番の飛行の始め） */
   begin(started = false): void {
     if (!started) startFromHeader(this.world, this.data.header);
-    this.startMatches = simHash(this.world) === this.data.header.startHash;
+    // 9-4 からの記録は丸めたハッシュで比べる（別の端末の記録でも、地形の高さの最後の桁の違いだけでは「違う」と出さない）
+    const first = this.checks?.[0];
+    this.startMatches =
+      first !== undefined
+        ? simCheckHash(this.world) === first
+        : simHash(this.world) === this.data.header.startHash;
+    this.divergedAt = null;
     this.tickValue = 0;
     this.commandIndex = 0;
     this.seekTarget = null;
@@ -109,6 +127,8 @@ export class ReplayPlayer {
       this.tickValue / KEY_STEPS === this.keyframes.count
     )
       this.keyframes.add();
+    if (this.checks && this.divergedAt === null && this.tickValue % CHECK_STEPS === 0)
+      this.compareCheck(this.tickValue / CHECK_STEPS);
     this.onStep?.(this.tickValue);
     return true;
   }
@@ -140,6 +160,14 @@ export class ReplayPlayer {
       return true;
     }
     return false;
+  }
+
+  /** k 秒の時点の丸めたハッシュを比べる（記録の無い秒は比べない） */
+  private compareCheck(k: number): void {
+    const want = this.checks?.[k];
+    if (want === undefined || simCheckHash(this.world) === want) return;
+    this.divergedAt = k;
+    this.onDiverge?.(k);
   }
 
   private restoreKeyframe(k: number): void {

@@ -265,14 +265,15 @@
 }
 
 .lobby-toggles {
-  display: flex;
-  flex-wrap: wrap;
+  /* 9-4: 補正 4 つは常に 2 × 2（幅で 3 + 1 に折り返して最後の 1 つが横いっぱいに伸びない） */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--ui-space-2);
   width: 100%;
 }
 
 .lobby-toggle {
-  flex: 1 1 140px;
+  min-width: 0;
   min-height: 48px;
   padding: 0 var(--ui-space-3);
   color: var(--ui-text-dim);

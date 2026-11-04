@@ -5,9 +5,12 @@ import type { StorageLike } from '../core/settings';
 import { loadTouchMode, saveTouchMode, shouldShowTouchControls } from '../core/touch-settings';
 import { createRotateHint, createTouchModeSelect } from './mobile';
 import { TouchControls } from './touch-controls';
+import { TiltSource } from './tilt-source';
 
 export interface TouchLink {
   readonly controls: TouchControls;
+  /** 傾き操作（9-4） */
+  readonly tilt: TiltSource;
   /** 表示を今の画面状態・設定に合わせる（画面の遷移のたびに呼ぶ） */
   refresh(): void;
 }
@@ -20,6 +23,7 @@ export function createTouchLink(
   inFlight: () => boolean,
 ): TouchLink {
   const controls = new TouchControls(parent, input);
+  const tilt = new TiltSource(input);
   createRotateHint(parent);
   let mode = loadTouchMode(storage);
   const coarsePointer =
@@ -28,6 +32,8 @@ export function createTouchLink(
     controls.setVisible(
       inFlight() && shouldShowTouchControls(mode, coarsePointer?.matches ?? false),
     );
+    // 9-4: 傾きは飛行中で傾きの方式のときだけ Input に書く
+    tilt.setActive(controls.isVisible && controls.mode === 'tilt');
   };
   refresh();
   coarsePointer?.addEventListener('change', refresh);
@@ -39,5 +45,5 @@ export function createTouchLink(
   window.addEventListener('blur', () => {
     controls.reset();
   });
-  return { controls, refresh };
+  return { controls, tilt, refresh };
 }

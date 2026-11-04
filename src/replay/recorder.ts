@@ -47,6 +47,7 @@ export class ReplayRecorder {
   private meta: RecordMeta | null = null;
   private readonly channels = FRAME_CHANNELS.map(() => new GrowableInt16());
   private commandList: ReplayCommand[] = [];
+  private checks: string[] = [];
   private count = 0;
   /** 毎ステップ書き換えて使う入れ物 */
   readonly frame: ReplayFrame = createFrame();
@@ -71,6 +72,17 @@ export class ReplayRecorder {
     this.meta = meta;
     this.count = 0;
     this.commandList = [];
+    this.checks = [];
+  }
+
+  /** 次の丸めたハッシュ（9-4）が要るか: 始めた直後（0 ステップ）と 1 秒ごと */
+  get wantsCheck(): boolean {
+    return this.start !== null && this.count % 60 === 0 && this.checks.length === this.count / 60;
+  }
+
+  /** 丸めたハッシュを足す（wantsCheck のときに。[k] は k 秒の時点） */
+  check(hash: string): void {
+    if (this.wantsCheck) this.checks.push(hash);
   }
 
   /** 1 ステップ分の入力を足す（判定を進める直前に呼ぶ） */
@@ -101,6 +113,7 @@ export class ReplayRecorder {
       simVersion: REPLAY_CONFIG.simVersion,
       steps: this.count,
       outcome,
+      ...(this.checks.length > 0 ? { checkHashes: this.checks.slice() } : {}),
     };
     return {
       header,
