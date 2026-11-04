@@ -1,0 +1,39 @@
+// 9-6a: ネフィルガの形の生成の数値。生成器は src/render/kaiju2-model/。画像ファイルは使わない（手続き生成）。
+// 三角形は「高」15,000 以下・「低」5,000 以下（tests/kaiju2.test.ts）。ヴォルガス（高 約 34,000・低 約 6,900）より軽くする
+
+export interface Kaiju2DetailSpec {
+  /** 管（胴・首・尾・翼の骨・脚）の断面の分割数 */
+  readonly radial: number;
+  /** 管の長さ方向の分割の倍率 */
+  readonly rings: number;
+  /** 翼の膜の分割（翼の付け根 → 先・前縁 → 後縁） */
+  readonly membraneSpan: number;
+  readonly membraneChord: number;
+}
+
+export const KAIJU2_MODEL_CONFIG = {
+  detail: {
+    high: { radial: 16, rings: 2, membraneSpan: 34, membraneChord: 10 },
+    low: { radial: 8, rings: 1, membraneSpan: 14, membraneChord: 4 },
+  } satisfies Record<'high' | 'low', Kaiju2DetailSpec>,
+  colors: {
+    /** 背: 灰白（骨のような色）、腹: 少し暖かい灰、膜: 深い藍 */
+    back: 0x9a968c,
+    belly: 0x6f6a62,
+    dark: 0x3a3632,
+    membrane: 0x2b2548,
+    membraneEdge: 0x15122a,
+    /** 目（淡い黄）・喉の袋と膜の筋（雷の紫白） */
+    eye: 0xffe58a,
+    storm: 0xb9a6ff,
+    orb: 0xcfc2ff,
+    gust: 0xdde8ff,
+  },
+  /** 発光: 目の明るさ・膜の筋の常時と予兆の最大・喉の袋の常時と最大 */
+  glow: { eye: 2.2, veinIdle: 0.35, veinMax: 3.2, throatIdle: 0.2, throatMax: 6 },
+  /** 羽ばたきの振れ幅（ラジアン）・たたむ量・掲げる量 */
+  flap: { amplitude: 0.62, foldElbow: 2.0, foldShoulder: 0.9, raise: 0.9 },
+  /** 雷球の見た目の半径（判定の半径の倍率）・突風の輪の不透明度 */
+  orbScale: 0.55,
+  gustOpacity: 0.35,
+} as const;

@@ -126,7 +126,8 @@ async function measureModes(browser, base) {
       open: card('race'),
       go: async (p) => {
         await p.locator('.race-course').first().click();
-        await p.locator('.ui-button.is-primary:text-is("スタート")').click();
+        // 9-6a: 練習場（9-5）の一覧にも同じボタンがあるので、見えている方だけ
+        await p.locator('.ui-button.is-primary:text-is("スタート"):visible').click();
       },
       until: 'flight',
     },

@@ -38,7 +38,11 @@ export type FlightRuntimeParts = Omit<
     readonly simWorld: SimWorld & { pristine: StateSnapshot | null };
   };
 
-export function startFlightRuntime(p: FlightRuntimeParts): { photo: PhotoEntry } {
+export function startFlightRuntime(p: FlightRuntimeParts): {
+  photo: PhotoEntry;
+  /** 描画フレームごとに呼ぶ関数を足す（9-6a: ?dev=kaiju2 の怪獣） */
+  onRender: (fn: (alpha: number) => void) => void;
+} {
   const { game, screens, race, defense, practice, replayHub, simWorld, pvp, touch } = p;
   const startFlight = createFlightStarter({
     ...p,
@@ -139,5 +143,10 @@ export function startFlightRuntime(p: FlightRuntimeParts): { photo: PhotoEntry }
     p.tutorial.update(game.state === 'flight');
   });
   loop.start();
-  return { photo };
+  return {
+    photo,
+    onRender: (fn) => {
+      loop.onRender(fn);
+    },
+  };
 }

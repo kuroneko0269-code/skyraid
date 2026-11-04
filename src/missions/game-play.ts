@@ -15,6 +15,7 @@ import { DefenseRunner } from './defense/runner';
 import { DEFENSE_CONFIG, type DefenseDifficulty, type DefenseMapDef } from '../data/defense';
 import type { MissionDef, Pose } from './types';
 import { PracticeRunner } from './practice/runner';
+import { freeExtraOf } from './free-extra';
 
 /** レース中（7-1）は武器を使わない */
 const NO_WEAPONS = createCombatInput();
@@ -95,10 +96,12 @@ export class GamePlay {
     this.setDefense(null);
     this.session.startFree();
     this.setRunner(null);
+    freeExtraOf(this)?.start();
   }
 
   /** PvP（5-1）: 敵・的・ミッションなしで世界を空にする（機体は net/ が動かし、session.step は呼ばない） */
   startEmpty(start: Readonly<Pose>): void {
+    freeExtraOf(this)?.stop();
     this.setPractice(null);
     this.setRace(null);
     this.setDefense(null);
@@ -107,6 +110,7 @@ export class GamePlay {
   }
 
   startMission(def: MissionDef): MissionRunner {
+    freeExtraOf(this)?.stop();
     this.setPractice(null);
     this.setRace(null);
     this.setDefense(null);
@@ -122,6 +126,7 @@ export class GamePlay {
    * reference はベストの走行（ゴーストとの差・スプリットに使う）
    */
   startRace(course: CourseDef, reference: RaceReference | null = null): RaceRunner {
+    freeExtraOf(this)?.stop();
     this.session.startMission(course.start, true);
     this.setPractice(null);
     this.setRunner(null);
@@ -145,6 +150,7 @@ export class GamePlay {
     difficulty: DefenseDifficulty,
     seed?: () => number,
   ): DefenseRunner {
+    freeExtraOf(this)?.stop();
     this.setPractice(null);
     this.setRace(null);
     this.session.startMission(map.start, false);
@@ -176,6 +182,7 @@ export class GamePlay {
 
   /** 練習場（9-5）: 練習扱いの世界で課題の開始位置から。aspect は指標（画面の外）の縦横比（記録のヘッダにも入れる） */
   startPractice(drill: PracticeRunner['drill'], aspect: number): PracticeRunner {
+    freeExtraOf(this)?.stop();
     this.setRace(null);
     this.setDefense(null);
     const p = new PracticeRunner(drill, this.session, aspect);
@@ -191,6 +198,7 @@ export class GamePlay {
   reseed(seed: number): void {
     this.session.random.reseed(seed);
     this.defenseRandom.reseed((seed ^ 0x9e3779b9) >>> 0);
+    freeExtraOf(this)?.reseed(seed);
   }
 
   /** 固定ステップ 1 回分（世界 → ミッションの順。ランナーはこのステップの結果を読む） */
@@ -212,6 +220,8 @@ export class GamePlay {
     }
     this.session.step(controls, input, dt);
     this.runner?.step(dt);
+    // 9-6a: フリーフライトの開発中の物（?dev=kaiju2 のときだけ付いている）
+    if (this.runner === null && this.defense === null) freeExtraOf(this)?.step(dt);
     this.stepResupply(dt);
     const d = this.defense;
     if (d) {

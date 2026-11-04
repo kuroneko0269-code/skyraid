@@ -93,7 +93,14 @@ export class KaijuMeshBuilder {
    * 断面をつないだ管。断面の向きは前後の断面の中心の差（接線）と、ワールドの上（接線が上下を向くときは前）から決める。
    * capStart / capEnd で端をふさぐ（一点に絞る）
    */
-  tube(rings: readonly TubeRing[], radial: number, capStart = true, capEnd = true): void {
+  tube(
+    rings: readonly TubeRing[],
+    radial: number,
+    capStart = true,
+    capEnd = true,
+    /** 9-6a: 面の巻きを逆にする（ネフィルガの管。ヴォルガスは false のまま） */
+    flip = false,
+  ): void {
     const n = rings.length;
     const first = this.glows.length;
     const stride = radial + 1;
@@ -164,15 +171,20 @@ export class KaijuMeshBuilder {
       for (let j = 0; j < radial; j++) {
         const a = first + i * stride + j;
         const b = a + stride;
-        this.triangle(a, a + 1, b);
-        this.triangle(a + 1, b + 1, b);
+        if (flip) {
+          this.triangle(a, b, a + 1);
+          this.triangle(a + 1, b, b + 1);
+        } else {
+          this.triangle(a, a + 1, b);
+          this.triangle(a + 1, b + 1, b);
+        }
       }
     }
     const r0 = rings[0];
     const r1 = rings[n - 1];
-    if (capStart && r0) this.cap(first, radial, r0, rings[1]?.center ?? r0.center, true);
+    if (capStart && r0) this.cap(first, radial, r0, rings[1]?.center ?? r0.center, !flip);
     if (capEnd && r1)
-      this.cap(first + (n - 1) * stride, radial, r1, rings[n - 2]?.center ?? r1.center, false);
+      this.cap(first + (n - 1) * stride, radial, r1, rings[n - 2]?.center ?? r1.center, flip);
   }
 
   /** 端のふた（中心の 1 点に向けて絞る。少し外へ出してとがらせない） */
