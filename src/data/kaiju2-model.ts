@@ -43,6 +43,9 @@ export const KAIJU2_MODEL_CONFIG = {
     foldWrist: 2.16,
     foldLift: 0.18,
   },
+  /** 9-6b: 被弾で白く光る明るさ（emissive）・壊れた部位の骨の縮み（翼の指 = 膜が裂けて短くなる・尾の先）と翼の垂れ（ラジアン） */
+  hitFlash: 0.55,
+  broken: { wingScale: 0.5, wingDroop: 0.35, tailScale: 0.45 },
   /** 雷球の見た目の半径（判定の半径の倍率）・突風の輪の不透明度 */
   orbScale: 0.55,
   gustOpacity: 0.35,

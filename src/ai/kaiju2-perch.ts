@@ -1,6 +1,7 @@
 // 9-6a: ネフィルガの止まり木（攻める隙）: 陸の高い所へ降りる → 羽を休める（動かない・攻撃しない）→ 飛び立つ。
 // 場所の選び方は kaiju2-attacks.ts の choosePerch。Three.js 非依存
 import { KAIJU2_CONFIG as C } from '../data/kaiju2';
+import { choosePerch } from './kaiju2-attacks';
 import { vec3 } from '../flight/math';
 import type { SkyKaiju } from '../entities/kaiju2/sky-kaiju';
 
@@ -67,4 +68,13 @@ export function stepTakeoff(k: SkyKaiju, dt: number): void {
     k.attackCooldown = C.attackInterval[k.phase - 1] ?? 7;
     k.setState('cruise', null);
   }
+}
+
+/** 9-6b: すぐ止まり木へ（両方の翼が壊れて落ちる）。降りられる場所が無ければ false */
+export function forcePerch(k: SkyKaiju): boolean {
+  if (k.state === 'landing' || k.state === 'perched') return true;
+  if (!choosePerch(k, k.random.next, k.perch)) return false;
+  for (const o of k.orbs) o.active = false;
+  k.setState('landing', null);
+  return true;
 }

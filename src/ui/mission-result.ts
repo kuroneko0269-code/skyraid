@@ -23,6 +23,9 @@ export function showMissionResult(screens: Screens, result: MissionResult, tutor
     practiceHint: practiceHintFor(tutorial, result),
   });
   // 8-5: 記録カード（キャンペーン・ソロのレイド。チュートリアルは作らない）
-  const raid = screens.inRaid ? (screens.nextMission?.reward.raid?.difficulty ?? 'normal') : null;
-  screens.result.card.set(tutorial ? null : missionCardSource(result, raid, screens.hangar, save));
+  const raidDef = screens.inRaid ? screens.nextMission?.reward.raid : undefined;
+  const raid = screens.inRaid ? (raidDef?.difficulty ?? 'normal') : null;
+  screens.result.card.set(
+    tutorial ? null : missionCardSource(result, raid, screens.hangar, save, raidDef?.kaiju),
+  );
 }

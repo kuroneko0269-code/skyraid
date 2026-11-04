@@ -35,6 +35,8 @@ export function missionCardSource(
   raid: RaidDifficulty | null,
   hangar: { readonly selectedId: string },
   save: SaveStore,
+  /** 9-6b: ヴォルガス以外のレイドの怪獣（?dev=kaiju2） */
+  kaiju?: string,
 ): CardSource {
   const aircraftId = hangar.selectedId;
   const common = {
@@ -51,6 +53,7 @@ export function missionCardSource(
       ...common,
       mode: 'raid',
       difficulty: raid,
+      ...(kaiju === undefined ? {} : { kaiju }),
       protectedBuildings: r.protectedBuildings ?? null,
     };
   return { ...common, mode: 'mission', missionId: r.missionId };

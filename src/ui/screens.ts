@@ -25,6 +25,7 @@ import { modeProgress } from '../progression/mode-progress';
 import { TUTORIAL_MISSION } from '../data/tutorial';
 import { MAPS } from '../data/maps';
 import { RAID_MISSION, raidMission } from '../data/missions-special';
+import { findRaidVariant } from '../missions/raid-variants';
 import type { DefenseDifficulty } from '../data/defense';
 import { tutorialStrings, type TutorialStrings } from './tutorial-text';
 
@@ -165,12 +166,13 @@ export class Screens {
       onDefense: (kind, mapId, difficulty) => {
         this.onDefense(kind, mapId, difficulty);
       },
-      onRaid: (kind, difficulty) => {
+      onRaid: (kind, difficulty, kaiju) => {
         if (kind === 'coop') {
           this.pvp?.onSelect(true);
           return;
         }
-        this.nextMission = raidMission(difficulty);
+        // 9-6b: ヴォルガス以外の怪獣（?dev=kaiju2 で登録されたときだけ選べる）
+        this.nextMission = findRaidVariant(kaiju)?.mission(difficulty) ?? raidMission(difficulty);
         game.transition('flight');
       },
       onBack: () => game.transition('title'),
@@ -274,9 +276,9 @@ export class Screens {
     return this.nextMission?.id === TUTORIAL_MISSION.id;
   }
 
-  /** ソロのレイド（6-2）を飛んでいる（または終えたばかり） */
+  /** ソロのレイド（6-2。9-6b からヴォルガス以外の怪獣も）を飛んでいる（または終えたばかり） */
   get inRaid(): boolean {
-    return this.nextMission?.id === RAID_MISSION.id;
+    return this.nextMission?.id === RAID_MISSION.id || this.nextMission?.reward.raid !== undefined;
   }
 
   /** リザルト・ポーズの「中断」の戻り先: レースはコース一覧、練習場は課題の一覧、チュートリアル・レイドはモード選択、ほかはミッション一覧 */

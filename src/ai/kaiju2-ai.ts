@@ -8,6 +8,7 @@ import { vec3, type Vec3 } from '../flight/math';
 import type { SkyKaiju } from '../entities/kaiju2/sky-kaiju';
 import {
   attackCandidates,
+  attackUsable,
   choosePerch,
   diveHits,
   geometryTo,
@@ -39,10 +40,13 @@ export interface Kaiju2Hooks {
 const want = vec3();
 const tip = vec3();
 
-/** 攻撃の秒数（予兆 / 攻撃 / 硬直） */
-export function attackTimes(a: Kaiju2Attack): { windup: number; active: number; recover: number } {
+/** 攻撃の秒数（予兆 / 攻撃 / 硬直）。windupScale は難易度の予兆の倍率（9-6b。高難度で短い） */
+export function attackTimes(
+  a: Kaiju2Attack,
+  windupScale = 1,
+): { windup: number; active: number; recover: number } {
   const s = A[a];
-  return { windup: s.windup, active: s.active, recover: s.recover };
+  return { windup: s.windup * windupScale, active: s.active, recover: s.recover };
 }
 
 export class Kaiju2Ai {
@@ -107,7 +111,18 @@ export class Kaiju2Ai {
 
   private hit(a: Kaiju2Attack, damage: number, stun: number): void {
     this.body.hits[a]++;
-    this.hooks.hit(a, damage, stun);
+    this.hooks.hit(a, damage * this.body.damageScale, stun);
+  }
+
+  /** 9-6b: 部位が壊れて今の攻撃が使えなくなったら取り消す（予兆・急降下の間。雷球は撃った後は続ける）。取り消したら true */
+  cancelBlocked(): boolean {
+    const k = this.body;
+    const a = k.attack;
+    if (a === null || attackUsable(a, k.broken)) return false;
+    if (k.state !== 'windup' && !(k.state === 'attack' && a !== 'orbs')) return false;
+    if (a === 'dive' && k.state === 'attack') k.setState('recover');
+    else this.endAttack();
+    return true;
   }
 
   /** 巡航: 周回の中心をプレイヤーへ寄せ、その周りを回る。時間で攻撃・スタミナで止まり木 */
@@ -192,12 +207,13 @@ export class Kaiju2Ai {
       k.setState('cruise', null);
       return;
     }
-    const t = attackTimes(a);
+    const t = attackTimes(a, k.windupScale);
     switch (a) {
       case 'orbs':
         // 攻撃に入った最初のステップで撃つ（attackHit を「撃った」の印に使う）
         if (k.state === 'attack' && !k.attackHit) {
           k.attackHit = true;
+          k.orbVolleyHits = 0;
           launchOrbs(k, target.position, k.random.next);
         }
         if (k.state === 'recover') this.fly(dt, target);
@@ -242,7 +258,7 @@ export class Kaiju2Ai {
   private endAttack(): void {
     const k = this.body;
     k.setState('cruise', null);
-    k.attackCooldown = C.attackInterval[k.phase - 1] ?? 7;
+    k.attackCooldown = (C.attackInterval[k.phase - 1] ?? 7) * k.intervalScale;
   }
 
   /** 急降下: 上昇（予兆）→ 狙った点へ降下（攻撃）→ 引き起こし（硬直 = 攻める隙） */
@@ -263,7 +279,7 @@ export class Kaiju2Ai {
       k.steer(want, k.turnRate * 1.5 * dt);
       k.approachSpeed(d.climbSpeed, 40, dt);
       k.integrate(dt);
-      if (k.stateTime >= d.windup) {
+      if (k.stateTime >= d.windup * k.windupScale) {
         const p = target.position;
         const v = target.velocity;
         k.diveTarget.x = p.x + v.x * d.lead;
@@ -305,6 +321,13 @@ export class Kaiju2Ai {
     k.steer(want, 30 * DEG * dt);
     k.approachSpeed(d.recoverSpeed, 50, dt);
     k.integrate(dt);
-    if (k.stateTime >= d.recover) this.endAttack();
+    if (k.stateTime < d.recover) return;
+    this.endAttack();
+    // 9-6b: 隙をつなげる: 急降下で疲れていれば（スタミナが perchAfterDive 未満）そのまま止まり木へ
+    if (
+      k.stamina < C.perch.stamina * C.perch.perchAfterDive &&
+      choosePerch(k, k.random.next, k.perch)
+    )
+      k.setState('landing', null);
   }
 }

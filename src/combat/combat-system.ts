@@ -117,6 +117,19 @@ export class CombatSystem {
     this.fuseTargets = [...this.allTargets, ...(player ? [player] : []), ...allies];
   }
 
+  /**
+   * 9-6b: 撃てる対象を後から足す（?dev=kaiju2 のレイドの怪獣の部位。まだ入っていないものだけ末尾に。順番は固定）。
+   * リプレイの状態の書き戻し（起動直後の写し）で配列の長さが戻るので、飛行を始めるたびに呼ぶ
+   */
+  addTargets(list: readonly CombatTarget[]): void {
+    const all = this.allTargets as CombatTarget[];
+    const fuse = this.fuseTargets as CombatTarget[];
+    for (const t of list) {
+      if (!all.includes(t)) all.push(t);
+      if (!fuse.includes(t)) fuse.push(t);
+    }
+  }
+
   /** 命中（的・地面）ごとに呼ばれる。火花の演出用 */
   onImpact(fn: ImpactListener): void {
     this.impactListeners.push(fn);

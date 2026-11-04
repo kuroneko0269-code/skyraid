@@ -116,7 +116,14 @@ export function liveStart(p: FlightStartParts, def: MissionDef | null): ReplaySt
   if (def) {
     const raid = def.reward.raid;
     const start: ReplayStart = raid
-      ? { ...base, mode: 'raid', mapId: def.mapId, raidDifficulty: raid.difficulty, weatherId }
+      ? {
+          ...base,
+          mode: 'raid',
+          mapId: def.mapId,
+          raidDifficulty: raid.difficulty,
+          ...(raid.kaiju === undefined ? {} : { raidKaiju: raid.kaiju }),
+          weatherId,
+        }
       : { ...base, mode: 'mission', mapId: def.mapId, missionId: def.id, weatherId };
     return missionFor(start) ? start : null;
   }

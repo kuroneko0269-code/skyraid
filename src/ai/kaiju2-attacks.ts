@@ -189,7 +189,11 @@ export function stepOrbs(
     )
       orb.active = false;
   }
-  return hits;
+  // 9-6b: 1 回の扇で当たるのは maxHits 個まで（届いたら残りを消す。Swift の HP 140 で一撃で落ちない）
+  const allowed = Math.max(0, Math.min(hits, o.maxHits - k.orbVolleyHits));
+  k.orbVolleyHits += allowed;
+  if (k.orbVolleyHits >= o.maxHits) for (const orb of k.orbs) orb.active = false;
+  return allowed;
 }
 
 function turnVelocity(orb: Kaiju2Orb, aim: Readonly<Vec3>, maxTurn: number, speed: number): void {

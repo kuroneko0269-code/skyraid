@@ -7,6 +7,7 @@ import { isPracticeDrill, PRACTICE_DRILL_LABELS } from '../data/practice';
 import type { DefenseRunner } from '../missions/defense/runner';
 import type { GamePlay } from '../missions/game-play';
 import { missionStrings } from '../ui/mission-text';
+import { findRaidVariant } from '../missions/raid-variants';
 import {
   isOtherGameVersion,
   replayGameVersion,
@@ -22,6 +23,8 @@ export function replayTitle(s: ReplayStart): string {
     case 'mission':
       return missionStrings(s.missionId ?? '').title;
     case 'raid':
+      if (s.raidKaiju !== undefined)
+        return findRaidVariant(s.raidKaiju)?.title(s.raidDifficulty ?? 'normal') ?? s.raidKaiju;
       return t(s.raidDifficulty === 'hard' ? 'replay.title.raidHard' : 'replay.title.raidNormal');
     case 'race':
       return findCourse(s.courseId ?? '')?.name ?? t('replay.title.race');

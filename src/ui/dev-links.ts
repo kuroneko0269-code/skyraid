@@ -1,11 +1,12 @@
 // 9-6a: ?dev=<名前> の開発中の機能（遊ぶ人には見えない。CLAUDE.md「更新履歴」）の入口。付いている名前の遅延チャンクだけを読む。
-// 今は kaiju2（空の怪獣の確かめる場。src/ui/kaiju2-dev.ts）
+// 今は kaiju2（空の怪獣の確かめる場と、9-6b からソロのレイド。src/ui/kaiju2-dev.ts）
 import type { Scene } from 'three';
 import { parseDevFlags } from '../core/debug-flags';
 import type { GameState } from '../core/game-state';
 import type { ActiveMap } from '../missions/active-map';
 import type { GamePlay } from '../missions/game-play';
 import type { QualityLink } from '../render/quality-link';
+import type { GameAudio } from '../audio/game-audio';
 
 export interface DevLinkParts {
   readonly search: string;
@@ -16,6 +17,10 @@ export interface DevLinkParts {
   readonly quality: QualityLink;
   readonly pvp: { readonly flying: boolean };
   readonly onRender: (fn: (alpha: number) => void) => void;
+  /** 9-6b: レイドの HUD（H キーの表示の切り替え）・音（エンジンとリスナーの位置） */
+  readonly hud: { readonly visible: boolean };
+  readonly audio: GameAudio;
+  readonly camera: { readonly position: Readonly<{ x: number; y: number; z: number }> };
 }
 
 export function linkDevFeatures(p: DevLinkParts): void {
@@ -44,6 +49,9 @@ export function linkDevFeatures(p: DevLinkParts): void {
           });
         },
         onRender: p.onRender,
+        hudVisible: () => p.hud.visible,
+        audio: p.audio,
+        listener: p.camera.position,
       }),
     (e: unknown) => {
       console.error('dev=kaiju2 failed to load', e);

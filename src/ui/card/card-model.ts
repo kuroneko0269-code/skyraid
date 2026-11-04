@@ -13,6 +13,7 @@ import { SKIN_PALETTE, findSkinPattern } from '../../data/skins';
 import { formatRaceTime } from '../../missions/race/score';
 import type { Paint } from '../../progression/paint';
 import { formatClock, missionStrings } from '../mission-text';
+import { findRaidVariant } from '../../missions/raid-variants';
 
 export interface CardOptions {
   readonly includePilot: boolean;
@@ -57,7 +58,10 @@ export function buildCardModel(s: CardSource, o: CardOptions): CardModel {
       return {
         ...common,
         mode: t('card.mode.raid'),
-        stage: t(s.difficulty === 'hard' ? 'replay.title.raidHard' : 'replay.title.raidNormal'),
+        stage:
+          s.kaiju !== undefined
+            ? (findRaidVariant(s.kaiju)?.title(s.difficulty) ?? s.kaiju)
+            : t(s.difficulty === 'hard' ? 'replay.title.raidHard' : 'replay.title.raidNormal'),
         headline: s.success ? 'MISSION COMPLETE' : 'MISSION FAILED',
         success: s.success,
         rank: s.success ? s.rank : null,

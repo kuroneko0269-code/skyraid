@@ -6,6 +6,7 @@ import { DEFENSE_MAPS, type DefenseDifficulty } from '../data/defense';
 import { ISLAND_MAP, SELECTABLE_MAPS } from '../data/maps';
 import { RAID_DIFFICULTY_LABELS, type RaidDifficulty } from '../data/raid';
 import { DEFAULT_WEATHER_ID, WEATHER_PRESETS, weatherLabel } from '../data/weather';
+import { raidVariants } from '../missions/raid-variants';
 import { el } from './hud-dom';
 import { createButton } from './screen';
 import { Segmented } from './segmented';
@@ -15,7 +16,7 @@ export interface ModeDialogHandlers {
   /** チュートリアルを始める・フリーフライトに出る */
   readonly onStart: (mode: 'tutorial' | 'free') => void;
   /** solo はすぐ出撃、coop は PvP のロビーへ（difficulty はソロの難易度。協力はロビーでホストが選ぶ） */
-  readonly onRaid: (kind: 'solo' | 'coop', difficulty: RaidDifficulty) => void;
+  readonly onRaid: (kind: 'solo' | 'coop', difficulty: RaidDifficulty, kaiju?: string) => void;
   /** solo はすぐ出撃、coop は PvP のロビーへ（マップと難易度はホストの初期設定） */
   readonly onDefense: (kind: 'solo' | 'coop', mapId: string, difficulty: DefenseDifficulty) => void;
   /** 閉じた（「戻る」「あとで」）。モードの一覧にフォーカスを戻す */
@@ -37,6 +38,9 @@ const DIFFICULTY_OPTIONS = [
   },
 ] as const;
 
+/** ヴォルガス（レイドの怪獣の既定） */
+const VORGAS = 'vorgas';
+
 const asDifficulty = (v: string): 'normal' | 'hard' => (v === 'hard' ? 'hard' : 'normal');
 
 export class ModeDialogs {
@@ -48,6 +52,8 @@ export class ModeDialogs {
   defenseMapId: string = DEFENSE_MAPS[0]?.mapId ?? 'island';
   defenseDifficulty: DefenseDifficulty = 'normal';
   raidDifficulty: RaidDifficulty = 'normal';
+  /** 9-6b: レイドの怪獣（'vorgas' か、?dev=kaiju2 で登録された怪獣の id） */
+  raidKaiju = VORGAS;
 
   private readonly all: HTMLDivElement[] = [];
   private readonly tutorialWrap: HTMLDivElement;
@@ -60,6 +66,10 @@ export class ModeDialogs {
   private readonly raidWrap: HTMLDivElement;
   private readonly raidSolo: HTMLButtonElement;
   private readonly raidDiff: Segmented;
+  private readonly raidTitle: HTMLElement;
+  private readonly raidKaijuSlot: HTMLDivElement;
+  private raidKaijuSeg: Segmented | null = null;
+  private readonly raidCoop: HTMLButtonElement;
   private readonly defenseWrap: HTMLDivElement;
   private readonly defenseSolo: HTMLButtonElement;
   private readonly defenseMap: Segmented;
@@ -127,6 +137,10 @@ export class ModeDialogs {
       t('modes.raidDialog.title'),
       t('modes.raidDialog.body'),
     );
+    this.raidTitle = box.querySelector('.mode-prompt-title') ?? box;
+    // 9-6b: 怪獣の選択（?dev=kaiju2 で別の怪獣が登録されているときだけ、開くときに作る）
+    this.raidKaijuSlot = el('div', 'mode-raid-kaiju', box);
+    this.raidKaijuSlot.hidden = true;
     this.raidDiff = new Segmented(
       box,
       t('modes.raidDialog.difficulty'),
@@ -136,11 +150,12 @@ export class ModeDialogs {
     );
     buttons = el('div', 'campaign-buttons', box);
     back(buttons);
-    go(buttons, t('modes.dialog.coop'), false, () => {
+    this.raidCoop = go(buttons, t('modes.dialog.coop'), false, () => {
       h.onRaid('coop', 'normal');
     });
     this.raidSolo = go(buttons, t('modes.dialog.solo'), true, () => {
-      h.onRaid('solo', this.raidDifficulty);
+      if (this.raidKaiju === VORGAS) h.onRaid('solo', this.raidDifficulty);
+      else h.onRaid('solo', this.raidDifficulty, this.raidKaiju);
     });
 
     // 防衛戦（7-2）
@@ -187,7 +202,33 @@ export class ModeDialogs {
 
   showRaid(): void {
     this.raidDiff.value = this.raidDifficulty;
+    this.syncRaidKaiju();
     this.open(this.raidWrap, this.raidSolo);
+  }
+
+  /** 9-6b: 別の怪獣が登録されていれば、怪獣の選択を出す（協力はヴォルガスだけ。9-6c で扱う） */
+  private syncRaidKaiju(): void {
+    const variants = raidVariants();
+    if (variants.length === 0) return;
+    if (!this.raidKaijuSeg) {
+      this.raidKaijuSlot.hidden = false;
+      this.raidTitle.textContent = t('modes.raid.label');
+      this.raidKaijuSeg = new Segmented(
+        this.raidKaijuSlot,
+        '',
+        [
+          { value: VORGAS, label: t('kaiju.name') },
+          ...variants.map((v) => ({ value: v.id, label: v.label() })),
+        ],
+        this.raidKaiju,
+        (v) => {
+          this.raidKaiju = v;
+          this.raidCoop.disabled = v !== VORGAS;
+        },
+      );
+    }
+    this.raidKaijuSeg.value = this.raidKaiju;
+    this.raidCoop.disabled = this.raidKaiju !== VORGAS;
   }
 
   showDefense(): void {
