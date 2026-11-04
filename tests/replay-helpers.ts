@@ -14,6 +14,7 @@ import {
   applyCommand,
   applyFrame,
   captureFrame,
+  simCheckHash,
   simHash,
   simSkip,
   startFromHeader,
@@ -151,6 +152,8 @@ export function record(
     gameVersion: '1.0.0',
     startHash: simHash(w),
   });
+  // 9-4: 本番と同じく始めと 1 秒ごとに丸めたハッシュを残す
+  rec.check(simCheckHash(w));
   const pilot = new ScriptedPilot(o.pilotSeed ?? 7, o.analog ?? true);
   const steps = Math.round(o.seconds * 60);
   const hashes: string[] = [];
@@ -170,6 +173,7 @@ export function record(
     applyFrame(f, w.controls, pilot.input, w.play.session);
     rec.push(f);
     stepWorld(w.play, w.buildings(), w.controls, pilot.input, 1 / 60);
+    if (rec.wantsCheck) rec.check(simCheckHash(w));
     if (o.hashes) hashes.push(simHash(w));
   }
   const data = rec.finish(null);

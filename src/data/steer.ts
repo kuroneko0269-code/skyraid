@@ -2,8 +2,11 @@
 // 「方向へ倒す」方式の組み立て（src/flight/direct-steer.ts）。設定の保存はセーブの settings.controls（src/core/control-settings.ts）
 import { t } from '../core/i18n';
 
-/** 操縦の方式（タッチのスティックだけ。キーボード・パッドは今までどおり） */
-export const STEER_MODES = ['direct', 'classic'] as const;
+/**
+ * 操縦の方式（タッチだけ。キーボード・パッドは今までどおり）。9-4: tilt（端末を傾ける）・drag（行きたい場所を押さえる）は、
+ * どちらも「方向へ倒す」の組み立て（direct-steer）に入力を渡す
+ */
+export const STEER_MODES = ['direct', 'classic', 'tilt', 'drag'] as const;
 export type SteerMode = (typeof STEER_MODES)[number];
 
 /** 感度のカーブ（倒し具合 ^ 指数。1 = 直線 = 9-1 までと同じ） */
@@ -31,6 +34,17 @@ export const DIRECT_STEER_CONFIG = {
   fullDeg: 30,
   /** 上下の角度の上限（度。真上・真下では方位が決まらないため。9-3: 上へ端まで倒し続けると宙返りで越える。下は越えない） */
   maxElevationDeg: 80,
+  /**
+   * 下向きの上限（度。9-4）: 高度に余裕があれば真下まで向けられる（アクロバットのコースの真下向きのリング）。
+   * 低空の安全（ground）が先に効くので、余裕が無ければこれより浅い
+   */
+  maxDiveDeg: 90,
+  /**
+   * 深く下へ向けるとき（9-4）: 押す（0.5 まで）だけでは機首が下がるのが遅いので、下げたい角度が startDeg を超え、
+   * 低空の安全の下限が floorDeg より深い（高度に余裕がある）ときは、背中を下へ向けて（背面へ回して）引く。
+   * 下げたい角度が startDeg + rangeDeg で背面まで
+   */
+  diveRoll: { startDeg: 15, rangeDeg: 12, floorDeg: -70 },
   /**
    * 上下に倒していないとき、水平へ戻すずれの上限（度）。旋回で引くと機首が少しずつ上がるのを溜めない。
    * 上下に端まで倒していると 0（戻さない）
@@ -97,6 +111,37 @@ export const DIRECT_STEER_CONFIG = {
   },
 } as const;
 
+/**
+ * 傾き操作（9-4。src/core/tilt.ts・src/ui/tilt-source.ts）: 端末の傾き（飛び始めたときの持ち方からの角度）を
+ * 「方向へ倒す」のスティックの値にする。左右に傾けると旋回、手前に傾けると上昇・奥へ傾けると下降。
+ * デッドゾーン・感度のカーブ・感度はスティックの設定をそのまま使う（デッドゾーンは端の角度に対する比）
+ */
+export const TILT_CONFIG = {
+  /** 端まで倒した扱いになる傾き（度）: 左右・手前と奥 */
+  fullRollDeg: 25,
+  fullPitchDeg: 25,
+  /** センサーの値のなめらかさ（秒。指数の平滑の時定数） */
+  smoothingSeconds: 0.08,
+  /** 傾きを選んでからこの秒数のうちに値が来なければ「この端末では傾きを読めない」 */
+  probeSeconds: 1.5,
+} as const;
+
+/**
+ * ドラッグ操作（9-4。src/ui/drag-surface.ts）: 押さえた点と画面の中央のずれ ÷ (画面の高さ × radiusRatio) を
+ * 「方向へ倒す」のスティックの値にする（直線。デッドゾーン・カーブは使わない: 押さえた所へそのまま向ける。画面の傾きで戻す: rereadPx）。
+ * 画面の上端の近く（中央から 0.9 × radiusRatio × 高さより上）を押さえ続けると、上へ端まで倒した扱いで宙返り
+ */
+export const DRAG_CONFIG = {
+  radiusRatio: 0.45,
+  /**
+   * 画面の傾き（カメラは機体と一緒に傾く）で、押さえた点を地平線の基準に戻す。読み直すのは押さえた瞬間と、指をこの px より
+   * 動かしたときだけ（止めている間は同じ向き = スティックを倒し続けるのと同じ。宙返りの間は読み直さない）
+   */
+  rereadPx: 12,
+  /** 押さえた点の印の直径（px） */
+  markerSize: 44,
+} as const;
+
 /** 設定の表示名 */
 export const STEER_LABELS = {
   get mode() {
@@ -114,6 +159,12 @@ export const STEER_LABELS = {
     },
     get classic() {
       return t('controls.steer.modes.classic');
+    },
+    get tilt() {
+      return t('controls.steer.modes.tilt');
+    },
+    get drag() {
+      return t('controls.steer.modes.drag');
     },
   } satisfies Record<SteerMode, string>,
   positions: {

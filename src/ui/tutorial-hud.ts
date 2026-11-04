@@ -1,4 +1,5 @@
 import './tutorial-hud.css';
+import type { SteerMode } from '../data/steer';
 import type { InputDevice } from '../core/input';
 import type { Action } from '../data/keybinds';
 import {
@@ -29,7 +30,7 @@ export class TutorialHud {
   private step: TutorialStep | null = null;
   private complete = false;
   private device: InputDevice | null = null;
-  private classic = false;
+  private steer: SteerMode = 'direct';
   private autoFire = false;
 
   constructor(
@@ -37,8 +38,8 @@ export class TutorialHud {
     private readonly keyName: (action: Action) => string,
     private readonly highlight: (parts: readonly TouchPart[]) => void,
     onAbort: () => void,
-    /** タッチのスティックがピッチ・ロールの方式か（9-2。文を選ぶ） */
-    private readonly classicTouch: () => boolean = () => false,
+    /** タッチの操縦の方式（9-2・9-4。文を選ぶ） */
+    private readonly steerTouch: () => SteerMode = () => 'direct',
     /** タッチの自動射撃が ON か（9-3。文を選ぶ） */
     private readonly autoFireTouch: () => boolean = () => false,
   ) {
@@ -84,15 +85,15 @@ export class TutorialHud {
 
   /** 描画フレームごと。入力系統・スティックの方式・自動射撃が変わったら文を書き直す */
   update(device: InputDevice): void {
-    const classic = this.classicTouch();
+    const steer = this.steerTouch();
     const autoFire = this.autoFireTouch();
     if (
       this.root.hidden ||
-      (device === this.device && classic === this.classic && autoFire === this.autoFire)
+      (device === this.device && steer === this.steer && autoFire === this.autoFire)
     )
       return;
     this.device = device;
-    this.classic = classic;
+    this.steer = steer;
     this.autoFire = autoFire;
     this.render();
   }
@@ -116,7 +117,7 @@ export class TutorialHud {
             this.step,
             this.device ?? 'keyboard',
             this.keyName,
-            this.classic,
+            this.steer,
             this.autoFire,
           );
     this.text.hidden = this.text.textContent === '';

@@ -5,7 +5,10 @@ import type { Input } from '../core/input';
 import type { Action } from '../data/keybinds';
 import { TOUCH_CONFIG } from '../data/touch';
 import { applyCssVariables } from './touch-controls-vars';
+import { t } from '../core/i18n';
 import type { TouchPart } from '../data/tutorial';
+import type { SteerMode } from '../data/steer';
+import { DragSurface } from './drag-surface';
 
 /**
  * 右下のボタン群。grid の並び順（左上・右上・左下・右下）。
@@ -46,8 +49,11 @@ function el(
 
 /** スティックの設定（9-2。操作設定）: 方式・感度のカーブ・位置 */
 export interface StickOptions {
-  /** 「方向へ倒す」方式（ピッチ・ロールのアクションへは分配せず Input.directStick に書く） */
-  readonly direct: boolean;
+  /**
+   * 操縦の方式（classic 以外は「方向へ倒す」の組み立てで、ピッチ・ロールのアクションへは分配せず Input.directStick に書く）。
+   * 9-4: tilt はスティックを隠して左手側に「水平を合わせ直す」ボタン、drag はスティックを隠して画面全体（ボタンの下）で押さえる
+   */
+  readonly mode: SteerMode;
   /** 感度のカーブの指数（1 = 直線） */
   readonly curve: number;
   /** 決まった位置（待機位置）に置いたまま（false は親指を置いた場所に出す） */
@@ -71,7 +77,11 @@ export class TouchControls {
   private readonly stick = new FloatingStick(TOUCH_CONFIG.stick);
   private readonly stickBase: HTMLDivElement;
   private readonly stickKnob: HTMLDivElement;
-  private stickOptions: StickOptions = { direct: false, curve: 1, fixed: false };
+  private stickOptions: StickOptions = { mode: 'classic', curve: 1, fixed: false };
+  /** 9-4: ドラッグ操作の面（描画のすぐ上） */
+  readonly drag: DragSurface;
+  /** 9-4: 傾き操作の「水平を合わせ直す」ボタンを押したとき */
+  onTiltLevel: (() => void) | null = null;
   private readonly shaped: Vec2Out = { x: 0, y: 0 };
   private readonly holdButtons: HoldButton[] = [];
   private readonly throttleTrack: HTMLDivElement;
@@ -112,6 +122,19 @@ export class TouchControls {
     this.secondaryButton = secondary;
     this.addHoldButton(el('tc-button tc-yaw tc-yaw-left', root, '◀', 'yaw'), ['yawLeft']);
     this.addHoldButton(el('tc-button tc-yaw tc-yaw-right', root, '▶', 'yaw'), ['yawRight']);
+    // 9-4: 傾き操作のとき、スティックの待機位置に「水平を合わせ直す」（今の持ち方を中立にする）
+    const level = el('tc-button tc-tilt-level', root, '◎', 'stick');
+    level.setAttribute('role', 'button');
+    level.setAttribute('aria-label', t('controls.steer.tiltLevel'));
+    level.addEventListener('pointerdown', () => {
+      level.classList.add('is-pressed');
+      this.onTiltLevel?.();
+    });
+    for (const type of RELEASE_EVENTS) {
+      level.addEventListener(type, () => {
+        level.classList.remove('is-pressed');
+      });
+    }
 
     const throttle = el('tc-throttle', root, undefined, 'throttle');
     this.throttleTrack = el('tc-throttle-track', throttle);
@@ -129,6 +152,12 @@ export class TouchControls {
       e.preventDefault();
     });
     parent.appendChild(root);
+    this.drag = new DragSurface(parent, input);
+  }
+
+  /** 今の操縦の方式（9-4） */
+  get mode(): SteerMode {
+    return this.stickOptions.mode;
   }
 
   get isVisible(): boolean {
@@ -140,6 +169,7 @@ export class TouchControls {
     this.visible = visible;
     this.root.hidden = !visible;
     document.documentElement.classList.toggle('touch-active', visible);
+    this.drag.setShown(visible && this.stickOptions.mode === 'drag');
     if (!visible) this.reset();
   }
 
@@ -149,7 +179,10 @@ export class TouchControls {
   configure(deadzone: number, swapped: boolean, scale: number, stick: StickOptions): void {
     this.stick.setDeadzone(deadzone);
     this.stickOptions = { ...stick };
-    this.input.directMode = stick.direct;
+    this.input.directMode = stick.mode !== 'classic';
+    this.input.steerMode = stick.mode;
+    this.root.dataset.steer = stick.mode;
+    this.drag.setShown(this.visible && stick.mode === 'drag');
     this.root.classList.toggle('is-swapped', swapped);
     // ⏸ ボタン（ヨーボタンの隣）も合わせるので :root に置く
     document.documentElement.style.setProperty('--tc-scale', String(scale));
@@ -181,6 +214,7 @@ export class TouchControls {
   reset(): void {
     this.stick.reset();
     this.renderStick();
+    this.drag.reset();
     this.throttlePointer = null;
     for (const b of this.holdButtons) {
       b.pointers.clear();
@@ -251,7 +285,7 @@ export class TouchControls {
     v.y = this.stick.value.y;
     applyStickCurve(v, this.stickOptions.curve);
     const { x, y } = v;
-    if (this.stickOptions.direct) {
+    if (this.stickOptions.mode !== 'classic') {
       this.input.setDirectStick(x, -y);
       return;
     }

@@ -113,43 +113,92 @@ export class DirectRaceBot {
   private index = 0;
   private readonly steer = new DirectSteer();
   private readonly stick = { x: 0, y: 0 };
-  private readonly approach: Vec3 = { x: 0, y: 0, z: 0 };
-  /** 真下向きのリングを飛ばして並ぶ、次のリングの番号（-1 はしていない）と、手前の点を過ぎたか */
-  private lineUp = -1;
-  private lineUpReached = false;
+  private readonly local: Vec3 = { x: 0, y: 0, z: 0 };
+  /** 引き起こしで上へ倒す量（引きの角速度を見て加減する） */
+  private pullStick = 0.6;
+  private stuckRing = -1;
+  private stuckSteps = 0;
+  private extendSteps = 0;
 
   constructor(private readonly sim: RaceSim) {
     this.path = coursePath(sim.race.course, sim.race.rings, this.ringIndex);
   }
 
   /**
-   * この方式は真下（-maxElevationDeg より下）へは向けないので、真下向きのリングは飛ばし（+5 秒）、次のリングの手前
-   * LINE_UP_DISTANCE m の点へ回り込んでから通る（人がするように）。向かう点（無ければ null）
+   * 9-4: 真下向きのリング（アクロバットの 11 番）は、その上にいる間はリングの中心へ倒す（人が見て向かうように）。
+   * 深く下へ倒すと背面へ回して引くので、スプリット S の形で通る。向かう点（真下向きのリングでなければ null）
    */
-  private straightDown(): Vec3 | null {
+  private downRing(): Vec3 | null {
     const race = this.sim.race;
     const ring = race.rings[race.next];
-    const follow = race.rings[race.next + 1];
-    if (!ring || !follow || ring.normal.y > -Math.sin((85 * Math.PI) / 180)) {
-      this.lineUp = -1;
-      return null;
+    if (!ring || !isDownRing(ring)) return null;
+    // 通り損ねて下へ抜けたら、道筋に戻ってもう一度
+    return this.sim.play.session.aircraft.state.position.y > ring.position.y - 60
+      ? ring.position
+      : null;
+  }
+
+  /** 真下向きのリングの後 n 個のうちか（引き起こしからの上下のスラローム） */
+  private afterDive(n: number): boolean {
+    const race = this.sim.race;
+    for (let k = 1; k <= n; k++) {
+      const prev = race.rings[race.next - k];
+      if (prev && isDownRing(prev)) return true;
     }
-    if (this.lineUp !== follow.index) {
-      this.lineUp = follow.index;
-      this.lineUpReached = false;
+    return false;
+  }
+
+  /**
+   * 真下向きのリングの後（引き起こし・スラローム）: 機首の接線で次のリングを通る輪の半径から要る引きの角速度を出し、
+   * 実際の角速度との差で上へ倒す量を加減する（人が「引き過ぎ・足りない」を見て加減するように）。していなければ false
+   */
+  private pullOut(s: Readonly<FlightState>, point: Readonly<Vec3>): boolean {
+    if (!this.afterDive(AFTER_DIVE_RINGS) || f.y > -0.2) {
+      this.pullStick = 0.6;
+      return false;
     }
-    const n = follow.normal;
-    const c = follow.position;
-    const p = this.sim.play.session.aircraft.state.position;
-    // リングの面からの距離（通る向きの手前が負）
-    const before = (p.x - c.x) * n.x + (p.y - c.y) * n.y + (p.z - c.z) * n.z;
-    const a = this.approach;
-    a.x = c.x - n.x * LINE_UP_DISTANCE;
-    a.y = c.y - n.y * LINE_UP_DISTANCE;
-    a.z = c.z - n.z * LINE_UP_DISTANCE;
-    if (Math.hypot(p.x - a.x, p.y - a.y, p.z - a.z) < 200 || before > -LINE_UP_DISTANCE * 0.6)
-      this.lineUpReached ||= Math.hypot(p.x - a.x, p.y - a.y, p.z - a.z) < 200;
-    return this.lineUpReached ? c : a;
+    const b = this.local;
+    b.x = point.x - s.position.x;
+    b.y = point.y - s.position.y;
+    b.z = point.z - s.position.z;
+    inverseRotateVec3(b, s.orientation, b);
+    const up = b.y;
+    const ahead = -b.z;
+    // 向かう点が前・頭の側（引けば向く面の中）にあるときだけ
+    if (up <= 0 || ahead <= 0 || Math.abs(b.x) > up) return false;
+    const r = (up * up + ahead * ahead) / (2 * up);
+    const want = s.speed / r;
+    this.pullStick = Math.max(
+      0,
+      Math.min(1, this.pullStick + (want - s.angularRate.x) * PULL_GAIN),
+    );
+    // 左右は向かう点へ（地平線が基準）、上下は引きの加減
+    stickToward(this.stick, s, point);
+    this.stick.y = this.pullStick;
+    return true;
+  }
+
+  /** 同じリングの周りを回り続けたら（旋回の輪の内側）、まっすぐ離れてから向かい直す。離れている間は true */
+  private extend(s: Readonly<FlightState>): boolean {
+    const next = this.sim.race.next;
+    if (next !== this.stuckRing) {
+      this.stuckRing = next;
+      this.stuckSteps = 0;
+      this.extendSteps = 0;
+    }
+    this.stuckSteps++;
+    if (this.extendSteps > 0) {
+      this.extendSteps--;
+      this.stick.x = 0;
+      // 低い所では少し上がりながら
+      this.stick.y = s.position.y < 700 ? 0.4 : 0;
+      return true;
+    }
+    if (this.stuckSteps > STUCK_SECONDS / DT) {
+      this.stuckSteps = 0;
+      this.extendSteps = Math.round(EXTEND_SECONDS / DT);
+    }
+    return false;
   }
 
   think(): AircraftControls {
@@ -180,17 +229,38 @@ export class DirectRaceBot {
     const missed =
       required !== undefined && this.index > (this.ringIndex[required.index] ?? Infinity) + 20;
     const ahead = Math.round((s.speed * 0.7) / 10);
+    rotateVec3(f, s.orientation, LOCAL_FORWARD);
+    const down = this.downRing();
+    const nextRing = race.rings[race.next];
+    if (!down && nextRing && this.pullOut(s, nextRing.position)) return this.finish(s);
+    if (this.extend(s)) return this.finish(s);
     const t =
-      this.straightDown() ??
+      down ??
       (missed ? required.position : this.path[Math.min(this.path.length - 1, this.index + ahead)]);
     if (t && !loopStick(this.stick, s, t, this.steer.loop.active)) stickToward(this.stick, s, t);
+    return this.finish(s);
+  }
+
+  private finish(s: Readonly<FlightState>): AircraftControls {
+    // 真下向きのリングと、その次（引き起こした先）へは、スロットルを絞る（引き起こしの輪を小さく）
+    this.controls.throttleTarget = this.downRing() || this.afterDive(1) ? DIVE_THROTTLE : 1;
     const spec = this.sim.play.session.aircraft.flight.spec;
     this.steer.apply(this.controls, s, this.stick.x, this.stick.y, this.sim.map.ground, spec);
     return this.controls;
   }
 }
 
-const LINE_UP_DISTANCE = 450;
+function isDownRing(ring: { readonly normal: Readonly<Vec3> }): boolean {
+  return ring.normal.y < -Math.sin((85 * Math.PI) / 180);
+}
+
+const DIVE_THROTTLE = 0.4;
+/** 引き起こしで加減するのは、真下向きのリングの後この個数まで */
+const AFTER_DIVE_RINGS = 3;
+const PULL_GAIN = 0.15;
+/** 同じリングをこの秒数通れなければ、EXTEND_SECONDS 秒まっすぐ離れる */
+const STUCK_SECONDS = 9;
+const EXTEND_SECONDS = 4;
 
 /** 「方向へ倒す」方式でリングレースをゴール（または時間切れ）まで飛ばす。墜落の回数も返す */
 export function runDirectRace(

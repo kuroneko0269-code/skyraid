@@ -115,6 +115,8 @@ function createFlightUpdate(p: FlightLoopParts): {
     p.replay.hub.capture(p.controls, p.combatInput);
     // 6-4: 街の建物が崩れる時間と、怪獣（歩行・薙ぎ払い・熱線）が壊す建物（協力はホストの RaidHost が配る）
     stepWorld(play, p.activeMap.buildings, p.controls, p.combatInput, dt, p.coopKaiju());
+    // 9-4: 1 秒ごとに丸めた状態のハッシュを記録に残す
+    p.replay.hub.checkpoint(p.activeMap.buildings);
     p.afterStep();
   };
   const update = (dt: number): void => {
@@ -160,7 +162,11 @@ function linkScreenChanges(p: FlightLoopParts): void {
     if (to === 'flight') {
       p.input.endStep();
       p.weaponInput.reset();
-      if (!isResume(from)) p.steer.reset();
+      if (!isResume(from)) {
+        p.steer.reset();
+        // 9-4: 飛び始めたときの持ち方を傾きの中立にする
+        p.touch.tilt.calibrate();
+      }
     }
     // 撃墜されたまま（ミッション失敗）のリザルトでは機体を隠す。ハンガーでは展示の機体だけ
     p.aircraftMesh.visible = !usesDemoCamera(to) && to !== 'hangar' && p.session.player.active;

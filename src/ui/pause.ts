@@ -16,8 +16,11 @@ export class PauseMenu {
   private readonly abortButton: HTMLButtonElement;
   private readonly photoButton: HTMLButtonElement;
   private readonly resumeButton: HTMLButtonElement;
+  private readonly tiltButton: HTMLButtonElement;
   /** 「フォトモード」（7-A。main がつなぐ） */
   onPhoto: (() => void) | null = null;
+  /** 「傾きを合わせ直す」（9-4。傾き操作のときだけ出す） */
+  onTiltLevel: (() => void) | null = null;
 
   constructor(
     parent: HTMLElement,
@@ -55,6 +58,11 @@ export class PauseMenu {
       this.onPhoto?.();
     });
     this.photoButton.hidden = true;
+    // 9-4: 傾き操作のときだけ。今の持ち方を中立にする
+    this.tiltButton = createButton(actions, 'ui-button', t('pause.tiltLevel'), () => {
+      this.onTiltLevel?.();
+    });
+    this.tiltButton.hidden = true;
     createButton(actions, 'ui-button', t('pause.allSettings'), handlers.onSettings);
     // ミッション中だけ出す（2-4）
     this.abortButton = createButton(
@@ -81,6 +89,11 @@ export class PauseMenu {
   setInMission(inMission: boolean, label = t('pause.abortMission')): void {
     this.abortButton.hidden = !inMission;
     this.abortButton.textContent = label;
+  }
+
+  /** 「傾きを合わせ直す」を出すか（9-4） */
+  setTiltLevelAvailable(available: boolean): void {
+    this.tiltButton.hidden = !available;
   }
 
   /** 「フォトモード」を出すか（PvP・協力・チュートリアルでは出さない） */

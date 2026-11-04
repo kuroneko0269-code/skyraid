@@ -122,11 +122,34 @@ function walk(
 
 const f64 = new Float64Array(1);
 const u32 = new Uint32Array(f64.buffer);
+const f32 = new Float32Array(1);
+const u32f = new Uint32Array(f32.buffer);
+
+/** 丸めたハッシュ（9-4）で 0 とみなす大きさ */
+const ROUND_ZERO = 1e-6;
+/** 丸めたハッシュ（9-4）で落とす単精度の仮数の下位ビット（23 のうち 11。残り 12 ビット ≒ 相対 2.4e-4） */
+const ROUND_DROP_BITS = 11;
+
+/**
+ * 端末をまたいでも同じになるよう丸めた数のビット列（9-4）。Math.exp などの最後の桁（1 ulp）のずれでは変わらない:
+ * 小さい値は 0、ほかは単精度にして仮数の下位を四捨五入で落とす（どちらも IEEE 754 で決まった計算なので、どの端末でも同じ）
+ */
+export function roundedBits(v: number): number {
+  if (!Number.isFinite(v)) return v !== v ? 0x7fc00000 : v > 0 ? 0x7f800000 : 0xff800000;
+  if (Math.abs(v) < ROUND_ZERO) return 0;
+  f32[0] = v;
+  const bits = u32f[0] ?? 0;
+  const half = 1 << (ROUND_DROP_BITS - 1);
+  return ((bits + half) & ~((1 << ROUND_DROP_BITS) - 1)) >>> 0;
+}
 
 /** 状態ハッシュ（FNV-1a 風の 32 bit を 2 本）。同じ状態なら同じ値。数値はビット列で比べる（-0 と 0 も区別） */
 export class StateHasher {
   private a = 0x811c9dc5;
   private b = 0x01000193;
+
+  /** round: 数を丸めて見る（9-4。端末をまたいだ比べ方） */
+  constructor(private readonly round = false) {}
 
   reset(): void {
     this.a = 0x811c9dc5;
@@ -139,6 +162,10 @@ export class StateHasher {
   }
 
   num(v: number): void {
+    if (this.round) {
+      this.int(roundedBits(v));
+      return;
+    }
     f64[0] = v;
     this.int(u32[0] ?? 0);
     this.int(u32[1] ?? 0);
@@ -152,11 +179,27 @@ export class StateHasher {
   get value(): string {
     return this.a.toString(16).padStart(8, '0') + this.b.toString(16).padStart(8, '0');
   }
+
+  /** 短い値（8 桁の 16 進。記録に毎秒残す丸めたハッシュ） */
+  get short(): string {
+    return (this.a ^ this.b).toString(16).padStart(8, '0');
+  }
 }
 
 /** roots から辿れる状態全体のハッシュ（16 桁の 16 進） */
 export function hashState(roots: readonly object[], skip?: WalkSkip): string {
-  const h = new StateHasher();
+  return hashWith(new StateHasher(), roots, skip).value;
+}
+
+/**
+ * 数を丸めた状態のハッシュ（9-4。8 桁の 16 進）: 端末の違い（数学関数の最後の桁）では変わらず、結果が分かれるほどの
+ * ずれ（相対 1e-4 くらいから）で変わる。記録の始めと 1 秒ごとに残し、再生で「ここからずれた」を知らせる
+ */
+export function hashStateRounded(roots: readonly object[], skip?: WalkSkip): string {
+  return hashWith(new StateHasher(true), roots, skip).short;
+}
+
+function hashWith(h: StateHasher, roots: readonly object[], skip?: WalkSkip): StateHasher {
   walk(
     roots,
     skip,
@@ -195,7 +238,7 @@ export function hashState(roots: readonly object[], skip?: WalkSkip): string {
       }
     },
   );
-  return h.value;
+  return h;
 }
 
 // ---- スナップショット ----

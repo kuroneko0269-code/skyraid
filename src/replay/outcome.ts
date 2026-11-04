@@ -164,3 +164,16 @@ export function replayVersionNotice(header: ReplayHeader, current: string): stri
   const version = replayGameVersion(header) ?? t('replay.status.unknownGameVersion');
   return t('replay.status.otherGameVersion', { version });
 }
+
+/**
+ * 再生中に記録の毎秒の丸めたハッシュと違った（9-4）ときの断り。同じ版なら別の端末の記録（数学関数の最後の桁の違い）、
+ * 違う版なら版の違い。再生は止めない
+ */
+export function replayDivergeNotice(
+  header: ReplayHeader,
+  current: string,
+  seconds: number,
+): string {
+  const key = isOtherGameVersion(header, current) ? 'divergedVersion' : 'diverged';
+  return t(`replay.status.${key}`, { seconds: String(seconds) });
+}

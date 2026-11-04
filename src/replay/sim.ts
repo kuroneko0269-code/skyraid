@@ -18,7 +18,7 @@ import type { FlightSession } from '../missions/flight-session';
 import type { GamePlay } from '../missions/game-play';
 import type { MissionDef } from '../missions/types';
 import { resolveLoadout, type Loadout } from '../progression/loadout';
-import { hashState, type StateSnapshot, type WalkSkip } from './state-walk';
+import { hashState, hashStateRounded, type StateSnapshot, type WalkSkip } from './state-walk';
 import type { ReplayCommand, ReplayFrame, ReplayStart } from './types';
 
 /** 再生・記録が触る世界 */
@@ -46,6 +46,11 @@ export function simSkip(play: GamePlay): WalkSkip {
 /** 今の状態のハッシュ */
 export function simHash(w: Pick<SimWorld, 'play' | 'buildings'>): string {
   return hashState(simRoots(w), simSkip(w.play));
+}
+
+/** 数を丸めた今の状態のハッシュ（9-4。端末の違いでは変わらない。記録の始めと 1 秒ごと） */
+export function simCheckHash(w: Pick<SimWorld, 'play' | 'buildings'>): string {
+  return hashStateRounded(simRoots(w), simSkip(w.play));
 }
 
 export function missionFor(

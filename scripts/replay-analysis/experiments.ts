@@ -183,11 +183,68 @@ export const ASSIST_COMPARE: readonly Experiment[] = AIM_ASSIST_LEVELS.flatMap((
   })),
 );
 
+/**
+ * 9-4 の傾き・ドラッグ（`--tilt`）: 9-2 の初期値（方向へ倒す・カーブ 1.5）の模擬の人と、同じ組み立てに傾き・ドラッグ相当の入力を
+ * 渡す人。狙いの補助・自動射撃は初期値（標準・ON）。人の手の数値は推定（実機の記録が無いので）:
+ * - 傾き: 手首で端末を傾ける。遅れ 0.25 秒（スティックより大きい）・ぶれ 0.06（両手で持つので小さい。端 25° の 1.5°）・
+ *   相関 0.5 秒・デッドゾーン 12%・カーブ 1.5・センサーの平滑 0.08 秒
+ * - ドラッグ: 行きたい所を指で押さえる。遅れ 0.2 秒・ぶれ 0.05（押さえた指は動かしにくい）・直線・デッドゾーンなし。
+ *   地平線で読む人（方式の説明どおり）と、画面（傾いたカメラ）に見える所を押さえる人
+ */
+const ASSIST_DEFAULT = {
+  assist: AIM_ASSIST_LEVEL_SPECS.normal,
+  autoFireScale: 1,
+} as const;
+export const TILT_COMPARE: readonly Experiment[] = [
+  {
+    id: 'stick',
+    label: 'スティック（方向へ倒す・カーブ 1.5）',
+    tweaks: { direct: true, hands: hands({ curve: 1.5 }), ...ASSIST_DEFAULT },
+  },
+  {
+    id: 'tilt',
+    label: '傾き',
+    tweaks: {
+      direct: true,
+      hands: hands({ curve: 1.5, delay: 0.25, noise: 0.06, tau: 0.5, smoothing: 0.08 }),
+      ...ASSIST_DEFAULT,
+    },
+  },
+  {
+    id: 'drag',
+    label: 'ドラッグ（地平線で読む人。画面が傾いていなければ同じ）',
+    tweaks: {
+      direct: true,
+      hands: hands({ curve: 1, deadzone: 0, noise: 0.05 }),
+      ...ASSIST_DEFAULT,
+    },
+  },
+  {
+    id: 'drag-screen',
+    label: '（参考）画面の傾きで戻さない場合の、画面に見える所を押さえる人',
+    tweaks: {
+      direct: 'screen',
+      hands: hands({ curve: 1, deadzone: 0, noise: 0.05 }),
+      ...ASSIST_DEFAULT,
+    },
+  },
+  {
+    id: 'drag-screen-comp',
+    label: 'ドラッグ（画面に見える所を押さえる人・本番: 画面の傾きで戻す）',
+    tweaks: {
+      direct: 'screen-comp',
+      hands: hands({ curve: 1, deadzone: 0, noise: 0.05 }),
+      ...ASSIST_DEFAULT,
+    },
+  },
+];
+
 const SETS = {
   tune: EXPERIMENTS,
   decompose: DECOMPOSE,
   compare: STICK_COMPARE,
   assist: ASSIST_COMPARE,
+  tilt: TILT_COMPARE,
 } as const;
 export type ExperimentSet = keyof typeof SETS;
 

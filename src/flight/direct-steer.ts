@@ -5,8 +5,9 @@
 // 1. 機首の向きを「方位（水平の向き）」と「上下の角度」に分け、スティックの左右で方位を・上下で上下の角度をずらした向きを
 //    「行きたい向き」にする（端まで倒すと fullDeg 度）。毎ステップ機首から測るので、倒している間は曲がり続ける。
 //    離すと方位は今のまま、上下は水平へ戻す（上下に倒していない分だけ、最大 levelDeg 度ずつ）
-// 2. 上下の角度は ±maxElevationDeg まで。低空では地面・海面までの余裕で下向きを制限し、余裕が無ければ引き起こす。
-//    9-3: 上へ端まで倒し続けると、速さが足りれば上限を越えて宙返り（loop-steer.ts。下は今のまま -maxElevationDeg で止まる）
+// 2. 上下の角度は上が maxElevationDeg、下が maxDiveDeg（9-4: 真下）まで。低空では地面・海面までの余裕で下向きを制限し、
+//    余裕が無ければ引き起こす。9-3: 上へ端まで倒し続けると、速さが足りれば上限を越えて宙返り（loop-steer.ts）。
+//    9-4: 深く下へ向けたい（高度に余裕がある）ときは背面へ回して引く（スプリット S の前半。真下で止まる）
 // 3. 行きたい向きを機体から見た向きにして、ピッチ（上下）とヨー（左右）で合わせる。ロールは機首を動かしたい向きへ背中を
 //    向けるバンク角へ（真横へ曲がるなら 90°。離すと水平に戻す。背面からも戻る）。バンクしていると引きで横へ曲がる
 //
@@ -88,6 +89,7 @@ export class DirectSteer {
     }
     const full = cfg.fullDeg * DEG;
     const maxElev = cfg.maxElevationDeg * DEG;
+    const maxDive = cfg.maxDiveDeg * DEG;
     const yawTurn = clamp(stickX, -1, 1) * full;
     const elev = Math.asin(clamp(f.y, -1, 1));
     const sy = clamp(stickY, -1, 1);
@@ -99,7 +101,7 @@ export class DirectSteer {
     }
     // 上下に倒していない分だけ水平へ戻す（旋回の引きで機首が少しずつ上がるのを溜めない。離すと水平飛行に戻る）
     const level = (1 - Math.abs(sy)) * clamp(elev, -cfg.levelDeg * DEG, cfg.levelDeg * DEG);
-    let goalElev = clamp(elev + sy * full - level, -maxElev, maxElev);
+    let goalElev = clamp(elev + sy * full - level, -maxDive, maxElev);
     // 行きたい向き（ワールド）: 方位を右へ yawTurn 回し、上下の角度を goalElev に
     const c = Math.cos(yawTurn);
     const s = Math.sin(yawTurn);
@@ -137,7 +139,12 @@ export class DirectSteer {
     const dx = yawTurn / DEG;
     const dy = (goalElev - elev) / DEG;
     const weight = smooth01(Math.abs(dx) / cfg.bankFullDeg);
-    const target = clamp(Math.atan2(dx, dy) / DEG, -cfg.maxBankDeg, cfg.maxBankDeg) * weight;
+    let target = clamp(Math.atan2(dx, dy) / DEG, -cfg.maxBankDeg, cfg.maxBankDeg) * weight;
+    // 9-4: 深く下へ向けたい（高度に余裕がある）ときは背中を下へ向けて引く（押すだけでは真下まで遅い）
+    const dr = cfg.diveRoll;
+    const deep = floor < dr.floorDeg * DEG ? smooth01((-dy - dr.startDeg) / dr.rangeDeg) : 0;
+    // 背面（±180°）は近い側から回る（ずれは ±180° で測るので、180° を目指せば向きは揺れない）
+    if (deep > 0) target += (Math.sign(target || bank || 1) * 180 - target) * deep;
     let diff = target - bank;
     if (diff > 180) diff -= 360;
     else if (diff < -180) diff += 360;

@@ -3,31 +3,29 @@ import type { ControlSettings } from '../core/control-settings';
 import { t } from '../core/i18n';
 import { AIM_ASSIST_LEVEL_LABELS, AIM_ASSIST_LEVELS } from '../data/assist';
 import { BUTTON_SIZES, CONTROL_LABELS, CONTROL_SETTINGS } from '../data/controls';
-import {
-  STEER_LABELS,
-  STEER_MODES,
-  STICK_CURVES,
-  STICK_POSITIONS,
-  type StickCurve,
-} from '../data/steer';
+import { STEER_LABELS, STICK_CURVES, STICK_POSITIONS, type StickCurve } from '../data/steer';
 import type { SaveStore } from '../progression/save-store';
 import { el } from './hud-dom';
 import { createKeybindSettings } from './keybind-settings';
 import { createToggleButton } from './mobile';
+import type { SteerMode } from '../data/steer';
+import { createSteerModeChoice } from './tilt-settings';
+import type { TiltSource } from './tilt-source';
 
 type ToggleKey = 'invertPitch' | 'autoLevel' | 'swapSides' | 'vibration' | 'autoFire';
 
 /**
  * 操作設定（4-11）: ポーズメニューの設定の「操作」。感度・デッドゾーンのスライダー、ピッチ反転・オートレベル・
- * 左右入替・振動の ON/OFF、ボタンの大きさ、スティックの方式・感度のカーブ・位置（9-2）、狙いの補助の強さ・自動射撃（9-3）、キー割当。変えるとすぐ apply で効かせ、セーブの settings.controls に保存する
+ * 左右入替・振動の ON/OFF、ボタンの大きさ、スティックの方式（9-4: 傾き・ドラッグ）・感度のカーブ・位置（9-2）、狙いの補助の強さ・自動射撃（9-3）、キー割当。変えるとすぐ apply で効かせ、セーブの settings.controls に保存する
  * （スライダーは離したときだけ保存）。設定の最下部（セーブデータ）より上に置く
  */
 export function createControlSettings(
   panel: HTMLElement,
   save: SaveStore,
   vibrationSupported: boolean,
+  tilt: TiltSource,
   apply: (c: Readonly<ControlSettings>) => void,
-): void {
+): { syncSteerMode: (mode: SteerMode) => void } {
   const c = save.settings.controls;
   const changed = (persist: boolean, fn: (c: ControlSettings) => void): void => {
     if (persist) save.updateControls(fn);
@@ -84,16 +82,10 @@ export function createControlSettings(
       changed(true, (x) => (x.buttonSize = v));
     },
   );
-  // 9-2: タッチのスティックの方式・感度のカーブ・位置
-  choice(
-    toggles,
-    STEER_LABELS.mode,
-    STEER_MODES.map((v) => [v, STEER_LABELS.modes[v]] as const),
-    c.steerMode,
-    (v) => {
-      changed(true, (x) => (x.steerMode = v));
-    },
-  );
+  // 9-2: タッチのスティックの方式・感度のカーブ・位置（9-4: 傾き・ドラッグ。傾きは使えると分かってから保存する）
+  const steerChoice = createSteerModeChoice(toggles, c, tilt, (v) => {
+    changed(true, (x) => (x.steerMode = v));
+  });
   choice(
     toggles,
     STEER_LABELS.curve,
@@ -129,6 +121,7 @@ export function createControlSettings(
     changed(true, fn);
   });
   panel.insertBefore(box, panel.querySelector(':scope > .save-settings'));
+  return { syncSteerMode: steerChoice.sync };
 }
 
 /** カーブの表示（1.0（直線）/ 1.5 / 2.0） */

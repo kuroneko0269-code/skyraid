@@ -22,6 +22,8 @@ export interface HandsSpec {
   readonly deadzone: number;
   /** ヨーを使うか（タッチのヨーはボタンなので、人はほとんど使わない。false なら 0） */
   readonly yaw: boolean;
+  /** 9-4: 入力の平滑（秒。傾きのセンサーの値をなめらかにする本番の TILT_CONFIG.smoothingSeconds。無ければ 0） */
+  readonly smoothing?: number;
 }
 
 export const DEFAULT_HANDS: HandsSpec = {
@@ -46,6 +48,8 @@ export class Hands {
   private nx = 0;
   private ny = 0;
   private readonly out: Vec2Out = { x: 0, y: 0 };
+  private sp = 0;
+  private sr = 0;
 
   constructor(
     readonly spec: HandsSpec,
@@ -100,6 +104,14 @@ export class Hands {
     const gain = vm > 0 ? stickOutput(vm, s.curve, s.sensitivity) / vm : 0;
     out.pitch = v.y * gain;
     out.roll = v.x * gain;
+    // 9-4: 傾きは平滑した値（本番は角度を平滑してからデッドゾーン・カーブ。ここでは後で近似）
+    if (s.smoothing && s.smoothing > 0) {
+      const k = 1 - Math.exp(-this.dt / s.smoothing);
+      this.sp += (out.pitch - this.sp) * k;
+      this.sr += (out.roll - this.sr) * k;
+      out.pitch = this.sp;
+      out.roll = this.sr;
+    }
     out.yaw = s.yaw ? intent.yaw : 0;
     out.throttle = intent.throttle;
     out.afterburner = intent.afterburner;

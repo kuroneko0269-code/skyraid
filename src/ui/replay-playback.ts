@@ -18,7 +18,7 @@ import type { PlayerView } from '../render/player-view';
 import { REPLAY_CAMERAS, type ReplayCameras, type ReplayCameraMode } from '../render/replay-camera';
 import type { WeatherView } from '../render/weather/weather-view';
 import type { ReplayHub } from '../replay/hub';
-import { replayVersionNotice } from '../replay/outcome';
+import { replayVersionNotice, replayDivergeNotice } from '../replay/outcome';
 import { ReplayPlayer } from '../replay/player';
 import type { SimWorld } from '../replay/sim';
 import type { ReplayData } from '../replay/types';
@@ -109,6 +109,12 @@ export class ReplayPlayback {
     this.savedOptions ??= { ...options };
     const player = new ReplayPlayer(p.world, data, p.controls);
     player.begin(true);
+    // 9-4: 記録の毎秒のハッシュと最初に違った所で一度だけ知らせる（再生は止めない）
+    player.onDiverge = (seconds) => {
+      showToast(replayDivergeNotice(data.header, APP_VERSION, seconds), {
+        seconds: REPLAY_CONFIG.versionNoticeSeconds,
+      });
+    };
     this.player = player;
     this.paused = false;
     this.speedIndex = NORMAL_SPEED;
