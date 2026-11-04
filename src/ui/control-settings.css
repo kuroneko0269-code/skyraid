@@ -39,7 +39,9 @@
 
 .control-settings-toggles {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* 9-6b: 中身の最小の幅で列が広がらないように（568×320 の英語で右の列が 2px はみ出した） */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
   gap: 8px;
 }
 
@@ -104,4 +106,24 @@
   align-self: flex-end;
   min-height: 36px;
   font-size: 13px;
+}
+
+/* 9-6b: 狭い画面（568×320 の英語）で 1 つの欄に収める: 名前は折り返し、選択肢の幅は欄の 6 割まで、長いボタンの文は折り返す */
+.settings-grid .control-size,
+.settings-grid .control-tilt-note,
+.settings-grid .control-tilt-permit {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.settings-grid .control-size select {
+  min-width: 0;
+  max-width: 60%;
+  flex: 0 0 auto;
+}
+
+.settings-grid .control-tilt-permit,
+.control-settings-toggles .settings-button {
+  min-width: 0;
+  white-space: normal;
 }

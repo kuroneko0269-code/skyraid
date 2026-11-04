@@ -28,7 +28,8 @@
 /* 2 列のグリッド（設定画面の各タブ・ポーズメニューの 4 項目） */
 .settings-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* 9-6b: 最小の幅を 0 に（1fr は中身の最小の幅より狭くならず、568×320 の英語の「操作」で右の列が画面の外へ 2px はみ出した） */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -57,7 +58,7 @@
 
 @media (max-width: 480px) {
   .settings-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
