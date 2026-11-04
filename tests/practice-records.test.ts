@@ -247,9 +247,19 @@ describe('画面の流れ・文・案内', () => {
     expect(practiceSettingsLabel('touch:direct:weak:0:1')).toContain('Auto-fire off');
   });
 
-  it('案内: チュートリアルの完了と、M1・M2 の失敗だけ', () => {
-    expect(practiceHintFor(true, { outcome: 'success', missionId: 'tutorial' })).toBe('tutorial');
-    expect(practiceHintFor(true, { outcome: 'aborted', missionId: 'tutorial' })).toBeUndefined();
+  it('案内: チュートリアルの狙いの章（9-5c: 機銃・動く的・的の探し方）の完了と、M1・M2 の失敗だけ', () => {
+    expect(practiceHintFor(true, { outcome: 'success', missionId: 'tutorial-gun' })).toBe(
+      'tutorial',
+    );
+    expect(practiceHintFor(true, { outcome: 'success', missionId: 'tutorial-find' })).toBe(
+      'tutorial',
+    );
+    expect(
+      practiceHintFor(true, { outcome: 'success', missionId: 'tutorial-steer' }),
+    ).toBeUndefined();
+    expect(
+      practiceHintFor(true, { outcome: 'aborted', missionId: 'tutorial-gun' }),
+    ).toBeUndefined();
     expect(practiceHintFor(false, { outcome: 'failed', missionId: 'training' })).toBe('failed');
     expect(practiceHintFor(false, { outcome: 'failed', missionId: 'first-sortie' })).toBe('failed');
     expect(practiceHintFor(false, { outcome: 'success', missionId: 'training' })).toBeUndefined();

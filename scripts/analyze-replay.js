@@ -11,6 +11,9 @@
 //   --compare            9-2 のスティックの変更前後（今の操作 / 方向へ倒す・カーブ 1.5 など。--missions・--seeds）
 //   --tilt               9-4 の傾き・ドラッグ（同じ組み立てに傾き・ドラッグ相当の入力を渡す模擬の人。--missions・--seeds）
 //   --assist             9-3 の狙いの補助の強さ（弱・標準・強）× 自動射撃（OFF / ON）。方向へ倒す・カーブ 1.5 の模擬の人（--missions・--seeds）
+//   --device-fix         9-5b 速度合わせの有無（練習場の動く的・M1・M2。--seeds・--only before,after）
+//   --advice             9-5c 練習場の助言の当たり方（実機の記録・変更前・変更後。--seeds・--drills moving,static,bandit）
+//   --tutorial           9-5c チュートリアルの通し（模擬の人・初心者役 × 6 方式 × 8 章。--seeds・--roles human,beginner）
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { runnerImport } from 'vite';
@@ -31,6 +34,8 @@ for (let i = 0; i < args.length; i++) {
       '--assist',
       '--tilt',
       '--device-fix',
+      '--advice',
+      '--tutorial',
     ].includes(a)
   )
     flags.set(a, true);
@@ -45,7 +50,15 @@ const { module: m } = await runnerImport('/scripts/replay-analysis/main.ts', {
   logLevel: 'error',
 });
 
-if (flags.get('--device-fix')) {
+if (flags.get('--advice')) {
+  // 9-5c: 練習場の助言（docs/control-analysis.md）
+  console.log(m.runAdvice(seeds, (l) => console.error(l), list('--drills', ['moving'])));
+} else if (flags.get('--tutorial')) {
+  // 9-5c: チュートリアルの通し
+  console.log(
+    m.runTutorialMatrix(seeds, (l) => console.error(l), list('--roles', ['human', 'beginner'])),
+  );
+} else if (flags.get('--device-fix')) {
   // 9-5b: 練習場の動く的・M1・M2 で速度合わせの有無（docs/control-analysis.md）
   console.log(m.runDeviceFix(seeds, (l) => console.error(l), list('--only', [])));
 } else if (flags.get('--make-bots')) {

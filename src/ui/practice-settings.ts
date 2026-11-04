@@ -69,8 +69,14 @@ export class PracticeSettingsPanel {
         commit((x) => (x.stickCurve = v));
       },
     );
+    // 9-5c: 飛行中の一言（追い越し・射程外・見失い）
+    const tips = createToggleButton(grid, t('practice.settings.tips'), c.practiceTips, () => {
+      commit((x) => (x.practiceTips = !x.practiceTips));
+      return this.save.settings.controls.practiceTips;
+    });
     this.syncers.push(() => {
       const now = this.save.settings.controls;
+      tips.sync(now.practiceTips);
       assist.value = now.aimAssist;
       autoFire.sync(now.autoFire);
       speedMatch.sync(now.speedMatch);

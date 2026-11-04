@@ -59,9 +59,9 @@
   },
   "tutorial": {
     "title": "Tutorial",
-    "note": "Learn the controls",
+    "note": "Learn by doing",
     "prompt": "Start the tutorial?",
-    "promptBody": "Practice flying and shooting in 5 short steps (3–4 minutes). You can also start it later from \"Tutorial\" in the mode select.",
+    "promptBody": "Practice flying, speed, guns, missiles, flares, loops and finding targets in 8 short hands-on chapters. You can redo any chapter later from \"Tutorial\" in the mode select.",
     "start": "Start",
     "later": "Later",
     "abort": "Quit",
@@ -69,43 +69,334 @@
     "complete": "TUTORIAL COMPLETE",
     "reward": "First-clear reward",
     "back": "Mode select",
-    "steps": {
-      "rings": {
-        "touch": "Push the stick (bottom left) toward where you want to go: right turns right, up climbs (keep holding up at speed to loop). Fly through the 3 yellow rings",
-        "touchClassic": "Tilt with the stick (bottom left) and pull to turn. Fly through the 3 yellow rings",
-        "touchTilt": "Tilt the device left or right to turn, toward you to climb (away to dive; keep it tilted well toward you at speed to loop). Fly through the 3 yellow rings",
-        "touchDrag": "Hold your finger where you want to go on the screen and the plane turns there (let go to level out; hold the top edge at speed to loop). Fly through the 3 yellow rings",
-        "keys": "Bank with {rollLeft}/{rollRight} and pull with {pitchUp} to turn ({pitchDown} pitches down). Fly through the 3 yellow rings",
-        "pad": "Bank with the left stick and pull it back to turn. Fly through the 3 yellow rings"
-      },
-      "speed": {
-        "touch": "Push the throttle (right edge) all the way up and hold AB to reach 360 m/s",
-        "keys": "Raise the throttle with {throttleUp} and hold {afterburner} (afterburner) to reach 360 m/s",
-        "pad": "Push the right stick up for throttle and hold LB to reach 360 m/s"
-      },
-      "targets": {
-        "touch": "Two red balloon targets. Point your nose at them and shoot them down with GUN (◇ marks a target)",
-        "touchAuto": "Two red balloon targets. Point your nose at them and shoot them down with GUN (◇ marks a target; the gun fires on its own when you're on target)",
-        "keys": "Two red balloon targets. Point your nose at them and shoot with {fire} (◇ marks a target)",
-        "pad": "Two red balloon targets. Point your nose at them and shoot with RB (◇ marks a target)"
-      },
-      "drone": {
-        "touch": "Keep the drone near the center of the screen to LOCK, then fire a missile with MSL",
-        "keys": "Keep the drone near the center of the screen to LOCK, then fire a missile with {missile} (Tab switches target)",
-        "pad": "Keep the drone near the center of the screen to LOCK, then fire a missile with A (Y switches target)"
-      },
-      "bandit": {
-        "touch": "Last, one enemy fighter. Shoot it down with guns and missiles. Use FLR when a missile is incoming",
-        "keys": "Last, one enemy fighter. Shoot it down with guns and missiles. Press {flare} (flare) when a missile is incoming",
-        "pad": "Last, one enemy fighter. Shoot it down with guns and missiles. Press B (flare) when a missile is incoming"
-      }
-    },
     "safety": "This is practice: you cannot be shot down, and hitting the ground puts you back in the air",
     "hints": {
       "speed": "Speed (m/s). Too slow and you stall",
       "altitude": "Altitude (m). PULL UP when the ground is close",
       "radar": "Radar. Up is where your nose points; red dots are enemies",
       "ammo": "Ammo: missiles, flares and more"
+    },
+    "list": {
+      "heading": "Tutorial",
+      "body": "Pick a chapter to start. Any chapter, any number of times. ✓ marks finished chapters.",
+      "chapter": "Chapter {n}",
+      "done": "✓ Done",
+      "fromStart": "From the start",
+      "close": "Back",
+      "reward": "Finish all flight chapters for a one-time {credits}"
+    },
+    "notice": {
+      "title": "The tutorial is new",
+      "body": "You can now learn what it takes to hit (matching speed, range, the aim marks, finding targets) in hands-on chapters. Try just the chapters you need.",
+      "open": "See chapters",
+      "later": "Later"
+    },
+    "result": {
+      "title": "CHAPTER {n} COMPLETE",
+      "next": "Next chapter",
+      "list": "Chapters"
+    },
+    "hintLabel": "Hint",
+    "live": {
+      "overtake": {
+        "direct": "You overshot. Keep your nose on the target while closing so THR AUTO (speed match) can slow you",
+        "keys": "You overshot. Lower the throttle with {throttleDown} as you close in",
+        "pad": "You overshot. Pull the right stick down to lower the throttle as you close in"
+      },
+      "offRange": {
+        "all": "Too far (OUT OF RANGE). Get within 1.5 km before you shoot"
+      },
+      "lost": {
+        "direct": "Target lost. Push toward the arrow at the screen edge to bring it back in front",
+        "classic": "Target lost. Bank toward the arrow at the screen edge and pull to bring it back in front",
+        "tilt": "Target lost. Tilt toward the arrow at the screen edge to bring it back in front",
+        "drag": "Target lost. Hold near the arrow at the screen edge to bring it back in front",
+        "keys": "Target lost. Bank toward the arrow at the screen edge and pull with {pitchUp}",
+        "pad": "Target lost. Bank toward the arrow at the screen edge and pull the left stick back"
+      },
+      "needSpeed": {
+        "direct": "NEED SPEED: too slow. Level off and speed up with AB first",
+        "keys": "NEED SPEED: too slow. Level off and speed up with {afterburner} (AB) first",
+        "pad": "NEED SPEED: too slow. Level off and speed up with LB (AB) first"
+      },
+      "missileHit": {
+        "direct": "Hit. Press FLR as soon as the MISSILE warning appears",
+        "keys": "Hit. Press {flare} as soon as the MISSILE warning appears",
+        "pad": "Hit. Press B as soon as the MISSILE warning appears"
+      },
+      "replaced": {
+        "all": "The target is back in front of you. Don't overshoot this time"
+      }
+    },
+    "chapters": {
+      "steer": {
+        "name": "Steering",
+        "goal": "Turn where you want, release to level, climb and dive",
+        "steps": {
+          "rings": {
+            "text": {
+              "direct": "Push the stick (bottom left) toward where you want to go and the plane turns there. Fly through the 3 yellow rings",
+              "classic": "Push the stick (bottom left) sideways to bank, then pull it back (down) to turn. Fly through the 3 yellow rings",
+              "tilt": "Tilt the device left or right to turn. Fly through the 3 yellow rings",
+              "drag": "Hold your finger where you want to go on the screen and the plane turns there. Fly through the 3 yellow rings",
+              "keys": "Bank with {rollLeft}/{rollRight} and pull with {pitchUp} to turn. Fly through the 3 yellow rings",
+              "pad": "Bank with the left stick and pull it back to turn. Fly through the 3 yellow rings"
+            },
+            "hint": {
+              "direct": "Keep pushing toward the ring and you keep turning. If you miss, fly away a bit and come back",
+              "keys": "Bank hard, then pull, to turn quickly. If you miss, fly away a bit and come back",
+              "all": "If you miss, fly away a bit and come back. The arrow at the screen edge points to the ring"
+            }
+          },
+          "level": {
+            "text": {
+              "direct": "Push left or right to turn, then let go. The wings level out and you fly straight",
+              "classic": "Bank about 30° with the stick, then let go. The wings level out (auto-level)",
+              "tilt": "Tilt to turn, then return to your starting grip. The wings level out",
+              "drag": "Hold near a screen edge to turn, then let go. The wings level out",
+              "keys": "Bank about 30° with {rollLeft} or {rollRight}, then release. The wings level out (auto-level)",
+              "pad": "Bank about 30° with the left stick, then release. The wings level out (auto-level)"
+            },
+            "hint": {
+              "direct": "Push well over, then let go and wait a few seconds",
+              "classic": "If the wings don't level, turn on Auto-level in Settings → Controls",
+              "keys": "If the wings don't level, turn on Auto-level in Settings → Controls",
+              "pad": "If the wings don't level, turn on Auto-level in Settings → Controls",
+              "all": "Bank, then let go and wait a few seconds"
+            }
+          },
+          "climb": {
+            "text": {
+              "direct": "Push up to climb, down to dive. Climb 150 m, then descend 150 m",
+              "classic": "Pull the stick back (down) to climb, push it forward (up) to dive. Climb 150 m, then descend 150 m",
+              "tilt": "Tilt the top edge toward you to climb, away to dive. Climb 150 m, then descend 150 m",
+              "drag": "Hold the upper part of the screen to climb, the lower part to dive. Climb 150 m, then descend 150 m",
+              "keys": "{pitchUp} climbs, {pitchDown} dives. Climb 150 m, then descend 150 m",
+              "pad": "Pull the left stick back to climb, push it forward to dive. Climb 150 m, then descend 150 m"
+            },
+            "hint": {
+              "all": "Watch the altitude number on the right. Small moves are enough"
+            }
+          }
+        }
+      },
+      "speed": {
+        "name": "Speed",
+        "goal": "Throttle and AB, overshooting, speed match",
+        "steps": {
+          "ab": {
+            "text": {
+              "direct": "Push the throttle (right edge) all the way up and hold AB to reach 360 m/s (speed is the number on the left)",
+              "keys": "Raise the throttle with {throttleUp} and hold {afterburner} (AB) to reach 360 m/s",
+              "pad": "Push the right stick up for throttle and hold LB (AB) to reach 360 m/s"
+            },
+            "hint": {
+              "direct": "The throttle alone tops out at 330 m/s. Hold AB (afterburner)",
+              "keys": "The throttle alone tops out at 330 m/s. Hold {afterburner}",
+              "pad": "The throttle alone tops out at 330 m/s. Hold LB"
+            }
+          },
+          "slow": {
+            "text": {
+              "direct": "Now lower the throttle and slow to 220 m/s. Too fast and you overshoot targets",
+              "keys": "Now lower the throttle with {throttleDown} and slow to 220 m/s. Too fast and you overshoot targets",
+              "pad": "Now pull the right stick down to lower the throttle and slow to 220 m/s. Too fast and you overshoot targets"
+            },
+            "hint": {
+              "direct": "Pull the throttle (right edge) all the way down and wait a moment",
+              "keys": "Hold {throttleDown} and wait a moment",
+              "pad": "Hold the right stick down and wait a moment"
+            }
+          },
+          "follow": {
+            "text": {
+              "direct": "Stay behind the drone ahead (within 1.4 km) for 4 seconds. As you close in, THR turns orange AUTO and matches your speed (speed match)",
+              "keys": "Stay behind the drone ahead (within 1.4 km) for 4 seconds. Lower the throttle with {throttleDown} as you close in so you don't overshoot",
+              "pad": "Stay behind the drone ahead (within 1.4 km) for 4 seconds. Lower the throttle with the right stick as you close in so you don't overshoot"
+            },
+            "hint": {
+              "direct": "Speed match works while your nose points at the drone. If it doesn't, turn on Speed match in Settings → Controls",
+              "keys": "Close and fast means overshooting. Under 1 km, keep the throttle below half",
+              "pad": "Close and fast means overshooting. Under 1 km, keep the throttle below half"
+            }
+          }
+        }
+      },
+      "gun": {
+        "name": "Aiming and guns",
+        "goal": "Put the nose mark on the circle, fire when it glows, 1.5 km range",
+        "steps": {
+          "aim": {
+            "text": {
+              "direct": "Put the nose mark (-○-) on the aim circle ahead of the target. When the circle glows thick white, you'll hit. Beyond 1.5 km the circle is dashed (out of reach)",
+              "keys": "Put the nose mark (-○-) on the aim circle ahead of the target. When the circle glows thick white, you'll hit. Beyond 1.5 km the circle is dashed (out of reach)",
+              "pad": "Put the nose mark (-○-) on the aim circle ahead of the target. When the circle glows thick white, you'll hit. Beyond 1.5 km the circle is dashed (out of reach)"
+            },
+            "hint": {
+              "all": "Turn toward the target first, then make small corrections up close, within 1.5 km where the circle is solid"
+            }
+          },
+          "targets": {
+            "text": {
+              "direct": "Shoot down 2 balloons. The gun fires on its own while the circle glows white (auto-fire). GUN works too, but OUT OF RANGE means too far",
+              "keys": "Shoot down 2 balloons. Fire with {fire} when the circle glows white. OUT OF RANGE means too far (get within 1.5 km)",
+              "pad": "Shoot down 2 balloons. Fire with RB when the circle glows white. OUT OF RANGE means too far (get within 1.5 km)"
+            },
+            "hint": {
+              "direct": "Too close to turn in? Fly away, then come back. If it never fires on its own, turn on Auto-fire in Settings → Controls",
+              "all": "Too close to turn in? Fly away, then come back. Fire once the circle glows white"
+            }
+          }
+        }
+      },
+      "moving": {
+        "name": "Moving targets",
+        "goal": "Shoot down moving drones with the gun",
+        "steps": {
+          "drones": {
+            "text": {
+              "direct": "Shoot down a moving drone with the gun. The circle leads ahead of them. Come from behind and match speed so you don't overshoot",
+              "keys": "Shoot down a moving drone with the gun. The circle leads ahead of them. Come from behind and match speed with {throttleDown} as you close",
+              "pad": "Shoot down a moving drone with the gun. The circle leads ahead of them. Come from behind and match speed with the right stick as you close"
+            },
+            "hint": {
+              "all": "From the side the circle keeps sliding. Swing in behind the drone, then close in"
+            }
+          }
+        }
+      },
+      "missile": {
+        "name": "Missiles",
+        "goal": "Lock and fire, resupply when empty",
+        "steps": {
+          "lock": {
+            "text": {
+              "direct": "Keep a drone near the center of the screen (within 2.5 km) to LOCK. Lock on first",
+              "keys": "Keep a drone near the center of the screen (within 2.5 km) to LOCK. Lock on first ({targetNext} switches target)",
+              "pad": "Keep a drone near the center of the screen (within 2.5 km) to LOCK. Lock on first (Y switches target)"
+            },
+            "hint": {
+              "all": "Hold it within 12° of the nose for about a second. Beyond 2.5 km it won't lock"
+            }
+          },
+          "launch": {
+            "text": {
+              "direct": "While locked, fire a missile with MSL. It chases the target",
+              "keys": "While locked, fire a missile with {missile}. It chases the target",
+              "pad": "While locked, fire a missile with A. It chases the target"
+            },
+            "hint": {
+              "direct": "If the lock drops, point your nose again. Tap MSL briefly (holding it switches to rockets)",
+              "all": "If the lock drops, point your nose again"
+            }
+          },
+          "resupply": {
+            "text": {
+              "direct": "Fire the rest of your missiles. A while after you run out, they're resupplied (8 s in the campaign)",
+              "keys": "Fire the rest of your missiles with {missile}. A while after you run out, they're resupplied (8 s in the campaign)",
+              "pad": "Fire the rest of your missiles with A. A while after you run out, they're resupplied (8 s in the campaign)"
+            },
+            "hint": {
+              "all": "The countdown starts when the ammo count reaches 0. You can fire without a lock"
+            }
+          }
+        }
+      },
+      "flare": {
+        "name": "Flares",
+        "goal": "Use them on the missile warning",
+        "steps": {
+          "flare": {
+            "text": {
+              "direct": "Missiles are coming from behind. When the MISSILE warning appears, release flares with FLR (twice)",
+              "keys": "Missiles are coming from behind. When the MISSILE warning appears, release flares with {flare} (twice)",
+              "pad": "Missiles are coming from behind. When the MISSILE warning appears, release flares with B (twice)"
+            },
+            "hint": {
+              "all": "It counts while the warning is showing. Too early (before the warning) doesn't count"
+            }
+          }
+        }
+      },
+      "loop": {
+        "name": "Loops",
+        "goal": "Loops need speed (NEED SPEED), release at the top to reverse",
+        "steps": {
+          "loopTop": {
+            "text": {
+              "direct": "Keep pushing up to loop. Too slow shows NEED SPEED (you can't get over), so speed up with AB first. Loop up to the top (upside down)",
+              "classic": "Keep pulling the stick back to loop. Too slow and you can't get over, so speed up with AB first. Loop up to the top (upside down)",
+              "tilt": "Keep the top edge tilted well toward you to loop. Too slow shows NEED SPEED, so speed up with AB first. Loop up to the top",
+              "drag": "Keep holding the top edge of the screen to loop. Too slow shows NEED SPEED, so speed up with AB first. Loop up to the top",
+              "keys": "Hold {pitchUp} to loop. Too slow and you can't get over, so speed up with {afterburner} (AB) first. Loop up to the top (upside down)",
+              "pad": "Keep pulling the left stick back to loop. Too slow and you can't get over, so speed up with LB (AB) first. Loop up to the top (upside down)"
+            },
+            "hint": {
+              "direct": "On NEED SPEED, level off and use AB to get above 260 m/s first",
+              "all": "Level off and use AB to get above 260 m/s, then keep pulling"
+            }
+          },
+          "reverse": {
+            "text": {
+              "direct": "Let go at the top (upside down) and you roll level, flying the other way. Level off facing the opposite direction",
+              "classic": "Let go at the top (upside down) and auto-level rolls you upright, flying the other way. Level off facing the opposite direction",
+              "tilt": "Return to your starting grip at the top (upside down) and you roll level, flying the other way. Level off facing the opposite direction",
+              "drag": "Let go at the top (upside down) and you roll level, flying the other way. Level off facing the opposite direction",
+              "keys": "Release the keys at the top (upside down) and auto-level rolls you upright, flying the other way. Level off facing the opposite direction",
+              "pad": "Release the stick at the top (upside down) and auto-level rolls you upright, flying the other way. Level off facing the opposite direction"
+            },
+            "hint": {
+              "all": "Let go too late and you finish the loop facing the same way. Let go when the sky is below you"
+            }
+          }
+        }
+      },
+      "find": {
+        "name": "Picking and finding targets",
+        "goal": "Switch targets, follow the edge arrow when one gets behind you",
+        "steps": {
+          "select": {
+            "text": {
+              "direct": "Tap a target on screen to choose it (◇). Pick a different target twice",
+              "keys": "Switch targets (◇) with {targetNext}. Pick a different target twice",
+              "pad": "Switch targets (◇) with Y. Pick a different target twice"
+            },
+            "hint": {
+              "direct": "Tap the mark of a drone you can see",
+              "keys": "Each press of {targetNext} moves to the next target",
+              "pad": "Each short press of Y moves to the next target"
+            }
+          },
+          "behind": {
+            "text": {
+              "direct": "The target got behind you. Keep pushing toward the arrow at the screen edge (and the red dot on the radar) to bring it in front (twice)",
+              "classic": "The target got behind you. Bank toward the arrow at the screen edge (and the red dot on the radar) and pull to bring it in front (twice)",
+              "tilt": "The target got behind you. Tilt toward the arrow at the screen edge (and the red dot on the radar) to bring it in front (twice)",
+              "drag": "The target got behind you. Hold near the arrow at the screen edge (and the red dot on the radar) to bring it in front (twice)",
+              "keys": "The target got behind you. Bank toward the arrow at the screen edge (and the red dot on the radar) and pull with {pitchUp} to bring it in front (twice)",
+              "pad": "The target got behind you. Bank toward the arrow at the screen edge (and the red dot on the radar) and pull back to bring it in front (twice)"
+            },
+            "hint": {
+              "all": "BEHIND means directly behind. Keep turning hard either way and it comes around"
+            }
+          }
+        }
+      },
+      "assist": {
+        "name": "Assists and the practice range",
+        "goal": "Settings that make hitting easier, and a place to practice",
+        "page": [
+          "In Settings → Controls you can tune how easy hitting is (touch controls).",
+          "• Aim assist (weak, normal, strong): how strongly the nose is pulled onto the target near the aim circle.",
+          "• Auto-fire: fires only while the circle glows white. It never fires out of range.",
+          "• Speed match: lowers the throttle as you close on the chosen target so you don't overshoot (THR shows orange AUTO).",
+          "• Sensitivity curve: 2.0 makes small stick movements finer (if you overshoot near the circle).",
+          "At the practice range you can practice aiming at still targets, moving targets and a mock enemy. The results show what to fix next time."
+        ],
+        "settings": "Open settings",
+        "practice": "Practice range",
+        "done": "Got it (finish)"
+      }
     }
   },
   "lobby": {
@@ -316,7 +607,8 @@
       "escort": "Escort",
       "destroy": "Targets destroyed",
       "kaiju": "Repel kaiju",
-      "speed": "Speed"
+      "speed": "Speed",
+      "task": "Task"
     },
     "killTarget": {
       "target": "Target kills",
@@ -332,7 +624,22 @@
       "outOfBounds": "Left the combat area"
     },
     "progressSeconds": "{label} {current} / {target} s",
-    "summarySeconds": "{label} {seconds} s"
+    "summarySeconds": "{label} {seconds} s",
+    "task": {
+      "level": "Release to level",
+      "climb": "Climb and dive",
+      "slow": "Slow to 220 m/s",
+      "follow": "Stay behind (s)",
+      "aim": "Nose on the circle",
+      "lock": "Lock on",
+      "launch": "Fire a missile",
+      "resupply": "Missile resupply",
+      "flare": "Flares",
+      "loopTop": "Top of the loop",
+      "reverse": "Reverse and level",
+      "select": "Switch target",
+      "behind": "Bring it in front"
+    }
   },
   "quality": {
     "low": "Low",
@@ -1539,7 +1846,8 @@
     },
     "settings": {
       "heading": "SETTINGS (TOUCH)",
-      "note": "Changes apply at once (same as Settings → Controls). Records are kept per setting."
+      "note": "Changes apply at once (same as Settings → Controls). Records are kept per setting.",
+      "tips": "In-flight tips"
     },
     "device": {
       "keyboard": "Keyboard",
@@ -1594,12 +1902,66 @@
       "record": "Record",
       "changed": "Not recorded: settings were changed during the run",
       "settingsRecord": "Best for this setting",
-      "drillBest": "Drill best"
+      "drillBest": "Drill best",
+      "issuesHeading": "What to fix next time",
+      "noIssues": "No big problems. Try weaker aim assist or auto-fire off to measure your skill."
     },
     "hint": {
       "go": "Practice Range",
       "tutorial": "Practice your aim at the Practice Range: fixed targets, moving targets and a dummy bandit, with settings you can change.",
       "failed": "Having trouble hitting? Practice your aim at the Practice Range (you can't be shot down, and you can compare settings)."
+    },
+    "issues": {
+      "noShots": {
+        "auto": "You didn't fire. Put the nose mark (-○-) on the circle ahead of the target; the circle glows white and the gun fires on its own.",
+        "manual": "You didn't fire. Put the nose mark (-○-) on the circle ahead of the target and fire when it glows white."
+      },
+      "overtake": {
+        "off": "Too fast: you overshot the target ({count} times). Lower the throttle as you close in, or turn on Speed match in Settings.",
+        "on": "Too fast: you overshot the target ({count} times). Speed match works when you close in with your nose on the target. Lower the throttle when coming from the side.",
+        "manual": "Too fast: you overshot the target ({count} times). Under 1 km, keep the throttle below half."
+      },
+      "offRange": {
+        "auto": "You fired out of range (beyond 1.5 km) for {ratio} of your firing time. When OUT OF RANGE shows, stop and close in. Auto-fire only shoots within range.",
+        "manual": "You fired out of range (beyond 1.5 km) for {ratio} of your firing time. Get within 1.5 km, where the circle turns solid, before firing."
+      },
+      "lost": {
+        "all": "The target was behind you or off screen for a long time ({seconds}, {ratio}). Keep turning toward the arrow at the screen edge to bring it in front."
+      },
+      "offAim": {
+        "all": "You fired off target for {ratio} of your firing time. Put the nose mark on the circle and fire once it glows white."
+      },
+      "overshoot": {
+        "touch": "You overshoot and correct back near the aim point ({perMinute} times a minute). Use small stick movements up close (try curve 2.0 or strong aim assist).",
+        "all": "You overshoot and correct back near the aim point ({perMinute} times a minute). Use small movements up close."
+      },
+      "noKills": {
+        "all": "Almost there. Get within about 1 km behind the target and fire once the circle glows white."
+      },
+      "slowKill": {
+        "all": "Kills took {seconds} on average. Swing in behind the target before closing in to finish faster."
+      }
+    },
+    "good": {
+      "accuracy": "Well done: {ratio} accuracy. Nice aiming.",
+      "fastKills": "Well done: {seconds} per kill on average. Quick work.",
+      "noOvertake": "Well done: you stayed behind without overshooting once.",
+      "inRange": "Well done: you fired within range (out of range only {ratio}).",
+      "onScreen": "Well done: you kept the target in front (off screen only {ratio}).",
+      "kills": "Well done: {kills} kills.",
+      "tried": "Well done: you chased the target to the end. Next time, focus on just the first point above."
+    },
+    "tips": {
+      "overtake": {
+        "on": "Overshot — close in with your nose on the target",
+        "off": "Overshot — lower the throttle as you close in"
+      },
+      "offRange": {
+        "all": "Too far — get within 1.5 km first"
+      },
+      "lost": {
+        "all": "Target lost — turn toward the edge arrow"
+      }
     }
   }
 }

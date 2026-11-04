@@ -48,7 +48,7 @@ export function linkMissionEvents(p: MissionWiringParts): void {
       runner !== null,
       inTutorial ? screens.tutorialText.abortMenu : undefined,
     );
-    p.tutorial.attach(runner, inTutorial);
+    p.tutorial.attach(runner, inTutorial ? p.play.tutorial : null);
     // 8-6b: ミサイルの補充を上のお知らせに（8-6d: キャンペーン共通）
     runner?.bus.on('mission:resupply', () => {
       showToast(t('hud.missileResupply'), { seconds: RESUPPLY_TOAST_SECONDS });

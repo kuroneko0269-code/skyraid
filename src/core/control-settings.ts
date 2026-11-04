@@ -53,6 +53,8 @@ export interface ControlSettings {
   autoFire: boolean;
   /** 速度合わせ（9-5b。タッチだけ。初期値 ON。今の利用者にも初期値を当てる） */
   speedMatch: boolean;
+  /** 練習場の飛行中の一言（9-5c。初期値 ON） */
+  practiceTips: boolean;
   /** キー割当の変更（アクション → 主キーの KeyboardEvent.code）。ないアクションは初期の割当 */
   keys: Partial<Record<RemappableAction, string>>;
 }
@@ -73,6 +75,7 @@ export function defaultControls(): ControlSettings {
     aimAssist: AIM_ASSIST_DEFAULT_LEVEL,
     autoFire: AUTO_FIRE_CONFIG.defaultOn,
     speedMatch: SPEED_MATCH_CONFIG.defaultOn,
+    practiceTips: true,
     keys: {},
   };
 }
@@ -104,6 +107,7 @@ export function normalizeControls(raw: unknown): ControlSettings {
     'vibration',
     'autoFire',
     'speedMatch',
+    'practiceTips',
   ] as const) {
     const v = r[k];
     if (typeof v === 'boolean') c[k] = v;

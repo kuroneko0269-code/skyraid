@@ -2,7 +2,9 @@
 // オンライン連携（7-4）の記録とは別に、ソロのプレイの結果だけをブラウザのセーブに持つ。
 // 防衛戦: key = マップ id:難易度 → クリアした波の最大（0〜10）。レイド: key = 難易度 → 撃破までの最短（ミリ秒）
 // 練習場（9-5）: practice = 課題 → 設定 × 機体ごとの最高（practice-records.ts）。版は 9 のまま（無ければ空）
+// チュートリアル（9-5c）: tutorial = 終えた章の id（章の一覧の ✓）。版は 9 のまま（無ければ空）
 import { DEFENSE_CONFIG } from '../data/defense';
+import { isTutorialChapter, type TutorialChapter } from '../data/tutorial';
 import { normalizePracticeRecords, type PracticeRecords } from './practice-records';
 import { isObject } from './save-settings';
 
@@ -10,10 +12,11 @@ export interface SaveRecords {
   defenseWaves: Record<string, number>;
   raidBestMs: Record<string, number>;
   practice: PracticeRecords;
+  tutorial: TutorialChapter[];
 }
 
 export function defaultRecords(): SaveRecords {
-  return { defenseWaves: {}, raidBestMs: {}, practice: {} };
+  return { defenseWaves: {}, raidBestMs: {}, practice: {}, tutorial: [] };
 }
 
 /** 防衛戦の波を記録する（多いときだけ）。変わったら true */
@@ -60,5 +63,8 @@ export function normalizeRecords(raw: unknown): SaveRecords {
   pick(raw.defenseWaves, out.defenseWaves, (n) => n >= 0 && n <= DEFENSE_CONFIG.waves);
   pick(raw.raidBestMs, out.raidBestMs, (n) => n > 0);
   out.practice = normalizePracticeRecords(raw.practice);
+  if (Array.isArray(raw.tutorial))
+    for (const c of raw.tutorial)
+      if (isTutorialChapter(c) && !out.tutorial.includes(c)) out.tutorial.push(c);
   return out;
 }

@@ -4,7 +4,8 @@ import { setMessages, t, type MessageTree } from './i18n';
 import type { Locale } from './locale';
 
 async function importTable(locale: Locale): Promise<MessageTree> {
-  const mod = locale === 'en' ? await import('../data/i18n/en.json') : await import('../data/i18n/ja.json');
+  const mod =
+    locale === 'en' ? await import('../data/i18n/en.json') : await import('../data/i18n/ja.json');
   return mod.default;
 }
 

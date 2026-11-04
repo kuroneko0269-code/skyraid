@@ -48,7 +48,7 @@ export const screenIs = (page, name, timeout = 60000) =>
       () => false,
     );
 
-/** 名前入力済み・チュートリアルの案内済みのセーブ（各モードの起動用） */
+/** 名前入力済み・チュートリアルの案内済み（9-5c の「新しくなりました」も）のセーブ（各モードの起動用） */
 export async function seed(page) {
   await page.evaluate(() => {
     localStorage.setItem(
@@ -63,7 +63,7 @@ export async function seed(page) {
           owned: { kestrel: { engine: 0, airframe: 0, weapons: 0, avionics: 0 } },
         },
         settings: {},
-        flags: { tutorialOffered: true },
+        flags: { tutorialOffered: true, tutorialNotice: true },
       }),
     );
   });

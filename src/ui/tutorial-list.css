@@ -1,0 +1,94 @@
+/* チュートリアルの章の一覧（9-5c）。モード選択のダイアログ（.mode-prompt）の中 */
+.tutorial-list-chapters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ui-space-2);
+}
+
+.tutorial-chapter {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'number done'
+    'name name'
+    'goal goal';
+  align-content: start;
+  gap: 2px 6px;
+  min-height: 72px;
+  padding: 8px 10px;
+  text-align: left;
+  white-space: normal;
+}
+
+.tutorial-chapter-number {
+  grid-area: number;
+  font: 600 11px/1.2 var(--ui-font-display);
+  letter-spacing: 0.12em;
+  color: var(--ui-accent-hud);
+}
+
+.tutorial-chapter-name {
+  grid-area: name;
+  font: 600 15px/1.25 var(--ui-font-body);
+}
+
+.tutorial-chapter-goal,
+.tutorial-chapter-name {
+  /* .ui-item の 1 行の省略をやめて折り返す（背の低い画面だけ 1 行） */
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+.tutorial-chapter-goal {
+  grid-area: goal;
+  font: 12px/1.35 var(--ui-font-body);
+  color: var(--ui-text-dim);
+}
+
+.tutorial-chapter-done {
+  grid-area: done;
+  font: 600 11px/1.2 var(--ui-font-body);
+  color: var(--ui-accent);
+}
+
+.tutorial-chapter-done[hidden],
+.tutorial-page[hidden],
+.tutorial-list .mode-prompt-box[hidden] {
+  display: none;
+}
+
+.tutorial-chapter.is-done {
+  border-color: var(--ui-accent);
+}
+
+.tutorial-list-reward {
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .tutorial-list-chapters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 背の低い横画面: 3 列のまま詰める（ダイアログの中は縦にスクロール） */
+@media (max-height: 480px) {
+  .tutorial-list-chapters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .tutorial-chapter {
+    min-height: 0;
+    padding: 5px 8px;
+  }
+
+  .tutorial-chapter-name {
+    font-size: 13px;
+  }
+
+  .tutorial-chapter-goal {
+    font-size: 10.5px;
+  }
+}

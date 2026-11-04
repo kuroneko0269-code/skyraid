@@ -46,6 +46,8 @@ export function objectiveLabel(def: ObjectiveDef): string {
   if (def.type === 'kill' && def.target !== 'enemyFighter') {
     return t(`objectives.killTarget.${def.target}`);
   }
+  // 9-5c: チュートリアルの課題は課題ごとの名前
+  if (def.type === 'task') return t(`objectives.task.${def.task}`);
   return defaultObjectiveLabel(def.type);
 }
 
@@ -53,6 +55,7 @@ export function objectiveLabel(def: ObjectiveDef): string {
 export function objectiveProgressText(def: ObjectiveDef, current: number, target: number): string {
   const label = objectiveLabel(def);
   if (def.type === 'survive') return t('objectives.progressSeconds', { label, current, target });
+  if (def.type === 'task' && target <= 1) return label;
   const unit =
     def.type === 'speed' ? ' m/s' : def.type === 'kaiju' || def.type === 'escort' ? ' %' : '';
   return `${label} ${current} / ${target}${unit}`;
@@ -76,6 +79,8 @@ export function objectiveSummary(def: ObjectiveDef): string {
       return `${label} ${Math.round(def.damageRatio * 100)} %`;
     case 'speed':
       return `${label} ${def.speed} m/s`;
+    case 'task':
+      return def.count > 1 ? `${label} ${def.count}` : label;
   }
 }
 

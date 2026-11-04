@@ -34,10 +34,12 @@ export function spawnInSession(def: SpawnDef, s: SpawnParts): void {
       }
       break;
     case 'targets':
-      s.combat.targets.configure(def.count, false);
+      s.combat.targets.configure(def.count, def.respawns === true);
       break;
     case 'drones':
-      configureDrones(s.combat.drones, def.count, false);
+      configureDrones(s.combat.drones, def.count, def.respawns === true);
+      // 9-5c: チュートリアルの経路（練習場の動く的と同じ）
+      def.paths?.forEach((path, i) => s.combat.drones[i]?.setPath(path));
       break;
     case 'groundTarget':
       s.props.spawnGroundTargets(def);

@@ -53,7 +53,8 @@
   width: auto;
   /* 文字に合わせた最小幅（折り返さない。7-C） */
   min-width: max-content;
-  min-height: 32px;
+  /* 9-5c: タップしやすい高さ（36px） */
+  min-height: 36px;
   padding: 2px 12px;
   font-size: 13px;
   pointer-events: auto;
@@ -75,11 +76,145 @@
   }
 
   .tutorial-hud-abort {
-    min-height: 26px;
+    min-height: 36px;
     font-size: 12px;
   }
 
   .tutorial-hud-note {
     font-size: 11px;
+  }
+}
+
+/* 9-5c: 指示の横に方式ごとの図、下にヒント（黄色） */
+.tutorial-hud-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tutorial-hud-figure {
+  flex: 0 0 auto;
+  width: 112px;
+  color: var(--ui-text);
+}
+
+.tutorial-hud-figure .tutorial-figure {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.tutorial-hud-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tutorial-hud-hint {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 196, 0, 0.16);
+  color: #ffd75a;
+  font-size: 13px;
+}
+
+/* 図の線と文字（currentColor と HUD の色） */
+.tutorial-figure {
+  overflow: visible;
+}
+.tutorial-figure .tf-device,
+.tutorial-figure .tf-key,
+.tutorial-figure .tf-horizon,
+.tutorial-figure .tf-divider {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.55;
+  stroke-width: 1.5;
+}
+.tutorial-figure .tf-divider {
+  stroke-opacity: 0.25;
+}
+.tutorial-figure .tf-key.is-on {
+  fill: rgba(255, 214, 90, 0.22);
+  stroke: #ffd75a;
+  stroke-opacity: 1;
+}
+.tutorial-figure .tf-knob {
+  fill: rgba(255, 255, 255, 0.85);
+}
+.tutorial-figure .tf-knob.is-hold {
+  fill: #ffd75a;
+}
+.tutorial-figure .tf-finger {
+  fill: rgba(255, 214, 90, 0.75);
+}
+.tutorial-figure .tf-dot {
+  fill: currentColor;
+}
+.tutorial-figure .tf-arrow {
+  fill: none;
+  stroke: #ffd75a;
+  stroke-width: 2;
+}
+.tutorial-figure .tf-arrow.is-dashed {
+  stroke-dasharray: 3 2;
+}
+.tutorial-figure .tf-head {
+  fill: #ffd75a;
+}
+.tutorial-figure .tf-plane {
+  fill: currentColor;
+}
+.tutorial-figure .tf-nose,
+.tutorial-figure .tf-pipper,
+.tutorial-figure .tf-lock {
+  fill: none;
+  stroke: var(--ui-accent-hud, #7df9c8);
+  stroke-width: 1.5;
+}
+.tutorial-figure .tf-pipper.is-ready {
+  stroke: #fff;
+  stroke-width: 3;
+}
+.tutorial-figure .tf-target {
+  fill: none;
+  stroke: #ff6b5a;
+  stroke-width: 1.5;
+}
+.tutorial-figure .tf-target.is-selected {
+  fill: rgba(255, 107, 90, 0.35);
+}
+.tutorial-figure .tf-edge {
+  fill: #ff6b5a;
+}
+.tutorial-figure .tf-flare {
+  fill: #ffb347;
+}
+.tutorial-figure .tf-label {
+  fill: currentColor;
+  font:
+    600 11px/1 system-ui,
+    sans-serif;
+  text-anchor: middle;
+}
+.tutorial-figure .tf-label.is-small {
+  font-size: 8px;
+}
+.tutorial-figure .tf-label.is-hud {
+  fill: var(--ui-accent-hud, #7df9c8);
+  font-size: 12px;
+}
+.tutorial-figure .tf-label.is-warn {
+  fill: #ff6b5a;
+  font-size: 10px;
+}
+
+@media (max-height: 420px) {
+  .tutorial-hud-figure {
+    width: 84px;
+  }
+
+  .tutorial-hud-hint {
+    font-size: 11.5px;
+    padding: 2px 6px;
   }
 }
