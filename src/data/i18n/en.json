@@ -59,7 +59,7 @@
   },
   "tutorial": {
     "title": "Tutorial",
-    "note": "Learn by doing, chapter by chapter",
+    "note": "Learn by doing",
     "prompt": "Start the tutorial?",
     "promptBody": "Practice flying, speed, guns, missiles, flares, loops and finding targets in 8 short hands-on chapters. You can redo any chapter later from \"Tutorial\" in the mode select.",
     "start": "Start",

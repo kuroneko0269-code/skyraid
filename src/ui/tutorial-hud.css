@@ -53,7 +53,8 @@
   width: auto;
   /* 文字に合わせた最小幅（折り返さない。7-C） */
   min-width: max-content;
-  min-height: 32px;
+  /* 9-5c: タップしやすい高さ（36px） */
+  min-height: 36px;
   padding: 2px 12px;
   font-size: 13px;
   pointer-events: auto;
@@ -75,7 +76,7 @@
   }
 
   .tutorial-hud-abort {
-    min-height: 26px;
+    min-height: 36px;
     font-size: 12px;
   }
 

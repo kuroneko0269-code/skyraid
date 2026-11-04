@@ -32,6 +32,14 @@
   font: 600 15px/1.25 var(--ui-font-body);
 }
 
+.tutorial-chapter-goal,
+.tutorial-chapter-name {
+  /* .ui-item の 1 行の省略をやめて折り返す（背の低い画面だけ 1 行） */
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+
 .tutorial-chapter-goal {
   grid-area: goal;
   font: 12px/1.35 var(--ui-font-body);
@@ -64,7 +72,7 @@
   }
 }
 
-/* 背の低い横画面: 3 列のまま詰める（目当ては 1 行で省く） */
+/* 背の低い横画面: 3 列のまま詰める（ダイアログの中は縦にスクロール） */
 @media (max-height: 480px) {
   .tutorial-list-chapters {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -81,9 +89,6 @@
   }
 
   .tutorial-chapter-goal {
-    overflow: hidden;
     font-size: 10.5px;
-    white-space: nowrap;
-    text-overflow: ellipsis;
   }
 }
