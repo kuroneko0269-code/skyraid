@@ -1,6 +1,5 @@
 import './touch-controls.css';
-import { FloatingStick } from '../core/touch-stick';
-import { applyStickCurve, sliderValueFromY, type Vec2Out } from '../core/analog';
+import { sliderValueFromY } from '../core/analog';
 import type { Input } from '../core/input';
 import type { Action } from '../data/keybinds';
 import { TOUCH_CONFIG } from '../data/touch';
@@ -9,6 +8,9 @@ import { t } from '../core/i18n';
 import type { TouchPart } from '../data/tutorial';
 import type { SteerMode } from '../data/steer';
 import { DragSurface } from './drag-surface';
+import { RELEASE_EVENTS, TouchStickPad, touchEl as el, type StickOptions } from './touch-stick-pad';
+
+export type { StickOptions } from './touch-stick-pad';
 
 /**
  * 右下のボタン群。grid の並び順（左上・右上・左下・右下）。
@@ -29,37 +31,6 @@ const BUTTONS: readonly {
 /** MSL ボタンの文字（今の兵装） */
 const SECONDARY_LABELS = { missile: 'MSL', rocket: 'RKT' } as const;
 
-/** 指が離れた（キャンセル・キャプチャ喪失を含む）ことを表すイベント */
-const RELEASE_EVENTS = ['pointerup', 'pointercancel', 'lostpointercapture'] as const;
-
-function el(
-  className: string,
-  parent: HTMLElement,
-  text?: string,
-  part?: TouchPart,
-): HTMLDivElement {
-  const div = document.createElement('div');
-  div.className = className;
-  if (text) div.textContent = text;
-  // チュートリアルで光らせる部品（4-11）
-  if (part) div.dataset.part = part;
-  parent.appendChild(div);
-  return div;
-}
-
-/** スティックの設定（9-2。操作設定）: 方式・感度のカーブ・位置 */
-export interface StickOptions {
-  /**
-   * 操縦の方式（classic 以外は「方向へ倒す」の組み立てで、ピッチ・ロールのアクションへは分配せず Input.directStick に書く）。
-   * 9-4: tilt はスティックを隠して左手側に「水平を合わせ直す」ボタン、drag はスティックを隠して画面全体（ボタンの下）で押さえる
-   */
-  readonly mode: SteerMode;
-  /** 感度のカーブの指数（1 = 直線） */
-  readonly curve: number;
-  /** 決まった位置（待機位置）に置いたまま（false は親指を置いた場所に出す） */
-  readonly fixed: boolean;
-}
-
 /** 長押しボタン。複数の指で押しても、全部離すまで押下が続く */
 interface HoldButton {
   readonly element: HTMLElement;
@@ -74,15 +45,11 @@ interface HoldButton {
  */
 export class TouchControls {
   readonly root: HTMLDivElement;
-  private readonly stick = new FloatingStick(TOUCH_CONFIG.stick);
-  private readonly stickBase: HTMLDivElement;
-  private readonly stickKnob: HTMLDivElement;
-  private stickOptions: StickOptions = { mode: 'classic', curve: 1, fixed: false };
+  private readonly stick: TouchStickPad;
   /** 9-4: ドラッグ操作の面（描画のすぐ上） */
   readonly drag: DragSurface;
   /** 9-4: 傾き操作の「水平を合わせ直す」ボタンを押したとき */
   onTiltLevel: (() => void) | null = null;
-  private readonly shaped: Vec2Out = { x: 0, y: 0 };
   private readonly holdButtons: HoldButton[] = [];
   private readonly throttleTrack: HTMLDivElement;
   private throttlePointer: number | null = null;
@@ -103,14 +70,7 @@ export class TouchControls {
     applyCssVariables(root);
     this.root = root;
 
-    const zone = el('tc-stick-zone', root);
-    this.stickBase = el('tc-stick-base', root, undefined, 'stick');
-    this.stickKnob = el('tc-stick-knob', this.stickBase);
-    zone.addEventListener('pointerdown', this.onStickDown);
-    zone.addEventListener('pointermove', this.onStickMove);
-    for (const type of RELEASE_EVENTS) {
-      zone.addEventListener(type, this.onStickUp);
-    }
+    this.stick = new TouchStickPad(root, input);
 
     const buttons = el('tc-buttons', root);
     let secondary: HTMLElement | null = null;
@@ -157,7 +117,7 @@ export class TouchControls {
 
   /** 今の操縦の方式（9-4） */
   get mode(): SteerMode {
-    return this.stickOptions.mode;
+    return this.stick.options.mode;
   }
 
   get isVisible(): boolean {
@@ -169,7 +129,7 @@ export class TouchControls {
     this.visible = visible;
     this.root.hidden = !visible;
     document.documentElement.classList.toggle('touch-active', visible);
-    this.drag.setShown(visible && this.stickOptions.mode === 'drag');
+    this.drag.setShown(visible && this.stick.options.mode === 'drag');
     if (!visible) this.reset();
   }
 
@@ -178,7 +138,7 @@ export class TouchControls {
    */
   configure(deadzone: number, swapped: boolean, scale: number, stick: StickOptions): void {
     this.stick.setDeadzone(deadzone);
-    this.stickOptions = { ...stick };
+    this.stick.options = { ...stick };
     this.input.directMode = stick.mode !== 'classic';
     this.input.steerMode = stick.mode;
     this.root.dataset.steer = stick.mode;
@@ -213,7 +173,6 @@ export class TouchControls {
   /** すべての指を離した扱いにする（フォーカス喪失・非表示時） */
   reset(): void {
     this.stick.reset();
-    this.renderStick();
     this.drag.reset();
     this.throttlePointer = null;
     for (const b of this.holdButtons) {
@@ -241,74 +200,6 @@ export class TouchControls {
     };
     for (const type of RELEASE_EVENTS) {
       element.addEventListener(type, release);
-    }
-  }
-
-  private readonly onStickDown = (e: PointerEvent): void => {
-    // 9-2: 決まった位置の方式は待機位置の中心が原点（触れた点まで倒した扱い）。触れた瞬間だけ位置を読む
-    let ox = e.clientX;
-    let oy = e.clientY;
-    if (this.stickOptions.fixed) {
-      const rect = this.stickBase.getBoundingClientRect();
-      ox = rect.left + rect.width / 2;
-      oy = rect.top + rect.height / 2;
-    }
-    if (!this.stick.start(e.pointerId, ox, oy)) return;
-    if (e.currentTarget instanceof Element) e.currentTarget.setPointerCapture(e.pointerId);
-    this.stickBase.classList.add('is-active');
-    if (this.stickOptions.fixed) {
-      this.stick.move(e.pointerId, e.clientX, e.clientY);
-      this.writeStick();
-    }
-    this.renderStick();
-  };
-
-  private readonly onStickMove = (e: PointerEvent): void => {
-    if (!this.stick.move(e.pointerId, e.clientX, e.clientY)) return;
-    this.writeStick();
-    this.renderStick();
-  };
-
-  private readonly onStickUp = (e: PointerEvent): void => {
-    if (!this.stick.end(e.pointerId)) return;
-    this.writeStick();
-    this.renderStick();
-  };
-
-  /**
-   * スティックの値（感度のカーブの後。9-2）を書く。ピッチ・ロールの方式はアクションに分配する（画面の下へ倒す = 操縦桿を引く =
-   * 機首上げ）。「方向へ倒す」方式は Input.directStick（画面の上が正）
-   */
-  private writeStick(): void {
-    const v = this.shaped;
-    v.x = this.stick.value.x;
-    v.y = this.stick.value.y;
-    applyStickCurve(v, this.stickOptions.curve);
-    const { x, y } = v;
-    if (this.stickOptions.mode !== 'classic') {
-      this.input.setDirectStick(x, -y);
-      return;
-    }
-    this.input.setAnalog('touch', 'rollRight', Math.max(0, x));
-    this.input.setAnalog('touch', 'rollLeft', Math.max(0, -x));
-    this.input.setAnalog('touch', 'pitchUp', Math.max(0, y));
-    this.input.setAnalog('touch', 'pitchDown', Math.max(0, -y));
-  }
-
-  private renderStick(): void {
-    const base = this.stickBase;
-    if (this.stick.active && !this.stickOptions.fixed) {
-      // 原点（触れた位置）にスティックを出す。CSS の left/top（待機位置）をインラインで上書き
-      base.style.left = `${this.stick.originX}px`;
-      base.style.top = `${this.stick.originY}px`;
-      this.stickKnob.style.transform = `translate(${this.stick.knobX}px, ${this.stick.knobY}px)`;
-    } else if (this.stick.active) {
-      this.stickKnob.style.transform = `translate(${this.stick.knobX}px, ${this.stick.knobY}px)`;
-    } else {
-      base.classList.remove('is-active');
-      base.style.left = '';
-      base.style.top = '';
-      this.stickKnob.style.transform = '';
     }
   }
 
