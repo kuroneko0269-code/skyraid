@@ -189,4 +189,13 @@ describe('チュートリアルの文', () => {
       tutorialStepText('speed', 'touch', name),
     );
   });
+
+  it('9-3: 方向へ倒す方式は宙返り（上へ倒し続ける）、自動射撃が ON なら的の段階で自動で撃つことを書く', () => {
+    const name = (a: string): string => a;
+    expect(tutorialStepText('rings', 'touch', name)).toContain('上へ倒し続けると宙返り');
+    expect(tutorialStepText('rings', 'touch', name, true)).not.toContain('宙返り');
+    expect(tutorialStepText('targets', 'touch', name, false, true)).toContain('自動で撃つ');
+    expect(tutorialStepText('targets', 'touch', name, false, false)).not.toContain('自動');
+    expect(tutorialStepText('targets', 'keyboard', name, false, true)).not.toContain('自動');
+  });
 });

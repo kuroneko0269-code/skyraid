@@ -82,7 +82,16 @@ export class DirectStick {
     this.hands.apply(it, this.finger);
     this.stick.x = this.finger.roll;
     this.stick.y = this.finger.pitch;
-    const c = this.steer.apply(this.command, st, this.finger.roll, this.finger.pitch, this.ground);
+    // 9-3: 本番と同じく機体の数値を渡す（上へ端まで倒し続けると宙返り）
+    const spec = session.aircraft.flight.spec;
+    const c = this.steer.apply(
+      this.command,
+      st,
+      this.finger.roll,
+      this.finger.pitch,
+      this.ground,
+      spec,
+    );
     out.pitch = c.pitch;
     out.roll = c.roll;
     out.yaw = c.yaw;

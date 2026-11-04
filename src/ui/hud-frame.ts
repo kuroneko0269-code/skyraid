@@ -22,6 +22,8 @@ export interface HudFrame {
   altitudeAboveGround: number;
   /** 失速の度合い（0〜1） */
   stall: number;
+  /** 宙返り（9-3）: 上へ端まで倒しているのに速さが足りなくて入れない */
+  loopSpeedLow: boolean;
   orientation: Readonly<Quat>;
   /** 進行方向マーカーの画面座標（px、左上原点）。null なら隠す（カメラの後ろ） */
   flightPath: { x: number; y: number } | null;

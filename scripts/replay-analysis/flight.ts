@@ -2,15 +2,15 @@
 // 記録するときは本番の飛行と同じ手順（操作 → エイムアシスト → 量子化して記録 → その値で判定）で .skyreplay を作る。
 // 実験（experiments.ts）では、エイムアシストの強さ・自動射撃・スティックのカーブを差し替えて飛ばす（ゲームの数値は変えない）
 import { applyAimAssist } from '../../src/combat/aim-assist';
+import { autoFireReady } from '../../src/combat/auto-fire';
 import { createCombatInput } from '../../src/combat/combat-input';
 import { createRandom } from '../../src/core/random';
 import type { DifficultySpec } from '../../src/data/ai';
 import { AIRCRAFT_MODELS } from '../../src/data/aircraft';
 import { AIM_ASSIST_CONFIG, type AimAssistSpec } from '../../src/data/assist';
 import { MISSIONS } from '../../src/data/missions';
-import { GUN_CONFIG } from '../../src/data/weapons';
 import type { AircraftControls } from '../../src/entities/aircraft';
-import { inverseRotateVec3, type Vec3 } from '../../src/flight/math';
+import type { Vec3 } from '../../src/flight/math';
 import { initialUpgrades } from '../../src/progression/save';
 import { ReplayRecorder } from '../../src/replay/recorder';
 import {
@@ -91,24 +91,20 @@ export interface FlightResult {
   readonly data: ReplayData | null;
 }
 
-const local: Vec3 = { x: 0, y: 0, z: 0 };
-
-/** 自動射撃の判定（実験用）: 選択中の対象の予測照準点が当たる範囲 × scale の中か */
+/** 自動射撃の判定（9-3 から本番と同じ autoFireReady）: 選択中の対象の予測照準点が当たる範囲 × scale の中か */
 function autoFire(play: GamePlay, scale: number): boolean {
   const s = play.session;
-  const target = s.combat.targeting.selected;
-  if (!target?.active || !s.combat.leadValid) return false;
+  const c = s.combat;
   const st = s.aircraft.state;
-  const a = s.combat.lead;
-  local.x = a.x - st.position.x;
-  local.y = a.y - st.position.y;
-  local.z = a.z - st.position.z;
-  inverseRotateVec3(local, st.orientation, local);
-  const d = Math.hypot(local.x, local.y, local.z);
-  if (-local.z <= 0 || d > GUN_CONFIG.range) return false;
-  const angle = Math.atan2(Math.hypot(local.x, local.y), -local.z);
-  const r = target.hitRadius * s.combat.gun.hitRadiusScale;
-  return angle <= Math.atan2(r, d) * scale;
+  return autoFireReady(
+    c.targeting.selected,
+    c.lead,
+    c.leadValid,
+    st.position,
+    st.orientation,
+    c.gun.hitRadiusScale,
+    scale,
+  );
 }
 
 /**

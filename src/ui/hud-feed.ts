@@ -22,6 +22,7 @@ export function createHudFrame(aircraft: Aircraft): HudFrame {
     z: 0,
     altitudeAboveGround: 0,
     stall: 0,
+    loopSpeedLow: false,
     orientation: aircraft.state.orientation,
     flightPath: null,
     gunHeat: 0,

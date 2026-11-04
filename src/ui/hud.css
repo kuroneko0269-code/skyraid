@@ -14,6 +14,7 @@
   --hud-color: rgba(110, 240, 255, 0.85);
   --hud-dim: rgba(110, 240, 255, 0.35);
   --hud-red: rgba(255, 60, 60, 0.95);
+  --hud-amber: rgba(255, 196, 64, 0.95);
   --hud-line: 2px;
   --hud-ppd: var(--hud-ppd-normal);
   --hud-ladder-w: calc(var(--hud-ladder-w-normal) * 1px);
@@ -181,7 +182,19 @@
   border: var(--hud-line) solid var(--hud-red);
 }
 
+/* 9-3: 宙返りの速度不足（失速と同じ位置。注意の色） */
+.hud-loop-speed {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - var(--hud-ladder-h) / 2);
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  color: var(--hud-amber);
+  border: var(--hud-line) solid var(--hud-amber);
+}
+
 .hud.is-stall .hud-stall,
+.hud.is-loop-speed .hud-loop-speed,
 .hud.is-ground-warning .hud-ground {
   display: block;
 }

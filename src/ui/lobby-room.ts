@@ -25,9 +25,11 @@ import {
   minutes,
   optionsSummary,
   parseMode,
+  RULE_TOGGLES,
   ruleSegment,
   rulesSummary,
   toggle,
+  type RuleToggle,
 } from './lobby-controls';
 import type { Segmented } from './segmented';
 
@@ -82,8 +84,8 @@ export class LobbyRoom {
   private readonly scoreSelect: Segmented;
   private readonly timeSelect: Segmented;
   private readonly modeSelect: Segmented;
-  private readonly noUpgrades: HTMLButtonElement;
-  private readonly rookie: HTMLButtonElement;
+  /** 補正の ON/OFF（強化の無効・初心者保護・9-3 の狙いの補助・自動射撃） */
+  private readonly ruleToggles = new Map<RuleToggle, HTMLButtonElement>();
   private readonly list: HTMLUListElement;
   private readonly autoTeams: HTMLButtonElement;
   private readonly waitText: HTMLParagraphElement;
@@ -181,12 +183,15 @@ export class LobbyRoom {
       changed,
     );
     const toggles = el('div', 'lobby-toggles', this.rules);
-    const flip = (key: 'noUpgrades' | 'rookieGuard') => () => {
-      const v = this.view;
-      if (v) h.onSettings({ ...v.settings, [key]: !v.settings[key] });
-    };
-    this.noUpgrades = toggle(toggles, t('lobby.rule.noUpgrades'), flip('noUpgrades'));
-    this.rookie = toggle(toggles, t('lobby.rule.rookie'), flip('rookieGuard'));
+    // 9-3: 狙いの補助・自動射撃（個人戦・チーム戦だけ出す。協力は各自の設定のまま）
+    for (const [key, label] of RULE_TOGGLES)
+      this.ruleToggles.set(
+        key,
+        toggle(toggles, t(label), () => {
+          const v = this.view;
+          if (v) h.onSettings({ ...v.settings, [key]: !v.settings[key] });
+        }),
+      );
     el('div', 'campaign-label', right, 'PILOTS');
     this.list = el('ul', 'lobby-players', right);
     this.autoTeams = createButton(
@@ -265,8 +270,10 @@ export class LobbyRoom {
     this.scoreSelect.value = String(st.scoreLimit);
     this.timeSelect.value = String(st.timeLimitSeconds);
     this.modeSelect.value = st.mode;
-    this.noUpgrades.setAttribute('aria-pressed', String(st.noUpgrades));
-    this.rookie.setAttribute('aria-pressed', String(st.rookieGuard));
+    for (const [key, b] of this.ruleToggles) {
+      b.setAttribute('aria-pressed', String(st[key]));
+      if (key === 'aimAssist' || key === 'autoFire') b.hidden = raid || defense;
+    }
     this.autoTeams.hidden = !(v.isHost && st.mode === 'team');
     this.renderPlayers(v);
     const block = startBlock(v.players, st.mode);

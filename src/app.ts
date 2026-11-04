@@ -23,7 +23,6 @@ import { QualityLink } from './render/quality-link';
 import { createWorldScene } from './render/scene';
 import { ActiveMap } from './missions/active-map';
 import { DamageOverlay } from './ui/damage-overlay';
-import { AssistControl } from './core/assist-control';
 import { KaijuHud } from './ui/kaiju-hud';
 import { KaijuHudLink } from './render/kaiju-hud-link';
 import { installTouchGuards } from './ui/mobile';
@@ -38,6 +37,7 @@ import { FxEvents } from './render/fx/fx-events';
 import { FrameFx } from './render/frame-fx';
 import { linkWeather } from './ui/weather-link';
 import { createPvpWiring } from './ui/pvp-wiring';
+import { createInputAssist } from './ui/input-assist-link';
 import { linkMissionEvents } from './ui/mission-wiring';
 import { createAppControls } from './ui/app-controls';
 import { createRaceLink } from './ui/race-link';
@@ -162,7 +162,6 @@ export function startApp(renderer: WebGLRenderer): void {
       });
     else session.configureEnemies(enabled, difficulty);
   });
-  const assist = new AssistControl(session, assistFlags, () => input.lastDevice);
   const damageOverlay = new DamageOverlay(document.body);
   const controls = createControls();
   // エフェクトと音のきっかけ（4-4）。被弾・近くの爆発でカメラを揺らす
@@ -262,6 +261,8 @@ export function startApp(renderer: WebGLRenderer): void {
   );
 
   // 天候（7-5）: 飛行・メニュー・ブリーフィング・ロビーの天候、HUD のマーカーと夜の減光、環境音
+  // エイムアシスト・自動射撃（9-3）と「方向へ倒す」方式（9-2）。部屋の補正と HUD の宙返りの速度不足も
+  const inputAssist = createInputAssist(session, assistFlags, input, save, activeMap, hudLink, pvp);
   linkWeather(world.weather, { game, screens, pvp, hud, hudLink, audio, save });
   // リングレース（7-1）: コース一覧・HUD・リザルト・音・ゴースト（天候の配線の後: レースの天候で上書きする）
   const ghost = new GhostView(scene);
@@ -297,7 +298,7 @@ export function startApp(renderer: WebGLRenderer): void {
     controls,
     combatInput,
     weaponInput,
-    assist,
+    ...inputAssist,
     coopKaiju,
     touch,
     touchControls: touch.controls,

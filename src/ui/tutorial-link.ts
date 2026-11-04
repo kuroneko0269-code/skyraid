@@ -41,6 +41,7 @@ export class TutorialLink {
       },
       onAbort,
       () => save.settings.controls.steerMode === 'classic',
+      () => save.settings.controls.autoFire,
     );
     this.hints = new TouchHints(parent, gameHud.root, tutorialStrings().hints);
     // 9-2: 初回起動の人（名前がまだ）は新しい操作から始めるので、「操作方法が新しくなりました」は出さない

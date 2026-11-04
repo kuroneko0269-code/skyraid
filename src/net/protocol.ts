@@ -23,6 +23,12 @@ export interface GameSettings {
   hard: boolean;
   /** 天候のプリセット（7-5。src/data/weather.ts の id。全員が同じ天候で飛ぶ） */
   weather: string;
+  /**
+   * 補正（9-3。個人戦・チーム戦だけ。既定 OFF）: 狙いの補助（各自の設定の強さ。OFF は 4-12 のエイムアシストのまま）と
+   * 自動射撃（各自の設定。OFF は撃たない）。どちらもタッチの人だけに効く
+   */
+  aimAssist: boolean;
+  autoFire: boolean;
 }
 
 export interface PlayerInfo {

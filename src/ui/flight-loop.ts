@@ -15,7 +15,7 @@ import {
 import type { GameLoop } from '../core/loop';
 import type { Input } from '../core/input';
 import type { AssistControl } from '../core/assist-control';
-import { SteerControl } from '../core/steer-control';
+import type { SteerControl } from '../core/steer-control';
 import type { WeaponInput } from '../core/weapon-input';
 import type { MissionDef } from '../missions/types';
 import type { ActiveMap } from '../missions/active-map';
@@ -48,6 +48,8 @@ export interface FlightLoopParts {
   readonly combatInput: CombatInput;
   readonly weaponInput: WeaponInput;
   readonly assist: AssistControl;
+  /** 9-2: タッチのスティックの「方向へ倒す」方式（9-3 の宙返りも） */
+  readonly steer: SteerControl;
   readonly pvp: PvpEntry;
   readonly play: GamePlay;
   readonly session: FlightSession;
@@ -88,7 +90,11 @@ function createFlightUpdate(p: FlightLoopParts): {
 } {
   const { input, game, pvp, play } = p;
   // 9-2: タッチのスティックの「方向へ倒す」方式（低空の安全は今のマップの地面・海面。PvP も同じ自機）
-  const steer = new SteerControl(input, p.session.aircraft, p.activeMap.ground);
+  const steer = p.steer;
+  // 9-3: 復帰したら宙返りの途中の状態を捨てる
+  p.session.onRespawn(() => {
+    steer.reset();
+  });
   const simulate = (dt: number): void => {
     if (pvp.flying) {
       pvp.step(p.controls, p.combatInput, dt);
@@ -127,6 +133,7 @@ function createFlightUpdate(p: FlightLoopParts): {
     steer.apply(p.controls);
     p.assist.apply(p.controls);
     p.weaponInput.read(input, p.combatInput, dt);
+    p.assist.applyFire(p.combatInput);
     simulate(dt);
     if (input.wasPressed('cameraToggle')) p.chaseCamera.toggleMode();
     p.keys.handle();
@@ -153,6 +160,7 @@ function linkScreenChanges(p: FlightLoopParts): void {
     if (to === 'flight') {
       p.input.endStep();
       p.weaponInput.reset();
+      if (!isResume(from)) p.steer.reset();
     }
     // 撃墜されたまま（ミッション失敗）のリザルトでは機体を隠す。ハンガーでは展示の機体だけ
     p.aircraftMesh.visible = !usesDemoCamera(to) && to !== 'hangar' && p.session.player.active;

@@ -9,6 +9,7 @@
 //   --experiment         模擬の人で 9-2・9-3 の案を比べる（--missions・--seeds・--only base,curve2）
 //   --decompose          難しさの原因の分解（初心者役のボットに人の条件を 1 つずつ足す。--missions・--seeds）
 //   --compare            9-2 のスティックの変更前後（今の操作 / 方向へ倒す・カーブ 1.5 など。--missions・--seeds）
+//   --assist             9-3 の狙いの補助の強さ（弱・標準・強）× 自動射撃（OFF / ON）。方向へ倒す・カーブ 1.5 の模擬の人（--missions・--seeds）
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { runnerImport } from 'vite';
@@ -19,7 +20,9 @@ const inputs = [];
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
   if (!a.startsWith('--')) inputs.push(a);
-  else if (['--each', '--timeline', '--experiment', '--decompose', '--compare'].includes(a))
+  else if (
+    ['--each', '--timeline', '--experiment', '--decompose', '--compare', '--assist'].includes(a)
+  )
     flags.set(a, true);
   else flags.set(a, args[++i]);
 }
@@ -43,8 +46,19 @@ if (flags.get('--make-bots')) {
     writeFileSync(p, f.bytes);
   }
   console.log(`${files.length} 本を ${outDir} に書いた`);
-} else if (flags.get('--experiment') || flags.get('--decompose') || flags.get('--compare')) {
-  const set = flags.get('--decompose') ? 'decompose' : flags.get('--compare') ? 'compare' : 'tune';
+} else if (
+  flags.get('--experiment') ||
+  flags.get('--decompose') ||
+  flags.get('--compare') ||
+  flags.get('--assist')
+) {
+  const set = flags.get('--decompose')
+    ? 'decompose'
+    : flags.get('--compare')
+      ? 'compare'
+      : flags.get('--assist')
+        ? 'assist'
+        : 'tune';
   console.log(m.runExperiments(missions, seeds, (l) => console.error(l), list('--only', []), set));
 } else {
   if (inputs.length === 0) {

@@ -1,4 +1,4 @@
-// 8-1 公開チェック: 版・更新履歴（v0.1〜v0.9・v1.0.0・v1.0.1・v1.0.2。8-7 で 1.0.0、v1.0.1 で 1.0.1、9-2 で 1.0.2。各版 3〜5 行）・情報画面の「データの扱い」の文面
+// 8-1 公開チェック: 版・更新履歴（v0.1〜v0.9・v1.0.0・v1.0.1・v1.0.2・v1.0.3。8-7 で 1.0.0、v1.0.1 で 1.0.1、9-2 で 1.0.2、9-3 で 1.0.3。各版 3〜5 行）・情報画面の「データの扱い」の文面
 import { describe, expect, it } from 'vitest';
 import { APP_VERSION } from 'virtual:app-info';
 import changelogText from '../docs/changelog.md?raw';
@@ -6,14 +6,15 @@ import { parseChangelog } from '../src/core/changelog';
 import { DATA_POLICY } from '../src/data/data-policy';
 
 describe('版と更新履歴', () => {
-  it('版は 1.0.2（9-2 スティックの改善）', () => {
-    expect(APP_VERSION).toBe('1.0.2');
+  it('版は 1.0.3（9-3 狙いの補助と宙返り）', () => {
+    expect(APP_VERSION).toBe('1.0.3');
   });
 
-  it('更新履歴は新しい順に 1.0.2・1.0.1・1.0.0・0.9.0〜0.1.0、各版 3〜5 行', () => {
+  it('更新履歴は新しい順に 1.0.3・1.0.2・1.0.1・1.0.0・0.9.0〜0.1.0、各版 3〜5 行', () => {
     const entries = parseChangelog(changelogText);
     const versions = entries.map((e) => /^(\d+\.\d+\.\d+)/.exec(e.title)?.[1]);
     expect(versions).toEqual([
+      '1.0.3',
       '1.0.2',
       '1.0.1',
       '1.0.0',

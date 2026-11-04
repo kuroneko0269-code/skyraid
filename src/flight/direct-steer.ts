@@ -5,7 +5,8 @@
 // 1. 機首の向きを「方位（水平の向き）」と「上下の角度」に分け、スティックの左右で方位を・上下で上下の角度をずらした向きを
 //    「行きたい向き」にする（端まで倒すと fullDeg 度）。毎ステップ機首から測るので、倒している間は曲がり続ける。
 //    離すと方位は今のまま、上下は水平へ戻す（上下に倒していない分だけ、最大 levelDeg 度ずつ）
-// 2. 上下の角度は ±maxElevationDeg まで（宙返りはしない）。低空では地面・海面までの余裕で下向きを制限し、余裕が無ければ引き起こす
+// 2. 上下の角度は ±maxElevationDeg まで。低空では地面・海面までの余裕で下向きを制限し、余裕が無ければ引き起こす。
+//    9-3: 上へ端まで倒し続けると、速さが足りれば上限を越えて宙返り（loop-steer.ts。下は今のまま -maxElevationDeg で止まる）
 // 3. 行きたい向きを機体から見た向きにして、ピッチ（上下）とヨー（左右）で合わせる。ロールは機首を動かしたい向きへ背中を
 //    向けるバンク角へ（真横へ曲がるなら 90°。離すと水平に戻す。背面からも戻る）。バンクしていると引きで横へ曲がる
 //
@@ -13,8 +14,10 @@
 // - 背面: バンク角は ±180° で測るので、まず水平まで回して戻す。方位は背面でも機首から決まる
 // - 真上・真下: 方位を機体の上下の向きから取る（機首が真上でも、来た方向が分かる）。バンクを合わせるのは弱める
 // - 真後ろの敵: 行きたい向きは機首から fullDeg 度より離れないので、真後ろでも向きが反転して揺れることはない（人は倒し続けるだけ）
+import type { AircraftSpec } from '../data/aircraft';
 import { DIRECT_STEER_CONFIG } from '../data/steer';
 import type { GroundHeightFn } from '../entities/aircraft';
+import { LoopSteer } from './loop-steer';
 import { LOCAL_FORWARD, LOCAL_RIGHT, LOCAL_UP, type FlightState } from './flight-model';
 import { clamp, inverseRotateVec3, rotateVec3, smoothstep, vec3 } from './math';
 
@@ -31,16 +34,32 @@ const DEG = Math.PI / 180;
 export class DirectSteer {
   /** 直前の組み立てで低空の安全が上下の角度を持ち上げた量（度。0 は効いていない。HUD・テスト用） */
   groundAssistDeg = 0;
+  /** 宙返り（9-3） */
+  readonly loop: LoopSteer;
   private readonly forward = vec3();
   private readonly up = vec3();
   private readonly right = vec3();
   private readonly goal = vec3();
+  // 宙返りの下りで使う低空の安全（毎ステップ関数を作らない）
+  private floorState: Readonly<FlightState> | null = null;
+  private floorGround: GroundHeightFn | null = null;
+  private readonly floorFn = (): number =>
+    this.floorState && this.floorGround
+      ? this.groundFloor(this.floorState, this.floorGround)
+      : -Math.PI / 2;
 
-  constructor(private readonly cfg: DirectSteerConfig = DIRECT_STEER_CONFIG) {}
+  constructor(private readonly cfg: DirectSteerConfig = DIRECT_STEER_CONFIG) {
+    this.loop = new LoopSteer(cfg.loop);
+  }
+
+  /** 宙返りの途中の状態を捨てる（飛行の始め・復帰・方式を切り替えたとき） */
+  reset(): void {
+    this.loop.reset();
+  }
 
   /**
    * stickX（右が正）・stickY（画面の上が正）は感度・カーブを掛けた後の値（合成の大きさ 1 まで）。
-   * 書く pitch は機首上げが正（ピッチ反転は呼ぶ側で）
+   * 書く pitch は機首上げが正（ピッチ反転は呼ぶ側で）。spec は機体の数値（宙返りの速さ・引きの判定。null は宙返りしない）
    */
   apply(
     out: SteerCommand,
@@ -48,6 +67,7 @@ export class DirectSteer {
     stickX: number,
     stickY: number,
     ground: GroundHeightFn,
+    spec: Readonly<AircraftSpec> | null = null,
   ): SteerCommand {
     const cfg = this.cfg;
     const q = state.orientation;
@@ -71,6 +91,12 @@ export class DirectSteer {
     const yawTurn = clamp(stickX, -1, 1) * full;
     const elev = Math.asin(clamp(f.y, -1, 1));
     const sy = clamp(stickY, -1, 1);
+    this.floorState = state;
+    this.floorGround = ground;
+    if (this.loop.apply(out, state, spec, sy, f, u, r, hx, hz, elev, this.floorFn)) {
+      this.groundAssistDeg = 0;
+      return out;
+    }
     // 上下に倒していない分だけ水平へ戻す（旋回の引きで機首が少しずつ上がるのを溜めない。離すと水平飛行に戻る）
     const level = (1 - Math.abs(sy)) * clamp(elev, -cfg.levelDeg * DEG, cfg.levelDeg * DEG);
     let goalElev = clamp(elev + sy * full - level, -maxElev, maxElev);

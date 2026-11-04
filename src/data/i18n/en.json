@@ -71,7 +71,7 @@
     "back": "Mode select",
     "steps": {
       "rings": {
-        "touch": "Push the stick (bottom left) toward where you want to go: right turns right, up climbs. Fly through the 3 yellow rings",
+        "touch": "Push the stick (bottom left) toward where you want to go: right turns right, up climbs (keep holding up at speed to loop). Fly through the 3 yellow rings",
         "touchClassic": "Tilt with the stick (bottom left) and pull to turn. Fly through the 3 yellow rings",
         "keys": "Bank with {rollLeft}/{rollRight} and pull with {pitchUp} to turn ({pitchDown} pitches down). Fly through the 3 yellow rings",
         "pad": "Bank with the left stick and pull it back to turn. Fly through the 3 yellow rings"
@@ -83,6 +83,7 @@
       },
       "targets": {
         "touch": "Two red balloon targets. Point your nose at them and shoot them down with GUN (◇ marks a target)",
+        "touchAuto": "Two red balloon targets. Point your nose at them and shoot them down with GUN (◇ marks a target; the gun fires on its own when you're on target)",
         "keys": "Two red balloon targets. Point your nose at them and shoot with {fire} (◇ marks a target)",
         "pad": "Two red balloon targets. Point your nose at them and shoot with RB (◇ marks a target)"
       },
@@ -190,7 +191,9 @@
       "mode": "Mode",
       "difficulty": "Difficulty",
       "noUpgrades": "No upgrades",
-      "rookie": "Rookie boost"
+      "rookie": "Rookie boost",
+      "aimAssist": "Aim assist+",
+      "autoFire": "Auto-fire"
     },
     "autoTeams": "Auto-assign teams",
     "hangarButton": "Hangar",
@@ -222,7 +225,8 @@
       "copyFailed": "Couldn't copy: {text}",
       "qrLabel": "QR code for the join URL: {url}",
       "qrFailed": "Couldn't create the QR code"
-    }
+    },
+    "optionsAssist": " · Aim assist+ {aim} · Auto-fire {fire}"
   },
   "common": {
     "waves": {
@@ -725,7 +729,14 @@
         "fixed": "Fixed (bottom left)"
       },
       "notice": "The touch controls have changed. You can switch back to the classic controls in Settings"
-    }
+    },
+    "aimAssist": {
+      "title": "Aim assist strength (touch)",
+      "weak": "Low",
+      "normal": "Standard",
+      "strong": "High"
+    },
+    "autoFire": "Auto-fire (touch)"
   },
   "settings": {
     "enemies": "Enemies",
