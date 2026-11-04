@@ -398,7 +398,8 @@
     "campaign": "{cleared}/{total} クリア",
     "separator": "・",
     "defense": "最高 {waves} 波",
-    "raid": "最速 {time}"
+    "raid": "最速 {time}",
+    "practice": "最高 {scores}"
   },
   "campaign": {
     "heading": "キャンペーン",
@@ -449,7 +450,8 @@
     "tiltLevel": "傾きを合わせ直す",
     "allSettings": "すべての設定",
     "abortMission": "ミッションを中断",
-    "toTitle": "タイトルへ"
+    "toTitle": "タイトルへ",
+    "restart": "やり直す"
   },
   "race": {
     "hud": {
@@ -561,6 +563,10 @@
     "defenseDialog": {
       "body": "基地の司令部を全 10 波の敵から守ります。波の間に基地の上を低く遅く（高度 300m 以下・速度 150 以下）通ると補給。高難度は敵 ×1.3・司令部 HP 1500。2〜4 人は部屋を作るか、部屋コードで参加します（全員が同じチーム）。",
       "difficulty": "難易度"
+    },
+    "practice": {
+      "label": "練習場",
+      "note": "的と模擬の敵で狙いの練習"
     }
   },
   "language": {
@@ -851,7 +857,8 @@
       "mission": "キャンペーン",
       "raid": "ソロレイド",
       "race": "リングレース",
-      "defense": "防衛戦"
+      "defense": "防衛戦",
+      "practice": "練習場"
     },
     "camera": {
       "follow": "追従",
@@ -879,7 +886,8 @@
       },
       "kills": {
         "other": "撃墜 {count}"
-      }
+      },
+      "practice": "スコア {score}（撃墜 {kills}）"
     },
     "bar": {
       "back10": "10 秒戻る（←）",
@@ -1478,6 +1486,93 @@
       "timeout": "応答がありません（時間切れ）",
       "network": "接続できませんでした",
       "unsupported": "このブラウザは P2P 通信（WebRTC）に対応していません"
+    }
+  },
+  "practice": {
+    "abort": "練習場を中断",
+    "drills": {
+      "static": {
+        "name": "止まった的",
+        "note": "島の上空の的（風船）を時間内にできるだけ多く撃ち落とします。落とした的は 10 秒後に別の場所に出ます。"
+      },
+      "moving": {
+        "name": "動く的",
+        "note": "直進・蛇行・上下する 3 機のドローンを撃ち落とします。落とすと 3 秒後に経路の始めから出直します。"
+      },
+      "bandit": {
+        "name": "模擬の敵",
+        "note": "撃ち返してこない入門の敵機を追いかけて落とします。落とすと 3 秒後に前方へ次の 1 機が出ます。"
+      }
+    },
+    "hud": {
+      "gunOnly": "機銃のみ",
+      "count": "撃墜 {kills}  スコア {score}",
+      "final": "スコア {score}・撃墜 {kills}"
+    },
+    "advice": {
+      "noShots": "機銃を撃ってみましょう。照準の円に的が入ったら撃つと当たります。",
+      "offAim": "照準に入ってから撃つと命中率が上がります。照準の円に的が重なるまで待ちましょう。",
+      "offScreen": "敵が画面の外にいる時間が長めです。画面の端の矢印とレーダーの向きへ曲がると見つけやすくなります。",
+      "overshoot": "照準の近くで行き過ぎて戻すことが多めです。近づいたら小さく倒すと止めやすくなります（感度のカーブ 2.0 も試せます）。",
+      "noKills": "撃墜まであと一息です。近づいてから（1km 以内）撃つと当たりやすくなります。",
+      "steady": "安定して狙えています。狙いの補助を弱めたり自動射撃を切ったりして、腕前を比べてみましょう。"
+    },
+    "settings": {
+      "heading": "設定（タッチ）",
+      "note": "変えるとすぐ効きます（設定の「操作」と同じ）。記録は設定ごとに残ります。"
+    },
+    "device": {
+      "keyboard": "キーボード",
+      "touch": "タッチ",
+      "gamepad": "パッド"
+    },
+    "assistOff": "OFF",
+    "assistShort": "補助 {level}",
+    "autoFireOn": "自動射撃 ON",
+    "autoFireOff": "自動射撃 OFF",
+    "curveShort": "カーブ {curve}",
+    "separator": "・",
+    "seconds": "{seconds} 秒",
+    "select": {
+      "heading": "練習場",
+      "lead": "短い課題で狙いを練習します。撃墜されず、墜落・戦域外でも終わりません。設定を変えて、すぐやり直して比べられます。",
+      "duration": "{seconds} 秒",
+      "best": "最高 {score}",
+      "notRun": "記録なし",
+      "records": "設定ごとの記録（上位 {count}）",
+      "start": "スタート",
+      "settings": "設定",
+      "rules": "決まり",
+      "rulesValue": "機銃のみ・撃墜されない",
+      "noRecords": "まだ記録がありません",
+      "row": "撃墜 {kills}・命中 {accuracy}"
+    },
+    "result": {
+      "toList": "練習場へ",
+      "score": "スコア {score}",
+      "settingsBest": "この設定のベスト",
+      "kills": "撃墜数",
+      "accuracy": "命中率",
+      "noShots": "撃っていません",
+      "accuracyValue": "{ratio}（{hits} / {shots} 発）",
+      "avgKill": "撃墜までの平均",
+      "offAim": "照準の外で撃った割合",
+      "offAimHint": "撃っていた間に、いちばん近い的の予測照準点が当たる範囲の外だった割合",
+      "offScreen": "敵が画面の外にいた時間",
+      "offScreenValue": "{seconds}（{ratio}）",
+      "offScreenHint": "選んだ対象が画面（機首の向き）の外にいた時間",
+      "overshoot": "行き過ぎて戻した回数",
+      "overshootValue": "{count} 回（1 分あたり {perMinute} 回）",
+      "overshootHint": "照準の近く（10° 内）で、的が機首の反対側へ抜けた回数",
+      "record": "記録",
+      "changed": "途中で設定を変えたので記録しません",
+      "settingsRecord": "この設定の最高",
+      "drillBest": "課題の最高"
+    },
+    "hint": {
+      "go": "練習場へ",
+      "tutorial": "狙いの練習は練習場で。止まった的・動く的・模擬の敵を、設定を変えながら試せます。",
+      "failed": "うまく当たらないときは練習場で狙いを練習できます（撃墜されず、設定を変えて比べられます）。"
     }
   }
 }

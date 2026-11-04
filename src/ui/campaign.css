@@ -248,3 +248,28 @@
 .result-gear[hidden] {
   display: none;
 }
+
+/* 9-5: 練習場への案内（チュートリアルの完了・M1 / M2 の失敗） */
+.result-practice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  background: var(--ui-bg);
+  border-left: 3px solid var(--ui-accent);
+}
+
+.result-practice-text {
+  flex: 1 1 220px;
+}
+
+.result-practice-go {
+  min-height: 40px;
+}
+
+.result-practice[hidden] {
+  display: none;
+}

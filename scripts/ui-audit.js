@@ -178,7 +178,28 @@ for (const size of SIZES) {
       s.missions[id] = { unlocked: true, bestRank: rank };
     const race = (bestRank) => ({ bestRank, clears: 1, times: [], ghost: null });
     s.races = { coast: race('S'), canyon: race('A'), harbor: race('S') };
-    s.records = { defenseWaves: { 'island:normal': 7 }, raidBestMs: { normal: 754000 } };
+    // 9-5: 練習場の設定ごとの記録（一覧の表・カードの進捗）
+    const row = (settings, score, kills, accuracy) => ({
+      settings,
+      aircraftId: 'kestrel',
+      score,
+      kills,
+      accuracy,
+      date: Date.parse('2026-11-03T00:00:00Z'),
+    });
+    s.records = {
+      defenseWaves: { 'island:normal': 7 },
+      raidBestMs: { normal: 754000 },
+      practice: {
+        static: [
+          row('touch:direct:strong:1:1.5', 1064, 8, 0.33),
+          row('touch:drag:normal:0:2', 845, 7, 0.207),
+          row('keyboard', 812, 7, 0.16),
+          row('touch:classic:off:0:1', 402, 4, 0.05),
+        ],
+        bandit: [row('touch:tilt:weak:1:1.5', 330, 3, 0.1)],
+      },
+    };
     localStorage.setItem('skyraid.save', JSON.stringify(s));
   });
   await page.goto(base);

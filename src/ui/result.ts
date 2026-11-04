@@ -20,6 +20,8 @@ export interface ResultExtras {
   readonly newGear: boolean;
   /** チュートリアル（4-11）の文: 見出しと「モード選択へ」。通常のミッションは省略 */
   readonly tutorial?: { readonly title: string; readonly back: string };
+  /** 練習場への案内（9-5。チュートリアルの完了・M1 / M2 の失敗）。省略は出さない */
+  readonly practiceHint?: 'tutorial' | 'failed';
 }
 
 /**
@@ -39,10 +41,15 @@ export class ResultScreen {
   private readonly facts: HTMLDivElement;
   private readonly rank: HTMLDivElement;
   private readonly gear: HTMLDivElement;
+  private readonly practice: HTMLDivElement;
+  private readonly practiceText: HTMLSpanElement;
   private readonly retry: HTMLButtonElement;
   private readonly back: HTMLButtonElement;
 
-  constructor(parent: HTMLElement, handlers: { onRetry: () => void; onList: () => void }) {
+  constructor(
+    parent: HTMLElement,
+    handlers: { onRetry: () => void; onList: () => void; onPractice: () => void },
+  ) {
     const root = createScreen(parent, 'campaign-screen result-screen');
     const panel = el('div', 'ui-panel campaign-panel', root);
     el('div', 'ui-kicker campaign-kicker', panel, 'RESULT');
@@ -54,6 +61,13 @@ export class ResultScreen {
     this.facts = el('div', 'campaign-facts', panel);
     this.gear = el('div', 'result-gear', panel, t('campaign.result.newGear'));
     this.gear.hidden = true;
+    // 9-5: 練習場への案内（文と「練習場へ」）
+    this.practice = el('div', 'result-practice', panel);
+    this.practiceText = el('span', 'result-practice-text', this.practice);
+    createButton(this.practice, 'ui-button result-practice-go', t('practice.hint.go'), () => {
+      handlers.onPractice();
+    });
+    this.practice.hidden = true;
     this.extras = el('div', 'result-extras', panel);
     this.card = new RecordCardButton(this.extras);
     const buttons = el('div', 'campaign-buttons', panel);
@@ -112,6 +126,9 @@ export class ResultScreen {
       }),
     );
     this.gear.hidden = !extras.newGear;
+    const hint = extras.practiceHint;
+    this.practice.hidden = hint === undefined;
+    if (hint) this.practiceText.textContent = t(`practice.hint.${hint}`);
   }
 
   setShown(shown: boolean): void {

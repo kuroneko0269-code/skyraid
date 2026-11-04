@@ -29,6 +29,11 @@ export function formatInteger(n: number): string {
   return numberFormat({ maximumFractionDigits: 0 }).format(Math.round(n));
 }
 
+/** 小数 digits 桁の数（9-5。練習場の割合・秒） */
+export function formatDecimal(n: number, digits: number): string {
+  return numberFormat({ minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
+}
+
 /** クレジット「1,500 CR」 */
 export function formatCredits(n: number): string {
   return `${formatInteger(n)} CR`;

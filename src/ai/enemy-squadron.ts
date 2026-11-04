@@ -125,6 +125,7 @@ export class EnemySquadron {
       u.targeting.reset();
       u.difficulty = this.difficultyValue;
       u.hpScale = 1;
+      u.passive = false;
       u.preferAllies = false;
       u.ai.setPatrol(this.config.patrols[i % this.config.patrols.length] ?? []);
       if (this.enabledFlag && i < this.countValue)
@@ -155,6 +156,8 @@ export class EnemySquadron {
     preferAllies = false,
     /** HP の倍率（8-6b。M1） */
     hpScale = 1,
+    /** 撃ち返さない（9-5。練習場の模擬の敵） */
+    passive = false,
   ): number {
     const i = this.units.findIndex((u) => !u.enemy.active);
     const u = this.units[i];
@@ -163,6 +166,7 @@ export class EnemySquadron {
     u.difficulty = difficulty;
     u.preferAllies = preferAllies;
     u.hpScale = hpScale;
+    u.passive = passive;
     u.playerAggro = false;
     u.ai.setPatrol(patrol);
     this.spawn(u, at);
@@ -236,10 +240,11 @@ export class EnemySquadron {
       return;
     }
 
-    if (c.missile && senses.target && u.missiles.tryUse())
+    // 9-5: 撃ち返さない機体（練習場の模擬の敵）はミサイル・機銃を撃たない（フレアは使う）
+    if (!u.passive && c.missile && senses.target && u.missiles.tryUse())
       this.combat.missiles.launch(state, u.targeting.selected, TEAM_ENEMY);
     if (c.flare && u.flares.tryUse()) this.combat.flares.release(state, TEAM_ENEMY);
-    u.gun.step(c.trigger, state, this.playerTargets, dt);
+    u.gun.step(c.trigger && !u.passive, state, this.playerTargets, dt);
   }
 
   /** 敵機 e を追っているプレイヤーのミサイルのうち最も近いものの位置。なければ null */

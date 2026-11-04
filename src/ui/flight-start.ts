@@ -7,7 +7,8 @@ import { findAircraftModel } from '../data/aircraft';
 import type { DefenseDifficulty } from '../data/defense';
 import { findMap, ISLAND_MAP } from '../data/maps';
 import { WORLD_CONFIG } from '../data/terrain';
-import { weatherForFlight } from '../data/weather';
+import { DEFAULT_WEATHER_ID, weatherForFlight } from '../data/weather';
+import type { PracticeDrill } from '../data/practice';
 import { freshSeed } from '../core/random';
 import type { ActiveMap } from '../missions/active-map';
 import type { FlightSession } from '../missions/flight-session';
@@ -59,6 +60,12 @@ export interface FlightStartParts {
     readonly selection: { readonly mapId: string; readonly difficulty: DefenseDifficulty } | null;
     afterStart(): void;
   };
+  /** 練習場（9-5。ui/practice-link.ts）: 選んだ課題（null は練習場でない）・指標の縦横比・始めた後の処理 */
+  readonly practice: {
+    readonly selection: { readonly drill: PracticeDrill } | null;
+    aspect(): number;
+    afterStart(replaying: boolean): void;
+  };
 }
 
 /** 今の画面の選択から、記録する飛行の初期状態を作る（チュートリアル・定義にないミッションは null = 記録しない） */
@@ -84,6 +91,17 @@ export function liveStart(p: FlightStartParts, def: MissionDef | null): ReplaySt
       courseId: course.id,
       raceReference: p.race.reference(),
       weatherId: course.weatherId,
+    };
+  // 9-5: 練習場は島・昼の快晴で固定（比べやすさ）
+  const practice = p.practice.selection;
+  if (practice)
+    return {
+      ...base,
+      mode: 'practice',
+      mapId: ISLAND_MAP.id,
+      practiceDrill: practice.drill,
+      practiceAspect: p.practice.aspect(),
+      weatherId: DEFAULT_WEATHER_ID,
     };
   const weatherId = weatherForFlight(false, def?.id ?? null, freeWeather, freeWeather);
   const defense = p.defense.selection;
@@ -123,6 +141,7 @@ export function createFlightStarter(
       p.playerView.setModel(model, loadoutFor(start).missiles, paintFromHex(start.paint));
       if (start.mode === 'race') p.race.afterStart(pending !== null);
       if (start.mode === 'defense' && !pending) p.defense.afterStart();
+      if (start.mode === 'practice') p.practice.afterStart(pending !== null);
       if (pending) p.replay.replayStarted();
       else p.replay.liveStarted(start);
     } else {

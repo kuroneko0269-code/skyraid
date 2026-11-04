@@ -80,12 +80,12 @@ export function createRaceLink(p: RaceLinkParts): RaceLink {
   const hud = new RaceHud(document.body);
   screens.inRace = () => course !== null;
 
-  game.onChange(({ from, to }) => {
+  game.onChange(({ from, to, restart }) => {
     select.setShown(to === 'race_select');
     result.setShown(to === 'result' && course !== null);
     // メニューへ戻ったらレースの選択を外す（次の飛行はフリーフライト・ミッション）
     if (usesDemoCamera(to) || to === 'hangar') course = null;
-    if (to === 'flight' && !isResume(from) && course) {
+    if (to === 'flight' && !isResume(from, restart) && course) {
       // レースの天候は固定（7-5 の天候の配線の後に呼ばれて上書きする）
       p.weather.set(course.weatherId);
       p.weather.setTimeFlow(false);

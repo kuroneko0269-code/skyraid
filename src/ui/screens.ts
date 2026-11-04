@@ -3,7 +3,6 @@ import type { Paint } from '../progression/paint';
 import { Paintshop } from '../progression/paintshop';
 import { parseUnlockAll } from '../core/debug-flags';
 import { usesDemoCamera, type GameState, type ScreenState } from '../core/game-state';
-import type { MissionResult } from '../missions/runner';
 import type { MissionDef } from '../missions/types';
 import type { AircraftModel } from '../data/aircraft';
 import { CampaignProgress } from '../progression/campaign-progress';
@@ -28,7 +27,14 @@ import { MAPS } from '../data/maps';
 import { RAID_MISSION, raidMission } from '../data/missions-special';
 import type { DefenseDifficulty } from '../data/defense';
 import { tutorialStrings, type TutorialStrings } from './tutorial-text';
-import { missionCardSource } from './card/card-entry';
+
+/** Esc でモード選択へ戻る一覧の画面 */
+const LIST_SCREENS: readonly ScreenState[] = [
+  'mission_select',
+  'race_select',
+  'replay_select',
+  'practice_select',
+];
 
 interface PvpHandlers {
   onSelect: (raid: boolean) => void;
@@ -87,6 +93,8 @@ export class Screens {
   inDefense: () => boolean = () => false;
   onDefense: (kind: 'solo' | 'coop', mapId: string, difficulty: DefenseDifficulty) => void = () =>
     undefined;
+  /** 練習場（9-5。ui/practice-link.ts が差し込む）: 飛んでいる（終えたばかり）か */
+  inPractice: () => boolean = () => false;
   /** ランキング（7-4。ui/online-app.ts が差し込む。オンライン連携が無ければ何もしない） */
   onRanking: () => void = () => undefined;
   /** PvP（5-1）: モード選択の「PvP」（raid: 協力レイド（6-2）の部屋）・ロビーの Esc・飛行中の ⏸（main が差し込む） */
@@ -97,7 +105,7 @@ export class Screens {
     game: GameState,
     missions: readonly MissionDef[],
     /** セーブ（3-1）: 進み具合・残高・パイロット名 */
-    private readonly save: SaveStore,
+    readonly save: SaveStore,
     /** ポーズメニューの「ミッションを中断」（遷移の前に呼ぶ） */
     private readonly onAbortMission: () => void,
   ) {
@@ -144,6 +152,7 @@ export class Screens {
           game.transition('flight');
         } else if (mode === 'campaign') game.transition('mission_select');
         else if (mode === 'race') game.transition('race_select');
+        else if (mode === 'practice') game.transition('practice_select');
         else if (mode === 'replay') game.transition('replay_select');
         else if (mode === 'ranking') this.onRanking();
         else if (mode === 'settings') this.settingsNav.open();
@@ -216,6 +225,7 @@ export class Screens {
     this.result = new ResultScreen(parent, {
       onRetry: () => game.transition('flight'),
       onList: () => game.transition(this.listState()),
+      onPractice: () => game.transition('practice_select'),
     });
     this.pause = new PauseMenu(parent, {
       onResume: () => game.transition('flight'),
@@ -242,11 +252,12 @@ export class Screens {
     const mapParam = new URLSearchParams(search).get('map');
     if (mapParam && MAPS[mapParam]) this.modeSelect.freeMapId = mapParam;
     this.show(game.state);
-    game.onChange(({ from, to }) => {
-      // デモカメラ ⇄ 追従カメラの切り替わり（とリザルトからのやり直し）は暗転で隠す（読み込み画面からは不要）
+    game.onChange(({ from, to, restart }) => {
+      // デモカメラ ⇄ 追従カメラの切り替わり（とリザルト・ポーズ（9-5）からのやり直し）は暗転で隠す（読み込み画面からは不要）
       const cut =
         (from !== 'boot' && usesDemoCamera(from) !== usesDemoCamera(to)) ||
-        (from === 'result' && to === 'flight');
+        (from === 'result' && to === 'flight') ||
+        restart === true;
       if (cut) this.curtain.cut();
       this.show(to);
     });
@@ -268,9 +279,10 @@ export class Screens {
     return this.nextMission?.id === RAID_MISSION.id;
   }
 
-  /** リザルト・ポーズの「中断」の戻り先: レースはコース一覧、チュートリアル・レイドはモード選択、ほかはミッション一覧 */
+  /** リザルト・ポーズの「中断」の戻り先: レースはコース一覧、練習場は課題の一覧、チュートリアル・レイドはモード選択、ほかはミッション一覧 */
   private listState(): ScreenState {
     if (this.inRace()) return 'race_select';
+    if (this.inPractice()) return 'practice_select';
     if (this.inDefense()) return 'mode_select';
     return this.inTutorial || this.inRaid ? 'mode_select' : 'mission_select';
   }
@@ -310,8 +322,7 @@ export class Screens {
     else if (state === 'mode_select') {
       if (!this.modeSelect.closeDialog()) game.transition('title');
     } else if (state === 'pilot_name') game.transition('title');
-    else if (state === 'mission_select' || state === 'race_select' || state === 'replay_select')
-      game.transition('mode_select');
+    else if (LIST_SCREENS.includes(state)) game.transition('mode_select');
     else if (state === 'briefing') game.transition('mission_select');
     else if (state === 'hangar') this.closeHangar(game);
     else if (state === 'lobby') this.pvp?.onBack();
@@ -322,29 +333,6 @@ export class Screens {
     if (this.hangarScreen.closeDialog()) return;
     this.briefing.setAircraftName(this.hangar.selectedModel.name);
     game.transition(this.hangarReturn);
-  }
-
-  /**
-   * リザルトを出す。クリアの記録と報酬はミッションの終わりのイベントでセーブに入っている
-   * （progression/mission-rewards.ts）ので、ここは残高を読むだけ
-   */
-  showResult(result: MissionResult, tutorialPaid = 0): void {
-    const balance = this.save.credits;
-    // チュートリアル（4-11）: 報酬は初回だけ（払った額を出す）。ランクは出さない
-    const tutorial = this.inTutorial;
-    const r = tutorial ? { ...result, credits: tutorialPaid, rank: null } : result;
-    // 報酬で新しく機体・強化が買える残高になったら 1 行出す（3-3）
-    const newGear = this.hangar.newlyAffordable(balance - r.credits, balance);
-    const t = this.tutorialText;
-    this.result.show(r, {
-      balance,
-      pilotName: this.save.pilotName,
-      newGear,
-      tutorial: tutorial ? { title: t.complete, back: t.back } : undefined,
-    });
-    // 8-5: 記録カード（キャンペーン・ソロのレイド。チュートリアルは作らない）
-    const raid = this.inRaid ? (this.nextMission?.reward.raid?.difficulty ?? 'normal') : null;
-    this.result.card.set(tutorial ? null : missionCardSource(result, raid, this.hangar, this.save));
   }
 
   private show(state: ScreenState): void {
@@ -359,7 +347,8 @@ export class Screens {
     // ポーズには設定画面の 4 つ（画質・HUD・音量・操作補助）を貸す（7-D。8-1 の事前修正で HUD を画質の右へ）
     if (state === 'pause') this.settings.lend(this.pause.quick);
     this.pause.setShown(state === 'pause');
-    this.result.setShown(state === 'result' && !this.inRace() && !this.inDefense());
+    const own = this.inRace() || this.inDefense() || this.inPractice();
+    this.result.setShown(state === 'result' && !own);
     this.hangarScreen.setShown(state === 'hangar');
   }
 }

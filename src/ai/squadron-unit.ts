@@ -35,6 +35,8 @@ export interface Unit {
   preferAllies: boolean;
   /** 出現のときの最大 HP の倍率（8-6b。M1 の敵は 0.6。フリーフライトは 1） */
   hpScale: number;
+  /** 撃ち返さない（9-5。練習場の模擬の敵: 機銃・ミサイルを撃たない。飛び方はそのまま） */
+  passive: boolean;
   /** preferAllies の機体が、近づいたプレイヤー機を相手にしているか */
   playerAggro: boolean;
   /** ロックの候補（狙う相手 1 つだけ。使い回す） */
@@ -76,6 +78,7 @@ export function createUnit(
     difficulty,
     preferAllies: false,
     hpScale: 1,
+    passive: false,
     playerAggro: false,
     lockTargets: [],
     self,

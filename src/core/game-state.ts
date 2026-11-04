@@ -8,7 +8,8 @@ import { EventBus } from './event-bus';
  * PvP（5-1）はモード選択 → ロビー → 飛行。飛行からはモード選択へ（退出・ホストの切断）、対戦が終わるとロビーへ（5-3）。
  * PvP の飛行にポーズはない。フォトモード（7-A）は飛行（P キー）・ポーズ（メニュー）から入り、出ると飛行へ戻る（時間は止まる）。
  * リングレース（7-1）はモード選択 → コース一覧（機体の選択も）→ 飛行 → リザルト → コース一覧。
- * リプレイ（7-B）はモード選択 → リプレイ一覧 → 飛行（再生。Esc・「一覧へ」で一覧へ戻る）
+ * リプレイ（7-B）はモード選択 → リプレイ一覧 → 飛行（再生。Esc・「一覧へ」で一覧へ戻る）。
+ * 練習場（9-5）はモード選択 → 課題の一覧 → 飛行 → 結果 → 課題の一覧。ポーズの「やり直す」は restart（ポーズ → 飛行のやり直し）
  */
 export const SCREEN_STATES = [
   'boot',
@@ -25,6 +26,7 @@ export const SCREEN_STATES = [
   'lobby',
   'race_select',
   'replay_select',
+  'practice_select',
 ] as const;
 export type ScreenState = (typeof SCREEN_STATES)[number];
 
@@ -43,8 +45,10 @@ export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenStat
     'lobby',
     'race_select',
     'replay_select',
+    'practice_select',
   ],
   race_select: ['mode_select', 'flight'],
+  practice_select: ['mode_select', 'flight'],
   replay_select: ['mode_select', 'flight'],
   lobby: ['mode_select', 'flight'],
   mission_select: ['mode_select', 'briefing'],
@@ -54,16 +58,27 @@ export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenStat
   // PvP の対戦が終わるとロビー（のリザルト）へ（5-3）
   flight: ['pause', 'photo', 'result', 'mode_select', 'lobby', 'replay_select'],
   // ミッション中はポーズから「ミッションを中断」でミッション一覧へ（チュートリアルはモード選択へ、レースはコース一覧へ）
-  pause: ['flight', 'photo', 'title', 'mission_select', 'mode_select', 'race_select'],
+  pause: [
+    'flight',
+    'photo',
+    'title',
+    'mission_select',
+    'mode_select',
+    'race_select',
+    'practice_select',
+  ],
   // フォトモード（7-A）を出るとゲームに戻る
   photo: ['flight'],
   // 「もう一度」は飛行へ直接、「ミッション一覧へ」（チュートリアルは「モード選択へ」）
-  result: ['flight', 'mission_select', 'mode_select', 'race_select'],
+  // 9-5: チュートリアルの完了・M1 / M2 の失敗から練習場へも
+  result: ['flight', 'mission_select', 'mode_select', 'race_select', 'practice_select'],
 };
 
 export interface StateChange {
   readonly from: ScreenState;
   readonly to: ScreenState;
+  /** ポーズからの「やり直す」（9-5。from は pause だが飛行を始め直す） */
+  readonly restart?: boolean;
 }
 
 export interface GameStateEvents extends Record<string, unknown> {
@@ -80,9 +95,9 @@ export function isSimulating(state: ScreenState): boolean {
   return state === 'flight';
 }
 
-/** 止めていた飛行に戻る遷移か（ポーズ・フォトモードから。飛行をやり直さない） */
-export function isResume(from: ScreenState): boolean {
-  return from === 'pause' || from === 'photo';
+/** 止めていた飛行に戻る遷移か（ポーズ・フォトモードから。飛行をやり直さない。restart は 9-5 のポーズの「やり直す」） */
+export function isResume(from: ScreenState, restart = false): boolean {
+  return !restart && (from === 'pause' || from === 'photo');
 }
 
 /** 飛行が止まっている状態か（ポーズ・フォトモード。機体・HUD は残す） */
@@ -113,7 +128,8 @@ export function usesDemoCamera(state: ScreenState): boolean {
     state === 'briefing' ||
     state === 'lobby' ||
     state === 'race_select' ||
-    state === 'replay_select'
+    state === 'replay_select' ||
+    state === 'practice_select'
   );
 }
 
@@ -133,6 +149,14 @@ export class GameState {
     if (!canTransition(from, to)) return false;
     this.current = to;
     this.bus.emit('state:change', { from, to });
+    return true;
+  }
+
+  /** ポーズから飛行を始め直す（9-5 の練習場の「やり直す」）。ポーズ中でなければ何もせず false */
+  restart(): boolean {
+    if (this.current !== 'pause') return false;
+    this.current = 'flight';
+    this.bus.emit('state:change', { from: 'pause', to: 'flight', restart: true });
     return true;
   }
 

@@ -42,6 +42,16 @@ const MODES = [
     },
   },
   {
+    // 9-5: 練習場（課題の一覧 → 止まった的）
+    name: 'practice',
+    kind: 'flight',
+    go: async (p) => {
+      await p.click('.mode-card[data-mode="practice"]');
+      await p.locator('.practice-screen .race-course').first().click();
+      await p.locator('.practice-screen .campaign-go').click();
+    },
+  },
+  {
     name: 'raid-solo',
     kind: 'flight',
     go: async (p) => {

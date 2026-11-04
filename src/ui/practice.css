@@ -1,0 +1,92 @@
+/* 練習場（9-5）: 課題の一覧・結果の画面・ポーズの設定の欄。部品はリングレース（race.css）・キャンペーン（campaign.css）と同じ */
+.practice-lead {
+  max-width: 880px;
+  margin: 0;
+  text-align: center;
+}
+
+/* 設定ごとの記録: 設定の見出しは長いので折り返す */
+.practice-records td.practice-records-settings {
+  white-space: normal;
+  font-family: var(--ui-font-body);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.practice-records td.practice-records-score {
+  color: var(--ui-accent-hud);
+}
+
+.practice-records tr.is-current td:first-child::before {
+  content: '▶ ';
+  color: var(--ui-accent);
+}
+
+/* 設定の欄（方式・狙いの補助・自動射撃・カーブ） */
+.practice-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: var(--ui-line-width) solid var(--ui-line-faint);
+}
+
+.practice-settings-heading {
+  font: 600 13px/1.2 var(--ui-font-display);
+  letter-spacing: 0.2em;
+  color: var(--ui-accent-hud);
+}
+
+.practice-settings-note {
+  font: 12px/1.35 var(--ui-font-body);
+  color: var(--ui-text-dim);
+}
+
+.practice-settings-grid .settings-item {
+  min-height: 40px;
+}
+
+/* 結果: スコアの下に一言の助言 */
+.practice-advice {
+  margin: 0;
+  padding: 8px 12px;
+  font: 600 15px/1.45 var(--ui-font-body);
+  color: var(--ui-text);
+  background: var(--ui-bg);
+  border-left: 3px solid var(--ui-accent);
+}
+
+.practice-result-screen .campaign-panel {
+  width: min(720px, 100%);
+}
+
+/* ポーズ: 設定の欄は右の列（4 つの設定の下） */
+.pause-extra {
+  grid-column: 2;
+}
+
+.pause-extra[hidden] {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .pause-extra {
+    grid-column: 1;
+  }
+}
+
+/* 背の低い横画面（スマホ 844×390 など）: 詰める */
+@media (max-height: 480px) {
+  .practice-lead {
+    font-size: 12px;
+  }
+
+  .practice-advice {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .practice-settings-grid .settings-item {
+    min-height: 36px;
+  }
+}

@@ -25,7 +25,7 @@ export function createControlSettings(
   vibrationSupported: boolean,
   tilt: TiltSource,
   apply: (c: Readonly<ControlSettings>) => void,
-): { syncSteerMode: (mode: SteerMode) => void } {
+): { syncSteerMode: (mode: SteerMode) => void; sync: () => void } {
   const c = save.settings.controls;
   const changed = (persist: boolean, fn: (c: ControlSettings) => void): void => {
     if (persist) save.updateControls(fn);
@@ -60,12 +60,13 @@ export function createControlSettings(
   );
 
   const toggles = el('div', 'control-settings-toggles', box);
-  const toggle = (key: ToggleKey, label: string, enabled = true): void => {
+  const toggle = (key: ToggleKey, label: string, enabled = true): ((on: boolean) => void) => {
     const t = createToggleButton(toggles, label, c[key], () => {
       changed(true, (x) => (x[key] = !x[key]));
       return c[key];
     });
     t.button.disabled = !enabled;
+    return t.sync;
   };
   toggle('invertPitch', CONTROL_LABELS.invertPitch);
   toggle('autoLevel', CONTROL_LABELS.autoLevel);
@@ -86,7 +87,7 @@ export function createControlSettings(
   const steerChoice = createSteerModeChoice(toggles, c, tilt, (v) => {
     changed(true, (x) => (x.steerMode = v));
   });
-  choice(
+  const curve = choice(
     toggles,
     STEER_LABELS.curve,
     STICK_CURVES.map((v) => [v, curveLabel(v)] as const),
@@ -106,7 +107,7 @@ export function createControlSettings(
   );
 
   // 9-3: タッチの狙いの補助の強さと自動射撃
-  choice(
+  const assist = choice(
     toggles,
     AIM_ASSIST_LEVEL_LABELS.title,
     AIM_ASSIST_LEVELS.map((v) => [v, AIM_ASSIST_LEVEL_LABELS.levels[v]] as const),
@@ -115,28 +116,37 @@ export function createControlSettings(
       changed(true, (x) => (x.aimAssist = v));
     },
   );
-  toggle('autoFire', AIM_ASSIST_LEVEL_LABELS.autoFire);
+  const autoFire = toggle('autoFire', AIM_ASSIST_LEVEL_LABELS.autoFire);
 
   createKeybindSettings(box, c, (fn) => {
     changed(true, fn);
   });
   panel.insertBefore(box, panel.querySelector(':scope > .save-settings'));
-  return { syncSteerMode: steerChoice.sync };
+  return {
+    syncSteerMode: steerChoice.sync,
+    // 9-5: 練習場の設定（方式・補助・自動射撃・カーブ）で変えた値を表示に合わせ直す
+    sync: () => {
+      steerChoice.sync(c.steerMode);
+      curve.value = String(c.stickCurve);
+      assist.value = c.aimAssist;
+      autoFire(c.autoFire);
+    },
+  };
 }
 
 /** カーブの表示（1.0（直線）/ 1.5 / 2.0） */
-function curveLabel(v: StickCurve): string {
+export function curveLabel(v: StickCurve): string {
   return v === 1 ? t('controls.steer.curveLinear') : v.toFixed(1);
 }
 
-/** 選択肢（select）1 つ。選んだら onChange（保存） */
-function choice<T extends string | number>(
+/** 選択肢（select）1 つ。選んだら onChange（保存）。9-5: 練習場の設定でも使う */
+export function choice<T extends string | number>(
   parent: HTMLElement,
   label: string,
   options: readonly (readonly [T, string])[],
   initial: T,
   onChange: (v: T) => void,
-): void {
+): HTMLSelectElement {
   const row = el('label', 'ui-toggle settings-item control-size', parent);
   row.textContent = `${label} `;
   const select = el('select', '', row);
@@ -151,6 +161,7 @@ function choice<T extends string | number>(
     // フォーカスが残ると矢印キー（ピッチ/ロール）で値が変わってしまうため外す
     select.blur();
   });
+  return select;
 }
 
 /** スライダー 1 本。動かしている間は onChange(v, false)、離したら onChange(v, true)（保存） */

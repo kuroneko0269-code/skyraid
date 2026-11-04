@@ -26,6 +26,13 @@
 | 出撃 | Launch |
 | ソロ | Solo |
 | ロビー | Lobby |
+| 練習場（9-5） | Practice Range |
+| 止まった的 / 動く的 / 模擬の敵 | Fixed Targets / Moving Targets / Dummy Bandit |
+| やり直す（ポーズ） | Restart |
+| 照準の外で撃った割合 | Shots fired off-target |
+| 敵が画面の外にいた時間 | Enemy off-screen |
+| 行き過ぎて戻した回数 | Overshoots |
+| 撃墜までの平均 | Average time to kill |
 
 ## 機体・武装・強化
 

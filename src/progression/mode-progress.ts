@@ -1,11 +1,13 @@
 // モード選択のカードに小さく出す進捗（7-D。Three.js・DOM 非依存）: キャンペーンのクリア数・レースのランクの数・
-// 防衛戦の最高波・レイドの最速。記録がなければ出さない（キャンペーンは 0/5 を出す）
+// 防衛戦の最高波・レイドの最速・練習場（9-5）の課題ごとの最高スコア。記録がなければ出さない（キャンペーンは 0/5 を出す）
 import { t } from '../core/i18n';
+import { PRACTICE_DRILLS } from '../data/practice';
 import { RANKS } from '../data/ranking';
+import { practiceEntries } from './practice-records';
 import type { SaveData } from './save';
 import { bestDefenseWaves, bestRaidMs } from './save-records';
 
-export type ProgressMode = 'campaign' | 'race' | 'defense' | 'raid';
+export type ProgressMode = 'campaign' | 'race' | 'defense' | 'raid' | 'practice';
 
 /** 分:秒（1 時間を超えても分で数える） */
 export function formatMinutes(ms: number): string {
@@ -31,5 +33,11 @@ export function modeProgress(
   if (waves !== null) out.defense = t('progress.defense', { waves });
   const raid = bestRaidMs(save.records);
   if (raid !== null) out.raid = t('progress.raid', { time: formatMinutes(raid) });
+  // 9-5: 課題ごとの最高（記録の無い課題は —）。どれも無ければ出さない
+  const bests = PRACTICE_DRILLS.map((d) => practiceEntries(save.records.practice, d)[0]?.score);
+  if (bests.some((b) => b !== undefined))
+    out.practice = t('progress.practice', {
+      scores: bests.map((b) => (b === undefined ? '—' : String(b))).join(' / '),
+    });
   return out;
 }

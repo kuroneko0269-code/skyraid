@@ -10,6 +10,7 @@ export const GLYPH_KINDS = [
   'crossedJets',
   'kaiju',
   'radar',
+  'target',
   'hangar',
   'play',
   'trophy',
@@ -108,6 +109,13 @@ const GLYPHS: Readonly<Record<GlyphKind, readonly Shape[]>> = {
     { p: 'M17 15 Q32 32 47 15 Z' },
     { p: 'M32 23.5 L32 26 M32 23.5 L38 12' },
     { p: 'M50 8 Q55 13 51 19 M54 4 Q62 13 55 23' },
+  ],
+  // 練習場の的（9-5。二重の円・十字の目盛り・中心の点）
+  target: [
+    { c: [32, 32, 22] },
+    { c: [32, 32, 11] },
+    { p: 'M32 4 L32 17 M32 47 L32 60 M4 32 L17 32 M47 32 L60 32' },
+    { c: [32, 32, 2.5] },
   ],
   // 格納庫（かまぼこ屋根・扉）
   hangar: [

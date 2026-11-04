@@ -19,6 +19,16 @@ const MODES: readonly [string, ReplayStart, boolean][] = [
     false,
   ],
   [
+    '練習場（動く的。9-5）',
+    { ...BASE_START, mode: 'practice', practiceDrill: 'moving', practiceAspect: 2.16 },
+    false,
+  ],
+  [
+    '練習場（模擬の敵。9-5）',
+    { ...BASE_START, mode: 'practice', practiceDrill: 'bandit', practiceAspect: 2.16 },
+    false,
+  ],
+  [
     'ソロ防衛戦（島。準備はすぐスキップ）',
     { ...BASE_START, mode: 'defense', mapId: 'island', defenseDifficulty: 'normal' },
     true,

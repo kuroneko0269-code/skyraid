@@ -3,8 +3,94 @@
 // 横スクロール（hscrollEl）とフォント（serif）を含む機械チェックをする（audit-inspect.js）。
 // キャンペーン（ミッション一覧・ブリーフィング）・リングレース・フリーフライト / レイド / 防衛戦のダイアログ・ハンガー（性能・塗装の
 // 翼 / 尾翼）・リプレイ・PvP のロビー・セーブデータの削除の確認・記録カードの画面・設定のデータ（オンライン連携中・メンバー管理の
-// 見本。環境変数なしでも画面の部品を作って差し込む）・メンバーの取り消しの確認
+// 見本。環境変数なしでも画面の部品を作って差し込む）・メンバーの取り消しの確認・練習場（9-5: 課題の一覧・飛行の HUD・ポーズの
+// 「やり直す」と設定の欄・結果の見本と M1 の失敗の案内）
 import { L } from './audit-lang.js';
+
+/** M1 の失敗のリザルトを見本で出す（練習場への案内つき） */
+async function openFailedResultSample(page) {
+  await page.evaluate(async () => {
+    const { ResultScreen } = await import('/src/ui/result.ts');
+    const screen = new ResultScreen(document.body, {
+      onRetry: () => undefined,
+      onList: () => undefined,
+      onPractice: () => undefined,
+    });
+    const def = {
+      id: 'bandits',
+      type: 'kill',
+      required: true,
+      start: 'afterPrevious',
+      target: 'enemyFighter',
+      count: 2,
+    };
+    screen.show(
+      {
+        missionId: 'training',
+        outcome: 'failed',
+        failReason: 'outOfBounds',
+        elapsedSeconds: 305,
+        damageTaken: 40,
+        maxHp: 100,
+        objectives: [{ id: 'bandits', def, status: 'failed', current: 1, target: 2 }],
+        rank: null,
+        credits: 0,
+      },
+      { balance: 1200, pilotName: 'ACE', newGear: false, practiceHint: 'failed' },
+    );
+    screen.setShown(true);
+  });
+}
+
+/** 練習場の結果の画面を見本で出す（60〜90 秒飛ばずに。設定の欄も見本のセーブで） */
+async function openPracticeResultSample(page) {
+  await page.evaluate(async () => {
+    const { PracticeResultScreen } = await import('/src/ui/practice-result.ts');
+    const { PracticeSettingsPanel } = await import('/src/ui/practice-settings.ts');
+    const { defaultControls } = await import('/src/core/control-settings.ts');
+    const screen = new PracticeResultScreen(document.body, {
+      onRetry: () => undefined,
+      onList: () => undefined,
+    });
+    const save = { settings: { controls: defaultControls() }, updateControls: () => undefined };
+    const tilt = { enable: () => Promise.resolve('unsupported'), disable: () => undefined };
+    new PracticeSettingsPanel(screen.settingsSlot, save, tilt, () => undefined);
+    const result = {
+      drill: 'bandit',
+      seconds: 90,
+      score: 698,
+      kills: 6,
+      shots: 220,
+      hits: 36,
+      accuracy: 0.1636,
+      avgKillSeconds: 12.01,
+      offAim: 0.7876,
+      offScreen: 0.1782,
+      offScreenSeconds: 14.6,
+      overshoots: 52,
+      overshootPerMinute: 34.7,
+      advice: 'offAim',
+    };
+    const best = {
+      settings: 'touch:direct:normal:1:1.5',
+      aircraftId: 'kestrel',
+      score: 698,
+      kills: 6,
+      accuracy: 0.164,
+      date: Date.parse('2026-11-04T00:00:00Z'),
+    };
+    const out = { newBest: true, newSettingsBest: true, previous: null, best };
+    screen.show(
+      result,
+      { kind: 'saved', out },
+      {
+        settings: 'touch:direct:normal:1:1.5',
+        pilotName: 'ACE',
+      },
+    );
+    screen.setShown(true);
+  });
+}
 
 /** 設定のデータのタブに、オンライン連携（連携中・owner）とメンバー管理の見本を差し込む（Supabase につながない） */
 export async function showOnlineSample(page) {
@@ -180,6 +266,27 @@ export async function auditMoreScreens(page, base, size, shot, shown) {
     await shot('dialog-member-revoke', '.online-sync-dialog');
     await page.locator(`.online-sync-dialog .ui-button:text-is("${L('やめる')}")`).click();
   }
+
+  // 練習場（9-5）: 課題の一覧 → スタート → 飛行の HUD → ポーズ（やり直す・設定の欄）→ 結果の見本
+  await toModeSelect();
+  await page.click('.mode-card[data-mode="practice"]');
+  await shown('.practice-screen');
+  await shot('practice', '.practice-screen.is-shown');
+  await page.locator('.practice-screen .race-course').nth(2).click();
+  await shot('practice-bandit', '.practice-screen.is-shown');
+  await page.click('.practice-screen .campaign-go');
+  await page.locator(':root[data-screen="flight"]').waitFor({ timeout: 20000 });
+  await page.waitForTimeout(4500);
+  await shot('practice-flight', '.practice-hud');
+  await page.keyboard.press('Escape');
+  await shown('.pause-screen');
+  await shot('practice-pause', '.pause-screen');
+  await toModeSelect();
+  await openPracticeResultSample(page);
+  await shot('practice-result', '.practice-result-screen.is-shown');
+  await toModeSelect();
+  await openFailedResultSample(page);
+  await shot('result-practice-hint', '.result-screen.is-shown:not(.practice-result-screen)');
 
   // 記録カードの画面
   await toModeSelect();

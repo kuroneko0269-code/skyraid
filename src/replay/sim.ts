@@ -7,6 +7,7 @@ import type { CombatInput } from '../combat/combat-input';
 import { AIM_ASSIST_CONFIG } from '../data/assist';
 import { findCourse } from '../data/courses';
 import { findDefenseMap } from '../data/defense';
+import { isPracticeDrill, PRACTICE_CONFIG } from '../data/practice';
 import { findMap, ISLAND_MAP } from '../data/maps';
 import { MISSIONS } from '../data/missions';
 import { raidMission } from '../data/missions-special';
@@ -93,6 +94,12 @@ export function startFromHeader(w: SimWorld, s: ReplayStart): void {
     case 'defense':
       play.startDefense(findDefenseMap(s.mapId), s.defenseDifficulty ?? 'normal');
       break;
+    case 'practice': {
+      const drill = s.practiceDrill;
+      if (!isPracticeDrill(drill)) throw new Error(`Practice drill not found: ${String(drill)}`);
+      play.startPractice(drill, s.practiceAspect ?? PRACTICE_CONFIG.aspectRange.fallback);
+      break;
+    }
     case 'mission':
     case 'raid': {
       const def = missionFor(s);

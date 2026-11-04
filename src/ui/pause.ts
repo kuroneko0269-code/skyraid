@@ -13,7 +13,10 @@ export class PauseMenu {
   readonly root: HTMLDivElement;
   /** 4 つの設定を置く場所（設定画面が部品を貸す） */
   readonly quick: HTMLDivElement;
+  /** 練習場（9-5）の設定の欄を置く場所（練習場のときだけ中身が入る） */
+  readonly extra: HTMLDivElement;
   private readonly abortButton: HTMLButtonElement;
+  private readonly restartButton: HTMLButtonElement;
   private readonly photoButton: HTMLButtonElement;
   private readonly resumeButton: HTMLButtonElement;
   private readonly tiltButton: HTMLButtonElement;
@@ -21,6 +24,8 @@ export class PauseMenu {
   onPhoto: (() => void) | null = null;
   /** 「傾きを合わせ直す」（9-4。傾き操作のときだけ出す） */
   onTiltLevel: (() => void) | null = null;
+  /** 「やり直す」（9-5。練習場のときだけ出す） */
+  onRestart: (() => void) | null = null;
 
   constructor(
     parent: HTMLElement,
@@ -43,7 +48,10 @@ export class PauseMenu {
     actions.className = 'pause-actions';
     this.quick = document.createElement('div');
     this.quick.className = 'settings-grid pause-quick';
-    body.append(actions, this.quick);
+    this.extra = document.createElement('div');
+    this.extra.className = 'pause-extra';
+    this.extra.hidden = true;
+    body.append(actions, this.quick, this.extra);
     panel.append(heading, body);
     root.appendChild(panel);
 
@@ -53,6 +61,11 @@ export class PauseMenu {
       t('pause.resume'),
       handlers.onResume,
     );
+    // 9-5: 練習場は同じ課題をすぐ始め直せる
+    this.restartButton = createButton(actions, 'ui-button', t('pause.restart'), () => {
+      this.onRestart?.();
+    });
+    this.restartButton.hidden = true;
     // フリーフライト・キャンペーン・ソロのレイドだけ出す（7-A）
     this.photoButton = createButton(actions, 'ui-button', t('pause.photoMode'), () => {
       this.onPhoto?.();
@@ -89,6 +102,12 @@ export class PauseMenu {
   setInMission(inMission: boolean, label = t('pause.abortMission')): void {
     this.abortButton.hidden = !inMission;
     this.abortButton.textContent = label;
+  }
+
+  /** 「やり直す」と設定の欄（extra）を出すか（9-5。練習場） */
+  setPracticeAvailable(available: boolean): void {
+    this.restartButton.hidden = !available;
+    this.extra.hidden = !available;
   }
 
   /** 「傾きを合わせ直す」を出すか（9-4） */

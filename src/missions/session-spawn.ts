@@ -58,6 +58,8 @@ export function configureDrones(
   respawns: boolean,
 ): void {
   drones.forEach((d, i) => {
+    // 9-5: 練習場の経路は外して周回に戻す
+    d.path = null;
     d.reset();
     d.deployed = i < count;
     d.respawns = respawns;

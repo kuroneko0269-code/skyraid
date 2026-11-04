@@ -14,16 +14,21 @@ import { createFlightStarter, type FlightStartParts } from './flight-start';
 import type { KaijuHudLink } from '../render/kaiju-hud-link';
 import { createPhotoMode, type PhotoEntry } from './photo/photo-entry';
 import type { RaceLink } from './race-link';
+import type { PracticeLink } from './practice-link';
 import { createReplayWiring } from './replay-wiring';
 import { viewport } from '../core/viewport';
 
-export type FlightRuntimeParts = Omit<FlightStartParts, 'world' | 'replay' | 'race' | 'defense'> &
+export type FlightRuntimeParts = Omit<
+  FlightStartParts,
+  'world' | 'replay' | 'race' | 'defense' | 'practice'
+> &
   Omit<FlightLoopParts, 'startFlight' | 'replay' | 'afterStep'> &
   Omit<FlightFrameParts, 'touch'> & {
     /** 描画のタッチ操作（スロットルの表示）。FlightLoopParts の touch は TouchLink */
     readonly touchControls: FlightFrameParts['touch'];
     readonly race: RaceLink;
     readonly defense: DefenseLink;
+    readonly practice: PracticeLink;
     readonly canvas: HTMLElement;
     readonly audio: GameAudio;
     readonly save: SaveStore;
@@ -34,7 +39,7 @@ export type FlightRuntimeParts = Omit<FlightStartParts, 'world' | 'replay' | 'ra
   };
 
 export function startFlightRuntime(p: FlightRuntimeParts): { photo: PhotoEntry } {
-  const { game, screens, race, defense, replayHub, simWorld, pvp, touch } = p;
+  const { game, screens, race, defense, practice, replayHub, simWorld, pvp, touch } = p;
   const startFlight = createFlightStarter({
     ...p,
     world: simWorld,
@@ -113,7 +118,12 @@ export function startFlightRuntime(p: FlightRuntimeParts): { photo: PhotoEntry }
     photo: () => {
       photo.toggle();
     },
-    resultExtras: [screens.result.extras, race.resultExtras, defense.resultExtras],
+    resultExtras: [
+      screens.result.extras,
+      race.resultExtras,
+      defense.resultExtras,
+      practice.resultExtras,
+    ],
   });
   // 起動直後の世界の写し（飛行の始めに前の飛行の名残を消す）は配線の最後に撮る
   simWorld.pristine = StateSnapshot.take([p.play], simSkip(p.play));
@@ -123,6 +133,7 @@ export function startFlightRuntime(p: FlightRuntimeParts): { photo: PhotoEntry }
     pvp.render(alpha);
     race.render(alpha);
     defense.render(viewport.width, viewport.height);
+    practice.render();
     frame.render(game.state, alpha, p.keys.menuTick);
     if (game.state === 'flight') p.kaijuHud.update();
     p.tutorial.update(game.state === 'flight');
