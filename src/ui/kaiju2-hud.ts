@@ -1,12 +1,14 @@
-// 9-6b: ネフィルガのレイドの HUD（?dev=kaiju2 の遅延チャンク）。見た目はヴォルガスの HUD（kaiju-hud.css）と同じ部品:
+// 9-6b: ネフィルガのレイドの HUD（ネフィルガの遅延チャンク）。見た目はヴォルガスの HUD（kaiju-hud.css）と同じ部品:
 // 上の帯に名前・体力バー（70% / 40% の目盛り）・段階と残り時間（嵐は赤）、ロック中の部位と部位 HP、壊せる 4 部位の小さなバー。
 // 予兆の警告（攻撃名と残り秒）、攻めどき（止まり木・引き起こし）。部位の破壊・段階の変化は上のお知らせに。
-// スタンのノイズはヴォルガスの HUD（KaijuHudLink）が自機のスタンから出す。DOM は最初に作り、値が変わったときだけ書く
+// スタンのノイズはヴォルガスの HUD（KaijuHudLink）が自機のスタンから出す。DOM は最初に作り、値が変わったときだけ書く。
+// 9-6c: 協力では、部位をロックしている他の人の色の印と、自分が狙われているときの「TARGET」（ヴォルガスの協力と同じ部品）
 import { KAIJU2_CONFIG, KAIJU2_PARTS, type Kaiju2Part } from '../data/kaiju2';
 import { KAIJU2_RAID_CONFIG } from '../data/kaiju2-raid';
 import { k2t } from '../data/kaiju2-text';
 import type { Kaiju2PartTarget } from '../entities/kaiju2/kaiju2-target';
 import { isPerching, type Kaiju2Raid } from '../missions/kaiju2-raid';
+import { t } from '../core/i18n';
 import { el } from './hud-dom';
 import { formatClock } from './mission-text';
 import { showToast } from './toast';
@@ -16,6 +18,14 @@ const TOAST_SECONDS = 3.5;
 interface Chip {
   readonly root: HTMLDivElement;
   readonly fill: HTMLDivElement;
+  readonly marks: HTMLSpanElement;
+  lastMarks: string;
+}
+
+/** 9-6c: 協力の 1 フレーム分の値（部位の印は KAIJU2_TARGETS の順。自分は入れない） */
+export interface Kaiju2CoopFrame {
+  readonly marks: readonly (readonly string[])[];
+  readonly targeted: boolean;
 }
 
 /** 予兆の警告の文（攻撃名と残り秒）。予兆でなければ '' */
@@ -45,6 +55,8 @@ export class Kaiju2Hud {
   private readonly chips = new Map<Kaiju2Part, Chip>();
   private readonly warning: HTMLDivElement;
   private readonly opening: HTMLDivElement;
+  private readonly target: HTMLDivElement;
+  private lastTarget = false;
   private last = { hp: NaN, phase: '', part: '', partHp: NaN, warn: '', open: '', chips: '' };
   /** お知らせを比べる前の値 */
   private seenBroken = -1;
@@ -72,10 +84,18 @@ export class Kaiju2Hud {
       const c = el('div', 'kaiju-coop-part', list);
       el('span', 'kaiju-coop-name', c, k2t(`part.${id}`));
       const b = el('div', 'kaiju-coop-bar', c);
-      this.chips.set(id, { root: c, fill: el('div', 'kaiju-coop-fill', b) });
+      const fill = el('div', 'kaiju-coop-fill', b);
+      this.chips.set(id, {
+        root: c,
+        fill,
+        marks: el('span', 'kaiju-coop-marks', c),
+        lastMarks: '',
+      });
     }
     this.warning = el('div', 'kaiju-warning', root);
     this.opening = el('div', 'kaiju-down', root);
+    this.target = el('div', 'kaiju-target', root, t('kaiju.hud.targeted'));
+    this.target.hidden = true;
     this.warning.hidden = true;
     this.opening.hidden = true;
     this.partRow.hidden = true;
@@ -87,12 +107,22 @@ export class Kaiju2Hud {
     this.seenBroken = -1;
   }
 
-  /** 描画フレームごと。shown は HUD を出す（H キーの切り替え）。locked はロック中の部位 */
-  update(raid: Kaiju2Raid, shown: boolean, locked: Kaiju2PartTarget | null): void {
+  /** 描画フレームごと。shown は HUD を出す（H キーの切り替え）。locked はロック中の部位。coop は協力の印（ソロは null） */
+  update(
+    raid: Kaiju2Raid,
+    shown: boolean,
+    locked: Kaiju2PartTarget | null,
+    coop: Readonly<Kaiju2CoopFrame> | null = null,
+  ): void {
     const visible = shown && !raid.dead && raid.body.visible;
     this.root.hidden = !visible;
     this.notify(raid);
     if (!visible) return;
+    const targeted = coop?.targeted ?? false;
+    if (targeted !== this.lastTarget) {
+      this.lastTarget = targeted;
+      this.target.hidden = !targeted;
+    }
     const ratio = Math.max(0, raid.hp / raid.maxHp);
     if (ratio !== this.last.hp) {
       this.last.hp = ratio;
@@ -116,6 +146,16 @@ export class Kaiju2Hud {
       c.fill.style.transform = `scaleX(${r.toFixed(3)})`;
       c.root.classList.toggle('is-broken', t.broken);
       c.root.classList.toggle('is-own', t === locked);
+      const colors = coop?.marks[t.kaijuIndex] ?? [];
+      const key = colors.join(',');
+      if (key !== c.lastMarks) {
+        c.lastMarks = key;
+        c.marks.replaceChildren();
+        for (const color of colors) {
+          const dot = el('span', 'kaiju-coop-mark', c.marks, '●');
+          dot.style.color = color;
+        }
+      }
     }
     this.last.chips = chips;
     const warn = warningText(raid);

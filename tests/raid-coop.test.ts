@@ -108,6 +108,7 @@ describe('state の怪獣', () => {
       missiles: [],
       kaiju: k,
       defense: null,
+      kaiju2: null,
     };
     const back = decodeMessage(encodeMessage(msg));
     if (back?.type !== 'state' || !back.kaiju) throw new Error('decode');

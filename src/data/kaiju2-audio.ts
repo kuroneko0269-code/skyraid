@@ -1,4 +1,4 @@
-// 9-6b: ネフィルガの効果音の数値（合成。?dev=kaiju2 の遅延チャンクだけが読む）。鳴らし方は src/audio/sfx/kaiju2-sounds.ts。
+// 9-6b: ネフィルガの効果音の数値（合成。ネフィルガの遅延チャンクだけが読む）。鳴らし方は src/audio/sfx/kaiju2-sounds.ts。
 // 巨大なので定位なしで鳴らし、音量は距離で下げる（ヴォルガスの KAIJU_SOUND.distance と同じ考え）
 export const KAIJU2_SOUND = {
   distance: { refDistance: 800, minGain: 0.12 },

@@ -1,14 +1,23 @@
-// 9-6b: ネフィルガのソロのレイドのミッション（?dev=kaiju2 の裏だけ。遅延チャンクがレイドの別の怪獣として登録する）。
+// 9-6b: ネフィルガのソロのレイドのミッション。9-6c: 一般に公開（起動時に登録する。判定・形・HUD・音は遅延チャンクで、
+// ミッションを始める前・再生の前に読む: src/ui/kaiju2-link.ts）。起動時に読むので、ここは名前と数値の参照だけにする。
 // 港湾都市・開始位置・報酬の式（2,000 CR × 時間ボーナス × 高難度 1.8・失敗 300）はヴォルガスと同じ。出現物は無く、
-// 怪獣は差し込み口（missions/kaiju2-dev.ts）が出す。失敗は嵐が街に着く（制限時間）・戦域離脱
+// 怪獣は差し込み口（missions/kaiju2-dev.ts）が出す。失敗は嵐の時間切れ・全体の時間切れ（9-6c で理由を分けた）・戦域離脱
+import { t } from '../core/i18n';
 import { RAID_CONFIG } from '../data/kaiju';
-import { k2list, k2t } from '../data/kaiju2-text';
 import { RAID_RULES, type RaidDifficulty } from '../data/raid';
+import { NEPHIRGA_ID } from '../data/raid-kaiju';
 import type { RaidVariant } from './raid-variants';
 import type { MissionDef } from './types';
 
-export const NEPHIRGA_ID = 'nephirga';
+export { NEPHIRGA_ID } from '../data/raid-kaiju';
 export const NEPHIRGA_MISSION_ID = 'raidNephirga';
+
+/** ブリーフィングの文（遅延チャンクの文言の表にある。読み込むまでは空。kaiju2-link.ts が読んだときに差す） */
+let briefingLines: () => readonly string[] = () => [];
+
+export function setNephirgaBriefing(fn: () => readonly string[]): void {
+  briefingLines = fn;
+}
 
 export function nephirgaRaidMission(difficulty: RaidDifficulty = 'normal'): MissionDef {
   return {
@@ -25,12 +34,12 @@ export function nephirgaRaidMission(difficulty: RaidDifficulty = 'normal'): Miss
         start: 'withPrevious',
         damageRatio: 1,
         get label() {
-          return k2t('objective');
+          return t('kaiju2.objective');
         },
       },
     ],
     success: 'allRequiredObjectives',
-    failConditions: ['kaijuReachedCity', 'outOfBounds'],
+    failConditions: ['stormTimeUp', 'totalTimeUp', 'outOfBounds'],
     reward: { baseCredits: RAID_RULES.reward.soloBase, raid: { difficulty, kaiju: NEPHIRGA_ID } },
   };
 }
@@ -38,8 +47,8 @@ export function nephirgaRaidMission(difficulty: RaidDifficulty = 'normal'): Miss
 export const NEPHIRGA_VARIANT: RaidVariant = {
   id: NEPHIRGA_ID,
   missionId: NEPHIRGA_MISSION_ID,
-  label: () => k2t('dialogLabel'),
+  label: () => t('kaiju2.name'),
   mission: nephirgaRaidMission,
-  title: (d) => k2t(d === 'hard' ? 'titleHard' : 'titleNormal'),
-  strings: () => ({ title: k2t('missionTitle'), briefing: k2list('briefing') }),
+  title: (d) => t(d === 'hard' ? 'kaiju2.titleHard' : 'kaiju2.titleNormal'),
+  strings: () => ({ title: t('kaiju2.missionTitle'), briefing: briefingLines() }),
 };

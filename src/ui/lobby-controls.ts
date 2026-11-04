@@ -1,7 +1,8 @@
 // ロビーの部屋の画面の部品（6-6。lobby-room.ts から分けた）: 選択肢のセグメント・押すと切り替わるボタン・モードの表示名
+import { RAID_KAIJU_IDS, VORGAS_ID, raidKaijuName, raidKaijuOf } from '../data/raid-kaiju';
 import { t, tn } from '../core/i18n';
 import type { PvpMode } from '../data/pvp';
-import { RAID_DIFFICULTY_LABELS } from '../data/raid';
+import { RAID_DIFFICULTIES, RAID_DIFFICULTY_LABELS } from '../data/raid';
 import type { GameSettings } from '../net/protocol';
 import { createButton } from './screen';
 import { Segmented } from './segmented';
@@ -61,6 +62,7 @@ export const minutes = (s: number): string => tn('lobby.minutes', Math.round(s /
 export function rulesSummary(st: Readonly<GameSettings>): string {
   if (st.mode === 'raid')
     return t('lobby.rules.raid', {
+      kaiju: raidKaijuName(raidKaijuOf(st.raidKaiju)),
       difficulty: RAID_DIFFICULTY_LABELS[st.hard ? 'hard' : 'normal'],
     });
   if (st.mode === 'defense')
@@ -99,3 +101,34 @@ export const RULE_TOGGLES: readonly (readonly [RuleToggle, string])[] = [
   ['aimAssist', 'lobby.rule.aimAssist'],
   ['autoFire', 'lobby.rule.autoFire'],
 ];
+
+/** 9-6c: レイドの怪獣（ヴォルガス / ネフィルガ。値は設定の番号）と 6-6 の難易度の選択肢（レイドのときだけ出す） */
+export function raidRuleSegments(
+  parent: HTMLElement,
+  onChange: () => void,
+): [Segmented, Segmented] {
+  const kaiju = ruleSegment(
+    parent,
+    t('lobby.rule.kaiju'),
+    RAID_KAIJU_IDS.map((_, i) => i),
+    (v) => raidKaijuName(raidKaijuOf(Number(v))),
+    onChange,
+  );
+  const difficulty = ruleSegment(
+    parent,
+    t('lobby.rule.difficulty'),
+    RAID_DIFFICULTIES,
+    (v) => (v === 'hard' ? RAID_DIFFICULTY_LABELS.hard : RAID_DIFFICULTY_LABELS.normal),
+    onChange,
+  );
+  return [kaiju, difficulty];
+}
+
+/** レイドの定型文（6-6。頭・脚・結晶・避けて）はレイドのときだけ。9-6c: ネフィルガでは部位の 3 つを隠して「避けて」だけ */
+export function syncRaidChat(buttons: readonly HTMLElement[], st: Readonly<GameSettings>): void {
+  const raid = st.mode === 'raid';
+  const nephirga = raidKaijuOf(st.raidKaiju) !== VORGAS_ID;
+  buttons.forEach((b, i) => {
+    b.hidden = !raid || (nephirga && i < buttons.length - 1);
+  });
+}

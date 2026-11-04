@@ -1,5 +1,7 @@
 // PvP（5-1）・協力レイド（6-2）の入口の配線（main.ts から分けた。7-A の事前修正。挙動は変えていない）:
 // 選んだとき・?room のときだけ通信の部分を読み込む。画質に合わせた機体モデルの細かさもここで配る
+import { loadKaiju2, loadedKaiju2 } from './kaiju2-link';
+import type { Kaiju2Source } from './pvp-flight';
 import type { PerspectiveCamera, Scene } from 'three';
 import type { GameAudio } from '../audio/game-audio';
 import type { GameState } from '../core/game-state';
@@ -48,6 +50,7 @@ export interface PvpWiring {
 export function createPvpWiring(p: PvpWiringParts): PvpWiring {
   const { save, audio, activeMap, session } = p;
   let coopKaiju: { body: KaijuBodyView; fx: KaijuEffectsView | null } | null = null;
+  let coopKaiju2: Kaiju2Source | null = null;
   const pvp = new PvpEntry(p.screens, p.search, {
     game: p.game,
     scene: p.scene,
@@ -81,6 +84,27 @@ export function createPvpWiring(p: PvpWiringParts): PvpWiring {
       p.kaijuHud.setSource(src ? src.hud : null);
       audio.setKaijuSource(src?.body ?? null);
     },
+    // 9-6c: 協力のネフィルガ（遅延チャンクを読んでから表示元を差す。スタンのノイズはヴォルガスの HUD の部品で出す）
+    kaiju2Source: (src) => {
+      coopKaiju2 = src;
+      const frame = { body: null, locked: null, stun: 0, coop: null };
+      p.kaijuHud.setSource(
+        src
+          ? () => {
+              frame.stun = src.stun();
+              return frame;
+            }
+          : null,
+      );
+      if (!src) {
+        loadedKaiju2()?.setCoop(null);
+        return;
+      }
+      void loadKaiju2().then((rt) => {
+        rt?.setCoop(coopKaiju2);
+      });
+    },
+    kaijuGround: activeMap.ordnanceGround,
   });
   // 機体モデルの細かさ（4-3。画質「低」は LOD）と陽炎の屈折（4-4。「高」だけ）
   p.quality.onPreset((preset) => {

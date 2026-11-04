@@ -223,6 +223,8 @@ export class MissionRunner {
       if (c === 'playerDown' && w.playerDowns > this.initialDowns) return c;
       if (c === 'escortLost' && w.escortLost) return c;
       if (c === 'kaijuReachedCity' && w.kaijuReachedCity) return c;
+      if (c === 'stormTimeUp' && w.kaijuStormTimeUp === true) return c;
+      if (c === 'totalTimeUp' && w.kaijuTotalTimeUp === true) return c;
       if (c === 'outOfBounds' && this.boundary.expired) return c;
       if (c === 'timeUp' && this.timeLeft !== null && this.timeLeft <= 1e-9) return c;
     }

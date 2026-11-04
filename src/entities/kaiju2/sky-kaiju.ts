@@ -101,6 +101,8 @@ export class SkyKaiju {
   readonly diveTarget = vec3();
   /** この攻撃で当てたか（1 回の攻撃で 1 回だけ当てる） */
   attackHit = false;
+  /** 9-6c: 段階 2 から、前の急降下（無ければ段階 2 に入ってから）からの秒数。attacks.dive.dueSeconds 以上で出番 */
+  diveWait: number = C.attacks.dive.dueSeconds;
   /** 9-6b: 今の雷球の扇で当たった数（attacks.orbs.maxHits で残りを消す） */
   orbVolleyHits = 0;
   /** 9-6b: 難易度（レイド）: 予兆の秒数・攻撃の間隔・当たりのダメージの倍率。確かめる場は 1 */

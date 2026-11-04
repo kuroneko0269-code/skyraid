@@ -4,6 +4,7 @@ import { PVP_CONFIG } from '../data/pvp';
 import { ByteReader, ByteWriter, readQuat, writeQuat } from './codec';
 import { readKaiju, writeKaiju } from './codec-kaiju';
 import { readDefense, writeDefense } from './codec-defense';
+import { readKaiju2, writeKaiju2 } from './codec-kaiju2';
 import { readScore, writeScore } from './codec-score';
 import {
   PL_AGAIN,
@@ -133,6 +134,7 @@ export function encodeMessage(msg: NetMessage): ArrayBuffer {
       }
       writeKaiju(w, msg.kaiju);
       writeDefense(w, msg.defense);
+      writeKaiju2(w, msg.kaiju2);
       break;
     case 'event':
       w.u8(EVENT_KINDS.indexOf(msg.kind)).u8(msg.a).u8(msg.b).u32(msg.tick).u32(msg.n);
@@ -225,7 +227,8 @@ function decodeBody(r: ByteReader): NetMessage | null {
       const missiles: MissileStateMsg[] = [];
       for (let i = 0; i < m; i++) missiles.push(readMissile(r));
       const kaiju = readKaiju(r);
-      return { type: 'state', tick, aircraft, missiles, kaiju, defense: readDefense(r) };
+      const defense = readDefense(r);
+      return { type: 'state', tick, aircraft, missiles, kaiju, defense, kaiju2: readKaiju2(r) };
     }
     case TYPE_IDS.event: {
       const kind = EVENT_KINDS[r.u8()];

@@ -29,6 +29,9 @@ export interface MissionWorld {
   readonly kaijuDamageRatio: number;
   /** 怪獣が最終フェーズの時間切れで街に到達したか（6-2）。6-4 から街（タワー群）に着いたときも */
   readonly kaijuReachedCity: boolean;
+  /** 9-6c: ネフィルガの嵐の制限時間 / 全体の制限時間が切れた（ほかの世界は持たない = false） */
+  readonly kaijuStormTimeUp?: boolean;
+  readonly kaijuTotalTimeUp?: boolean;
   /** 守れた建物の割合（%。街のないマップは null。6-4） */
   readonly protectedBuildings?: number | null;
 }

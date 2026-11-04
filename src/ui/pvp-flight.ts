@@ -28,13 +28,13 @@ import type { ResultView } from './pvp-result';
 import type { BuildingField } from '../combat/buildings';
 import { RAID_RULES } from '../data/raid';
 import type { RaidBriefing } from './raid-briefing';
-import { RaidFlight, type KaijuSource } from './raid-flight';
+import { RaidFlight, type Kaiju2Source, type KaijuSource } from './raid-flight';
 import { DefenseFlight } from './defense-flight';
 import { isCoopMode } from '../net/lobby-rules';
 import type { DefenseHud } from './defense-hud';
 import type { DefenseSoundKind } from '../data/defense';
 
-export type { KaijuSource } from './raid-flight';
+export type { Kaiju2Source, KaijuSource } from './raid-flight';
 
 export type PvpSound = 'countdown' | 'go' | 'alert';
 
@@ -59,6 +59,9 @@ export interface PvpFlightDeps {
   readonly sound: (kind: PvpSound) => void;
   /** レイドの怪獣の表示元を差し替える（6-2。描画・HUD・音。null で戻す） */
   readonly kaijuSource: (src: KaijuSource | null) => void;
+  /** 9-6c: ネフィルガの表示元を差し替える（遅延チャンク。null で戻す）と、ネフィルガが避ける高さ（地表と建物の屋根） */
+  readonly kaiju2Source: (src: Kaiju2Source | null) => void;
+  readonly kaijuGround: (x: number, z: number) => number;
   /** 街の建物（6-6。協力レイドはホストだけが壊して配る） */
   readonly buildings: () => BuildingField | null;
   /** 協力レイドのブリーフィング（6-6）と、前に見たか・見た印 */
@@ -113,6 +116,7 @@ export class PvpFlight {
             groundHeight: deps.groundHeight,
             obstacles: deps.obstacles,
             buildings,
+            kaijuGround: deps.kaijuGround,
           })
         : new ClientGame(room, { own, obstacles: deps.obstacles, buildings });
     this.mirror = new PvpMirror(deps.session, room.localPlayerId, deps.otherGun);
@@ -121,6 +125,7 @@ export class PvpFlight {
         ? new RaidFlight(this.net, this.mirror, () => this.players.keys(), this.nameOf, {
             ...deps,
             hard: room.settings.hard,
+            raidKaiju: room.settings.raidKaiju,
           })
         : null;
     this.defense =
@@ -292,7 +297,11 @@ export class PvpFlight {
     const reason = this.raid
       ? this.raid.cleared
         ? 'raidClear'
-        : 'raidFail'
+        : this.raid.failReason === 'storm'
+          ? 'raidStormFail'
+          : this.raid.failReason === 'total'
+            ? 'raidTotalFail'
+            : 'raidFail'
       : this.defense
         ? this.defense.cleared
           ? 'defenseClear'

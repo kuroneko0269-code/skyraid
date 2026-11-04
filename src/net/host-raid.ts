@@ -11,6 +11,9 @@ import type { GroundHeightFn } from '../entities/aircraft';
 import { PreStart } from './briefing';
 import { spawnPosition } from './net-game';
 import { RaidHost } from './raid-host';
+import { Kaiju2Host } from './kaiju2-host';
+import { findMap } from '../data/maps';
+import { raidKaijuOf, NEPHIRGA_ID } from '../data/raid-kaiju';
 import type { EventMsg, GameSettings, PlayerInfo, RuinMsg, ScoreEntry, ScoreMsg } from './protocol';
 
 /** 開始前: レイドはブリーフィング（省略は 5 秒）→ カウントダウン（省略は 3 秒）。PvP はカウントダウンだけ */
@@ -45,23 +48,75 @@ export function createRaidHost(
   });
 }
 
-/** 成績（全員）。レイドの残り時間は最終フェーズの残り */
+/** 9-6c: 成績のレイドの欄の出どころ（ヴォルガスの RaidHost・ネフィルガの Kaiju2Host） */
+export interface RaidScoreSource {
+  readonly remaining: number;
+  fields(id: number): Pick<ScoreEntry, 'partDamage' | 'breaks'>;
+}
+
+/** ヴォルガス: 残りは最終フェーズの残り・部位別の与ダメージは本体の stats */
+export function vorgasScore(raid: RaidHost | null): RaidScoreSource | null {
+  if (!raid) return null;
+  return {
+    get remaining() {
+      return raid.kaiju.finalRemaining ?? 0;
+    },
+    fields: (id) => raidScoreFields(raid, id),
+  };
+}
+
+/** 9-6c: ネフィルガ: 残りは制限時間（嵐と全体の短い方）・部位別の与ダメージ（KAIJU2_TARGETS の順） */
+export function nephirgaScore(raid: Kaiju2Host | null): RaidScoreSource | null {
+  if (!raid) return null;
+  return {
+    get remaining() {
+      return raid.timeLeft;
+    },
+    fields: (id) => raid.scoreFields(id),
+  };
+}
+
+/** 9-6c: 協力レイドのネフィルガ（設定がネフィルガのときだけ）を用意し、arena をレイドの復帰にする */
+export function createKaiju2Host(
+  arena: PvpArena,
+  room: { readonly players: readonly unknown[]; readonly settings: GameSettings },
+  deps: {
+    readonly groundHeight?: GroundHeightFn;
+    readonly kaijuGround?: (x: number, z: number) => number;
+  },
+  rng: () => number,
+): Kaiju2Host | null {
+  const s = room.settings;
+  if (s.mode !== 'raid' || raidKaijuOf(s.raidKaiju) !== NEPHIRGA_ID) return null;
+  const seed = Math.floor(rng() * 0xffffffff);
+  useRaidRespawn(arena);
+  const ground = deps.kaijuGround ?? deps.groundHeight;
+  return new Kaiju2Host(arena, room.players.length, {
+    ground: ground ? (x, z) => ground(x, z) : undefined,
+    difficulty: s.hard ? 'hard' : 'normal',
+    center: findMap(RAID_CONFIG.mapId).center,
+    start: RAID_CONFIG.start,
+    seed,
+  });
+}
+
+/** 成績（全員）。レイドの残り時間は最終フェーズ（ネフィルガは制限時間）の残り */
 export function scoreMsg(
   fighters: readonly PvpFighter[],
-  raid: RaidHost | null,
+  raid: RaidScoreSource | null,
   matchRemaining: number,
   over: boolean,
 ): ScoreMsg {
   return {
     type: 'score',
-    remainingSeconds: raid ? (raid.kaiju.finalRemaining ?? 0) : matchRemaining,
+    remainingSeconds: raid ? raid.remaining : matchRemaining,
     over,
     players: fighters.map((f) => scoreEntry(f, raid)),
   };
 }
 
 /** 成績の 1 人分 */
-export function scoreEntry(f: PvpFighter, raid: RaidHost | null): ScoreEntry {
+export function scoreEntry(f: PvpFighter, raid: RaidScoreSource | null): ScoreEntry {
   return {
     id: f.id,
     kills: f.kills,
@@ -69,7 +124,7 @@ export function scoreEntry(f: PvpFighter, raid: RaidHost | null): ScoreEntry {
     shots: f.shots,
     hits: f.hits,
     bestStreak: f.bestStreak,
-    ...raidScoreFields(raid, f.id),
+    ...(raid ? raid.fields(f.id) : { partDamage: [], breaks: 0 }),
   };
 }
 

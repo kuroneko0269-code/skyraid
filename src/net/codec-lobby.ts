@@ -66,6 +66,8 @@ export function writeSettings(w: ByteWriter, s: Readonly<GameSettings>): void {
   );
   // 7-5: 天候
   w.str(s.weather);
+  // 9-6c: レイドの怪獣
+  w.u8(s.raidKaiju & 0xff);
 }
 
 export function readSettings(r: ByteReader): GameSettings {
@@ -74,6 +76,7 @@ export function readSettings(r: ByteReader): GameSettings {
   const scoreLimit = r.u8();
   const f = r.u8();
   const weather = r.str();
+  const raidKaiju = r.u8();
   return {
     mapId,
     timeLimitSeconds,
@@ -85,6 +88,7 @@ export function readSettings(r: ByteReader): GameSettings {
     weather,
     aimAssist: (f & SET_AIM_ASSIST) !== 0,
     autoFire: (f & SET_AUTO_FIRE) !== 0,
+    raidKaiju,
   };
 }
 

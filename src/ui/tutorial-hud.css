@@ -218,3 +218,69 @@
     padding: 2px 6px;
   }
 }
+
+/*
+ * 9-6c の事前修正: 背の低い横向きのスマホ（568×320 など）では、指示の欄が速度・高度の箱（ラダーの両脇の上端）にかかっていた。
+ * 左の ◀ と右の ⏸ のボタンの間の帯（箱より上）に収める: 1 行目に小さな図・章と段階・中断、2 行目から指示（欄の幅いっぱい）。
+ * 注意書き（練習なので撃墜されない）は隠し、ヒント（黄色）が出ている間は指示の代わりにヒントを出す
+ */
+@media (max-height: 360px) {
+  .tutorial-hud {
+    box-sizing: border-box;
+    top: calc(3px + env(safe-area-inset-top, 0px));
+    left: calc(76px + env(safe-area-inset-left, 0px));
+    width: min(
+      400px,
+      calc(100vw - 208px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))
+    );
+    transform: none;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'fig count abort'
+      'text text abort'
+      'hint hint abort';
+    align-items: center;
+    column-gap: 6px;
+    row-gap: 0;
+    padding: 2px 4px 3px 8px;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .tutorial-hud-head,
+  .tutorial-hud-body {
+    display: contents;
+  }
+
+  .tutorial-hud-count {
+    grid-area: count;
+    font-size: 11px;
+  }
+
+  .tutorial-hud-abort {
+    grid-area: abort;
+    align-self: center;
+    padding: 2px 8px;
+  }
+
+  .tutorial-hud-figure {
+    grid-area: fig;
+    width: 40px;
+  }
+
+  .tutorial-hud-text {
+    grid-area: text;
+  }
+
+  .tutorial-hud-hint {
+    grid-area: hint;
+    padding: 0 6px;
+    font-size: 11px;
+  }
+
+  .tutorial-hud:has(.tutorial-hud-hint:not([hidden])) .tutorial-hud-text,
+  .tutorial-hud-note {
+    display: none;
+  }
+}

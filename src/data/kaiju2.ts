@@ -1,6 +1,6 @@
 // 9-6a: 空を飛ぶ怪獣「ネフィルガ（Nephirga）」の数値（仮。9-6b / 9-6c で決める）。設計は docs/kaiju2.md。
 // 動きは src/entities/kaiju2/（Three.js 非依存）、攻撃の判定は src/ai/kaiju2-attacks.ts、形は src/render/kaiju2-model/。
-// まだ ?dev=kaiju2 の裏だけで使う（起動時には読まない。遅延チャンク）。
+// 9-6c で公開（起動時には読まない。遅延チャンクと協力のチャンク）。
 // 距離は m、時間は秒、角度は度、速さは m/s。座標はワールド（前方は forward の単位ベクトル）
 
 /** 部位（壊すと動きが変わる） */
@@ -150,6 +150,14 @@ export const KAIJU2_CONFIG = {
       maxRange: 2200,
       /** 降下を止める地面からの高さ */
       pullUpClearance: 160,
+      /**
+       * 9-6c: 急降下が出にくかった（段階 2 が 30〜40 秒と短く、自機が 100m 以上下にいるときだけ）ので、段階 2 に入ってからと
+       * 前の急降下から dueSeconds 経つと「出番」にする。出番の間は自機が dueMinDrop（上なら負）まで下・dueMinRange m から選べ、
+       * 雷球より先に選ぶ（尾の打ち払い・突風は先）。段階 2 に入った最初の攻撃は出番（段階が変わった合図に見せる）
+       */
+      dueSeconds: 20,
+      dueMinDrop: -250,
+      dueMinRange: 200,
     },
     tail: {
       windup: 0.9,

@@ -33,16 +33,16 @@ export function raceRecord(
   };
 }
 
-/** ソロのレイドのクリア */
+/** ソロのレイドのクリア。key は難易度（ヴォルガス）か「怪獣:難易度」（9-6c。src/data/raid-kaiju.ts の raidRecordKey） */
 export function raidRecord(
-  difficulty: string,
+  key: string,
   elapsedSeconds: number,
   aircraftId: string,
   rank: string | null,
 ): RecordInput {
   return {
     kind: 'raid',
-    key: difficulty,
+    key,
     aircraftId,
     valueMs: Math.round(elapsedSeconds * 1000),
     detail: rank ? { rank } : {},

@@ -10,7 +10,6 @@ import {
   attackCandidates,
   attackUsable,
   choosePerch,
-  diveHits,
   geometryTo,
   gustHits,
   launchOrbs,
@@ -18,11 +17,11 @@ import {
   stepOrbs,
   tailTip,
 } from './kaiju2-attacks';
+import { stepDive } from './kaiju2-dive';
 import { stepLanding, stepPerched, stepTakeoff } from './kaiju2-perch';
 import { updateKaiju2Pose } from '../entities/kaiju2/kaiju2-pose';
 
 const A = C.attacks;
-const DEG = Math.PI / 180;
 
 /** 怪獣が見る世界（プレイヤー 1 機・フレア・当たったときの知らせ先） */
 export interface Kaiju2Target {
@@ -74,6 +73,7 @@ export class Kaiju2Ai {
     k.attackCooldown = C.firstAttackDelay;
     k.history.length = 0;
     k.attackHit = false;
+    k.diveWait = A.dive.dueSeconds;
     for (const o of k.orbs) o.active = false;
     for (const key of Object.keys(k.hits) as Kaiju2Attack[]) k.hits[key] = 0;
     k.setState('cruise', null);
@@ -85,6 +85,8 @@ export class Kaiju2Ai {
   step(dt: number, target: Kaiju2Target, flares: Pool<Flare> | null): void {
     const k = this.body;
     k.beginStep();
+    // 9-6c: 急降下の出番の時計（段階 2 から）
+    if (k.phase >= A.dive.fromPhase && k.attack !== 'dive') k.diveWait += dt;
     switch (k.state) {
       case 'cruise':
         this.cruise(dt, target);
@@ -139,14 +141,22 @@ export class Kaiju2Ai {
     }
     k.attackCooldown -= dt;
     if (k.attackCooldown > 0 || !target.active) return;
-    const cands = attackCandidates(geometryTo(k, target.position), k.phase, k.broken, k.history);
-    const a = pickAttack(cands, k.random.next);
+    const due = k.diveWait >= A.dive.dueSeconds;
+    const cands = attackCandidates(
+      geometryTo(k, target.position),
+      k.phase,
+      k.broken,
+      k.history,
+      due,
+    );
+    const a = pickAttack(cands, k.random.next, due);
     if (a === null) {
       k.attackCooldown = 1;
       return;
     }
     k.history.push(a);
     if (k.history.length > 4) k.history.shift();
+    if (a === 'dive') k.diveWait = 0;
     k.attackHit = false;
     k.setState('windup', a);
   }
@@ -239,7 +249,17 @@ export class Kaiju2Ai {
         }
         break;
       case 'dive':
-        this.dive(dt, target);
+        stepDive(
+          k,
+          dt,
+          target,
+          (a, dmg, stun) => {
+            this.hit(a, dmg, stun);
+          },
+          () => {
+            this.endAttack();
+          },
+        );
         return;
     }
     this.advance(t);
@@ -259,75 +279,5 @@ export class Kaiju2Ai {
     const k = this.body;
     k.setState('cruise', null);
     k.attackCooldown = (C.attackInterval[k.phase - 1] ?? 7) * k.intervalScale;
-  }
-
-  /** 急降下: 上昇（予兆）→ 狙った点へ降下（攻撃）→ 引き起こし（硬直 = 攻める隙） */
-  private dive(dt: number, target: Kaiju2Target): void {
-    const k = this.body;
-    const d = A.dive;
-    if (k.state === 'windup') {
-      // 上昇: プレイヤーの手前・上の点へ（終わったときにプレイヤーが前の下に来る）
-      const tp = target.position;
-      const hx = tp.x - k.position.x;
-      const hz = tp.z - k.position.z;
-      const hl = Math.hypot(hx, hz) || 1;
-      want.x = tp.x - (hx / hl) * d.setback - k.position.x;
-      want.z = tp.z - (hz / hl) * d.setback - k.position.z;
-      const wl = Math.hypot(want.x, want.z) || 1;
-      const wantY = Math.min(k.ceiling, tp.y + d.above) - k.position.y;
-      want.y = Math.max(-0.2, Math.min(Math.tan(d.climbDeg * DEG), wantY / wl)) * wl;
-      k.steer(want, k.turnRate * 1.5 * dt);
-      k.approachSpeed(d.climbSpeed, 40, dt);
-      k.integrate(dt);
-      if (k.stateTime >= d.windup * k.windupScale) {
-        const p = target.position;
-        const v = target.velocity;
-        k.diveTarget.x = p.x + v.x * d.lead;
-        k.diveTarget.y = p.y + v.y * d.lead;
-        k.diveTarget.z = p.z + v.z * d.lead;
-        k.setState('attack');
-      }
-      return;
-    }
-    if (k.state === 'attack') {
-      const dir = k.directionTo(k.diveTarget);
-      // 狙った点を追う（ゆっくり）。予兆の終わりの向きが大きく違っても、始めの 0.6 秒は速く向ける
-      const turn = (k.stateTime < d.aimSeconds ? d.aimDegPerSec : d.turnDegPerSec) * DEG * dt;
-      want.x = dir.x;
-      want.y = dir.y;
-      want.z = dir.z;
-      k.steer(want, turn, false);
-      k.approachSpeed(d.speed, 140, dt);
-      k.integrate(dt);
-      if (!k.attackHit && target.active && diveHits(k, target.position)) {
-        k.attackHit = true;
-        this.hit('dive', d.damage, 0);
-      }
-      const tx = k.diveTarget.x - k.position.x;
-      const ty = k.diveTarget.y - k.position.y;
-      const tz = k.diveTarget.z - k.position.z;
-      const passed =
-        k.stateTime > d.aimSeconds && tx * k.forward.x + ty * k.forward.y + tz * k.forward.z < 0;
-      const low = k.position.y - k.floorAt(k.position.x, k.position.z) < d.pullUpClearance;
-      if (passed || low || k.stateTime >= d.active) k.setState('recover');
-      return;
-    }
-    // 引き起こし: 水平より少し上へ、ゆっくり（腹を見せる）
-    const f = k.forward;
-    const h = Math.hypot(f.x, f.z) || 1;
-    want.x = f.x / h;
-    want.y = 0.3;
-    want.z = f.z / h;
-    k.steer(want, 30 * DEG * dt);
-    k.approachSpeed(d.recoverSpeed, 50, dt);
-    k.integrate(dt);
-    if (k.stateTime < d.recover) return;
-    this.endAttack();
-    // 9-6b: 隙をつなげる: 急降下で疲れていれば（スタミナが perchAfterDive 未満）そのまま止まり木へ
-    if (
-      k.stamina < C.perch.stamina * C.perch.perchAfterDive &&
-      choosePerch(k, k.random.next, k.perch)
-    )
-      k.setState('landing', null);
   }
 }

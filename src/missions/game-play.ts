@@ -125,7 +125,7 @@ export class GamePlay {
     this.setRace(null);
     this.setDefense(null);
     this.session.startMission(def.start, def.practice === true);
-    // 9-6b: ?dev=kaiju2 のレイドの怪獣は差し込み口が引き受ける（付けていなければ今までと同じ）
+    // 9-6b: ネフィルガのレイドは差し込み口が引き受ける（付けていなければ今までと同じ）
     const world = freeExtraOf(this)?.startMission?.(def) ?? this.session;
     const runner = new MissionRunner(def, world);
     if (chapter) this.tutorial = new TutorialCoach(chapter, this.session, runner);
@@ -244,7 +244,7 @@ export class GamePlay {
     this.session.step(controls, input, dt);
     this.runner?.step(dt);
     this.tutorial?.step(input, dt);
-    // 9-6a: フリーフライトの開発中の物（?dev=kaiju2 のときだけ付いている）。9-6b: 引き受けたミッションでも動く
+    // 9-6a: フリーフライトの開発中の物（ネフィルガの遅延チャンクを読んだら付く）。9-6b: 引き受けたミッションでも動く
     // （ほかのミッション・防衛戦などを始めると stop されて止まっている）
     if (this.defense === null) freeExtraOf(this)?.step(dt);
     this.stepResupply(dt);

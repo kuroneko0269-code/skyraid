@@ -27,7 +27,7 @@ export type CardSource = CardCommon &
     | {
         readonly mode: 'raid';
         readonly difficulty: RaidDifficulty;
-        /** 9-6b: ヴォルガス以外の怪獣（?dev=kaiju2 のときだけ。省略はヴォルガス） */
+        /** 9-6b: ヴォルガス以外の怪獣（9-6c からネフィルガ。省略はヴォルガス） */
         readonly kaiju?: string;
         readonly success: boolean;
         readonly rank: string | null;

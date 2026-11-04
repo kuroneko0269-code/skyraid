@@ -4,11 +4,10 @@ import type { MissileSpec } from '../data/weapons';
 import { splashDamage, type Detonation } from './missile';
 import { nearestPerGroup, type CombatTarget } from './target';
 import { PvpFighter, RewoundTarget } from './pvp-fighter';
-import { KaijuPart } from '../entities/kaiju-part';
 import { farthestSpawn } from './pvp-spawn';
 import { isRookie } from './pvp-rules';
 import { PVP_SPAWN_POINTS } from '../data/pvp';
-import type { PvpControls } from './arena-types';
+import type { ArenaKaijuPart, PvpControls } from './arena-types';
 import { DEFENSE_ID_BASE, KAIJU_ID_BASE, NOBODY, RESPAWN_BOOST } from './arena-types';
 import { PVP_CONFIG } from '../data/pvp';
 import { headingQuat } from '../entities/enemy-aircraft';
@@ -17,30 +16,30 @@ import { inCone } from './targeting';
 import type { Vec3 } from '../flight/math';
 
 /** ミサイルの信管・誘導の対象: 機体か怪獣の部位か防衛戦の敵（7-2） */
-export type ArenaFuseTarget = PvpFighter | KaijuPart | CombatTarget;
+export type ArenaFuseTarget = PvpFighter | ArenaKaijuPart | CombatTarget;
 
 /** スタン中の操作（操縦・射撃なし。オートレベルと反転の設定はそのまま） */
 export const NEUTRAL = { pitch: 0, roll: 0, yaw: 0, throttle: 0, afterburner: false };
 
 /** ミサイルの発射で、ロックした部位が円錐（+ 余裕）の中か見直す。外れていれば null（無誘導） */
 export function lockablePart(
-  part: KaijuPart,
+  part: ArenaKaijuPart,
   from: Readonly<Vec3>,
   forward: Readonly<Vec3>,
   range: number,
   coneDeg: number,
-): KaijuPart | null {
+): ArenaKaijuPart | null {
   return part.active && inCone(from, forward, part.position, range, coneDeg) ? part : null;
 }
 
 /** 爆心から半径以内の部位のうち、最も近い 1 つに撃った人の ID 付きで範囲ダメージ */
 export function splashKaijuParts(
-  parts: readonly KaijuPart[],
+  parts: readonly ArenaKaijuPart[],
   d: Readonly<Detonation<unknown>>,
   spec: MissileSpec,
 ): void {
   if (parts.length === 0) return;
-  const list: KaijuPart[] = [];
+  const list: ArenaKaijuPart[] = [];
   const dist: number[] = [];
   for (const p of parts) {
     if (!p.active) continue;
@@ -74,7 +73,7 @@ export function splashExtras(
 
 /** ロックしている部位の番号（6-6。ロックしていない・部位でなければ -1） */
 export function lockedPartIndex(
-  parts: readonly KaijuPart[],
+  parts: readonly ArenaKaijuPart[],
   locked: boolean,
   index: number,
 ): number {
@@ -100,7 +99,7 @@ export function lockTargetOf(
   f: PvpFighter,
   c: Readonly<PvpControls>,
   fwd: Readonly<Vec3>,
-  parts: readonly KaijuPart[],
+  parts: readonly ArenaKaijuPart[],
   extras: readonly CombatTarget[],
 ): ArenaFuseTarget | null {
   if (!c.locked) return null;
@@ -122,7 +121,7 @@ export function lockTargetOf(
 export function rebuildTargets(
   fighters: ReadonlyMap<number, PvpFighter>,
   list: PvpFighter[],
-  parts: readonly KaijuPart[],
+  parts: readonly ArenaKaijuPart[],
   extras: readonly CombatTarget[],
   fuseList: ArenaFuseTarget[],
   sameSide: (a: number, b: number) => boolean,
@@ -138,9 +137,14 @@ export function rebuildTargets(
 }
 
 /** 起爆の event の b（当たった相手の ID。7-2 で防衛戦の敵を足した） */
-export function hitIdOf(t: ArenaFuseTarget | null, extras: readonly CombatTarget[]): number {
+export function hitIdOf(
+  t: ArenaFuseTarget | null,
+  extras: readonly CombatTarget[],
+  parts: readonly ArenaKaijuPart[],
+): number {
   if (t instanceof PvpFighter) return t.id;
-  if (t instanceof KaijuPart) return KAIJU_ID_BASE + t.index;
+  const part = kaijuPartOf(t, parts);
+  if (part) return KAIJU_ID_BASE + part.kaijuIndex;
   return t ? DEFENSE_ID_BASE + extras.indexOf(t) : NOBODY;
 }
 
@@ -170,4 +174,9 @@ export function respawnFighter(
   const boost = rookieGuard && isRookie(f.id, list);
   f.revive(PVP_CONFIG.invulnerableSeconds, boost);
   send(i | (boost ? RESPAWN_BOOST : 0), s);
+}
+
+/** 対象が怪獣の部位なら返す（9-6c: ヴォルガス・ネフィルガのどちらも。部位の一覧に入っているかで見る） */
+export function kaijuPartOf(t: unknown, parts: readonly ArenaKaijuPart[]): ArenaKaijuPart | null {
+  return t !== null && (parts as readonly unknown[]).includes(t) ? (t as ArenaKaijuPart) : null;
 }

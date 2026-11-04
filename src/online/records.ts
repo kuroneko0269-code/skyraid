@@ -1,11 +1,12 @@
 // 送る記録（7-4、Three.js・DOM・Supabase 非依存）: 形・キー・送信前の不正値チェック（SQL の check と同じ規則）。
 // レース: key = コース id、value_ms = タイム（ペナルティ・ボーナス込み）。完走だけ
-// レイド: key = 難易度、value_ms = 撃破までの時間。ソロのクリアだけ
+// レイド: key = 難易度（ヴォルガス）か「怪獣:難易度」（9-6c）、value_ms = 撃破までの時間。ソロのクリアだけ
 // 防衛戦: key = マップ id:難易度、value_ms = 終わるまでの時間、detail.waves = クリアした波（0〜10）・detail.hq = 司令部の残り %。ソロだけ
 import { AIRCRAFT_MODELS } from '../data/aircraft';
 import { COURSES } from '../data/courses';
 import { DEFENSE_DIFFICULTIES, DEFENSE_MAPS } from '../data/defense';
-import { ONLINE_CONFIG, RECORD_KINDS, type RecordKind } from '../data/online';
+import { ONLINE_CONFIG, RANKED_RAID_KAIJU, RECORD_KINDS, type RecordKind } from '../data/online';
+import { raidRecordKey } from '../data/raid-kaiju';
 import { RACE_CONFIG } from '../data/race';
 import { RAID_DIFFICULTIES } from '../data/raid';
 import { UPGRADE_LEVELS } from '../data/upgrades';
@@ -35,7 +36,9 @@ export function defenseKey(mapId: string, difficulty: string): string {
 /** 種類ごとに受け付ける key（SQL の check と同じ） */
 export function validKeys(kind: RecordKind): readonly string[] {
   if (kind === 'race') return COURSES.map((c) => c.id);
-  if (kind === 'raid') return RAID_DIFFICULTIES;
+  // 9-6c: 怪獣ごとのキー（ヴォルガスは難易度だけ。ほかはサーバーの準備ができた怪獣だけ: RANKED_RAID_KAIJU）
+  if (kind === 'raid')
+    return RANKED_RAID_KAIJU.flatMap((k) => RAID_DIFFICULTIES.map((d) => raidRecordKey(k, d)));
   return DEFENSE_MAPS.flatMap((m) => DEFENSE_DIFFICULTIES.map((d) => defenseKey(m.mapId, d)));
 }
 

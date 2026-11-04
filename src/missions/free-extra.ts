@@ -7,6 +7,8 @@ import type { MissionWorld } from './world';
 export interface FreeExtra {
   /** 状態の走査の根（ハッシュ・キーフレームに入れる。関数・描画の物を持たないこと） */
   readonly stateRoot: object;
+  /** 9-6c: 動かしているか（false の間は状態の走査に入れない） */
+  readonly active: boolean;
   /** 飛行の始めのシード（GamePlay.reseed と同じ値） */
   reseed(seed: number): void;
   /** フリーフライトを始めた（やり直しも） */

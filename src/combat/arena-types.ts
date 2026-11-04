@@ -1,5 +1,15 @@
 // PvpArena の操作・判定の結果の型と ID の定数（6-6。pvp-arena.ts から分けた。pvp-arena.ts からも再エクスポート）。Three.js 非依存
 import type { AircraftControls } from '../entities/aircraft';
+import type { CombatTarget } from './target';
+
+/**
+ * 協力レイドの怪獣の部位（6-2 のヴォルガスの KaijuPart、9-6c のネフィルガの Kaiju2PartTarget）。機銃・ミサイルの対象で、
+ * 入力の targetId は KAIJU_ID_BASE + kaijuIndex。ダメージは攻撃した人の ID 付き
+ */
+export interface ArenaKaijuPart extends CombatTarget {
+  readonly kaijuIndex: number;
+  damageBy(amount: number, attacker: number): boolean;
+}
 
 /** 1 ステップ分の操作（NetControls と同じ形。飛行 + 戦闘） */
 export interface PvpControls extends AircraftControls {

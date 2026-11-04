@@ -2,7 +2,11 @@
 // 爆弾の当たりとロック・Tab の切り替えは今の仕組みがそのまま部位単位で動く（ヴォルガスの kaiju-part.ts と同じ考え）。
 // 位置は体の位置・向き・傾き・翼のたたみ具合から毎ステップ置き直す。ダメージは持ち主（kaiju2-raid.ts）へ渡す
 import { TEAM_ENEMY, type CombatTarget } from '../../combat/target';
-import { KAIJU2_RAID_CONFIG, type Kaiju2Target as TargetId } from '../../data/kaiju2-raid';
+import {
+  KAIJU2_RAID_CONFIG,
+  KAIJU2_TARGETS,
+  type Kaiju2Target as TargetId,
+} from '../../data/kaiju2-raid';
 import { vec3, type Vec3 } from '../../flight/math';
 import type { SkyKaiju } from './sky-kaiju';
 
@@ -11,8 +15,8 @@ export interface Kaiju2TargetOwner {
   readonly targetable: boolean;
   readonly isDestroyed: boolean;
   readonly velocity: Readonly<Vec3>;
-  /** この被弾で倒れたら true */
-  damageTarget(target: Kaiju2PartTarget, amount: number): boolean;
+  /** この被弾で倒れたら true。attacker は協力のプレイヤー ID（ソロは 0。9-6c） */
+  damageTarget(target: Kaiju2PartTarget, amount: number, attacker?: number): boolean;
 }
 
 export class Kaiju2PartTarget implements CombatTarget {
@@ -63,6 +67,16 @@ export class Kaiju2PartTarget implements CombatTarget {
 
   applyDamage(amount: number): boolean {
     return this.owner.damageTarget(this, amount);
+  }
+
+  /** 9-6c: 部位の番号（KAIJU2_TARGETS の順。協力の入力の targetId = KAIJU_ID_BASE + これ） */
+  get kaijuIndex(): number {
+    return KAIJU2_TARGETS.indexOf(this.id);
+  }
+
+  /** 9-6c: 協力（ホスト）: 攻撃した人の ID 付き */
+  damageBy(amount: number, attacker: number): boolean {
+    return this.owner.damageTarget(this, amount, attacker);
   }
 
   reset(maxHp: number): void {

@@ -248,6 +248,27 @@ URL に `?net=local` を付けると、PeerJS の代わりに**同じブラウ�
 
 - SQL の挙動は手元の Postgres 16 で Supabase のロールを模して確かめられる（`supabase/tests/run.sh`。使い方はファイルの先頭）。承認前のユーザーが申請でき・他人の行は見えず・owner の一覧に載ることと、上の owner の付与の SQL を確かめる
 
+### ネフィルガのランキング（9-6c。まだ流していなければ）
+
+ネフィルガ（2 体目の怪獣）のソロのクリアをランキングに載せるには、記録の key に `nephirga:normal`・`nephirga:hard` を足す SQL が要ります。**流すまでは、ゲームはネフィルガの記録を送らず、ランキングにも怪獣の選択を出しません**（ローカルの自己ベストには残ります。流す前のクリアはランキングに載りません）。
+
+1. **SQL を流す**: SQL エディタに `supabase/migrations/skyraid_0003_raid_kaiju.sql` の全文を貼り付けて実行。もう一度そのまま実行してもエラーにならないことも確かめる（冪等）。変えるのは `skyraid.records` の key の check だけ（今の記録はそのまま通る）
+
+   ```sql
+   begin;
+   alter table skyraid.records drop constraint if exists records_key;
+   alter table skyraid.records add constraint records_key check (
+     (kind = 'race' and key in ('coast', 'canyon', 'harbor-speed', 'acro'))
+     or (kind = 'raid' and key in ('normal', 'hard', 'nephirga:normal', 'nephirga:hard'))
+     or (kind = 'defense' and key in ('island:normal', 'island:hard', 'harbor:normal', 'harbor:hard'))
+   );
+   insert into skyraid.schema_migrations (version) values ('skyraid_0003_raid_kaiju') on conflict do nothing;
+   commit;
+   ```
+
+2. **確かめる**: `select version from skyraid.schema_migrations order by version;` に `skyraid_0003_raid_kaiju` がある。`select pg_get_constraintdef(oid) from pg_constraint where conname = 'records_key';` に `nephirga:normal` が入っている
+3. **ゲームで有効にする**: `src/data/online.ts` の `RANKED_RAID_KAIJU` に `'nephirga'` を足して公開する（流したことを伝えてもらえれば、こちらで足します）。ランキングの「レイド」に怪獣（ヴォルガス / ネフィルガ）の選択が出て、ネフィルガのソロのクリアが送られるようになる
+
 ### 確かめること（連携中になった後）
 
 - レースを完走・ソロのレイドをクリア・ソロの防衛戦を終える →「ランキング」に自分の行がハイライトで出る（キャッシュは 5 分。表示名を変えたときと記録を送ったときはすぐ取り直す）

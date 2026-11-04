@@ -1,8 +1,9 @@
 // ローカルの自己ベスト（7-D。v9 から。Three.js・DOM 非依存）: モード選択のカードに出す防衛戦の最高波とレイドの最速。
 // オンライン連携（7-4）の記録とは別に、ソロのプレイの結果だけをブラウザのセーブに持つ。
-// 防衛戦: key = マップ id:難易度 → クリアした波の最大（0〜10）。レイド: key = 難易度 → 撃破までの最短（ミリ秒）
+// 防衛戦: key = マップ id:難易度 → クリアした波の最大（0〜10）。レイド: key = 難易度（9-6c: ネフィルガは「nephirga:難易度」）→ 撃破までの最短（ミリ秒）
 // 練習場（9-5）: practice = 課題 → 設定 × 機体ごとの最高（practice-records.ts）。版は 9 のまま（無ければ空）
 // チュートリアル（9-5c）: tutorial = 終えた章の id（章の一覧の ✓）。版は 9 のまま（無ければ空）
+import { raidKaijuOfKey, VORGAS_ID, type RaidKaijuId } from '../data/raid-kaiju';
 import { DEFENSE_CONFIG } from '../data/defense';
 import { isTutorialChapter, type TutorialChapter } from '../data/tutorial';
 import { normalizePracticeRecords, type PracticeRecords } from './practice-records';
@@ -45,9 +46,16 @@ export function bestDefenseWaves(r: Readonly<SaveRecords>): number | null {
   return v.length > 0 ? Math.max(...v) : null;
 }
 
-/** 全難易度の中の最速（ミリ秒。記録なしは null） */
-export function bestRaidMs(r: Readonly<SaveRecords>): number | null {
-  const v = Object.values(r.raidBestMs);
+/**
+ * 全難易度の中の最速（ミリ秒。記録なしは null）。9-6c: 怪獣ごと（キーが「怪獣:難易度」。ヴォルガスは難易度だけ）
+ */
+export function bestRaidMs(
+  r: Readonly<SaveRecords>,
+  kaiju: RaidKaijuId = VORGAS_ID,
+): number | null {
+  const v = Object.entries(r.raidBestMs)
+    .filter(([key]) => raidKaijuOfKey(key) === kaiju)
+    .map(([, ms]) => ms);
   return v.length > 0 ? Math.min(...v) : null;
 }
 

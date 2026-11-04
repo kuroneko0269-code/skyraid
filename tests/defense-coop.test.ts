@@ -38,6 +38,7 @@ describe('防衛戦の state', () => {
       missiles: [],
       kaiju: null,
       defense: null,
+      kaiju2: null,
     };
     const none = encodeMessage(base).byteLength;
     const half = host.state(false);

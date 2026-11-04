@@ -52,7 +52,7 @@ import { createLanguageSettings } from './ui/language-settings';
 import { watchViewport } from './core/viewport';
 import { linkTiltPause } from './ui/tilt-settings';
 import { screenRoll } from './render/screen-roll';
-import { linkDevFeatures } from './ui/dev-links';
+import { linkKaiju2 } from './ui/kaiju2-link';
 
 /**
  * ゲーム本体を組み立てて起動する（8-3: main.ts が WebGL2 の描画を作れたときだけ呼ぶ。作れなければ案内画面）。
@@ -327,9 +327,9 @@ export function startApp(renderer: WebGLRenderer): void {
     simWorld,
   });
 
-  // 9-6a: ?dev=<名前> の開発中の機能（遅延チャンク。付けなければ読まない）
-  const dev = { search, play, scene, activeMap, game, quality, pvp, hud, audio, camera };
-  linkDevFeatures({ ...dev, ...runtime });
+  // 9-6c: ネフィルガ（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=kaiju2 は起動時に読む）
+  const kaiju2 = { search, play, scene, activeMap, game, quality, pvp, hud, audio, camera };
+  linkKaiju2({ ...kaiju2, ...runtime });
 
   // 8-3: WebGL のコンテキストを失ったら、ソロの飛行中はポーズ（リプレイの再生・PvP・協力は止めない）
   linkContextLoss(renderer.domElement, {

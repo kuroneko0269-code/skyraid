@@ -14,17 +14,17 @@ import { copyQuat, copyVec3, quatIdentity, rotateVec3, vec3, type Vec3 } from '.
 import { FlareField } from './flare';
 import type { GroundHeightFn, GunHit, Rng } from './gun';
 import { MissileSystem, splashDamage, type Detonation } from './missile';
-import { KaijuPart } from '../entities/kaiju-part';
 import { PvpFighter, RewoundTarget, type ArenaGunTarget, type FighterSpec } from './pvp-fighter';
 import * as R from './arena-raid';
 import type { ArenaFuseTarget } from './arena-raid';
+import type { ArenaKaijuPart } from './arena-types';
 import * as T from './arena-types';
 import { DEFENSE_ID_BASE, KAIJU_ID_BASE, NOBODY } from './arena-types';
 import type { CombatTarget } from './target';
 import { farthestSpawn } from './pvp-spawn';
 
 export { DEFENSE_ID_BASE, KAIJU_ID_BASE, NOBODY, RESPAWN_BOOST } from './arena-types';
-export type { ArenaEvent, PvpControls } from './arena-types';
+export type { ArenaEvent, ArenaKaijuPart, PvpControls } from './arena-types';
 
 export class PvpArena {
   /** 今の tick（ホストが step の初めに進める） */
@@ -37,7 +37,7 @@ export class PvpArena {
   private teams: ReadonlyMap<number, number> | null = null;
   readonly fighters = new Map<number, PvpFighter>();
   readonly missiles: MissileSystem<ArenaFuseTarget>;
-  private kaijuParts: readonly KaijuPart[] = [];
+  private kaijuParts: readonly ArenaKaijuPart[] = [];
   /** 防衛戦（7-2）の敵（機銃・ミサイルの対象。ダメージは onExtraDamage に渡す） */
   private extras: readonly CombatTarget[] = [];
   private onExtraDamage: (shooter: number, target: CombatTarget, amount: number) => void = () =>
@@ -80,8 +80,8 @@ export class PvpArena {
       target instanceof PvpFighter && this.sameSide(target.id, owner);
   }
 
-  /** レイドの怪獣の部位を対象に入れる（6-2） */
-  setKaijuParts(parts: readonly KaijuPart[]): void {
+  /** レイドの怪獣の部位を対象に入れる（6-2。9-6c: ネフィルガの部位も） */
+  setKaijuParts(parts: readonly ArenaKaijuPart[]): void {
     this.kaijuParts = parts;
     this.rebuild();
   }
@@ -326,10 +326,11 @@ export class PvpArena {
   ): void => {
     const t = hit.target;
     if (!t) return;
-    if (t instanceof KaijuPart) {
+    const part = R.kaijuPartOf(t, this.kaijuParts);
+    if (part) {
       shooter.hits++;
-      this.send('hit', shooter.id, KAIJU_ID_BASE + t.index, 0, hit);
-      t.damageBy(shooter.spec.gunDamage, shooter.id);
+      this.send('hit', shooter.id, KAIJU_ID_BASE + part.kaijuIndex, 0, hit);
+      part.damageBy(shooter.spec.gunDamage, shooter.id);
       return;
     }
     if (!(t instanceof RewoundTarget)) {
@@ -353,7 +354,7 @@ export class PvpArena {
   private readonly handleDetonation = (d: Readonly<Detonation<ArenaFuseTarget>>): void => {
     const owner = this.fighters.get(d.owner) ?? null;
     const t = d.target;
-    const hitId = R.hitIdOf(t, this.extras);
+    const hitId = R.hitIdOf(t, this.extras, this.kaijuParts);
     this.send('explode', d.owner, hitId, d.serial & this.netIdMask, d);
     R.splashKaijuParts(this.kaijuParts, d, this.missiles.spec);
     if (this.extras.length > 0 && this.fighters.has(d.owner))

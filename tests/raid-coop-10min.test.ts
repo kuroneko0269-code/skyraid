@@ -39,6 +39,7 @@ describe('怪獣の state の大きさと岩', () => {
       missiles: [],
       kaiju: k,
       defense: null,
+      kaiju2: null,
     };
     const none = encodeMessage({ ...msg, kaiju: null }).byteLength;
     const size = encodeMessage(msg).byteLength - none + 1;

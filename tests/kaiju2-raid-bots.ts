@@ -3,6 +3,8 @@
 // 役（9-1 の考え。scripts/replay-analysis/flight.ts）:
 // - skilled（熟練）: 熟練の腕前（VETERAN）・武装 Lv3・翼 → 頭 → 尾 → 胴の順に壊す・予兆を見て 0.25 秒で避ける・フレア
 // - average（平均的）: 平均的な腕前（AVERAGE + 人の撃ち方）・Lv0・ロックした部位（初めは胴）を撃ち続ける・予兆は半分避ける
+// - beginner（初心者役。9-6c）: 9-1 の初心者役（BEGINNER + 人の撃ち方。キーボード・補助なし）・Lv0・ロックした部位を撃つ・
+//   予兆は 0.6 秒遅れて 3 回に 1 回避ける
 // - human（模擬の人）: 9-1 の模擬の人（初心者役 + 狙いのずれ 4°・9° で撃つ + 人の手）がタッチの初期値（方向へ倒す・カーブ 1.5・
 //   狙いの補助 標準・自動射撃 ON）で飛ぶ。予兆は 0.6 秒遅れて 3 回に 1 回避ける
 // 機体は初期機 Kestrel（HP 200）。撃墜されても開始位置へ戻って続ける（本番と同じ）
@@ -11,7 +13,6 @@ import { autoFireReady } from '../src/combat/auto-fire';
 import { createCombatInput } from '../src/combat/combat-input';
 import type { CombatTarget } from '../src/combat/target';
 import { createRandom } from '../src/core/random';
-import type { DifficultySpec } from '../src/data/ai';
 import { AIM_ASSIST_CONFIG, AIM_ASSIST_LEVEL_SPECS } from '../src/data/assist';
 import { RAID_CONFIG } from '../src/data/kaiju';
 import { KAIJU2_CONFIG } from '../src/data/kaiju2';
@@ -26,52 +27,15 @@ import { registerRaidVariant } from '../src/missions/raid-variants';
 import { ReplayRecorder } from '../src/replay/recorder';
 import { applyFrame, captureFrame, simHash, startFromHeader, stepWorld } from '../src/replay/sim';
 import type { ReplayData, ReplayStart } from '../src/replay/types';
-import { AVERAGE, PilotBot, VETERAN } from './ai-sim';
+import { PilotBot } from './ai-sim';
+import { FOCUS, KAIJU2_ROLES, type Kaiju2Role } from './kaiju2-bot-roles';
 import { BoundsGuard, ISLAND_CENTER_SKY, WaypointBot } from './mission-bots';
 import { createWorld, type TestWorld } from './replay-helpers';
 import { DirectStick } from '../scripts/replay-analysis/direct';
-import { HUMAN_SKILL } from '../scripts/replay-analysis/flight';
 import { DEFAULT_HANDS, Hands } from '../scripts/replay-analysis/hands';
 
 const DT = 1 / 60;
-const HUMAN_GUN = { gunBurstSeconds: 2, gunPauseSeconds: 0.5 } as const;
-
-export type Kaiju2Role = 'skilled' | 'average' | 'human';
-
-interface RoleSpec {
-  readonly skill: DifficultySpec;
-  readonly weapons: number;
-  /** 部位を順に壊す（false はロックした部位 = 胴を撃ち続ける） */
-  readonly focus: boolean;
-  /** 予兆への反応の遅れ（秒）と避ける確率 */
-  readonly react: number;
-  readonly dodgeChance: number;
-  /** 人の手と「方向へ倒す」・狙いの補助 標準・自動射撃（タッチの初期値） */
-  readonly touch: boolean;
-}
-
-export const KAIJU2_ROLES: Readonly<Record<Kaiju2Role, RoleSpec>> = {
-  skilled: { skill: VETERAN, weapons: 3, focus: true, react: 0.25, dodgeChance: 1, touch: false },
-  average: {
-    skill: { ...AVERAGE, ...HUMAN_GUN },
-    weapons: 0,
-    focus: false,
-    react: 0.4,
-    dodgeChance: 0.5,
-    touch: false,
-  },
-  human: {
-    skill: HUMAN_SKILL,
-    weapons: 0,
-    focus: false,
-    react: 0.6,
-    dodgeChance: 0.34,
-    touch: true,
-  },
-};
-
-/** 熟練が狙う順（壊れていない最初の部位。胴は最後） */
-const FOCUS = ['wingL', 'wingR', 'head', 'tail', 'body'] as const;
+export { KAIJU2_ROLES, type Kaiju2Role } from './kaiju2-bot-roles';
 
 export interface Kaiju2BotOptions {
   readonly role: Kaiju2Role;
