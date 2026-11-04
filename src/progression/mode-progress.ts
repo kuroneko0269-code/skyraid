@@ -1,5 +1,6 @@
 // モード選択のカードに小さく出す進捗（7-D。Three.js・DOM 非依存）: キャンペーンのクリア数・レースのランクの数・
 // 防衛戦の最高波・レイドの最速・練習場（9-5）の課題ごとの最高スコア。記録がなければ出さない（キャンペーンは 0/5 を出す）
+import { NEPHIRGA_ID } from '../data/raid-kaiju';
 import { t } from '../core/i18n';
 import { PRACTICE_DRILLS } from '../data/practice';
 import { RANKS } from '../data/ranking';
@@ -31,8 +32,15 @@ export function modeProgress(
   if (ranks.length > 0) out.race = ranks.join(t('progress.separator'));
   const waves = bestDefenseWaves(save.records);
   if (waves !== null) out.defense = t('progress.defense', { waves });
+  // 9-6c: ネフィルガの記録があれば怪獣ごとに（ヴォルガスだけなら今までどおり）
   const raid = bestRaidMs(save.records);
-  if (raid !== null) out.raid = t('progress.raid', { time: formatMinutes(raid) });
+  const raid2 = bestRaidMs(save.records, NEPHIRGA_ID);
+  if (raid2 !== null)
+    out.raid = t('progress.raidBoth', {
+      vorgas: raid === null ? '—' : formatMinutes(raid),
+      nephirga: formatMinutes(raid2),
+    });
+  else if (raid !== null) out.raid = t('progress.raid', { time: formatMinutes(raid) });
   // 9-5: 課題ごとの最高（記録の無い課題は —）。どれも無ければ出さない
   const bests = PRACTICE_DRILLS.map((d) => practiceEntries(save.records.practice, d)[0]?.score);
   if (bests.some((b) => b !== undefined))

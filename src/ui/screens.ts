@@ -1,3 +1,4 @@
+import { withSoloRaid } from './kaiju2-link';
 import { t } from '../core/i18n';
 import type { Paint } from '../progression/paint';
 import { Paintshop } from '../progression/paintshop';
@@ -24,8 +25,7 @@ import { SettingsScreen } from './settings-screen';
 import { modeProgress } from '../progression/mode-progress';
 import { TutorialEntry } from './tutorial-entry';
 import { MAPS } from '../data/maps';
-import { RAID_MISSION, raidMission } from '../data/missions-special';
-import { findRaidVariant } from '../missions/raid-variants';
+import { RAID_MISSION } from '../data/missions-special';
 import type { DefenseDifficulty } from '../data/defense';
 import { tutorialStrings, type TutorialStrings } from './tutorial-text';
 
@@ -38,7 +38,8 @@ const LIST_SCREENS: readonly ScreenState[] = [
 ];
 
 interface PvpHandlers {
-  onSelect: (raid: boolean) => void;
+  /** kaiju: 協力レイドの怪獣（9-6c。省略はヴォルガス） */
+  onSelect: (raid: boolean, kaiju?: string) => void;
   /** 防衛戦（7-2）の協力の部屋を作る */
   onDefense: (mapId: string, hard: boolean) => void;
   onBack: () => void;
@@ -168,13 +169,13 @@ export class Screens {
         this.onDefense(kind, mapId, difficulty);
       },
       onRaid: (kind, difficulty, kaiju) => {
-        if (kind === 'coop') {
-          this.pvp?.onSelect(true);
-          return;
-        }
-        // 9-6b: ヴォルガス以外の怪獣（?dev=kaiju2 で登録されたときだけ選べる）
-        this.nextMission = findRaidVariant(kaiju)?.mission(difficulty) ?? raidMission(difficulty);
-        game.transition('flight');
+        if (kind === 'coop') this.pvp?.onSelect(true, kaiju);
+        // 9-6b: ヴォルガス以外の怪獣。9-6c: ネフィルガは遅延チャンクを読んでから（読めなければ今の画面のまま）
+        else
+          withSoloRaid(kaiju, difficulty, (def) => {
+            this.nextMission = def;
+            game.transition('flight');
+          });
       },
       onBack: () => game.transition('title'),
     });

@@ -1,5 +1,6 @@
 // ロビーの操作（5-4。pvp-link.ts から分けた）: 開始・準備・ハンガー（所持機体）・ルール・チーム・定型文・「もう一度」を、
 // ホストなら部屋を直接、クライアントならホストへのメッセージで変える。名簿の変化のお知らせ（切断・再接続・離脱）の文も作る
+import { NET_CONFIG } from '../data/net';
 import { t } from '../core/i18n';
 import { AIRCRAFT_MODELS } from '../data/aircraft';
 import { ClientRoom } from '../net/client-room';
@@ -23,7 +24,7 @@ export const JOIN_ERRORS: Record<JoinError, string> = {
     return t('net.joinError.started');
   },
   get version() {
-    return t('net.joinError.version');
+    return t('net.joinError.version', { version: NET_CONFIG.protocolVersion });
   },
   get expired() {
     return t('net.joinError.expired');

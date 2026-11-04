@@ -2,6 +2,7 @@
 // 5-4: 描画用の補間・止める・?netdebug の値も host-game.ts から分けた。Three.js 非依存
 import type { Missile } from '../combat/missile';
 import type { Pool } from '../combat/pool';
+import type { Kaiju2StateMsg } from './codec-kaiju2';
 import { PvpFighter, type FighterSpec } from '../combat/pvp-fighter';
 import type { Aircraft } from '../entities/aircraft';
 import { copyQuat, copyVec3 } from '../flight/math';
@@ -95,10 +96,11 @@ export function stateMsg(
   kaiju: KaijuStateMsg | null,
   msgs: AircraftStateMsg[],
   defense: DefenseStateMsg | null = null,
+  kaiju2: Kaiju2StateMsg | null = null,
 ): StateMsg {
   msgs.length = 0;
   for (const f of fighters) msgs.push(stateOf(f, f.id === 0 ? 0 : seqOf(f.id)));
-  return { type: 'state', tick, aircraft: msgs, missiles, kaiju, defense };
+  return { type: 'state', tick, aircraft: msgs, missiles, kaiju, defense, kaiju2 };
 }
 
 /** ホストの機体を固定ステップの間で補間して描画用の値に入れる */

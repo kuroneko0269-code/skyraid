@@ -35,7 +35,7 @@ export function missionCardSource(
   raid: RaidDifficulty | null,
   hangar: { readonly selectedId: string },
   save: SaveStore,
-  /** 9-6b: ヴォルガス以外のレイドの怪獣（?dev=kaiju2） */
+  /** 9-6b: ヴォルガス以外のレイドの怪獣（ネフィルガ） */
   kaiju?: string,
 ): CardSource {
   const aircraftId = hangar.selectedId;

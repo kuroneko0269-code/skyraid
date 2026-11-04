@@ -1,6 +1,7 @@
 // PvP のロビー画面（5-1）: 「部屋を作る」「コードで参加」→ 接続中 → ロビー（部屋の画面は lobby-room.ts）→
 // 対戦の後のリザルト（5-3）。5-4: 準備・ハンガー（lobby-hangar.ts）・共有・定型文・チーム、リザルトの「もう一度」の待ち。
 // 見た目は 4-10 のデザインシステム。通信はしない（ui/pvp-link.ts が呼ぶ）。文字は textContent だけで入れる
+import { raidKaijuIndex } from '../data/raid-kaiju';
 import './lobby.css';
 import { NET_CONFIG } from '../data/net';
 import { initialSettings, type DefensePreset } from '../net/lobby-rules';
@@ -150,9 +151,9 @@ export class LobbyScreen {
   }
 
   /** ロビーを開く: 部屋を作るときのホスト設定（レイド・防衛戦の協力）を返し、見出しを遊び方に合わせる */
-  prepare(raid: boolean, defense: DefensePreset): GameSettings | undefined {
+  prepare(raid: boolean, defense: DefensePreset, kaiju?: string): GameSettings | undefined {
     this.setMode(raid ? 'raid' : defense ? 'defense' : 'pvp');
-    return initialSettings(raid, defense);
+    return initialSettings(raid, defense, raidKaijuIndex(kaiju));
   }
 
   /** 見出しを遊び方に合わせる（8-2 の事前修正: 協力レイド・協力防衛戦から入ったときはその名前） */

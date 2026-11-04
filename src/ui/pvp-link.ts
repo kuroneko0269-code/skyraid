@@ -71,6 +71,9 @@ export interface PvpDeps {
   readonly sound: (kind: PvpSound) => void;
   /** レイドの怪獣の表示元（6-2） */
   readonly kaijuSource: (src: KaijuSource | null) => void;
+  /** 9-6c: ネフィルガの表示元（遅延チャンク）と、ネフィルガが避ける高さ */
+  readonly kaiju2Source: PvpFlightDeps['kaiju2Source'];
+  readonly kaijuGround: PvpFlightDeps['kaijuGround'];
   /** 街の建物（6-6。協力レイドはホストだけが壊して配る） */
   readonly buildings: PvpFlightDeps['buildings'];
   /** 報酬をセーブに足す（6-6） */
@@ -157,8 +160,8 @@ export class PvpLink {
   }
 
   /** ロビーを開く。code があればすぐ参加する（?room）。raid はレイドの協力（6-2）として部屋を作る */
-  openLobby(code?: string, raid = false, defense: DefensePreset = null): void {
-    this.preset = this.lobby.prepare(raid, defense);
+  openLobby(code?: string, raid = false, defense: DefensePreset = null, kaiju?: string): void {
+    this.preset = this.lobby.prepare(raid, defense, kaiju);
     const game = this.deps.game;
     if (game.state !== 'mode_select') game.transition('mode_select');
     game.transition('lobby');

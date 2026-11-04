@@ -408,7 +408,7 @@
     "raid": {
       "kicker": "CO-OP RAID",
       "title": "協力レイド",
-      "note": "2〜{max} 人で巨大怪獣ヴォルガスを撃破"
+      "note": "2〜{max} 人で巨大怪獣（ヴォルガス / ネフィルガ）を撃破"
     },
     "defense": {
       "kicker": "CO-OP DEFENSE",
@@ -484,7 +484,8 @@
       "noUpgrades": "強化を無効にする",
       "rookie": "初心者保護",
       "aimAssist": "狙いの補助",
-      "autoFire": "自動射撃"
+      "autoFire": "自動射撃",
+      "kaiju": "怪獣"
     },
     "autoTeams": "チームを自動で分ける",
     "hangarButton": "ハンガー",
@@ -492,7 +493,7 @@
     "unready": "準備を取り消す",
     "start": "開始",
     "rules": {
-      "raid": "レイド（協力）・ヴォルガス撃破・{difficulty}",
+      "raid": "レイド（協力）・{kaiju}撃破・{difficulty}",
       "defense": "防衛戦（協力）・全 10 波・{difficulty}",
       "versus": "{mode}・撃墜 {score} 機・{time}",
       "ffa": "個人戦",
@@ -517,7 +518,8 @@
       "qrLabel": "参加用 URL の QR コード: {url}",
       "qrFailed": "QR コードを作れませんでした"
     },
-    "optionsAssist": "・狙いの補助 {aim}・自動射撃 {fire}"
+    "optionsAssist": "・狙いの補助 {aim}・自動射撃 {fire}",
+    "protocol": "通信の版 {version}"
   },
   "common": {
     "waves": {
@@ -591,6 +593,13 @@
       "targeted": "TARGET  怪獣があなたを狙っています"
     }
   },
+  "kaiju2": {
+    "name": "ネフィルガ",
+    "missionTitle": "レイド：ネフィルガ",
+    "objective": "ネフィルガ撃破",
+    "titleNormal": "ネフィルガ",
+    "titleHard": "ネフィルガ（高難度）"
+  },
   "maps": {
     "island": "海岸と島",
     "harbor": "港湾都市"
@@ -618,7 +627,9 @@
       "escortLost": "護衛対象を失った",
       "timeUp": "時間切れ",
       "kaijuReachedCity": "怪獣が街に到達した",
-      "outOfBounds": "戦域を離脱した"
+      "outOfBounds": "戦域を離脱した",
+      "stormTimeUp": "嵐の時間切れ（嵐が街を襲った）",
+      "totalTimeUp": "時間切れ（嵐が街を襲った）"
     },
     "progressSeconds": "{label} {current} / {target} 秒",
     "summarySeconds": "{label} {seconds} 秒",
@@ -706,7 +717,8 @@
     "separator": "・",
     "defense": "最高 {waves} 波",
     "raid": "最速 {time}",
-    "practice": "最高 {scores}"
+    "practice": "最高 {scores}",
+    "raidBoth": "最速 {vorgas} / {nephirga}"
   },
   "campaign": {
     "heading": "キャンペーン",
@@ -830,7 +842,7 @@
     },
     "raid": {
       "label": "レイド",
-      "note": "巨大怪獣ヴォルガスを撃破"
+      "note": "巨大怪獣ヴォルガス・ネフィルガを撃破"
     },
     "defense": {
       "label": "防衛戦",
@@ -865,7 +877,8 @@
     "raidDialog": {
       "title": "レイド：ヴォルガス",
       "body": "1 人は難易度を選んですぐ出撃（高難度は HP ×1.4・予兆が短い・最終フェーズ 3.5 分・報酬 ×1.8）。2〜4 人は部屋を作るか、部屋コードで参加します（全員が同じチーム。難易度はホストが選ぶ）。",
-      "difficulty": "難易度（ソロ）"
+      "difficulty": "難易度（ソロ）",
+      "bodyNephirga": "1 人は難易度を選んですぐ出撃（高難度は体力 ×1.55・予兆が短い・嵐 4 分・全体 10 分・報酬 ×1.8）。2〜4 人は部屋を作るか、部屋コードで参加します（全員が同じチーム。難易度はホストが選ぶ）。"
     },
     "defenseDialog": {
       "body": "基地の司令部を全 10 波の敵から守ります。波の間に基地の上を低く遅く（高度 300m 以下・速度 150 以下）通ると補給。高難度は敵 ×1.3・司令部 HP 1500。2〜4 人は部屋を作るか、部屋コードで参加します（全員が同じチーム）。",
@@ -1433,7 +1446,8 @@
     "selfPlace": {
       "other": "あなたの順位: {place} 位 / {count} 人"
     },
-    "selfNone": "あなたの記録はまだありません（上位 100 位以内に入ると表示）"
+    "selfNone": "あなたの記録はまだありません（上位 100 位以内に入ると表示）",
+    "kaiju": "怪獣"
   },
   "sync": {
     "title": "どちらのセーブを使いますか？",
@@ -1751,7 +1765,9 @@
       "raidClear": "全員で怪獣を倒した（報酬は全員同じ）",
       "raidFail": "怪獣が街に到達した（全員に 300 CR）",
       "defenseClear": "全 10 波から基地を守り切った（報酬は全員同じ）",
-      "defenseFail": "司令部が破壊された（クリアした波 × 300 CR）"
+      "defenseFail": "司令部が破壊された（クリアした波 × 300 CR）",
+      "raidStormFail": "嵐の時間切れ — 嵐が街を襲った（全員に 300 CR）",
+      "raidTotalFail": "時間切れ — 嵐が街を襲った（全員に 300 CR）"
     },
     "title": {
       "raidClear": "ヴォルガス撃破",
@@ -1759,7 +1775,8 @@
       "draw": "引き分け",
       "win": "勝利",
       "lose": "敗北",
-      "over": "終了"
+      "over": "終了",
+      "raid2Clear": "ネフィルガ撃破"
     },
     "result": {
       "protected": "守れた建物 {percent}%",
@@ -1790,7 +1807,7 @@
       "notFound": "その部屋は見つかりません（コードを確かめてください）",
       "full": "満員です（最大 4 人）",
       "started": "すでに始まっています",
-      "version": "ホストとバージョンが違います（両方とも再読み込みしてください）",
+      "version": "ホストと通信の版が違います（この端末は {version}。両方とも再読み込みしてください）",
       "expired": "再接続の期限が過ぎました",
       "timeout": "応答がありません（時間切れ）",
       "network": "接続できませんでした",

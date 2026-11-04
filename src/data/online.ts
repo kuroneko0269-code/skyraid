@@ -1,6 +1,7 @@
 // オンライン連携（7-4）の決めた数値。仕組みは src/online/、SQL は supabase/migrations/skyraid_0001_init.sql、
 // 設計は docs/supabase-design.md。SQL と同じ値を使うものは tests/online-sql.test.ts で突き合わせる
 import { t } from '../core/i18n';
+import type { RaidKaijuId } from './raid-kaiju';
 
 export const ONLINE_CONFIG = {
   /** Supabase のスキーマ（規約 1.1。アプリ名と同じ） */
@@ -37,6 +38,17 @@ export const ONLINE_CONFIG = {
   /** 承認待ちの間、トークンを取り直して承認を確かめる間隔（ミリ秒。7-4b） */
   pendingRecheckMs: 5 * 60 * 1000,
 } as const;
+
+/**
+ * 9-6c: オンラインのランキングに載せるレイドの怪獣。ネフィルガの記録のキー（nephirga:normal / nephirga:hard）は
+ * supabase/migrations/skyraid_0003_raid_kaiju.sql を流してからサーバーが受け付けるので、それまではここに入れない
+ * （送らない・ランキングの選択に出さない。流したら 'nephirga' を足す。README の「ネフィルガのランキング」）
+ */
+export const RANKED_RAID_KAIJU: readonly RaidKaijuId[] = ['vorgas'];
+
+export function rankedRaidKaiju(id: RaidKaijuId): boolean {
+  return RANKED_RAID_KAIJU.includes(id);
+}
 
 /** 記録の種類 */
 export const RECORD_KINDS = ['race', 'raid', 'defense'] as const;

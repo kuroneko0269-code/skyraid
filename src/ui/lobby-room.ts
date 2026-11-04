@@ -13,9 +13,10 @@ import {
 import { normalizeSettings, startBlock, type StartBlock } from '../net/lobby-rules';
 import { findMap, SELECTABLE_MAPS } from '../data/maps';
 import { WEATHER_PRESETS, weatherLabel } from '../data/weather';
-import { RAID_DIFFICULTIES, RAID_DIFFICULTY_LABELS, RAID_QUICK_PHRASES } from '../data/raid';
+import { RAID_QUICK_PHRASES } from '../data/raid';
 import type { GameSettings, PlayerInfo } from '../net/protocol';
 import { t, tn } from '../core/i18n';
+import { NET_CONFIG } from '../data/net';
 import { el } from './hud-dom';
 import { LobbyShare } from './lobby-share';
 import { renderLobbyPlayers } from './lobby-players';
@@ -30,6 +31,8 @@ import {
   rulesSummary,
   toggle,
   type RuleToggle,
+  raidRuleSegments,
+  syncRaidChat,
 } from './lobby-controls';
 import type { Segmented } from './segmented';
 
@@ -92,6 +95,8 @@ export class LobbyRoom {
   private readonly startButton: HTMLButtonElement;
   private readonly readyButton: HTMLButtonElement;
   private readonly difficultySelect: Segmented;
+  /** 9-6c: レイドの怪獣（レイドのときだけ出す） */
+  private readonly kaijuSelect: Segmented;
   private readonly raidChat: HTMLButtonElement[];
   /** 定型文の吹き出し（プレイヤー ID → 文と消す時刻 ms） */
   private readonly bubbles = new Map<number, { text: string; until: number }>();
@@ -109,6 +114,8 @@ export class LobbyRoom {
     el('div', 'campaign-label', left, 'ROOM CODE');
     this.codeText = el('div', 'lobby-code', left);
     this.share = new LobbyShare(left, overlayParent);
+    // 9-6c: 通信の版（違う版の人は参加できない。参加できないと言われたときに見比べる）
+    el('div', 'lobby-protocol', left, t('lobby.protocol', { version: NET_CONFIG.protocolVersion }));
     const facts = el('div', 'campaign-facts', left);
     const fact = (label: string): HTMLSpanElement => {
       const f = el('div', 'campaign-fact', facts);
@@ -132,6 +139,7 @@ export class LobbyRoom {
           timeLimitSeconds: Number(this.timeSelect.value),
           mode: parseMode(this.modeSelect.value),
           hard: this.difficultySelect.value === 'hard',
+          raidKaiju: Number(this.kaijuSelect.value) || 0,
           weather: this.weatherSelect.value,
         }),
       );
@@ -174,14 +182,8 @@ export class LobbyRoom {
       (v) => MODE_LABELS[parseMode(String(v))],
       changed,
     );
-    // 6-6: レイドの難易度（レイドのときだけ出す）
-    this.difficultySelect = ruleSegment(
-      this.rules,
-      t('lobby.rule.difficulty'),
-      RAID_DIFFICULTIES,
-      (v) => (v === 'hard' ? RAID_DIFFICULTY_LABELS.hard : RAID_DIFFICULTY_LABELS.normal),
-      changed,
-    );
+    // 9-6c: レイドの怪獣（ヴォルガス / ネフィルガ）と 6-6 のレイドの難易度（レイドのときだけ出す）
+    [this.kaijuSelect, this.difficultySelect] = raidRuleSegments(this.rules, changed);
     const toggles = el('div', 'lobby-toggles', this.rules);
     // 9-3: 狙いの補助・自動射撃（個人戦・チーム戦だけ出す。協力は各自の設定のまま）
     for (const [key, label] of RULE_TOGGLES)
@@ -252,7 +254,9 @@ export class LobbyRoom {
       s.root.hidden = raid || (defense && s !== this.mapSelect);
     this.difficultySelect.root.hidden = !raid && !defense;
     this.difficultySelect.value = st.hard ? 'hard' : 'normal';
-    for (const b of this.raidChat) b.hidden = !raid;
+    this.kaijuSelect.root.hidden = !raid;
+    this.kaijuSelect.value = String(st.raidKaiju);
+    syncRaidChat(this.raidChat, st);
     this.optionsText.textContent = optionsSummary(st);
     this.rules.hidden = !v.isHost;
     // ホストは選ぶ欄に同じことが出ているので、文字のルールは出さない（横画面のスマホで縦に詰める）

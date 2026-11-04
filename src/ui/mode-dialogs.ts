@@ -1,6 +1,7 @@
 // モード選択の上に重ねるダイアログ（7-C で mode-select.ts から分けた）: チュートリアルの案内（4-11）・
 // フリーフライトのマップと天候（6-4・7-5）・レイドの人数と難易度（6-2・6-6）・防衛戦の人数・マップ・難易度（7-2）。
 // 選択はセグメント（ui/segmented.ts。高さ 48px 以上・選択中は塗りつぶし）、決定は下のボタン
+import { prefetchKaiju2 } from './kaiju2-link';
 import { t } from '../core/i18n';
 import { DEFENSE_MAPS, type DefenseDifficulty } from '../data/defense';
 import { ISLAND_MAP, SELECTABLE_MAPS } from '../data/maps';
@@ -52,7 +53,7 @@ export class ModeDialogs {
   defenseMapId: string = DEFENSE_MAPS[0]?.mapId ?? 'island';
   defenseDifficulty: DefenseDifficulty = 'normal';
   raidDifficulty: RaidDifficulty = 'normal';
-  /** 9-6b: レイドの怪獣（'vorgas' か、?dev=kaiju2 で登録された怪獣の id） */
+  /** 9-6b: レイドの怪獣（'vorgas' か、登録された怪獣の id。9-6c からネフィルガは起動時に登録） */
   raidKaiju = VORGAS;
 
   private readonly all: HTMLDivElement[] = [];
@@ -67,9 +68,9 @@ export class ModeDialogs {
   private readonly raidSolo: HTMLButtonElement;
   private readonly raidDiff: Segmented;
   private readonly raidTitle: HTMLElement;
+  private readonly raidBody: HTMLElement;
   private readonly raidKaijuSlot: HTMLDivElement;
   private raidKaijuSeg: Segmented | null = null;
-  private readonly raidCoop: HTMLButtonElement;
   private readonly defenseWrap: HTMLDivElement;
   private readonly defenseSolo: HTMLButtonElement;
   private readonly defenseMap: Segmented;
@@ -138,7 +139,8 @@ export class ModeDialogs {
       t('modes.raidDialog.body'),
     );
     this.raidTitle = box.querySelector('.mode-prompt-title') ?? box;
-    // 9-6b: 怪獣の選択（?dev=kaiju2 で別の怪獣が登録されているときだけ、開くときに作る）
+    this.raidBody = box.querySelector('.mode-prompt-text') ?? box;
+    // 9-6b: 怪獣の選択（別の怪獣が登録されているときだけ、開くときに作る）
     this.raidKaijuSlot = el('div', 'mode-raid-kaiju', box);
     this.raidKaijuSlot.hidden = true;
     this.raidDiff = new Segmented(
@@ -150,8 +152,10 @@ export class ModeDialogs {
     );
     buttons = el('div', 'campaign-buttons', box);
     back(buttons);
-    this.raidCoop = go(buttons, t('modes.dialog.coop'), false, () => {
-      h.onRaid('coop', 'normal');
+    go(buttons, t('modes.dialog.coop'), false, () => {
+      // 9-6c: ネフィルガも協力できる（怪獣はロビーのホストの設定の初めの値。難易度はロビーで選ぶ）
+      if (this.raidKaiju === VORGAS) h.onRaid('coop', 'normal');
+      else h.onRaid('coop', 'normal', this.raidKaiju);
     });
     this.raidSolo = go(buttons, t('modes.dialog.solo'), true, () => {
       if (this.raidKaiju === VORGAS) h.onRaid('solo', this.raidDifficulty);
@@ -206,7 +210,7 @@ export class ModeDialogs {
     this.open(this.raidWrap, this.raidSolo);
   }
 
-  /** 9-6b: 別の怪獣が登録されていれば、怪獣の選択を出す（協力はヴォルガスだけ。9-6c で扱う） */
+  /** 9-6b: 別の怪獣が登録されていれば、怪獣の選択を出す。9-6c: 協力も選べる・ネフィルガを選んだら先読み */
   private syncRaidKaiju(): void {
     const variants = raidVariants();
     if (variants.length === 0) return;
@@ -223,12 +227,20 @@ export class ModeDialogs {
         this.raidKaiju,
         (v) => {
           this.raidKaiju = v;
-          this.raidCoop.disabled = v !== VORGAS;
+          this.syncRaidBody();
+          if (v !== VORGAS) prefetchKaiju2();
         },
       );
     }
     this.raidKaijuSeg.value = this.raidKaiju;
-    this.raidCoop.disabled = this.raidKaiju !== VORGAS;
+    this.syncRaidBody();
+  }
+
+  /** 9-6c: 説明の文（高難度の中身）を選んだ怪獣に合わせる */
+  private syncRaidBody(): void {
+    this.raidBody.textContent = t(
+      this.raidKaiju === VORGAS ? 'modes.raidDialog.body' : 'modes.raidDialog.bodyNephirga',
+    );
   }
 
   showDefense(): void {

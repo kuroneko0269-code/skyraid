@@ -1,12 +1,24 @@
 // ランキング画面（7-4）: モード選択の「ランキング」（連携中で ON のときだけ出る）から。モード選択の上に重ねる。
 // タブはレース（コース × 機体）/ レイド（難易度）/ 防衛戦（マップ × 難易度）。メンバーの表示名・記録・機体・日付、自分の行をハイライト。
 // 読み込みは OnlineService.ranking（5 分キャッシュ）
+import {
+  VORGAS_ID,
+  isRaidKaijuId,
+  raidKaijuName,
+  raidRecordKey,
+  type RaidKaijuId,
+} from '../data/raid-kaiju';
 import './online.css';
 import { t } from '../core/i18n';
 import { AIRCRAFT_MODELS } from '../data/aircraft';
 import { COURSES } from '../data/courses';
 import { DEFENSE_MAPS } from '../data/defense';
-import { RECORD_KIND_LABELS, RECORD_KINDS, type RecordKind } from '../data/online';
+import {
+  RANKED_RAID_KAIJU,
+  RECORD_KIND_LABELS,
+  RECORD_KINDS,
+  type RecordKind,
+} from '../data/online';
 import { RAID_DIFFICULTY_LABELS } from '../data/raid';
 import type { RankingQuery, RankingRow } from '../online/backend';
 import { rankingLines, selfPlaceText } from '../online/format';
@@ -35,6 +47,8 @@ export class RankingScreen {
   private course: string = COURSES[0]?.id ?? 'coast';
   private aircraft: string = AIRCRAFT_MODELS[0]?.id ?? 'kestrel';
   private raidDiff = 'normal';
+  /** 9-6c: レイドの怪獣（ランキングに載せる怪獣が 2 つ以上のときだけ選ぶ欄を出す） */
+  private raidKaiju: RaidKaijuId = VORGAS_ID;
   private defenseMap: string = DEFENSE_MAPS[0]?.mapId ?? 'island';
   private defenseDiff = 'normal';
   private readonly raceRows: HTMLDivElement;
@@ -92,6 +106,17 @@ export class RankingScreen {
       },
     );
     this.raidRows = el('div', 'ranking-filters', panel);
+    if (RANKED_RAID_KAIJU.length > 1)
+      new Segmented(
+        this.raidRows,
+        t('ranking.kaiju'),
+        RANKED_RAID_KAIJU.map((k) => ({ value: k, label: raidKaijuName(k) })),
+        this.raidKaiju,
+        (v) => {
+          if (isRaidKaijuId(v)) this.raidKaiju = v;
+          reload();
+        },
+      );
     new Segmented(this.raidRows, t('ranking.difficulty'), difficulties(), this.raidDiff, (v) => {
       this.raidDiff = v;
       reload();
@@ -157,7 +182,11 @@ export class RankingScreen {
 
   private query(): RankingQuery {
     if (this.kind === 'race') return { kind: 'race', key: this.course, aircraftId: this.aircraft };
-    if (this.kind === 'raid') return { kind: 'raid', key: this.raidDiff };
+    if (this.kind === 'raid')
+      return {
+        kind: 'raid',
+        key: raidRecordKey(this.raidKaiju, this.raidDiff === 'hard' ? 'hard' : 'normal'),
+      };
     return { kind: 'defense', key: defenseKey(this.defenseMap, this.defenseDiff) };
   }
 

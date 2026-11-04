@@ -4,6 +4,7 @@
 // 出現位置からやり直して（記録した操作で計算し直す）ホストと同じ位置にそろえる。
 // 5-4: 開始前のカウントダウン（止まって操作を無視し、入力も送らない）、つなぎ直している間と、戻ってからホストの
 // 位置合わせの復帰が届くまでは止まる。初心者保護つきの復帰は最大 HP を増やす。Three.js 非依存
+import type { Kaiju2StateMsg } from './codec-kaiju2';
 import { NET_CONFIG } from '../data/net';
 import { PVP_CONFIG } from '../data/pvp';
 import { PVP_SPAWN_POINTS } from '../data/pvp';
@@ -77,6 +78,8 @@ export class ClientGame extends NetGameEvents implements NetGame {
   /** レイドの怪獣（6-2） */
   kaiju: KaijuStateMsg | null = null;
   kaijuVersion = 0;
+  /** 9-6c: ネフィルガ */
+  kaiju2: Kaiju2StateMsg | null = null;
   /** 防衛戦（7-2。最新の state） */
   defenseState: DefenseStateMsg | null = null;
   defenseVersion = 0;
@@ -178,7 +181,7 @@ export class ClientGame extends NetGameEvents implements NetGame {
 
   /** 攻撃の対象のプレイヤー（6-6。最新の state。攻撃中だけ） */
   get kaijuTarget(): number | null {
-    const t = this.kaiju?.targetId ?? NO_TARGET;
+    const t = this.kaiju?.targetId ?? this.kaiju2?.targetId ?? NO_TARGET;
     return t === NO_TARGET ? null : t;
   }
 
@@ -304,6 +307,7 @@ export class ClientGame extends NetGameEvents implements NetGame {
       this.missiles = msg.missiles;
       this.missileVersion++;
       this.kaiju = msg.kaiju;
+      this.kaiju2 = msg.kaiju2;
       this.kaijuVersion++;
       if (msg.defense) {
         this.defenseState = msg.defense;

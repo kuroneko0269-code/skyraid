@@ -59,6 +59,7 @@ describe('protocol: 直列化の往復', () => {
           mode: 'team',
           aimAssist: true,
           autoFire: false,
+          raidKaiju: 0,
           noUpgrades: true,
           rookieGuard: false,
           hard: true,
@@ -102,6 +103,7 @@ describe('protocol: 直列化の往復', () => {
           mode: 'ffa',
           aimAssist: false,
           autoFire: true,
+          raidKaiju: 0,
           noUpgrades: false,
           rookieGuard: true,
           hard: false,
@@ -198,11 +200,12 @@ describe('protocol: 直列化の往復', () => {
       missiles: [],
       kaiju: null,
       defense: null,
+      kaiju2: null,
     };
     const data = encodeMessage(msg);
     // 1 機 37 バイト + 見出し 7 バイト + 怪獣の有無 1 バイト（6-2）+ 防衛戦の有無 1 バイト（7-2）
-    // （4 機で 157 バイト。15Hz で約 2.4KB/s）
-    expect(data.byteLength).toBe(9 + 37 * 4);
+    // + ネフィルガの有無 1 バイト（9-6c）（4 機で 158 バイト。15Hz で約 2.4KB/s）
+    expect(data.byteLength).toBe(10 + 37 * 4);
     const back = decodeMessage(data);
     expect(back?.type).toBe('state');
     if (back?.type !== 'state') return;
@@ -262,8 +265,9 @@ describe('protocol: 直列化の往復', () => {
       missiles,
       kaiju: null,
       defense: null,
+      kaiju2: null,
     });
-    expect(data.byteLength).toBe(9 + 37 * 4 + 14 * 16);
+    expect(data.byteLength).toBe(10 + 37 * 4 + 14 * 16);
     // 15Hz で 6KB/s 以下
     expect(data.byteLength * 15).toBeLessThanOrEqual(6000);
     const back = decodeMessage(data);

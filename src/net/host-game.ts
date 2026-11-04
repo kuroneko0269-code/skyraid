@@ -6,27 +6,33 @@
 // 待ち（away）、戻ったら入力が届き直してから出現位置へ戻す（クライアントはその seq から計算し直す）。
 // 6-2: レイド（全員が同じチーム）は怪獣をホストで動かし（RaidHost）、state に怪獣を入れ、倒すか街に到達されたら終わる。Three.js 非依存
 import type { Paint } from '../progression/paint';
-import { quatIdentity, type Vec3 } from '../flight/math';
+import { quatIdentity } from '../flight/math';
 import { headingQuat } from '../entities/enemy-aircraft';
 import { NET_CONFIG } from '../data/net';
 import { PVP_CONFIG } from '../data/pvp';
 import { FLIGHT_CONFIG } from '../data/flight';
-import { Aircraft, type AircraftControls, type GroundHeightFn } from '../entities/aircraft';
+import { Aircraft, type AircraftControls } from '../entities/aircraft';
 import { PvpArena, type ArenaEvent } from '../combat/pvp-arena';
 import type { PvpFighter } from '../combat/pvp-fighter';
 import { fighterSpec, holdAircraft, hostStats, interpolateSample, stateMsg } from './host-state';
 import { PvpMatch } from '../combat/pvp-rules';
-import type { BuildingField } from '../combat/buildings';
 import type { PreStart } from './briefing';
+import type { HostGameDeps, HostRemote } from './host-game-deps';
+
+export type { HostGameDeps } from './host-game-deps';
 import {
   allSkipped,
+  createKaiju2Host,
   createRaidHost,
+  nephirgaScore,
   preStart,
   resendRuins,
   scoreMsg,
   takeRuins,
+  vorgasScore,
 } from './host-raid';
-import type { Rng } from '../combat/gun';
+import type { Kaiju2Host } from './kaiju2-host';
+import type { Kaiju2StateMsg } from './codec-kaiju2';
 import { InputBuffer } from './input-buffer';
 import { RAID_OUTCOME, type RaidHost } from './raid-host';
 import { DEFENSE_OUTCOME, type DefenseHost } from './defense-host';
@@ -57,30 +63,6 @@ import {
   type RemoteSample,
 } from './net-game';
 
-interface HostRemote {
-  readonly id: number;
-  readonly fighter: PvpFighter;
-  readonly input: InputBuffer;
-  readonly sample: RemoteSample;
-  /** 再接続した: 入力が届き直したら出現位置へ戻す */
-  pendingResume: boolean;
-}
-
-export interface HostGameDeps {
-  /** 自機（FlightSession の機体。HUD・カメラはこれを見る） */
-  readonly own: Aircraft;
-  readonly groundHeight?: GroundHeightFn;
-  /** 高層の建物（6-4） */
-  readonly obstacles?: (a: Readonly<Vec3>, b: Readonly<Vec3>) => boolean;
-  readonly rng?: Rng;
-  /** 開始前のカウントダウンの秒数（省略は PVP_CONFIG.countdownSeconds。テストで 0 にする） */
-  readonly countdownSeconds?: number;
-  /** 協力レイドのブリーフィングの秒数（6-6。省略は RAID_RULES.briefingSeconds。PvP は 0） */
-  readonly briefingSeconds?: number;
-  /** 街の建物（6-6。レイドはホストだけが壊し、壊れた番号を配る） */
-  readonly buildings?: BuildingField | null;
-}
-
 const TICK_HZ = NET_CONFIG.rates.tickHz;
 
 export class HostGame extends NetGameEvents implements NetGame {
@@ -96,6 +78,8 @@ export class HostGame extends NetGameEvents implements NetGame {
   missiles: MissileStateMsg[] = [];
   /** レイドの怪獣（6-2。PvP は null） */
   readonly raid: RaidHost | null;
+  /** 9-6c: 協力レイドのネフィルガ（ほかは null） */
+  readonly raid2: Kaiju2Host | null;
   /** 防衛戦（7-2。ほかは null） */
   readonly defense: DefenseHost | null;
   missileVersion = 0;
@@ -135,7 +119,9 @@ export class HostGame extends NetGameEvents implements NetGame {
     deps.own.respawn(start, headingQuat(quatIdentity(), start.headingDeg));
     this.own = this.arena.add(0, deps.own, fighterSpec(this.loadout(p.aircraftId, p.upgrades)));
     for (const pl of room.players) if (pl.id !== 0) this.addRemote(pl.id, pl.aircraftId, pl.paint);
-    this.raid = raid ? createRaidHost(this.arena, room, deps, this.sendEvent) : null;
+    // 9-6c: レイドの怪獣はヴォルガスかネフィルガ（設定の raidKaiju）。ネフィルガの種はホストが決める（判定はホストだけ）
+    this.raid2 = raid ? createKaiju2Host(this.arena, room, deps, deps.rng ?? Math.random) : null;
+    this.raid = raid && !this.raid2 ? createRaidHost(this.arena, room, deps, this.sendEvent) : null;
     this.defense = createDefenseHost(this.arena, room, deps, this.sendEvent);
     room.onPlayerLeave((id) => {
       this.remotes.delete(id);
@@ -216,7 +202,7 @@ export class HostGame extends NetGameEvents implements NetGame {
 
   /** 攻撃の対象のプレイヤー（6-6。攻撃中だけ） */
   get kaijuTarget(): number | null {
-    return this.raid?.targetId ?? null;
+    return this.raid?.targetId ?? this.raid2?.targetId ?? null;
   }
 
   /** その人がロックしている怪獣の部位（6-6。-1 はなし） */
@@ -266,14 +252,16 @@ export class HostGame extends NetGameEvents implements NetGame {
     this.playTicks++;
     arena.endTick(dt);
     this.raid?.step(dt);
+    this.raid2?.step(dt);
     this.defense?.step(dt);
     collectAllMissiles(this.arena, this.defense, this.missiles, this.missilePool);
     this.missileVersion++;
     if (this.tick % this.stateEvery === 0) this.broadcastState();
     // レイドは怪獣を倒すか街に到達されたら終わり（撃墜数・制限時間は使わない）
-    const outcome = this.raid?.outcome ?? this.defense?.outcome ?? RAID_OUTCOME.none;
+    const outcome =
+      this.raid?.outcome ?? this.raid2?.outcome ?? this.defense?.outcome ?? RAID_OUTCOME.none;
     const ended =
-      this.raid || this.defense
+      this.raid || this.raid2 || this.defense
         ? outcome !== RAID_OUTCOME.none && outcome !== DEFENSE_OUTCOME.none
         : this.match.step(dt, arena.all) !== null;
     if (ended || this.scoreDirty || this.tick % this.scoreEvery === 0) this.sendScore(ended);
@@ -293,6 +281,11 @@ export class HostGame extends NetGameEvents implements NetGame {
     return this.raid?.state() ?? null;
   }
 
+  /** 9-6c: ネフィルガの状態（表示は本体を直接読む。テスト・クライアントと同じ口） */
+  get kaiju2(): Kaiju2StateMsg | null {
+    return this.raid2?.state() ?? null;
+  }
+
   /** 防衛戦の状態（7-2。ホスト自身の表示は戦闘機を全部） */
   get defenseState(): DefenseStateMsg | null {
     return this.defense?.state(true) ?? null;
@@ -305,7 +298,8 @@ export class HostGame extends NetGameEvents implements NetGame {
 
   /** 成績（全員） */
   score(over: boolean): ScoreMsg {
-    return scoreMsg(this.arena.all, this.raid, this.match.remainingSeconds, over);
+    const raid = vorgasScore(this.raid) ?? nephirgaScore(this.raid2);
+    return scoreMsg(this.arena.all, raid, this.match.remainingSeconds, over);
   }
 
   private sendScore(over: boolean): void {
@@ -332,6 +326,7 @@ export class HostGame extends NetGameEvents implements NetGame {
     this.sendRuins();
     const seqOf = (id: number): number => this.remotes.get(id)?.input.lastApplied ?? 0;
     const kaiju = this.raid?.state() ?? null;
+    const kaiju2 = this.raid2?.state() ?? null;
     const defense = this.defense?.state(false) ?? null;
     const msg = stateMsg(
       this.tick,
@@ -341,6 +336,7 @@ export class HostGame extends NetGameEvents implements NetGame {
       kaiju,
       this.msgs,
       defense,
+      kaiju2,
     );
     this.room.broadcast(msg, 'unordered');
     this.sent.hit(this.now());

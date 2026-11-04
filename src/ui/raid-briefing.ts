@@ -7,17 +7,25 @@ import type { SaveStore } from '../progression/save-store';
 import { el } from './hud-dom';
 import { createButton } from './screen';
 
+/** 9-6c: ヴォルガス以外の怪獣のブリーフィングの題と文 */
+export interface RaidBriefingText {
+  readonly title: string;
+  readonly lines: readonly string[];
+}
+
 export class RaidBriefing {
   private readonly root: HTMLDivElement;
   private readonly remain: HTMLSpanElement;
   private readonly skip: HTMLButtonElement;
   private readonly list: HTMLUListElement;
+  private readonly title: HTMLSpanElement;
   private lastText = '';
   private pressed = false;
 
   constructor(parent: HTMLElement, onSkip: () => void) {
     this.root = el('div', 'ui-dialog raid-briefing', parent);
-    const head = el('div', 'campaign-label', this.root, RAID_BRIEFING.title);
+    const head = el('div', 'campaign-label', this.root);
+    this.title = el('span', '', head, RAID_BRIEFING.title);
     this.remain = el('span', 'raid-briefing-remain', head);
     this.list = el('ul', 'briefing-text raid-briefing-lines', this.root);
     this.fill(false);
@@ -47,15 +55,16 @@ export class RaidBriefing {
     this.skip.hidden = !canSkip;
   }
 
-  /** 難易度の文で埋める（8-6c: 高難度だけ「ダウン中はダメージ 2 倍」） */
-  private fill(hard: boolean): void {
+  /** 難易度の文で埋める（8-6c: 高難度だけ「ダウン中はダメージ 2 倍」）。9-6c: ほかの怪獣は渡された題と文 */
+  private fill(hard: boolean, custom: RaidBriefingText | null = null): void {
+    this.title.textContent = custom?.title ?? RAID_BRIEFING.title;
     this.list.replaceChildren();
-    for (const line of RAID_BRIEFING.linesFor(hard)) el('li', '', this.list, line);
+    for (const line of custom?.lines ?? RAID_BRIEFING.linesFor(hard)) el('li', '', this.list, line);
   }
 
-  /** 新しい飛行の始め。hard は高難度 */
-  reset(hard = false): void {
-    this.fill(hard);
+  /** 新しい飛行の始め。hard は高難度。custom はヴォルガス以外の怪獣の題と文（9-6c） */
+  reset(hard = false, custom: RaidBriefingText | null = null): void {
+    this.fill(hard, custom);
     this.pressed = false;
     this.skip.disabled = false;
     this.skip.textContent = t('raid.briefing.skip');

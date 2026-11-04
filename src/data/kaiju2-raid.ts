@@ -1,4 +1,4 @@
-// 9-6b: ネフィルガのレイド（ソロ。?dev=kaiju2 の裏だけ）の数値: 体力・部位・難易度・制限時間・出し方・報酬の考え方。
+// 9-6b: ネフィルガのレイド（9-6c でソロ・協力とも公開）の数値: 体力・部位・難易度・制限時間・出し方・報酬の考え方。
 // 動きと攻撃の数値は src/data/kaiju2.ts。進め方は src/missions/kaiju2-raid.ts（Three.js 非依存）。
 // 体力と制限時間は tests/kaiju2-raid-bots.ts のボットと模擬の人で決めた（docs/kaiju2.md の「9-6b の調整」）
 import type { RaidDifficulty } from './raid';
@@ -50,6 +50,17 @@ export const KAIJU2_RAID_CONFIG = {
   vanishSeconds: 2,
   /** ブリーフィングを出す秒数（タップで閉じる） */
   briefingSeconds: 9,
+  /**
+   * 9-6c: 協力。hpScale は人数（1〜4 人）ごとの全体 HP の倍率（部位 HP も同じ割合）。人数が増えても 1 人より難しくならないよう、
+   * 協力のボット（tests/kaiju2-coop-bots.ts）で人数ごとの中央値が 1 人以下になる値にした（docs/kaiju2.md の 9-6c）。
+   * focusSeconds: 狙う人（いちばん近い人）を選び直す間隔（攻撃の途中では変えない）。focusKeep: 今の人がいちばん近い人の
+   * この倍の距離までなら変えない
+   */
+  coop: {
+    hpScale: [1, 1.85, 2.65, 3.5] as readonly number[],
+    focusSeconds: 2,
+    focusKeep: 1.25,
+  },
 } as const;
 
 /** 部位の名前（壊れると動きが変わる部位）→ 撃てる部位 */

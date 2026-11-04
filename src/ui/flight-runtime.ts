@@ -40,7 +40,7 @@ export type FlightRuntimeParts = Omit<
 
 export function startFlightRuntime(p: FlightRuntimeParts): {
   photo: PhotoEntry;
-  /** 描画フレームごとに呼ぶ関数を足す（9-6a: ?dev=kaiju2 の怪獣） */
+  /** 描画フレームごとに呼ぶ関数を足す（9-6a: ネフィルガ） */
   onRender: (fn: (alpha: number) => void) => void;
 } {
   const { game, screens, race, defense, practice, replayHub, simWorld, pvp, touch } = p;

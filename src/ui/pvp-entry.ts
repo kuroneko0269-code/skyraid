@@ -97,9 +97,9 @@ export class PvpEntry {
       }
     }
     screens.setPvpHandlers({
-      onSelect: (raid) => {
+      onSelect: (raid, kaiju) => {
         void this.load().then((l) => {
-          l?.openLobby(undefined, raid);
+          l?.openLobby(undefined, raid, null, kaiju);
         });
       },
       onDefense: (mapId, hard) => {

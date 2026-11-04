@@ -4,7 +4,7 @@
 import { FLARE_CONFIG, GUN_CONFIG, MISSILE_CONFIG, type TargetingSpec } from '../data/weapons';
 import { PVP_CONFIG } from '../data/pvp';
 import type { Aircraft } from '../entities/aircraft';
-import type { KaijuPart } from '../entities/kaiju-part';
+import type { ArenaKaijuPart } from './arena-types';
 import { vec3, type Vec3 } from '../flight/math';
 import { Health } from './damage';
 import { Gun, type GroundHeightFn, type GunHit, type GunTarget, type Rng } from './gun';
@@ -26,7 +26,7 @@ export interface FighterSpec {
 }
 
 /** 機銃の当たり判定の対象: 他機（巻き戻した位置）か、レイドの怪獣の部位（6-2。巻き戻さない）か、防衛戦の敵（7-2。巻き戻さない） */
-export type ArenaGunTarget = RewoundTarget | KaijuPart | CombatTarget;
+export type ArenaGunTarget = RewoundTarget | ArenaKaijuPart | CombatTarget;
 
 /** 撃つ人から見た対象（遅延補償で巻き戻した位置）。機銃の当たり判定に使う */
 export class RewoundTarget implements GunTarget {

@@ -39,6 +39,8 @@ export function parseKaiju2Options(search: string): Kaiju2DevOptions {
 export interface Kaiju2DevEnv {
   readonly ground: (x: number, z: number) => number;
   readonly map: () => Pick<MapDef, 'center'>;
+  /** 9-6c: フリーフライトにも出す（?dev=kaiju2 の確かめる場だけ。省略は true） */
+  readonly freeFlight?: boolean;
 }
 
 /** 動かしている場面: 止めている / フリーフライト（確かめる場）/ ソロのレイド */
@@ -56,6 +58,11 @@ export class Kaiju2Dev implements FreeExtra {
   /** 走査の根（怪獣の本体・体力・部位。AI の hooks は関数なので値は入らない） */
   get stateRoot(): object {
     return this.raid;
+  }
+
+  /** 9-6c: 動かしているか（止めている間は状態の走査に入れない: 読み込んだ後のほかのモードのリプレイが今までと同じ） */
+  get active(): boolean {
+    return this.mode !== 'off';
   }
 
   constructor(
@@ -117,6 +124,11 @@ export class Kaiju2Dev implements FreeExtra {
 
   /** フリーフライトの始め: 開始位置の前方に出す（戦域はそのマップ）。体力・壊れた部位は URL から */
   start(): void {
+    // 9-6c: 一般のフリーフライトには出さない（レイドのために読んだ後も）
+    if (this.env.freeFlight === false) {
+      this.stop();
+      return;
+    }
     this.mode = 'free';
     this.lateStart = false;
     this.raid.reset(false, 'normal');
@@ -221,14 +233,20 @@ function raidWorld(play: GamePlay, raid: Kaiju2Raid): MissionWorld {
       return raid.damageRatio;
     },
     get kaijuReachedCity() {
-      return raid.stormReached;
+      return false;
+    },
+    get kaijuStormTimeUp() {
+      return raid.timeUp === 'storm';
+    },
+    get kaijuTotalTimeUp() {
+      return raid.timeUp === 'total';
     },
     // 空の怪獣は建物を壊さないので、守れた建物は出さない
     protectedBuildings: null,
   };
 }
 
-/** GamePlay に付ける（?dev=kaiju2 の遅延チャンクから） */
+/** GamePlay に付ける（ネフィルガの遅延チャンクから） */
 export function attachKaiju2Dev(
   play: GamePlay,
   options: Kaiju2DevOptions,

@@ -1,6 +1,7 @@
 // PvP の飛行の共通部分（5-1）: 開始位置、他機の表示用の値、通信の計測値。
 // ホストは host-game.ts、クライアントは client-game.ts。Three.js 非依存
 import type { Paint } from '../progression/paint';
+import type { Kaiju2StateMsg } from './codec-kaiju2';
 import { RAID_CONFIG } from '../data/kaiju';
 import { findDefenseMap } from '../data/defense';
 import { NET_CONFIG } from '../data/net';
@@ -197,6 +198,8 @@ export interface NetGame extends NetGameEvents {
   /** レイドの怪獣の状態（6-2。ホストの最新。kaijuVersion が変わったら新しい。PvP は null） */
   readonly kaiju: KaijuStateMsg | null;
   readonly kaijuVersion: number;
+  /** 9-6c: ネフィルガの状態（ネフィルガのレイドでなければ null。kaijuVersion が変わったら新しい） */
+  readonly kaiju2: Kaiju2StateMsg | null;
   /** 防衛戦の状態（7-2。最新。defenseVersion が変わったら新しい。防衛戦でなければ null） */
   readonly defenseState: DefenseStateMsg | null;
   readonly defenseVersion: number;

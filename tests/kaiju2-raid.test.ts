@@ -58,7 +58,7 @@ describe('ネフィルガのソロのレイド（9-6b）', () => {
     const def = nephirgaRaidMission('hard');
     expect(def.reward.raid).toEqual({ difficulty: 'hard', kaiju: 'nephirga' });
     expect(raidReward({ coop: false, cleared: true, seconds: 200, difficulty: 'hard' })).toBe(5400);
-    expect(def.failConditions).toEqual(['kaijuReachedCity', 'outOfBounds']);
+    expect(def.failConditions).toEqual(['stormTimeUp', 'totalTimeUp', 'outOfBounds']);
   });
 
   it('一撃で落ちない: 1 回の攻撃のダメージは高難度でも Swift の HP 140 より少ない・突風の操作不能は 0.6 秒', () => {
@@ -131,10 +131,12 @@ describe('ネフィルガのソロのレイド（9-6b）', () => {
     expect(r.stormReached).toBe(false);
     for (let i = 0; i < 60; i++) r.step(DT, still, null);
     expect(r.stormReached).toBe(true);
+    expect(r.timeUp).toBe('storm');
     // 全体の制限時間（段階 1 のまま）
     const r2 = makeRaid('hard');
     for (let i = 0; i < R.totalSeconds.hard * 60 + 5; i++) r2.step(DT, still, null);
     expect(r2.stormReached).toBe(true);
+    expect(r2.timeUp).toBe('total');
     // 撃破
     const r3 = makeRaid();
     expect(part(r3, 'tail').applyDamage(r3.maxHp * 10)).toBe(true);

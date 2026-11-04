@@ -17,6 +17,8 @@ export interface RaidResultRow {
 
 export interface RaidSummary {
   readonly cleared: boolean;
+  /** 9-6c: 怪獣（部位の列の名前。省略はヴォルガス） */
+  readonly kaiju?: string;
   readonly difficulty: RaidDifficulty;
   /** クリア（終わり）までの秒数（カウントダウンの後から） */
   readonly seconds: number;
@@ -35,6 +37,7 @@ export function raidSummary(
     readonly difficulty: RaidDifficulty;
     readonly seconds: number;
     readonly protectedBuildings: number | null;
+    readonly kaiju?: string;
   },
 ): RaidSummary {
   const rows = [...players]

@@ -127,6 +127,7 @@ export type DefensePreset = { readonly mapId: string; readonly hard: boolean } |
 export function initialSettings(
   raid: boolean,
   defense: DefensePreset = null,
+  raidKaiju = 0,
 ): GameSettings | undefined {
   if (defense)
     return {
@@ -141,6 +142,7 @@ export function initialSettings(
         mode: 'raid',
         mapId: RAID_CONFIG.mapId,
         weather: RAID_COOP_DEFAULT_WEATHER,
+        raidKaiju,
       }
     : undefined;
 }

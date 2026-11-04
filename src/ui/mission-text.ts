@@ -39,6 +39,12 @@ export const FAIL_REASON_TEXT: Record<FailCondition, string> = {
   get outOfBounds() {
     return t('objectives.fail.outOfBounds');
   },
+  get stormTimeUp() {
+    return t('objectives.fail.stormTimeUp');
+  },
+  get totalTimeUp() {
+    return t('objectives.fail.totalTimeUp');
+  },
 };
 
 export function objectiveLabel(def: ObjectiveDef): string {

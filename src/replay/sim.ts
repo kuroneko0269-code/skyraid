@@ -42,7 +42,7 @@ export function simRoots(w: Pick<SimWorld, 'play' | 'buildings'>): object[] {
   const b = w.buildings();
   const roots: object[] = b ? [w.play, b] : [w.play];
   const extra = freeExtraOf(w.play);
-  if (extra) roots.push(extra.stateRoot);
+  if (extra?.active === true) roots.push(extra.stateRoot);
   return roots;
 }
 
@@ -66,7 +66,7 @@ export function missionFor(
   s: Pick<ReplayStart, 'mode' | 'missionId' | 'raidDifficulty' | 'raidKaiju'>,
 ): MissionDef | null {
   if (s.mode === 'raid') {
-    // 9-6b: ほかの怪獣は登録されているときだけ（?dev=kaiju2 の遅延チャンク）
+    // 9-6b: ほかの怪獣は登録されているときだけ（9-6c: ネフィルガは起動時に登録する）
     if (s.raidKaiju !== undefined)
       return findRaidVariant(s.raidKaiju)?.mission(s.raidDifficulty ?? 'normal') ?? null;
     return raidMission(s.raidDifficulty ?? 'normal');

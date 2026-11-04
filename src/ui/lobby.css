@@ -61,6 +61,13 @@
   user-select: all;
 }
 
+/* 9-6c: 通信の版（違う版の人は参加できない。見比べる用に小さく） */
+.lobby-protocol {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--ui-text-dim);
+}
+
 .lobby-players {
   display: flex;
   flex-direction: column;

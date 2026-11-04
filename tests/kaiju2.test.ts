@@ -23,7 +23,7 @@ const island = new ActiveMap();
 const ground = island.ground;
 
 /** プレイヤーの代わり: 決まった動き（周回・地面すれすれ・止まる・怪獣にくっつく） */
-type Path = 'orbit' | 'low' | 'still' | 'far' | 'hug' | 'above' | 'chase';
+type Path = 'orbit' | 'low' | 'still' | 'far' | 'hug' | 'above' | 'chase' | 'ahead';
 
 function makeTarget(): Kaiju2Target & {
   position: { x: number; y: number; z: number };
@@ -73,6 +73,14 @@ function moveTarget(t: ReturnType<typeof makeTarget>, path: Path, time: number, 
       p.x = k.position.x - f.x * 220;
       p.y = k.position.y - f.y * 220 + 20;
       p.z = k.position.z - f.z * 220;
+      break;
+    }
+    case 'ahead': {
+      // 9-6c: 前 500m（突風の間合い）
+      const f = k.forward;
+      p.x = k.position.x + f.x * 500;
+      p.y = k.position.y + f.y * 500;
+      p.z = k.position.z + f.z * 500;
       break;
     }
     case 'above':
@@ -182,7 +190,8 @@ describe('ネフィルガの動き（9-6a）', () => {
   it('段階 2 以上では 4 種の攻撃をすべて使い、止まり木に降りる（攻める隙）', () => {
     const seen = new Set<Kaiju2Attack>();
     const states = new Set<string>();
-    for (const path of ['orbit', 'low', 'still', 'chase'] as Path[])
+    // 9-6c: 急降下の出番（段階 2 から）で近づき方が変わり、周回の道では正面の近くに入らなくなったので、前 500m（ahead）を足した
+    for (const path of ['orbit', 'low', 'still', 'chase', 'ahead'] as Path[])
       for (const seed of [1, 2, 3]) {
         const r = run(seed, 300, path, { hp: 0.5 });
         for (const a of r.attacks) seen.add(a);

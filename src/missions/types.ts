@@ -240,10 +240,17 @@ export type SuccessCondition = 'allRequiredObjectives';
 /**
  * 失敗条件。playerDown: 自機撃墜（地面・海面への墜落も） / escortLost: 護衛対象の喪失 /
  * timeUp: 制限時間超過（timeLimitSeconds があるとき） / outOfBounds: 戦域離脱（境界の外で猶予を過ぎる） /
- * kaijuReachedCity: 怪獣の最終フェーズの制限時間が切れ、島の中心（街）に到達した（6-2）
+ * kaijuReachedCity: 怪獣の最終フェーズの制限時間が切れ、島の中心（街）に到達した（6-2） /
+ * stormTimeUp・totalTimeUp: ネフィルガの嵐（段階 3）の制限時間・全体の制限時間が切れた（9-6c）
  */
 export type FailCondition =
-  'playerDown' | 'escortLost' | 'timeUp' | 'outOfBounds' | 'kaijuReachedCity';
+  | 'playerDown'
+  | 'escortLost'
+  | 'timeUp'
+  | 'outOfBounds'
+  | 'kaijuReachedCity'
+  | 'stormTimeUp'
+  | 'totalTimeUp';
 
 export interface RewardDef {
   /** クレジットの基本額 */
@@ -256,7 +263,7 @@ export interface RewardDef {
    */
   readonly raid?: {
     readonly difficulty: RaidDifficulty;
-    /** 9-6b: ヴォルガス以外の怪獣（src/missions/raid-variants.ts の id。?dev=kaiju2 のときだけ）。省略はヴォルガス */
+    /** 9-6b: ヴォルガス以外の怪獣（src/missions/raid-variants.ts の id。9-6c からネフィルガ）。省略はヴォルガス */
     readonly kaiju?: string;
   };
 }

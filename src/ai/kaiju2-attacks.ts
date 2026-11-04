@@ -57,18 +57,19 @@ export function attackCandidates(
   phase: number,
   broken: Readonly<Record<Kaiju2Part, boolean>>,
   history: readonly Kaiju2Attack[],
+  diveDue = false,
 ): Kaiju2Attack[] {
   const out: Kaiju2Attack[] = [];
   if (g.distance <= A.tail.pickRange && g.angle >= 180 - A.tail.pickAngleDeg) out.push('tail');
-  if (g.distance <= A.gust.pickRange && g.angle <= A.gust.pickAngleDeg) out.push('gust');
   const d = A.dive;
-  if (
+  // 9-6c: 急降下の出番は尾・突風の次・雷球より先（段階 2 で 1 回は見られるように）
+  const dive =
     phase >= d.fromPhase &&
-    g.drop >= d.minDrop &&
-    g.distance >= d.minRange &&
-    g.distance <= d.maxRange
-  )
-    out.push('dive');
+    g.drop >= (diveDue ? d.dueMinDrop : d.minDrop) &&
+    g.distance >= (diveDue ? d.dueMinRange : d.minRange) &&
+    g.distance <= d.maxRange;
+  if (g.distance <= A.gust.pickRange && g.angle <= A.gust.pickAngleDeg) out.push('gust');
+  if (dive) out.push('dive');
   if (g.distance >= A.orbs.minRange && g.distance <= A.orbs.maxRange) out.push('orbs');
   return out.filter((a) => attackUsable(a, broken) && !repeated(a, history));
 }
@@ -84,10 +85,14 @@ function repeated(a: Kaiju2Attack, history: readonly Kaiju2Attack[]): boolean {
  * 候補から 1 つ選ぶ: 近い間合いの攻撃（尾・突風）はそのまま、急降下と雷球が両方使えるときは乱数（種から）で半々。
  * 候補がなければ null
  */
-export function pickAttack(cands: readonly Kaiju2Attack[], rnd: () => number): Kaiju2Attack | null {
+export function pickAttack(
+  cands: readonly Kaiju2Attack[],
+  rnd: () => number,
+  diveDue = false,
+): Kaiju2Attack | null {
   const first = cands[0];
   if (first === undefined) return null;
-  if (first === 'dive' && cands.includes('orbs')) return rnd() < 0.5 ? 'dive' : 'orbs';
+  if (first === 'dive' && !diveDue && cands.includes('orbs')) return rnd() < 0.5 ? 'dive' : 'orbs';
   return first;
 }
 

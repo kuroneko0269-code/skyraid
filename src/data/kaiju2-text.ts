@@ -1,5 +1,6 @@
-// 9-6b: ネフィルガ（?dev=kaiju2 の裏だけ）の文言（日本語・英語）。表は src/data/i18n/kaiju2/{ja,en}.json で、遅延チャンクだけが読むので
-// 起動時の表（src/data/i18n/{ja,en}.json）には入れない。遊ぶ人に出すとき（9-6c 以降）に起動時の表へ移す。
+// 9-6b: ネフィルガの文言（HUD・ブリーフィング・お知らせ・部位の名前。日本語・英語）。表は src/data/i18n/kaiju2/{ja,en}.json で、
+// 遅延チャンク（と協力のチャンク）だけが読む。9-6c: 起動時に要る名前・題（モード選択・リプレイ・記録カード）だけを起動時の表
+// （src/data/i18n/{ja,en}.json の kaiju2）へ移した。
 // キーは両方の言語でそろえる（tests/kaiju2-raid.test.ts）
 import { fill, getLocale, type Params } from '../core/i18n';
 import en from './i18n/kaiju2/en.json';

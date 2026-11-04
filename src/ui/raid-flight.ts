@@ -1,6 +1,8 @@
 // 協力レイドの 1 回の飛行（6-2 の pvp-flight.ts のレイドの部分を 6-6 で分けた）: 怪獣の表示元（ホストは本体、
 // クライアントは state の写し）、岩・ブレイクの event、役割分担の HUD（他プレイヤーのロックの印・攻撃の対象・
-// ブレイクの貢献者）、開始前のブリーフィング、リザルト（全員の与ダメージ・ブレイク・復帰・MVP・報酬）
+// ブレイクの貢献者）、開始前のブリーフィング、リザルト（全員の与ダメージ・ブレイク・復帰・MVP・報酬）。
+// 9-6c: ネフィルガ（設定の raidKaiju）: ホストは Kaiju2Host の本体、クライアントは state の写し（Kaiju2Mirror）を
+// 遅延チャンクの表示（kaiju2Source）に渡し、部位をロックの対象にする
 import type { KaijuBodyView, KaijuEffectsView, KaijuPartView } from '../entities/kaiju-display';
 import type { FlightSession } from '../missions/flight-session';
 import { HostGame } from '../net/host-game';
@@ -9,11 +11,26 @@ import type { NetGame } from '../net/net-game';
 import type { EventMsg, ScoreEntry } from '../net/protocol';
 import type { PvpMirror } from '../net/pvp-mirror';
 import { RAID_OUTCOME } from '../net/raid-host';
+import { KAIJU2_OUTCOME } from '../net/kaiju2-host';
+import { Kaiju2Mirror } from '../net/kaiju2-mirror';
+import { KAIJU2_TARGETS } from '../data/kaiju2-raid';
+import { k2list, k2t } from '../data/kaiju2-text';
+import { NEPHIRGA_ID, raidKaijuOf, type RaidKaijuId } from '../data/raid-kaiju';
+import type { Kaiju2Raid } from '../missions/kaiju2-raid';
+import type { Kaiju2CoopFrame } from './kaiju2-hud';
 import { raidSummary, type RaidSummary } from '../net/raid-result';
 import type { KaijuCoopFrame } from './kaiju-coop-hud';
 import type { KaijuHudFrame } from './kaiju-hud';
 import { playerColorCss } from './lobby-colors';
 import type { RaidBriefing } from './raid-briefing';
+
+/** 9-6c: ネフィルガの表示元（遅延チャンクの kaiju2-runtime.ts が描画・HUD・音に出す） */
+export interface Kaiju2Source {
+  readonly raid: Kaiju2Raid;
+  readonly frame: () => Kaiju2CoopFrame;
+  /** 自機のスタン（煽られて操作できない）の残り秒数（画面のノイズ） */
+  readonly stun: () => number;
+}
 
 /** レイドの怪獣の表示元（6-2） */
 export interface KaijuSource {
@@ -34,10 +51,23 @@ export interface RaidFlightDeps {
   readonly markBriefingSeen: () => void;
   /** 高難度（ブリーフィングの文を難易度で変える。8-6c） */
   readonly hard: boolean;
+  /** 9-6c: レイドの怪獣（設定の raidKaiju の番号）と、ネフィルガの表示元を差し替える（null で戻す） */
+  readonly raidKaiju: number;
+  readonly kaiju2Source: (src: Kaiju2Source | null) => void;
+  /** 9-6c: ネフィルガが避ける高さ（写しの止まり木の見た目） */
+  readonly kaijuGround: (x: number, z: number) => number;
 }
 
 export class RaidFlight {
   private kaijuMirror: KaijuMirror | null = null;
+  /** 9-6c: ネフィルガの写し（クライアント） */
+  private kaiju2Mirror: Kaiju2Mirror | null = null;
+  readonly kaiju: RaidKaijuId;
+  private readonly marks2: string[][] = KAIJU2_TARGETS.map(() => []);
+  private readonly coop2 = {
+    marks: this.marks2 as readonly (readonly string[])[],
+    targeted: false,
+  };
   private kaijuVersion = -1;
   private kaijuAt = 0;
   private outcome = 0;
@@ -58,8 +88,38 @@ export class RaidFlight {
     private readonly deps: RaidFlightDeps,
   ) {
     this.canSkip = deps.briefingSeen();
-    deps.briefing.reset(deps.hard);
-    this.attachKaiju();
+    this.kaiju = raidKaijuOf(deps.raidKaiju);
+    if (this.kaiju === NEPHIRGA_ID) {
+      deps.briefing.reset(deps.hard, { title: k2t('briefingTitle'), lines: k2list('briefing') });
+      this.attachKaiju2();
+    } else {
+      deps.briefing.reset(deps.hard);
+      this.attachKaiju();
+    }
+  }
+
+  /** 9-6c: ネフィルガ: ホストは本体、クライアントは写しを表示元にし、部位をロックの対象にする */
+  private attachKaiju2(): void {
+    const host = this.net instanceof HostGame ? this.net.raid2 : null;
+    const mirror = host ? null : new Kaiju2Mirror(this.deps.kaijuGround);
+    this.kaiju2Mirror = mirror;
+    const raid = host?.raid ?? mirror?.raid;
+    if (!raid) return;
+    this.mirror.setKaijuTargets(raid.targets);
+    this.deps.kaiju2Source({
+      raid,
+      frame: () => {
+        for (const m of this.marks2) m.length = 0;
+        for (const id of this.playerIds()) {
+          if (id === this.net.localId) continue;
+          const part = this.net.lockPartOf(id);
+          if (part >= 0) this.marks2[part]?.push(playerColorCss(id));
+        }
+        this.coop2.targeted = this.net.kaijuTarget === this.net.localId;
+        return this.coop2;
+      },
+      stun: () => this.mirror.ownStun,
+    });
   }
 
   /** 怪獣の表示元を、ホストは本体、クライアントは写しにし、部位をロックの対象にする */
@@ -122,6 +182,16 @@ export class RaidFlight {
 
   /** 固定ステップ: クライアントの怪獣の写しを進める（新しい state が来たら写す） */
   step(dt: number): void {
+    const m2 = this.kaiju2Mirror;
+    if (m2) {
+      const k2 = this.net.kaiju2;
+      if (k2 && this.net.kaijuVersion !== this.kaijuVersion) {
+        this.kaijuVersion = this.net.kaijuVersion;
+        m2.receive(k2);
+      }
+      m2.step(dt);
+      return;
+    }
     const m = this.kaijuMirror;
     if (!m) return;
     this.kaijuAt += dt;
@@ -148,17 +218,27 @@ export class RaidFlight {
     return this.outcome === RAID_OUTCOME.clear;
   }
 
+  /** 9-6c: 失敗の理由（ネフィルガの嵐 / 全体の時間切れ。ヴォルガス・成功は null） */
+  get failReason(): 'storm' | 'total' | null {
+    if (this.outcome === KAIJU2_OUTCOME.stormFail) return 'storm';
+    if (this.outcome === KAIJU2_OUTCOME.totalFail) return 'total';
+    return null;
+  }
+
   /** リザルト（最後に届いた成績から。全員が同じ値になる） */
   summary(players: readonly ScoreEntry[], hard: boolean): RaidSummary {
     return raidSummary(players, {
       cleared: this.cleared,
       difficulty: hard ? 'hard' : 'normal',
       seconds: this.ticks / 60,
-      protectedBuildings: this.deps.protectedBuildings(),
+      // 9-6c: ネフィルガは建物を壊さない
+      protectedBuildings: this.kaiju === NEPHIRGA_ID ? null : this.deps.protectedBuildings(),
+      kaiju: this.kaiju,
     });
   }
 
   dispose(): void {
+    if (this.kaiju === NEPHIRGA_ID) this.deps.kaiju2Source(null);
     this.deps.kaijuSource(null);
     this.deps.briefing.hide();
   }

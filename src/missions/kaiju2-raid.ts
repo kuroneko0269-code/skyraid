@@ -1,4 +1,4 @@
-// 9-6b: ネフィルガのレイド（ソロ。?dev=kaiju2 の裏だけ）の進め方（Three.js・DOM 非依存）: 体力と部位 HP・部位の破壊で
+// 9-6b: ネフィルガのレイド（ソロ。9-6c から協力のホスト・写しも同じもの）の進め方（Three.js・DOM 非依存）: 体力と部位 HP・部位の破壊で
 // 動きが変わる（翼・頭・尾）・段階（70% / 40%）・止まり木の間のダメージ・制限時間（嵐の 4.5 分と全体の 12 分）・撃破で落ちる。
 // 動きと攻撃は 9-6a の Kaiju2Ai。状態はすべてプロパティ（関数を持たない）なので、リプレイの状態の走査にそのまま入る
 import type { Flare } from '../combat/flare';
@@ -11,6 +11,12 @@ import type { RaidDifficulty } from '../data/raid';
 import { Kaiju2PartTarget } from '../entities/kaiju2/kaiju2-target';
 import { SkyKaiju, type Kaiju2Ground } from '../entities/kaiju2/sky-kaiju';
 import { vec3 } from '../flight/math';
+
+/** 9-6c: 協力の人数の全体 HP の倍率（1 人は 1。tests/kaiju2-coop-bots.ts で決めた。docs/kaiju2.md の 9-6c） */
+export function coopHpScale(players: number): number {
+  const n = Math.max(1, Math.min(4, Math.round(players)));
+  return R.coop.hpScale[n - 1] ?? 1;
+}
 
 /** 止まり木の間（降りる・休む・飛び立つ）は攻撃しない（攻める隙） */
 export function isPerching(k: SkyKaiju): boolean {
@@ -37,8 +43,9 @@ export class Kaiju2Raid {
   /** レイドの経過（秒。倒すと止まる）と、嵐（段階 3）に入った時刻（-1 は入っていない） */
   elapsed = 0;
   stormAt = -1;
-  /** 嵐が街に着いた（制限時間。失敗） */
+  /** 嵐が街に着いた（制限時間。失敗）。9-6c: どちらの制限時間か（嵐 / 全体。切れていなければ null） */
   stormReached = false;
+  timeUp: 'storm' | 'total' | null = null;
   /** 被弾で白く光る残り秒数 */
   flash = 0;
   /** 段階が変わって吠えている残り秒数 */
@@ -48,8 +55,17 @@ export class Kaiju2Raid {
   lastBroken: string | null = null;
   /** 部位ごとに与えたダメージ（全体 HP を減らした量。結果・ボットの集計） */
   readonly dealt: Record<string, number> = { body: 0, wingL: 0, wingR: 0, head: 0, tail: 0 };
+  /** 9-6c: 協力の人数（全体 HP の倍率）と、プレイヤー ID ごとの部位別の与ダメージ（KAIJU2_TARGETS の順）・壊した部位の数 */
+  players = 1;
+  readonly dealtBy: number[][] = [0, 1, 2, 3].map(() => KAIJU2_TARGETS.map(() => 0));
+  readonly breaksBy: number[] = [0, 0, 0, 0];
 
-  constructor(ground: Kaiju2Ground, hooks: Kaiju2Hooks) {
+  /** mirror: 協力のクライアントの写し（9-6c。ダメージは受けず、値はホストの state から写す） */
+  constructor(
+    ground: Kaiju2Ground,
+    hooks: Kaiju2Hooks,
+    readonly mirror = false,
+  ) {
     this.body = new SkyKaiju(ground);
     this.ai = new Kaiju2Ai(this.body, hooks);
     this.targets = KAIJU2_TARGETS.map((id) => new Kaiju2PartTarget(id, this));
@@ -78,17 +94,21 @@ export class Kaiju2Raid {
     return 1 - this.hp / this.maxHp;
   }
 
-  /** 体力と部位を満タンにする。raid なら難易度の倍率を掛ける（確かめる場は hpRatio と壊れた部位を URL から） */
-  reset(raid: boolean, difficulty: RaidDifficulty): void {
+  /**
+   * 体力と部位を満タンにする。raid なら難易度の倍率を掛ける（確かめる場は hpRatio と壊れた部位を URL から）。
+   * 9-6c: players は協力の人数（全体 HP と部位 HP を R.coopHpScale 倍）
+   */
+  reset(raid: boolean, difficulty: RaidDifficulty, players = 1): void {
     this.raid = raid;
     this.difficulty = difficulty;
+    this.players = players;
     const hard = raid && difficulty === 'hard';
     const k = this.body;
     k.windupScale = hard ? R.hard.windupScale : 1;
     k.intervalScale = hard ? R.hard.intervalScale : 1;
     k.damageScale = hard ? R.hard.damageScale : 1;
     k.visible = true;
-    this.maxHp = R.hp * (hard ? R.hard.hpScale : 1);
+    this.maxHp = R.hp * (hard ? R.hard.hpScale : 1) * coopHpScale(players);
     this.hp = this.maxHp;
     for (const t of this.targets) t.reset(this.maxHp * R.targets[t.id].hpShare);
     for (const p of KAIJU2_PARTS) k.broken[p] = false;
@@ -99,11 +119,14 @@ export class Kaiju2Raid {
     this.elapsed = 0;
     this.stormAt = -1;
     this.stormReached = false;
+    this.timeUp = null;
     this.flash = 0;
     this.shout = 0;
     this.brokenCount = 0;
     this.lastBroken = null;
     for (const key of Object.keys(this.dealt)) this.dealt[key] = 0;
+    for (const row of this.dealtBy) row.fill(0);
+    this.breaksBy.fill(0);
   }
 
   /** 体力の割合と壊れた部位を決める（確かめる場の URL）。部位 HP も合わせる */
@@ -124,8 +147,8 @@ export class Kaiju2Raid {
     for (const t of this.targets) t.place(this.body, true);
   }
 
-  damageTarget(target: Kaiju2PartTarget, amount: number): boolean {
-    if (!this.targetable || amount <= 0) return false;
+  damageTarget(target: Kaiju2PartTarget, amount: number, attacker = 0): boolean {
+    if (this.mirror || !this.targetable || amount <= 0) return false;
     const k = this.body;
     const dmg =
       amount * R.targets[target.id].damageScale * (isPerching(k) ? R.perchedDamageScale : 1);
@@ -135,9 +158,15 @@ export class Kaiju2Raid {
     const before = this.hp;
     this.hp = Math.max(floor, this.hp - dmg);
     this.dealt[target.id] = (this.dealt[target.id] ?? 0) + (before - this.hp);
+    const row = this.dealtBy[attacker & 3];
+    const index = KAIJU2_TARGETS.indexOf(target.id);
+    if (row) row[index] = (row[index] ?? 0) + (before - this.hp);
     if (isBreakable(target.id) && !target.broken) {
       target.partHp = Math.max(0, target.partHp - dmg);
-      if (target.partHp <= 0) this.breakPart(target.id);
+      if (target.partHp <= 0) {
+        this.breakPart(target.id);
+        this.breaksBy[attacker & 3] = (this.breaksBy[attacker & 3] ?? 0) + 1;
+      }
     }
     const phase = k.phase;
     k.setHpRatio(this.hp / this.maxHp);
@@ -179,11 +208,13 @@ export class Kaiju2Raid {
       this.ai.step(dt, target, flares);
       if (this.raid) {
         this.elapsed += dt;
-        if (
-          this.elapsed >= R.totalSeconds[this.difficulty] ||
-          (this.stormAt >= 0 && this.elapsed - this.stormAt >= R.finalSeconds[this.difficulty])
-        )
+        const storm =
+          this.stormAt >= 0 && this.elapsed - this.stormAt >= R.finalSeconds[this.difficulty];
+        const total = this.elapsed >= R.totalSeconds[this.difficulty];
+        if ((storm || total) && !this.stormReached) {
           this.stormReached = true;
+          this.timeUp = storm ? 'storm' : 'total';
+        }
       }
     }
     const s = k.state === 'perched' ? 0 : k.speed;

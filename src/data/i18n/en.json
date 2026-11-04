@@ -408,7 +408,7 @@
     "raid": {
       "kicker": "CO-OP RAID",
       "title": "Co-op Raid",
-      "note": "Take down the giant kaiju Vorgas with 2–{max} players"
+      "note": "Take down a giant kaiju (Vorgas / Nephirga) with 2–{max} players"
     },
     "defense": {
       "kicker": "CO-OP DEFENSE",
@@ -486,7 +486,8 @@
       "noUpgrades": "No upgrades",
       "rookie": "Rookie boost",
       "aimAssist": "Aim assist+",
-      "autoFire": "Auto-fire"
+      "autoFire": "Auto-fire",
+      "kaiju": "Kaiju"
     },
     "autoTeams": "Auto-assign teams",
     "hangarButton": "Hangar",
@@ -494,7 +495,7 @@
     "unready": "Not Ready",
     "start": "Start",
     "rules": {
-      "raid": "Raid (co-op) · Defeat Vorgas · {difficulty}",
+      "raid": "Raid (co-op) · Defeat {kaiju} · {difficulty}",
       "defense": "Defense (co-op) · 10 waves · {difficulty}",
       "versus": "{mode} · {score} kills · {time}",
       "ffa": "Free-for-All",
@@ -519,7 +520,8 @@
       "qrLabel": "QR code for the join URL: {url}",
       "qrFailed": "Couldn't create the QR code"
     },
-    "optionsAssist": " · Aim assist+ {aim} · Auto-fire {fire}"
+    "optionsAssist": " · Aim assist+ {aim} · Auto-fire {fire}",
+    "protocol": "Protocol v{version}"
   },
   "common": {
     "waves": {
@@ -594,6 +596,13 @@
       "targeted": "TARGET  The kaiju is targeting you"
     }
   },
+  "kaiju2": {
+    "name": "Nephirga",
+    "missionTitle": "Raid: Nephirga",
+    "objective": "Defeat Nephirga",
+    "titleNormal": "Nephirga",
+    "titleHard": "Nephirga (Hard)"
+  },
   "maps": {
     "island": "Coast & Island",
     "harbor": "Harbor City"
@@ -621,7 +630,9 @@
       "escortLost": "Escort lost",
       "timeUp": "Time up",
       "kaijuReachedCity": "The kaiju reached the city",
-      "outOfBounds": "Left the combat area"
+      "outOfBounds": "Left the combat area",
+      "stormTimeUp": "The storm ran out of time and struck the city",
+      "totalTimeUp": "Time up — the storm struck the city"
     },
     "progressSeconds": "{label} {current} / {target} s",
     "summarySeconds": "{label} {seconds} s",
@@ -709,7 +720,8 @@
     "separator": " · ",
     "defense": "Best: Wave {waves}",
     "raid": "Best {time}",
-    "practice": "Best {scores}"
+    "practice": "Best {scores}",
+    "raidBoth": "Best {vorgas} / {nephirga}"
   },
   "campaign": {
     "heading": "Campaign",
@@ -834,7 +846,7 @@
     },
     "raid": {
       "label": "Raid",
-      "note": "Defeat kaiju Vorgas"
+      "note": "Defeat kaiju Vorgas or Nephirga"
     },
     "defense": {
       "label": "Defense",
@@ -869,7 +881,8 @@
     "raidDialog": {
       "title": "Raid: Vorgas",
       "body": "Solo: pick a difficulty and launch right away (Hard: HP ×1.4, shorter tells, 3.5-min final phase, reward ×1.8). For 2–4 players, create a room or join with a room code (everyone on one team; the host picks the difficulty).",
-      "difficulty": "Difficulty (Solo)"
+      "difficulty": "Difficulty (Solo)",
+      "bodyNephirga": "Solo: pick a difficulty and launch right away (Hard: health ×1.55, shorter tells, 4-min storm, 10-min overall limit, reward ×1.8). For 2–4 players, create a room or join with a room code (everyone on one team; the host picks the difficulty)."
     },
     "defenseDialog": {
       "body": "Defend the base HQ from all 10 waves. Between waves, pass low and slow over the base (below 300 m, speed under 150) to resupply. Hard: enemies ×1.3, HQ HP 1500. For 2–4 players, create a room or join with a room code (everyone on one team).",
@@ -1445,7 +1458,8 @@
       "one": "Your rank: #{place} of {count} pilot",
       "other": "Your rank: #{place} of {count} pilots"
     },
-    "selfNone": "No record of yours yet (shown when you reach the top 100)"
+    "selfNone": "No record of yours yet (shown when you reach the top 100)",
+    "kaiju": "Kaiju"
   },
   "sync": {
     "title": "Which Save Do You Want?",
@@ -1767,7 +1781,9 @@
       "raidClear": "The team defeated the kaiju (everyone gets the same reward)",
       "raidFail": "The kaiju reached the city (300 CR each)",
       "defenseClear": "Held the base through all 10 waves (everyone gets the same reward)",
-      "defenseFail": "HQ destroyed (waves cleared × 300 CR)"
+      "defenseFail": "HQ destroyed (waves cleared × 300 CR)",
+      "raidStormFail": "The storm ran out of time and struck the city (300 CR each)",
+      "raidTotalFail": "Time up — the storm struck the city (300 CR each)"
     },
     "title": {
       "raidClear": "Vorgas Defeated",
@@ -1775,7 +1791,8 @@
       "draw": "Draw",
       "win": "Victory",
       "lose": "Defeat",
-      "over": "Match Over"
+      "over": "Match Over",
+      "raid2Clear": "Nephirga Defeated"
     },
     "result": {
       "protected": "Buildings saved {percent}%",
@@ -1808,7 +1825,7 @@
       "notFound": "Room not found (check the code)",
       "full": "Room is full (max 4 players)",
       "started": "The match has already started",
-      "version": "Version mismatch with the host (both players should reload)",
+      "version": "The host's protocol version differs (this device: {version}). Reload the page on both devices.",
       "expired": "Reconnect window expired",
       "timeout": "No response (timed out)",
       "network": "Couldn't connect",

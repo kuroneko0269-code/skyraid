@@ -3,6 +3,7 @@
 // .skyreplay の書き出し・読み込み。再生中の操作は ui/replay-playback.ts。
 // 8-2: 一覧・再生の操作・書き出し / 読み込みは別のチャンク（replay-ui.ts）にし、一覧を開くときに読む（loadUi）。
 // 読めなければ（オフライン・古いチャンク）お知らせを出してモード選択へ戻る
+import { loadKaiju2, needsKaiju2 } from './kaiju2-link';
 import { APP_VERSION } from 'virtual:app-info';
 import { replayControlsOf } from '../core/control-settings';
 import type { GameState } from '../core/game-state';
@@ -161,12 +162,16 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
     const s = await storeReady;
     const r = s ? await s.get(e.id) : null;
     if (!r) return;
+    let data: ReplayData;
     try {
-      hub.pending = decodeReplay(r.bytes);
+      data = decodeReplay(r.bytes);
     } catch {
       say(t('replay.msg.corrupt'));
       return;
     }
+    // 9-6c: ネフィルガのレイドは遅延チャンクを読んでから（読めなければ再生しない）
+    if (needsKaiju2(data.header.raidKaiju) && !(await loadKaiju2())) return;
+    hub.pending = data;
     game.transition('flight');
   };
 

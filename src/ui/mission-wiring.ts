@@ -1,5 +1,7 @@
 // ミッションと自機のイベントの配線（main.ts から分けた。7-A の事前修正。挙動は変えていない）:
 // 爆弾・ロケットと建物、ミッションの開始（HUD・ポーズの「中断」・チュートリアル・報酬）、撃墜とリスポーンのカメラ
+import { isRaidKaijuId, raidRecordKey, VORGAS_ID } from '../data/raid-kaiju';
+import { rankedRaidKaiju } from '../data/online';
 import type { ActiveMap } from '../missions/active-map';
 import type { FlightSession } from '../missions/flight-session';
 import type { GamePlay } from '../missions/game-play';
@@ -55,27 +57,23 @@ export function linkMissionEvents(p: MissionWiringParts): void {
     });
     // 成功の記録と報酬をセーブへ（3-2）。チュートリアルの報酬は初回だけ（TutorialLink）
     // 7-B: 再生中は記録・報酬を入れない
-    const variant = runner?.def.reward.raid?.kaiju !== undefined;
-    // 9-6b: ヴォルガス以外のレイド（?dev=kaiju2 の開発中の怪獣）は報酬だけ。クリアの記録・自己ベスト・ランキングには入れない
-    if (runner && variant && !replaying)
-      runner.bus.on('mission:reward', ({ credits }) => {
-        if (credits > 0) p.save.addCredits(credits);
-      });
-    if (runner && !inTutorial && !replaying && !variant) {
+    if (runner && !inTutorial && !replaying) {
       bindMissionRewards(runner.bus, p.save, screens.progress);
       // 7-4: ソロのレイドのクリアをオンライン連携の記録に（連携していなければ何もしない）
+      // 9-6c: ネフィルガも（記録のキーは怪獣ごと。ランキングはサーバーの準備ができた怪獣だけ送る）
       const raid = runner.def.reward.raid;
       if (raid) {
+        const kaiju = isRaidKaijuId(raid.kaiju) ? raid.kaiju : VORGAS_ID;
         runner.bus.on('mission:end', ({ result }) => {
           if (result.outcome !== 'success') return;
           const aircraftId = screens.hangar.selectedId;
+          const key = raidRecordKey(kaiju, raid.difficulty);
           // 7-D: モード選択のカードに出す自己ベスト（ローカル）
           p.save.transact((data) =>
-            recordRaidTime(data.records, raid.difficulty, result.elapsedSeconds * 1000),
+            recordRaidTime(data.records, key, result.elapsedSeconds * 1000),
           );
-          recordOutbox.submit(
-            raidRecord(raid.difficulty, result.elapsedSeconds, aircraftId, result.rank),
-          );
+          if (rankedRaidKaiju(kaiju))
+            recordOutbox.submit(raidRecord(key, result.elapsedSeconds, aircraftId, result.rank));
         });
       }
     }

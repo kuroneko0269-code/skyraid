@@ -5,6 +5,7 @@ import type { PvpMode } from '../data/pvp';
 import type { Quat, Vec3 } from '../flight/math';
 import type { NetControls } from './net-controls';
 import type { Paint } from '../progression/paint';
+import type { Kaiju2StateMsg } from './codec-kaiju2';
 
 export { NO_TARGET, createNetControls, quantizeControls, type NetControls } from './net-controls';
 
@@ -29,6 +30,8 @@ export interface GameSettings {
    */
   aimAssist: boolean;
   autoFire: boolean;
+  /** 9-6c: レイドの怪獣（RAID_KAIJU_IDS の番号。0 = ヴォルガス・1 = ネフィルガ） */
+  raidKaiju: number;
 }
 
 export interface PlayerInfo {
@@ -238,6 +241,8 @@ export interface StateMsg {
   kaiju: KaijuStateMsg | null;
   /** 防衛戦（7-2。防衛戦でなければ null） */
   defense: DefenseStateMsg | null;
+  /** 9-6c: 協力レイドのネフィルガ（ネフィルガのレイドでなければ null） */
+  kaiju2: Kaiju2StateMsg | null;
 }
 
 export const EVENT_KINDS = [

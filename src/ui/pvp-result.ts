@@ -1,5 +1,6 @@
 // PvP のリザルト（5-3）: 順位・名前・撃墜・被撃墜・命中率の表。ロビーの画面の中に出す。文字は textContent だけで入れる。
 // 5-4: ベストプレイヤー（最多撃墜）、最長連続撃墜、チーム戦の合計と勝ったチーム、「もう一度」を押した人の印
+import { NEPHIRGA_ID } from '../data/raid-kaiju';
 import { PVP_TEAM } from '../data/pvp';
 import type { PlayerInfo } from '../net/protocol';
 import type { RaidSummary } from '../net/raid-result';
@@ -27,7 +28,15 @@ export interface ResultRow {
 
 export interface ResultView {
   /** 終わり方（撃墜数に達した / 時間切れ / レイドの成功・失敗。6-2） */
-  reason: 'score' | 'time' | 'raidClear' | 'raidFail' | 'defenseClear' | 'defenseFail';
+  reason:
+    | 'score'
+    | 'time'
+    | 'raidClear'
+    | 'raidFail'
+    | 'raidStormFail'
+    | 'raidTotalFail'
+    | 'defenseClear'
+    | 'defenseFail';
   localId: number;
   rows: readonly ResultRow[];
   /** ベストプレイヤー（誰も撃墜していなければ null） */
@@ -55,6 +64,13 @@ const REASON_TEXT: Readonly<Record<ResultView['reason'], string>> = {
   get raidFail() {
     return t('pvp.reason.raidFail');
   },
+  // 9-6c: ネフィルガの失敗（嵐 / 全体の時間切れ）
+  get raidStormFail() {
+    return t('pvp.reason.raidStormFail');
+  },
+  get raidTotalFail() {
+    return t('pvp.reason.raidTotalFail');
+  },
   get defenseClear() {
     return t('pvp.reason.defenseClear');
   },
@@ -64,8 +80,10 @@ const REASON_TEXT: Readonly<Record<ResultView['reason'], string>> = {
 };
 
 function title(r: Readonly<ResultView>): string {
-  if (r.reason === 'raidClear') return t('pvp.title.raidClear');
-  if (r.reason === 'raidFail') return t('pvp.title.raidFail');
+  if (r.reason === 'raidClear')
+    return r.raid?.kaiju === NEPHIRGA_ID ? t('pvp.title.raid2Clear') : t('pvp.title.raidClear');
+  if (r.reason === 'raidFail' || r.reason === 'raidStormFail' || r.reason === 'raidTotalFail')
+    return t('pvp.title.raidFail');
   if (r.reason === 'defenseClear') return t('defense.outcome.cleared');
   if (r.reason === 'defenseFail') return t('defense.outcome.fallen');
   const totals = r.teamTotals;

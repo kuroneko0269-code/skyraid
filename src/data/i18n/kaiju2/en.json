@@ -1,7 +1,5 @@
 {
-  "name": "Nephirga",
   "hudName": "NEPHIRGA",
-  "dialogLabel": "Nephirga (in development)",
   "part.body": "Body",
   "part.wingL": "Left wing",
   "part.wingR": "Right wing",
@@ -25,16 +23,12 @@
   "broken.both": "Both wings broken: it falls to the ground to rest",
   "phase2": "PHASE 2: it now dives",
   "phase3": "STORM: five orbs per volley. Time limit {time}",
-  "missionTitle": "Raid: Nephirga",
-  "objective": "Defeat Nephirga",
-  "titleNormal": "Nephirga",
-  "titleHard": "Nephirga (Hard)",
   "briefingTitle": "Briefing: Nephirga",
   "briefing": [
     "Nephirga, a giant storm-wrapped pterosaur, circles above the harbor city. Turn inside its circle to catch it.",
     "Tells: hovering with a glowing throat → lightning orbs (break hard sideways or flare); wings raised → gust ahead; sharp climb → dive (turn at a right angle); tail curled → sweep behind.",
     "Attack while it rests on a perch, while it pulls up after a dive, and during tells. Breaking a wing makes it slower and lower; the head stops the orbs and the tail stops the sweep.",
-    "Below 40% health the storm begins (4.5 min, Hard 3.5 min). If it is not down within the overall limit (12 min, Hard 10 min), the storm hits the city."
+    "Below 40% health the storm begins (4.5 min, Hard 4 min). If it is not down within the overall limit (12 min, Hard 10 min), the storm hits the city."
   ],
   "briefingTap": "Tap to close"
 }
