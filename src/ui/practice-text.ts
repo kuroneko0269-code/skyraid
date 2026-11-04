@@ -23,6 +23,7 @@ export function practiceSettingsLabel(key: string): string {
     t('practice.assistShort', { level: assist }),
     t(c.autoFire ? 'practice.autoFireOn' : 'practice.autoFireOff'),
     t('practice.curveShort', { curve: curveLabel(c.curve) }),
+    t(c.speedMatch ? 'practice.speedMatchOn' : 'practice.speedMatchOff'),
   ].join(t('practice.separator'));
 }
 

@@ -15,6 +15,7 @@ const arrow: EdgeArrow = { x: 0, y: 0, deg: 0 };
 const sel: HudPoint = { x: 0, y: 0 };
 const leadScreen: HudPoint = { x: 0, y: 0 };
 const noseScreen: HudPoint = { x: 0, y: 0 };
+const farLead: Vec3 = { x: 0, y: 0, z: 0 };
 
 export class TargetProjector {
   /** markers[i] に対応する対象（タップで選ぶのに使う） */
@@ -41,6 +42,8 @@ export class TargetProjector {
     width: number,
     height: number,
     maxDist = Infinity,
+    /** 自機の速さ（m/s。射程外の印の見越しに使う） */
+    shooterSpeed = 0,
   ): void {
     const far = (t: CombatTarget): boolean =>
       maxDist < Infinity && aircraft.position.distanceTo(lead.copy(t.position)) > maxDist;
@@ -62,6 +65,7 @@ export class TargetProjector {
 
     w.selected = 'none';
     w.leadShown = false;
+    w.leadInRange = false;
     if (!selected) return;
     this.projectTarget(selected, alpha, width, height, sel);
     if (!this.behind && onScreen()) {
@@ -77,8 +81,23 @@ export class TargetProjector {
       w.selY = arrow.y;
       w.arrowDeg = arrow.deg;
     }
-    if (combat.leadValid && fpm)
-      this.projectLead(w, combat, selected, aircraft, fpm, alpha, width, height);
+    if (!fpm || w.selected !== 'screen') return;
+    if (combat.leadValid) {
+      w.leadInRange = true;
+      this.projectLead(w, combat.lead, selected, aircraft, fpm, alpha, width, height);
+      return;
+    }
+    // 9-5b: 射程外でも、同じ見越しの近似（距離 / 弾の速さ 秒先）の位置に「射程外」の印を出す
+    const st = combat.gun.spec;
+    const p = selected.position;
+    const v = selected.velocity;
+    const k =
+      aircraft.position.distanceTo(lead.set(p.x, p.y, p.z)) / (st.muzzleSpeed + shooterSpeed);
+    farLead.x = p.x + v.x * k;
+    farLead.y = p.y + v.y * k;
+    farLead.z = p.z + v.z * k;
+    w.leadInRange = false;
+    this.projectLead(w, farLead, selected, aircraft, fpm, alpha, width, height);
   }
 
   /** ワールドの点を画面座標にして out に書く。画面内なら true（爆弾の着弾予測点。2-6） */
@@ -100,7 +119,7 @@ export class TargetProjector {
    */
   private projectLead(
     w: HudWeaponsFrame,
-    combat: CombatSystem,
+    aim: Readonly<Vec3>,
     t: CombatTarget,
     aircraft: Object3D,
     fpm: Readonly<HudPoint>,
@@ -111,9 +130,9 @@ export class TargetProjector {
     const p = t.position;
     const q = t.prevPosition;
     lead.set(
-      q.x + (p.x - q.x) * alpha + (combat.lead.x - p.x),
-      q.y + (p.y - q.y) * alpha + (combat.lead.y - p.y),
-      q.z + (p.z - q.z) * alpha + (combat.lead.z - p.z),
+      q.x + (p.x - q.x) * alpha + (aim.x - p.x),
+      q.y + (p.y - q.y) * alpha + (aim.y - p.y),
+      q.z + (p.z - q.z) * alpha + (aim.z - p.z),
     );
     const dist = lead.distanceTo(aircraft.position);
     nose.set(0, 0, -dist).applyQuaternion(aircraft.quaternion).add(aircraft.position);

@@ -755,7 +755,8 @@
       "normal": "Standard",
       "strong": "High"
     },
-    "autoFire": "Auto-fire (touch)"
+    "autoFire": "Auto-fire (touch)",
+    "speedMatch": "Speed matching (touch)"
   },
   "settings": {
     "enemies": "Enemies",
@@ -1549,6 +1550,8 @@
     "assistShort": "Assist {level}",
     "autoFireOn": "Auto-fire on",
     "autoFireOff": "Auto-fire off",
+    "speedMatchOn": "Speed match on",
+    "speedMatchOff": "Speed match off",
     "curveShort": "Curve {curve}",
     "separator": " · ",
     "seconds": "{seconds} s",
@@ -1583,6 +1586,11 @@
       "overshoot": "Overshoots",
       "overshootValue": "{count} ({perMinute} per minute)",
       "overshootHint": "Times the target crossed to the other side of the nose within 10° of the sights",
+      "offRange": "Shots fired out of range",
+      "offRangeHint": "Share of firing time when the nearest target was beyond gun range (1.5 km)",
+      "overtakes": "Overshot targets",
+      "overtakesValue": "{count}",
+      "overtakesHint": "Times a target ahead within range ended up behind you because you closed too fast (speed matching helps)",
       "record": "Record",
       "changed": "Not recorded: settings were changed during the run",
       "settingsRecord": "Best for this setting",

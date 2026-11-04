@@ -43,11 +43,16 @@ describe('スコアと助言', () => {
       offScreenSteps: 100,
       overshoots: 10,
       aliveSteps: 3600,
+      fireOutOfRange: 25,
+      overtakes: 2,
     };
     const counts = { kills: 3, shots: 100, hits: 30, killTimes: [5, 10, 15] };
     const r = buildPracticeResult('static', 60, counts, aim);
     expect(r.advice).toBe('steady');
     expect(r.avgKillSeconds).toBe(10);
+    // 9-5b: 射程外で撃った割合・追い越した回数
+    expect(r.offRange).toBe(0.25);
+    expect(r.overtakes).toBe(2);
     expect(r.offAim).toBeCloseTo(0.3);
     expect(r.offScreen).toBeCloseTo(0.1);
     expect(r.offScreenSeconds).toBeCloseTo(100 / 60);
@@ -75,6 +80,8 @@ describe('記録（設定ごと）', () => {
         offScreenSteps: 0,
         overshoots: 0,
         aliveSteps: 0,
+        fireOutOfRange: 0,
+        overtakes: 0,
       },
     ),
     score,
@@ -83,14 +90,24 @@ describe('記録（設定ごと）', () => {
   it('設定の見出し: タッチは方式・補助（エイムアシスト OFF なら off）・自動射撃・カーブ、キーボード・パッドは入力系統だけ', () => {
     const c = defaultControls();
     const touch = practiceSettingsOf(c, 'touch', 'direct', true);
-    expect(practiceSettingsKey(touch)).toBe('touch:direct:normal:1:1.5');
+    // 9-5b: 速度合わせ ON（初期値）は末尾に :s。OFF は 9-5 の見出しのまま（9-5 の記録は速度合わせなしの記録として並ぶ）
+    expect(practiceSettingsKey(touch)).toBe('touch:direct:normal:1:1.5:s');
     expect(practiceSettingsKey(practiceSettingsOf(c, 'touch', 'tilt', false))).toBe(
-      'touch:tilt:off:1:1.5',
+      'touch:tilt:off:1:1.5:s',
     );
+    const off = practiceSettingsOf({ ...c, speedMatch: false }, 'touch', 'direct', true);
+    expect(practiceSettingsKey(off)).toBe('touch:direct:normal:1:1.5');
     expect(practiceSettingsKey(practiceSettingsOf(c, 'keyboard', 'direct', true))).toBe('keyboard');
-    expect(parsePracticeSettings('touch:direct:normal:1:1.5')).toEqual(touch);
+    expect(parsePracticeSettings('touch:direct:normal:1:1.5:s')).toEqual(touch);
+    expect(parsePracticeSettings('touch:direct:normal:1:1.5')).toEqual(off);
     expect(parsePracticeSettings('gamepad')).toEqual({ device: 'gamepad', touch: null });
-    for (const bad of ['touch:x:normal:1:1.5', 'touch:direct:normal:2:1.5', 'mouse', 'keyboard:x'])
+    for (const bad of [
+      'touch:x:normal:1:1.5',
+      'touch:direct:normal:2:1.5',
+      'touch:direct:normal:1:1.5:x',
+      'mouse',
+      'keyboard:x',
+    ])
       expect(parsePracticeSettings(bad)).toBeNull();
   });
 
@@ -219,8 +236,11 @@ describe('画面の流れ・文・案内', () => {
       expect(practiceSettingsLabel('keyboard').length).toBeGreaterThan(0);
     }
     useLocale('ja');
+    expect(practiceSettingsLabel('touch:direct:normal:1:1.5:s')).toBe(
+      'タッチ・方向へ倒す・補助 標準・自動射撃 ON・カーブ 1.5・速度合わせ ON',
+    );
     expect(practiceSettingsLabel('touch:direct:normal:1:1.5')).toBe(
-      'タッチ・方向へ倒す・補助 標準・自動射撃 ON・カーブ 1.5',
+      'タッチ・方向へ倒す・補助 標準・自動射撃 ON・カーブ 1.5・速度合わせ OFF',
     );
     expect(formatRatio(0.1234)).toBe('12.3%');
     useLocale('en');

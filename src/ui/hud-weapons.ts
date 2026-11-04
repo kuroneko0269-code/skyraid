@@ -24,8 +24,15 @@ export interface HudWeaponsFrame {
   /** ロックの進行（0〜1）とロック完了 */
   lockProgress: number;
   locked: boolean;
-  /** 機銃の予測照準点。leadShown が false なら隠す */
+  /**
+   * 機銃で狙う印（予測照準点）。leadShown が false なら隠す。9-5b: leadInRange が false なら射程外の印（破線）、
+   * leadReady は機首が当たる範囲に入っている（撃てば当たる。白く強調）
+   */
   leadShown: boolean;
+  leadInRange: boolean;
+  leadReady: boolean;
+  /** 9-5b: 射程外で機銃を撃っている（GUN ボタン。HUD に OUT OF RANGE） */
+  outOfRangeFire: boolean;
   leadX: number;
   leadY: number;
   missiles: number;
@@ -46,6 +53,9 @@ export function createWeaponsFrame(): HudWeaponsFrame {
     lockProgress: 0,
     locked: false,
     leadShown: false,
+    leadInRange: false,
+    leadReady: false,
+    outOfRangeFire: false,
     leadX: 0,
     leadY: 0,
     missiles: 0,
@@ -100,6 +110,9 @@ export class HudWeapons {
   readonly mslRow: HTMLDivElement;
   private last = {
     ring: NaN,
+    leadFar: false,
+    leadReady: false,
+    rangeFire: false,
     locked: false,
     dist: '',
     msl: '',
@@ -107,7 +120,10 @@ export class HudWeapons {
     flrCooling: false,
   };
 
-  constructor(root: HTMLElement, gauges: HTMLElement) {
+  constructor(
+    private readonly root: HTMLElement,
+    gauges: HTMLElement,
+  ) {
     const layer = el('div', 'hud-targets', root);
     this.markers = Array.from({ length: HUD_CONFIG.targets.maxMarkers }, () =>
       slot(el('div', 'hud-tgt', layer)),
@@ -121,6 +137,8 @@ export class HudWeapons {
     this.selected = slot(sel);
     this.arrow = slot(el('div', 'hud-arrow', layer));
     this.lead = slot(el('div', 'hud-lead', layer));
+    // 9-5b: 射程外で撃っている（機首の下。hud.ts が機首の位置に合わせて動かす）
+    el('div', 'hud-warn hud-range-warn', root, 'OUT OF RANGE');
 
     const ammo = el('div', 'hud-ammo', gauges);
     this.ammo = ammo;
@@ -162,6 +180,20 @@ export class HudWeapons {
     place(this.arrow, f.selected === 'edge', f.selX, f.selY, f.arrowDeg);
 
     place(this.lead, f.leadShown, f.leadX, f.leadY);
+    const far = f.leadShown && !f.leadInRange;
+    if (far !== last.leadFar) {
+      last.leadFar = far;
+      this.lead.el.classList.toggle('is-far', far);
+    }
+    const ready = f.leadShown && f.leadInRange && f.leadReady;
+    if (ready !== last.leadReady) {
+      last.leadReady = ready;
+      this.lead.el.classList.toggle('is-ready', ready);
+    }
+    if (f.outOfRangeFire !== last.rangeFire) {
+      last.rangeFire = f.outOfRangeFire;
+      this.root.classList.toggle('is-out-of-range', f.outOfRangeFire);
+    }
 
     const msl = String(f.missiles);
     if (msl !== last.msl) {
@@ -186,5 +218,8 @@ export class HudWeapons {
     const last = this.last;
     last.ring = NaN;
     last.dist = last.msl = last.flr = '';
+    last.leadFar = last.leadReady = last.rangeFire = false;
+    this.lead.el.classList.remove('is-far', 'is-ready');
+    this.root.classList.remove('is-out-of-range');
   }
 }

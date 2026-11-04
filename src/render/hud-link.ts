@@ -9,6 +9,8 @@ import { createHudFrame, fillHudFrame } from '../ui/hud-feed';
 import { projectFlightPath } from './hud-projection';
 import { TargetProjector } from './target-projection';
 import { markerRange } from '../core/weather-state';
+import { autoFireReady } from '../combat/auto-fire';
+import { HUD_CONFIG } from '../data/hud';
 
 export class HudLink {
   private readonly frame: HudFrame;
@@ -19,6 +21,12 @@ export class HudLink {
   visibility: () => number = () => 0;
   /** 宙返り（9-3）の速度不足（「方向へ倒す」方式の SteerControl。app.ts が入れる） */
   loopSpeedLow: () => boolean = () => false;
+  /** 9-5b: 機銃だけで飛んでいる（練習場。app.ts が入れる） */
+  gunOnly: () => boolean = () => false;
+  /** 9-5b: 速度合わせでスロットルを下げている（HUD の THR に AUTO） */
+  speedMatching: () => boolean = () => false;
+  private lastShots = 0;
+  private lastShotAt = -Infinity;
 
   constructor(
     private readonly hud: Hud,
@@ -41,8 +49,12 @@ export class HudLink {
     const f = this.frame;
     fillHudFrame(f, this.ff, this.groundHeight, this.assist());
     f.loopSpeedLow = this.ff.player.active && this.loopSpeedLow();
+    f.speedMatching = this.ff.player.active && this.speedMatching();
+    f.gunOnly = this.gunOnly();
     const fpm = projectFlightPath(this.camera, this.aircraftMesh, width, height, this.flightPath);
     f.flightPath = fpm ? this.flightPath : null;
+    f.viewWidth = width;
+    f.viewHeight = height;
     this.projector.fill(
       f.weapons,
       this.ff.combat,
@@ -52,9 +64,44 @@ export class HudLink {
       width,
       height,
       markerRange(this.ff.combat.targeting.spec.sensorRange, this.visibility()),
+      this.ff.aircraft.state.speed,
     );
+    this.fillGun();
     this.fillImpact(width, height);
     this.hud.update(f);
+  }
+
+  /**
+   * 9-5b: 狙う印が「撃てば当たる」か（自動射撃と同じ判定）と、射程外で撃っているか（GUN ボタン。自動射撃は射程内でしか撃たない）。
+   * 撃っている = 直前 rangeFireHoldSeconds の間に弾が出た
+   */
+  private fillGun(): void {
+    const w = this.frame.weapons;
+    const c = this.ff.combat;
+    const st = this.ff.aircraft.state;
+    w.leadReady =
+      w.leadShown &&
+      autoFireReady(
+        c.targeting.selected,
+        c.lead,
+        c.leadValid,
+        st.position,
+        st.orientation,
+        c.gun.hitRadiusScale,
+      );
+    const now = performance.now() / 1000;
+    const shots = c.gun.shotCount;
+    if (shots > this.lastShots) this.lastShotAt = now;
+    if (shots < this.lastShots) this.lastShotAt = -Infinity;
+    this.lastShots = shots;
+    const firing = now - this.lastShotAt < HUD_CONFIG.rangeFireHoldSeconds;
+    const sel = c.targeting.selected;
+    w.outOfRangeFire =
+      firing &&
+      this.ff.player.active &&
+      sel !== null &&
+      sel.active &&
+      c.targeting.selectedDistance > c.gun.spec.range;
   }
 
   /** 爆弾の着弾予測点（2-6）と、MSL ボタンの兵装 */
@@ -62,8 +109,10 @@ export class HudLink {
     const o = this.frame.ordnance;
     const bombs = this.ff.combat.bombs;
     o.secondary = this.weaponInput?.secondary ?? 'missile';
+    // 9-5b: 機銃だけの練習場では出さない（機銃で狙う印と間違える）
     o.impactShown =
       this.ff.player.active &&
+      !this.frame.gunOnly &&
       bombs.predictionValid &&
       this.projector.projectPoint(bombs.prediction, width, height, this.impact);
     o.impactX = this.impact.x;

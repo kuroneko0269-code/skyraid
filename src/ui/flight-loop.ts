@@ -95,6 +95,7 @@ function createFlightUpdate(p: FlightLoopParts): {
   // 9-3: 復帰したら宙返りの途中の状態を捨てる
   p.session.onRespawn(() => {
     steer.reset();
+    p.assist.resetThrottle();
   });
   const simulate = (dt: number): void => {
     if (pvp.flying) {
@@ -135,6 +136,7 @@ function createFlightUpdate(p: FlightLoopParts): {
     readFlightControls(input, p.controls);
     steer.apply(p.controls);
     p.assist.apply(p.controls);
+    p.assist.applyThrottle(p.controls);
     p.weaponInput.read(input, p.combatInput, dt);
     p.assist.applyFire(p.combatInput);
     simulate(dt);
@@ -166,6 +168,7 @@ function linkScreenChanges(p: FlightLoopParts): void {
       p.weaponInput.reset();
       if (!resume) {
         p.steer.reset();
+        p.assist.resetThrottle();
         // 9-4: 飛び始めたときの持ち方を傾きの中立にする
         p.touch.tilt.calibrate();
       }

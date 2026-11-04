@@ -57,6 +57,21 @@ export class Totals {
     noTarget: 0,
   };
   bursts = 0;
+  /** 9-5b: 撃っていたステップの内訳（自動射撃 / GUN ボタン）と、そのうち機首にいちばん近い敵が射程外（・対象なし） */
+  fireAuto = 0;
+  fireAutoFar = 0;
+  fireButton = 0;
+  fireButtonFar = 0;
+  /** 自動射撃とボタンを区別できる記録が 1 本でもあるか（v1.0.6 から） */
+  fireKnown = false;
+  /** 区別できない記録で、自動射撃の条件を満たさずに撃っていた（= GUN ボタン）ステップ */
+  fireSurelyButton = 0;
+  /** 追い越し（射程内・前にいた選んだ対象が、射程内のまま後ろへ回った回数。src/missions/practice/overtake.ts） */
+  overtakes = 0;
+  /** 機首が ±70° より先にいたステップ・そのうち機体の軸まわりの横回転が 120°/秒 を超えた・最大（度/秒） */
+  verticalSteps = 0;
+  verticalFastRoll = 0;
+  verticalRollMax = 0;
   /** 選択中の対象が変わった回数（タップ・切り替え・撃墜の後の自動の選び直し） */
   targetSwitches = 0;
   /** 戦域の外（警告が出ている）にいたステップ数 */
@@ -114,6 +129,14 @@ export class Totals {
       'nearSteps',
       'crossings',
       'bursts',
+      'fireAuto',
+      'fireAutoFar',
+      'fireButton',
+      'fireButtonFar',
+      'fireSurelyButton',
+      'overtakes',
+      'verticalSteps',
+      'verticalFastRoll',
       'targetSwitches',
       'outsideSteps',
       'shots',
@@ -141,6 +164,8 @@ export class Totals {
     this.reacquire.push(...o.reacquire);
     this.killSeconds.push(...o.killSeconds);
     this.missileAngles.push(...o.missileAngles);
+    this.fireKnown ||= o.fireKnown;
+    this.verticalRollMax = Math.max(this.verticalRollMax, o.verticalRollMax);
     this.missionStatus = first ? o.missionStatus : '';
   }
 

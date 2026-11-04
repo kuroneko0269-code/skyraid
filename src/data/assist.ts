@@ -78,6 +78,30 @@ export const AUTO_FIRE_CONFIG = {
   hitConeScale: 1,
 } as const;
 
+/**
+ * 速度合わせ（9-5b。タッチだけ。設定 settings.controls.speedMatch、初期値 ON）: 選んだ対象が前方（機首から engageConeDeg 内）・
+ * engageRange 内で、詰まる速さ（接近の速さ）が「その距離で望む速さ」より大きいとき、スロットルを下げる（上げることはしない）。
+ * 望む速さ = (距離 − stopDistance) × gain を [minClosure, maxClosure] に収めたもの。自機の速さは minSpeed より下げない
+ * （曲がる力が落ちない速さ）。releaseRange・releaseConeDeg を超えたら止めて、スロットルを元の位置へ戻す。
+ * スロットル・AB を自分で動かしたらそちらを優先し、その対象には効かせない（対象が変わるか離れるまで）
+ */
+export const SPEED_MATCH_CONFIG = {
+  defaultOn: true,
+  engageRange: 2500,
+  engageConeDeg: 35,
+  releaseRange: 3000,
+  releaseConeDeg: 60,
+  stopDistance: 300,
+  gain: 0.2,
+  minClosure: 60,
+  maxClosure: 150,
+  /** 望む速さより closureMargin（m/s）以上速く詰まっているときに効き始める */
+  closureMargin: 10,
+  minSpeed: 180,
+  /** 望む自機の速さへ近づける速さ（1/秒。エンジンの反応 response で割って目標速度を前へ出す） */
+  approachRate: 2,
+} as const;
+
 /** 初期値（タッチ。今の利用者にも当てる） */
 export const AIM_ASSIST_DEFAULT_LEVEL: AimAssistLevel = 'normal';
 
@@ -87,6 +111,9 @@ export const AIM_ASSIST_LEVEL_LABELS = {
   },
   get autoFire() {
     return t('controls.autoFire');
+  },
+  get speedMatch() {
+    return t('controls.speedMatch');
   },
   levels: {
     get weak() {

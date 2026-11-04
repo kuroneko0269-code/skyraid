@@ -114,6 +114,7 @@ export class ReplayRecorder {
       steps: this.count,
       outcome,
       ...(this.checks.length > 0 ? { checkHashes: this.checks.slice() } : {}),
+      fireSource: true,
     };
     return {
       header,

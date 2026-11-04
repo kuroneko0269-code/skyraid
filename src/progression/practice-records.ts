@@ -1,5 +1,6 @@
 // 練習場（9-5）の記録（Three.js・DOM 非依存）: 課題ごとに「設定の組み合わせ × 機体」ごとの最高スコアを端末のセーブに持つ
-// （records.practice。v9 のまま足した: 無いセーブは空として読む）。設定は入力系統と、タッチなら方式・狙いの補助・自動射撃・カーブ。
+// （records.practice。v9 のまま足した: 無いセーブは空として読む）。設定は入力系統と、タッチなら方式・狙いの補助・自動射撃・カーブ・
+// 速度合わせ（9-5b）。
 // クレジットは出さず、オンラインのランキングにも送らない（稼ぎ場にしない・設定で条件が違う）
 import type { InputDevice } from '../core/input';
 import type { ControlSettings } from '../core/control-settings';
@@ -18,6 +19,8 @@ export interface PracticeSettings {
     readonly aimAssist: (typeof AIM_ASSIST_LEVELS)[number] | 'off';
     readonly autoFire: boolean;
     readonly curve: StickCurve;
+    /** 速度合わせ（9-5b。それより前の記録は無し = OFF） */
+    readonly speedMatch: boolean;
   } | null;
 }
 
@@ -53,28 +56,46 @@ export function practiceSettingsOf(
       aimAssist: aimOn ? c.aimAssist : 'off',
       autoFire: c.autoFire,
       curve: c.stickCurve,
+      speedMatch: c.speedMatch,
     },
   };
 }
 
-/** 記録の見出しの文字列（「touch:direct:normal:1:1.5」「keyboard」） */
+/**
+ * 記録の見出しの文字列（「touch:direct:normal:1:1.5」「keyboard」）。9-5b: 速度合わせが ON なら末尾に「:s」
+ * （OFF は 9-5 の記録と同じ見出し = 速度合わせの無かった記録と並ぶ）
+ */
 export function practiceSettingsKey(s: Readonly<PracticeSettings>): string {
   const t = s.touch;
   if (!t) return s.device;
-  return [s.device, t.steerMode, t.aimAssist, t.autoFire ? '1' : '0', String(t.curve)].join(':');
+  const parts = [s.device, t.steerMode, t.aimAssist, t.autoFire ? '1' : '0', String(t.curve)];
+  if (t.speedMatch) parts.push(SPEED_MATCH_KEY);
+  return parts.join(':');
 }
+
+const SPEED_MATCH_KEY = 's';
 
 /** 見出しの文字列を読む（読めなければ null） */
 export function parsePracticeSettings(key: string): PracticeSettings | null {
-  const [device, mode, assist, auto, curve, ...rest] = key.split(':');
+  const [device, mode, assist, auto, curve, speed, ...rest] = key.split(':');
   if (device === 'keyboard' || device === 'gamepad')
     return mode === undefined ? { device, touch: null } : null;
   if (device !== 'touch' || rest.length > 0) return null;
+  if (speed !== undefined && speed !== SPEED_MATCH_KEY) return null;
   const steerMode = STEER_MODES.find((m) => m === mode);
   const aimAssist = [...AIM_ASSIST_LEVELS, 'off' as const].find((a) => a === assist);
   const c = STICK_CURVES.find((v) => String(v) === curve);
   if (!steerMode || !aimAssist || c === undefined || (auto !== '0' && auto !== '1')) return null;
-  return { device, touch: { steerMode, aimAssist, autoFire: auto === '1', curve: c } };
+  return {
+    device,
+    touch: {
+      steerMode,
+      aimAssist,
+      autoFire: auto === '1',
+      curve: c,
+      speedMatch: speed !== undefined,
+    },
+  };
 }
 
 export interface PracticeRecordOutcome {

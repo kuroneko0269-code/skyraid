@@ -105,6 +105,13 @@ export class PracticeResultScreen {
       }),
       t('practice.result.overshootHint'),
     );
+    // 9-5b: 射程外で撃った割合・追い越した回数
+    fact(t('practice.result.offRange'), formatRatio(r.offRange), t('practice.result.offRangeHint'));
+    fact(
+      t('practice.result.overtakes'),
+      t('practice.result.overtakesValue', { count: String(r.overtakes) }),
+      t('practice.result.overtakesHint'),
+    );
     fact(t('practice.select.settings'), practiceSettingsLabel(extras.settings));
     if (record.kind === 'changed') fact(t('practice.result.record'), t('practice.result.changed'));
     else {

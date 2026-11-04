@@ -109,6 +109,8 @@ export interface ReplayControls {
   /** 狙いの補助の強さ・自動射撃（9-3 から。それより前の記録には無い） */
   readonly aimAssist?: string;
   readonly autoFire?: boolean;
+  /** 速度合わせ（9-5b から） */
+  readonly speedMatch?: boolean;
 }
 
 /** 記録のヘッダ（JSON で保存） */
@@ -140,6 +142,11 @@ export interface ReplayHeader extends ReplayStart {
    * 9-4 より前の記録には無い（始めは startHash で比べる）
    */
   readonly checkHashes?: readonly string[];
+  /**
+   * 9-5b（v1.0.6）から true: flags の 8（引き金が自動射撃から）を記録している。それより前の記録は自動射撃も GUN ボタンも
+   * 同じ「機銃」の印だけ（解析で区別できない）
+   */
+  readonly fireSource?: boolean;
 }
 
 /** 毎秒の丸めたハッシュ（無い・形が違えば null。インポートしたファイルは信用しない） */
@@ -152,7 +159,7 @@ export function replayCheckHashes(header: ReplayHeader): readonly string[] | nul
 /**
  * 1 ステップの入力（量子化した整数）。操縦は ±127、スロットル目標は 0〜1000（-1 は指定なし）。
  * buttons: 1 AB / 2 機銃 / 4 ミサイル / 8 フレア / 16 ターゲット切替 / 32 ロケット / 64 爆弾 / 128 爆弾の長押し。
- * flags: 1 オートレベル / 2 ピッチ反転 / 4 エイムアシスト（機銃の判定の拡大）
+ * flags: 1 オートレベル / 2 ピッチ反転 / 4 エイムアシスト（機銃の判定の拡大）/ 8 引き金が自動射撃から（9-5b。判定には使わない）
  */
 export interface ReplayFrame {
   pitch: number;
@@ -227,7 +234,8 @@ export function replayControls(header: ReplayHeader): ReplayControls | null {
     !num(r.sensitivity) ||
     !num(r.deadzone) ||
     (r.aimAssist !== undefined && typeof r.aimAssist !== 'string') ||
-    (r.autoFire !== undefined && typeof r.autoFire !== 'boolean')
+    (r.autoFire !== undefined && typeof r.autoFire !== 'boolean') ||
+    (r.speedMatch !== undefined && typeof r.speedMatch !== 'boolean')
   )
     return null;
   return c as ReplayControls;

@@ -44,7 +44,17 @@ export const DIRECT_STEER_CONFIG = {
    * 低空の安全の下限が floorDeg より深い（高度に余裕がある）ときは、背中を下へ向けて（背面へ回して）引く。
    * 下げたい角度が startDeg + rangeDeg で背面まで
    */
-  diveRoll: { startDeg: 15, rangeDeg: 12, floorDeg: -70 },
+  diveRoll: {
+    startDeg: 15,
+    rangeDeg: 12,
+    floorDeg: -70,
+    /**
+     * 9-5b: 背面にして引くのは、下へ holdStick 以上倒し続けて holdSeconds 秒たってから（大きく下へ倒した一瞬や、
+     * 引き起こしの途中で入らない）。離すか holdStick より戻すと数え直す
+     */
+    holdStick: 0.5,
+    holdSeconds: 0.3,
+  },
   /**
    * 上下に倒していないとき、水平へ戻すずれの上限（度）。旋回で引くと機首が少しずつ上がるのを溜めない。
    * 上下に端まで倒していると 0（戻さない）
@@ -69,6 +79,14 @@ export const DIRECT_STEER_CONFIG = {
   bankGain: 0.03,
   /** 機首の上下（|前方.y|）がこの範囲（ほぼ真上・真下）ではバンク角が決まらないので、バンクを合わせるのを弱める */
   vertical: { rollStart: 0.98, rollEnd: 0.998 },
+  /**
+   * 9-5b 真上・真下の近く（実機で -84° のとき最大 約 640°/秒、+82° で 約 360°/秒 の意図しない横回転）:
+   * - 機首の上下の角度が limitStartDeg から limitEndDeg へ近づくほど、ロールの入力の上限を 1 から minRoll へ下げる
+   *   （初期機のロール 200°/秒 × 0.25 ≒ 50°/秒。70° で 約 0.4）。宙返り（loop-steer.ts）は別の組み立てなので変わらない
+   * - 回る向きの切り替えにヒステリシス: 合わせたいバンク角とのずれが ±180° から flipMarginDeg 内なら、前に回っていた向きのまま
+   *   （真上・真下でずれの符号が揺れても、左右に振れない）
+   */
+  nearVertical: { limitStartDeg: 60, limitEndDeg: 75, minRoll: 0.25, flipMarginDeg: 40 },
   /**
    * 低空の安全（9-1 の模擬で低空のリングで地面に当たった件）: 地面・海面（真下と、aheadSeconds 秒先の機首の先の高い方）からの
    * 高さで、行きたい向きの下向きの角度を制限する。clearance m より上は「その下向きから引き起こしても clearance m 残る」角度まで
