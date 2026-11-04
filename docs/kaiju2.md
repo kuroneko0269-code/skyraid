@@ -204,7 +204,7 @@
 
 - 負けの理由: 失敗条件を `stormTimeUp`（嵐の時間切れ）・`totalTimeUp`（全体の時間切れ）・`outOfBounds`（戦域を離脱した）に分けた（「怪獣が街に到達した」の流用をやめた）。協力の結果も同じ
 - 記録: ソロのクリアを自己ベスト（`records.raidBestMs` の `nephirga:normal`・`nephirga:hard`。ヴォルガスは今までどおり `normal`・`hard`）に残し、モード選択のレイドのカードは「最速 ヴォルガス / ネフィルガ」（ネフィルガの記録があるときだけ 2 つ）。クリアの報酬・ランクの記録はヴォルガスと同じ
-- オンライン: ランキングの key を怪獣ごと（`nephirga:難易度`）にする。サーバーの check を変える SQL（`supabase/migrations/skyraid_0003_raid_kaiju.sql`。README の「ネフィルガのランキング」）を流すまでは送らず・ランキングに怪獣の選択を出さない（`src/data/online.ts` の `RANKED_RAID_KAIJU`）
+- オンライン: ランキングの key を怪獣ごと（`nephirga:難易度`）にする。サーバーの check を変える SQL（`supabase/migrations/skyraid_0003_raid_kaiju.sql`。README の「ネフィルガのランキング」）を流すまでは送らず・ランキングに怪獣の選択を出さない（`src/data/online.ts` の `RANKED_RAID_KAIJU`）。9-5d の事前修正で流し済みとして `'nephirga'` を足した
 
 ### 公開
 

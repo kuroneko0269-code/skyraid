@@ -248,7 +248,7 @@ URL に `?net=local` を付けると、PeerJS の代わりに**同じブラウ�
 
 - SQL の挙動は手元の Postgres 16 で Supabase のロールを模して確かめられる（`supabase/tests/run.sh`。使い方はファイルの先頭）。承認前のユーザーが申請でき・他人の行は見えず・owner の一覧に載ることと、上の owner の付与の SQL を確かめる
 
-### ネフィルガのランキング（9-6c。まだ流していなければ）
+### ネフィルガのランキング（9-6c。0003 は流し済み・9-5d で有効にした）
 
 ネフィルガ（2 体目の怪獣）のソロのクリアをランキングに載せるには、記録の key に `nephirga:normal`・`nephirga:hard` を足す SQL が要ります。**流すまでは、ゲームはネフィルガの記録を送らず、ランキングにも怪獣の選択を出しません**（ローカルの自己ベストには残ります。流す前のクリアはランキングに載りません）。
 
@@ -267,7 +267,7 @@ URL に `?net=local` を付けると、PeerJS の代わりに**同じブラウ�
    ```
 
 2. **確かめる**: `select version from skyraid.schema_migrations order by version;` に `skyraid_0003_raid_kaiju` がある。`select pg_get_constraintdef(oid) from pg_constraint where conname = 'records_key';` に `nephirga:normal` が入っている
-3. **ゲームで有効にする**: `src/data/online.ts` の `RANKED_RAID_KAIJU` に `'nephirga'` を足して公開する（流したことを伝えてもらえれば、こちらで足します）。ランキングの「レイド」に怪獣（ヴォルガス / ネフィルガ）の選択が出て、ネフィルガのソロのクリアが送られるようになる
+3. **ゲームで有効にする**: `src/data/online.ts` の `RANKED_RAID_KAIJU` に `'nephirga'` を足して公開する（9-5d の事前修正で足した）。ランキングの「レイド」に怪獣（ヴォルガス / ネフィルガ）の選択が出て、ネフィルガのソロのクリアが送られるようになる
 
 ### 確かめること（連携中になった後）
 

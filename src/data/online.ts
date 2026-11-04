@@ -41,10 +41,10 @@ export const ONLINE_CONFIG = {
 
 /**
  * 9-6c: オンラインのランキングに載せるレイドの怪獣。ネフィルガの記録のキー（nephirga:normal / nephirga:hard）は
- * supabase/migrations/skyraid_0003_raid_kaiju.sql を流してからサーバーが受け付けるので、それまではここに入れない
- * （送らない・ランキングの選択に出さない。流したら 'nephirga' を足す。README の「ネフィルガのランキング」）
+ * supabase/migrations/skyraid_0003_raid_kaiju.sql を流してからサーバーが受け付ける（README の「ネフィルガのランキング」）。
+ * 9-5d の事前修正: 0003 を流したので 'nephirga' を足した（送る・ランキングの選択に出す）
  */
-export const RANKED_RAID_KAIJU: readonly RaidKaijuId[] = ['vorgas'];
+export const RANKED_RAID_KAIJU: readonly RaidKaijuId[] = ['vorgas', 'nephirga'];
 
 export function rankedRaidKaiju(id: RaidKaijuId): boolean {
   return RANKED_RAID_KAIJU.includes(id);
