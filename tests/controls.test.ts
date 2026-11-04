@@ -51,6 +51,7 @@ describe('感度とデッドゾーンの変換', () => {
       stickPosition: 'floating',
       aimAssist: 'normal',
       autoFire: true,
+      speedMatch: true,
       keys: {},
     });
     expect(CONTROL_SETTINGS.buttonScale[c.buttonSize]).toBe(1);

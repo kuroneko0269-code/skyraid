@@ -1,4 +1,4 @@
-// 練習場（9-5）の設定の欄: 操縦（タッチ）の方式・狙いの補助・自動射撃・感度のカーブを、課題の一覧・ポーズ・結果の画面からその場で変える。
+// 練習場（9-5）の設定の欄: 操縦（タッチ）の方式・狙いの補助・自動射撃・速度合わせ（9-5b）・感度のカーブを、課題の一覧・ポーズ・結果の画面からその場で変える。
 // 値は設定画面の「操作」と同じ（セーブの settings.controls）。変えるとすぐ効かせ、設定画面とほかの欄の表示を合わせ直す（onChange）。
 // 傾きは設定画面と同じ選択肢（使えない端末には出さない・iOS は許可のボタン）
 import { t } from '../core/i18n';
@@ -50,6 +50,16 @@ export class PracticeSettingsPanel {
       commit((x) => (x.autoFire = !x.autoFire));
       return this.save.settings.controls.autoFire;
     });
+    // 9-5b: 速度合わせ
+    const speedMatch = createToggleButton(
+      grid,
+      AIM_ASSIST_LEVEL_LABELS.speedMatch,
+      c.speedMatch,
+      () => {
+        commit((x) => (x.speedMatch = !x.speedMatch));
+        return this.save.settings.controls.speedMatch;
+      },
+    );
     const curve = choice(
       grid,
       STEER_LABELS.curve,
@@ -63,6 +73,7 @@ export class PracticeSettingsPanel {
       const now = this.save.settings.controls;
       assist.value = now.aimAssist;
       autoFire.sync(now.autoFire);
+      speedMatch.sync(now.speedMatch);
       curve.value = String(now.stickCurve);
     });
     el('div', 'practice-settings-note', root, t('practice.settings.note'));

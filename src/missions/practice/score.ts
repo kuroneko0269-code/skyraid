@@ -33,6 +33,9 @@ export interface PracticeResult {
   /** 行き過ぎて戻した回数と 1 分あたり */
   readonly overshoots: number;
   readonly overshootPerMinute: number;
+  /** 9-5b: 射程外で撃った割合（0〜1。撃っていなければ null）と、追い越した回数 */
+  readonly offRange: number | null;
+  readonly overtakes: number;
   readonly advice: PracticeAdvice;
 }
 
@@ -76,6 +79,8 @@ export function buildPracticeResult(
     offScreenSeconds: aim.offScreenSteps / 60,
     overshoots: aim.overshoots,
     overshootPerMinute: minutes > 0 ? aim.overshoots / minutes : 0,
+    offRange: aim.fireSteps > 0 ? aim.fireOutOfRange / aim.fireSteps : null,
+    overtakes: aim.overtakes,
   };
   return { ...base, advice: practiceAdvice(base) };
 }

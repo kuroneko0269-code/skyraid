@@ -30,6 +30,7 @@ for (let i = 0; i < args.length; i++) {
       '--compare',
       '--assist',
       '--tilt',
+      '--device-fix',
     ].includes(a)
   )
     flags.set(a, true);
@@ -44,7 +45,10 @@ const { module: m } = await runnerImport('/scripts/replay-analysis/main.ts', {
   logLevel: 'error',
 });
 
-if (flags.get('--make-bots')) {
+if (flags.get('--device-fix')) {
+  // 9-5b: 練習場の動く的・M1・M2 で速度合わせの有無（docs/control-analysis.md）
+  console.log(m.runDeviceFix(seeds, (l) => console.error(l), list('--only', [])));
+} else if (flags.get('--make-bots')) {
   const outDir = String(flags.get('--make-bots'));
   const files = m.makeBotReplays(missions, seeds, list('--roles', m.ROLE_IDS), (l) =>
     console.error(l),

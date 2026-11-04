@@ -9,16 +9,14 @@ import { GUN_CONFIG } from '../../src/data/weapons';
 import type { AircraftControls } from '../../src/entities/aircraft';
 import { inverseRotateVec3, type Vec3 } from '../../src/flight/math';
 import type { GamePlay } from '../../src/missions/game-play';
+import { OvertakeCounter } from '../../src/missions/practice/overtake';
+import { countVerticalRoll, curveAt, ReversalCounter, surelyButton } from './metrics-parts';
 import { Totals } from './totals';
 
 const DEG = 180 / Math.PI;
 /** スティックの倒し具合の区切り（中央付近 < low ≤ 中間 < edge ≤ 端） */
 export const STICK_LOW = 0.3;
 export const STICK_EDGE = 0.9;
-/** 向きの反転を数える閾値（この大きさを超えて反対側へ倒したら 1 回） */
-const REVERSAL_LEVEL = 0.25;
-/** 反転から次の反転までがこれ未満なら「往復」（行き過ぎて戻す） */
-const QUICK_REVERSAL_SECONDS = 1;
 /** 照準の行き過ぎ: 機首から近い（この角度以内）ときに、対象が機首の反対側へ抜けた回数 */
 const CROSS_NEAR_DEG = 10;
 const CROSS_HYSTERESIS_DEG = 1;
@@ -46,42 +44,13 @@ export interface StepInput {
    * 倒し具合・往復を数える（省略は記録の値から）
    */
   readonly stick?: { readonly x: number; readonly y: number } | null;
-}
-
-const curveAt = (curve: readonly { speed: number; value: number }[], speed: number): number => {
-  const first = curve[0];
-  const last = curve[curve.length - 1];
-  if (!first || !last) return 60;
-  if (speed <= first.speed) return first.value;
-  if (speed >= last.speed) return last.value;
-  for (let i = 1; i < curve.length; i++) {
-    const a = curve[i - 1];
-    const b = curve[i];
-    if (a && b && speed <= b.speed)
-      return a.value + ((b.value - a.value) * (speed - a.speed)) / (b.speed - a.speed);
-  }
-  return last.value;
-};
-
-/** 軸の反転を数える（閾値をまたいで反対側へ倒したら 1 回） */
-class ReversalCounter {
-  private side = 0;
-  private lastAt = -Infinity;
-
-  constructor(
-    private readonly onReversal: (quick: boolean) => void,
-    private readonly level = REVERSAL_LEVEL,
-  ) {}
-
-  push(v: number, time: number): void {
-    const s = v > this.level ? 1 : v < -this.level ? -1 : 0;
-    if (s === 0 || s === this.side) return;
-    if (this.side !== 0) {
-      this.onReversal(time - this.lastAt < QUICK_REVERSAL_SECONDS);
-      this.lastAt = time;
-    }
-    this.side = s;
-  }
+  /**
+   * 9-5b: 引き金が自動射撃から（記録の flags の 8。GUN ボタンを押していない）。v1.0.6 より前の記録は false
+   * （ボタンと区別できない。そのときは autoKnown が false）
+   */
+  readonly auto?: boolean;
+  /** 自動射撃とボタンを区別できる記録か（v1.0.6 から・模擬の人） */
+  readonly autoKnown?: boolean;
 }
 
 export class ControlAnalyzer {
@@ -111,6 +80,8 @@ export class ControlAnalyzer {
   private launchLocked = false;
   private launchAngle = -1;
   private triggerNow = false;
+  private autoNow = false;
+  private readonly overtake = new OvertakeCounter();
   private missileNow = false;
   private lastSelected: CombatTarget | null = null;
 
@@ -209,6 +180,9 @@ export class ControlAnalyzer {
     this.reversals[2]?.push(yaw, this.time);
     // 射撃（照準の判定は after で、判定後の向きで）
     this.triggerNow = f.input.trigger;
+    this.autoNow = f.auto === true;
+    if (f.autoKnown) t.fireKnown = true;
+    if (f.input.trigger && !f.autoKnown && surelyButton(s)) t.fireSurelyButton++;
     if (f.input.trigger && !this.wasFiring) t.bursts++;
     this.wasFiring = f.input.trigger;
     this.missileNow = f.input.missile;
@@ -267,6 +241,7 @@ export class ControlAnalyzer {
       return;
     }
     if (this.play.runner?.boundary.outside) t.outsideSteps++;
+    countVerticalRoll(t, s.aircraft.state);
     if (this.missileNow && s.combat.missileAmmo.count < this.missilesBefore) {
       t.missiles++;
       if (this.launchLocked) t.missilesLocked++;
@@ -274,6 +249,9 @@ export class ControlAnalyzer {
     }
     if (this.triggerNow) this.classifyFire();
     const target = this.target();
+    const st0 = s.aircraft.state;
+    this.overtake.step(target, st0.position, st0.orientation);
+    t.overtakes = this.overtake.count;
     if (!target) {
       this.lostAt = -1;
       return;
@@ -323,8 +301,17 @@ export class ControlAnalyzer {
    * 選択中の対象とは別に数える（選んでいない敵を撃つこともある）
    */
   private classifyFire(): void {
-    const f = this.totals.fire;
+    const t = this.totals;
+    const f = t.fire;
     const n = this.nearestToNose();
+    const far = !n || n.distance > GUN_CONFIG.range;
+    if (this.autoNow) {
+      t.fireAuto++;
+      if (far) t.fireAutoFar++;
+    } else {
+      t.fireButton++;
+      if (far) t.fireButtonFar++;
+    }
     if (!n) f.noTarget++;
     else if (n.distance > GUN_CONFIG.range) f.outOfRange++;
     else if (n.angle <= n.hitCone) f.inHitCone++;

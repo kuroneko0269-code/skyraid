@@ -43,7 +43,7 @@ function setup(
     s,
     flags,
     () => device,
-    () => ({ aimAssist: level, autoFire }),
+    () => ({ aimAssist: level, autoFire, speedMatch: false }),
   );
   control.netRules = () => net;
   return { s, control };

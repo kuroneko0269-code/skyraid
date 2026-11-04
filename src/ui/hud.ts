@@ -1,4 +1,5 @@
 import './hud.css';
+import { HUD_ASSIST_CONFIG } from '../data/assist';
 import { HUD_CONFIG } from '../data/hud';
 import { applyCssVariables, el, gauge } from './hud-dom';
 import type { HudFrame } from './hud-frame';
@@ -43,6 +44,8 @@ export class Hud {
   private readonly ordnance: HudOrdnance;
   private readonly notice: HTMLDivElement;
   private readonly warnings: HudWarnings;
+  /** 機首の位置に合わせて動かす中央の印（9-5b） */
+  private readonly noseAnchored: HTMLElement[];
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly attitude: Attitude = { pitch: 0, roll: 0, heading: 0 };
@@ -54,11 +57,15 @@ export class Hud {
     throttle: NaN,
     ab: NaN,
     abState: '',
+    autoThr: false,
+    gunOnly: false,
     pitch: NaN,
     roll: NaN,
     fpmX: NaN,
     fpmY: NaN,
     fpmShown: true,
+    noseX: NaN,
+    noseY: NaN,
     heat: NaN,
     hp: NaN,
     lowHp: false,
@@ -104,7 +111,7 @@ export class Hud {
     const gauges = el('div', 'hud-gauges', left);
     // HP（2-3。残りが少ないと赤く点滅）
     this.hpFill = gauge(gauges, 'HP', 'hud-hp');
-    this.throttleFill = gauge(gauges, 'THR');
+    this.throttleFill = gauge(gauges, 'THR', 'hud-thr');
     this.abFill = gauge(gauges, 'AB');
     // 機銃の熱ゲージ（オーバーヒートで赤く点滅）
     this.heatFill = gauge(gauges, 'GUN', 'hud-heat');
@@ -132,6 +139,11 @@ export class Hud {
     // 角度差の矢印・接近 / 離脱の色・BEHIND（4-12）
     this.assist = new HudAssist(root, this.weapons.distText);
 
+    this.noseAnchored = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        '.hud-ladder-window, .hud-assist-ring, .hud-hitmarker, .hud-range-warn',
+      ),
+    );
     parent.appendChild(root);
 
     const l = HUD_CONFIG;
@@ -207,6 +219,17 @@ export class Hud {
       last.abState = abState;
     }
 
+    // 9-5b: 速度合わせでスロットルを下げている間は THR を AUTO（橙）に
+    if (f.speedMatching !== last.autoThr) {
+      last.autoThr = f.speedMatching;
+      this.root.classList.toggle('is-auto-thr', f.speedMatching);
+    }
+
+    if (f.gunOnly !== last.gunOnly) {
+      last.gunOnly = f.gunOnly;
+      this.root.classList.toggle('is-gun-only', f.gunOnly);
+    }
+
     this.updateCombat(f);
 
     this.warnings.update(f);
@@ -224,6 +247,7 @@ export class Hud {
     }
 
     this.updateFlightPath(f.flightPath);
+    this.updateNoseAnchor(f);
     this.radar.update(f.x, f.z, att.heading, f.radar);
   }
 
@@ -278,11 +302,37 @@ export class Hud {
     }
   }
 
+  /**
+   * 9-5b: 中央の印を機首（進行方向マーカー）の位置へ。カメラ（旋回の遅れ・ターゲットカメラの寄せ）が機首からずれても、補助の円と
+   * ピッチラダーが機首を囲む。画面の端からはみ出さないよう、補助の円が収まる範囲までにする
+   */
+  private updateNoseAnchor(f: Readonly<HudFrame>): void {
+    const last = this.last;
+    let dx = 0;
+    let dy = 0;
+    const p = f.flightPath;
+    if (p && f.viewWidth > 0 && f.viewHeight > 0) {
+      const c = HUD_ASSIST_CONFIG;
+      const margin =
+        (this.compact ? c.compactRingRadius : c.ringRadius) + HUD_CONFIG.noseAnchorMargin;
+      const hx = Math.max(0, f.viewWidth / 2 - margin);
+      const hy = Math.max(0, f.viewHeight / 2 - margin);
+      dx = Math.max(-hx, Math.min(hx, p.x - f.viewWidth / 2));
+      dy = Math.max(-hy, Math.min(hy, p.y - f.viewHeight / 2));
+    }
+    const eps = HUD_CONFIG.epsilon.px;
+    if (!changed(last.noseX, dx, eps) && !changed(last.noseY, dy, eps)) return;
+    last.noseX = dx;
+    last.noseY = dy;
+    const t = `${dx.toFixed(1)}px ${dy.toFixed(1)}px`;
+    for (const e of this.noseAnchored) e.style.translate = t;
+  }
+
   private invalidate(): void {
     const last = this.last;
     last.speed = last.alt = last.kills = '';
     last.throttle = last.ab = last.heat = last.hp = last.pitch = last.roll = NaN;
-    last.fpmX = last.fpmY = NaN;
+    last.fpmX = last.fpmY = last.noseX = last.noseY = NaN;
     this.radar.invalidate();
     this.weapons.invalidate();
     this.ordnance.invalidate();

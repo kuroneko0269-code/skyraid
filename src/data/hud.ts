@@ -25,6 +25,10 @@ export const HUD_CONFIG = {
     horizonWidth: 220,
     compactHorizonWidth: 150,
   },
+  /** 9-5b: 機首に合わせて動かす中央の印（補助の円）を、画面の端からこれだけ内側に残す（px） */
+  noseAnchorMargin: 8,
+  /** 9-5b: 射程外で撃ったとき OUT OF RANGE を出し続ける秒数（弾が出てから） */
+  rangeFireHoldSeconds: 0.25,
   /** これより狭い・低い画面はラダーを縮小する（スマホ横画面を想定） */
   compactMaxWidth: 760,
   compactMaxHeight: 480,

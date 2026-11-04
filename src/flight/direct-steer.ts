@@ -16,6 +16,7 @@
 // - 真上・真下: 方位を機体の上下の向きから取る（機首が真上でも、来た方向が分かる）。バンクを合わせるのは弱める
 // - 真後ろの敵: 行きたい向きは機首から fullDeg 度より離れないので、真後ろでも向きが反転して揺れることはない（人は倒し続けるだけ）
 import type { AircraftSpec } from '../data/aircraft';
+import { LOOP_CONFIG } from '../data/loop';
 import { DIRECT_STEER_CONFIG } from '../data/steer';
 import type { GroundHeightFn } from '../entities/aircraft';
 import { LoopSteer } from './loop-steer';
@@ -31,12 +32,17 @@ export interface SteerCommand {
 }
 
 const DEG = Math.PI / 180;
+/** 固定ステップ（apply は固定ステップごとに 1 回呼ぶ） */
+const STEP_SECONDS = 1 / LOOP_CONFIG.updateHz;
 
 export class DirectSteer {
   /** 直前の組み立てで低空の安全が上下の角度を持ち上げた量（度。0 は効いていない。HUD・テスト用） */
   groundAssistDeg = 0;
   /** 宙返り（9-3） */
   readonly loop: LoopSteer;
+  /** 9-5b: 下へ倒し続けている秒数・前に回っていた向き（±1） */
+  private diveHold = 0;
+  private rollSide = 0;
   private readonly forward = vec3();
   private readonly up = vec3();
   private readonly right = vec3();
@@ -56,6 +62,8 @@ export class DirectSteer {
   /** 宙返りの途中の状態を捨てる（飛行の始め・復帰・方式を切り替えたとき） */
   reset(): void {
     this.loop.reset();
+    this.diveHold = 0;
+    this.rollSide = 0;
   }
 
   /**
@@ -142,15 +150,38 @@ export class DirectSteer {
     let target = clamp(Math.atan2(dx, dy) / DEG, -cfg.maxBankDeg, cfg.maxBankDeg) * weight;
     // 9-4: 深く下へ向けたい（高度に余裕がある）ときは背中を下へ向けて引く（押すだけでは真下まで遅い）
     const dr = cfg.diveRoll;
-    const deep = floor < dr.floorDeg * DEG ? smooth01((-dy - dr.startDeg) / dr.rangeDeg) : 0;
+    // 9-5b: 下へ倒し続けて holdSeconds たってから（一瞬・引き起こしの途中では入らない）
+    this.diveHold = sy <= -dr.holdStick ? this.diveHold + STEP_SECONDS : 0;
+    const deep =
+      floor < dr.floorDeg * DEG && this.diveHold >= dr.holdSeconds
+        ? smooth01((-dy - dr.startDeg) / dr.rangeDeg)
+        : 0;
     // 背面（±180°）は近い側から回る（ずれは ±180° で測るので、180° を目指せば向きは揺れない）
     if (deep > 0) target += (Math.sign(target || bank || 1) * 180 - target) * deep;
     let diff = target - bank;
     if (diff > 180) diff -= 360;
     else if (diff < -180) diff += 360;
+    // 9-5b: 真上・真下の近く（limitStartDeg から）では、±180° の近くのずれは前に回っていた向きのまま（ずれの符号が揺れても
+    // 左右に振れない）。水平の近くは今までどおり（右旋回から左旋回への切り返しは水平を通る）
+    const nv = cfg.nearVertical;
+    const nearV = smoothstep(
+      Math.sin(nv.limitStartDeg * DEG),
+      Math.sin(nv.limitEndDeg * DEG),
+      Math.abs(f.y),
+    );
+    if (
+      nearV > 0 &&
+      this.rollSide !== 0 &&
+      Math.sign(diff) !== this.rollSide &&
+      Math.abs(diff) > 180 - nv.flipMarginDeg
+    )
+      diff += this.rollSide * 360;
+    if (Math.abs(diff) > 1) this.rollSide = Math.sign(diff);
     const fade = 1 - smoothstep(cfg.vertical.rollStart, cfg.vertical.rollEnd, Math.abs(f.y));
+    // 9-5b: 真上・真下の近くでは回る速さの上限を下げる
+    const limit = 1 - (1 - nv.minRoll) * nearV;
     // 右ロールの角速度 = -angularRate.z
-    out.roll = clamp(cfg.bankGain * diff * fade - cfg.rollDamping * -w.z, -1, 1);
+    out.roll = clamp(cfg.bankGain * diff * fade - cfg.rollDamping * -w.z, -limit, limit);
     return out;
   }
 

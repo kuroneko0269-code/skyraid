@@ -83,7 +83,32 @@ const ROWS: readonly Row[] = [
   ['  8° より外', (t) => pct(t.fire.wide, t.fireSteps)],
   ['  射程（1500m）の外', (t) => pct(t.fire.outOfRange, t.fireSteps)],
   ['  対象なし', (t) => pct(t.fire.noTarget, t.fireSteps)],
+  '  9-5b: 自動射撃と GUN ボタン（v1.0.6 からの記録。前の記録はどちらもボタンに数える）',
+  [
+    '自動射撃: 撃っていた時間・うち射程外',
+    (t) =>
+      t.fireKnown ? `${pct(t.fireAuto, t.fireSteps)}・${pct(t.fireAutoFar, t.fireAuto)}` : '-',
+  ],
+  [
+    'GUN ボタン: 撃っていた時間・うち射程外',
+    (t) =>
+      t.fireKnown
+        ? `${pct(t.fireButton, t.fireSteps)}・${pct(t.fireButtonFar, t.fireButton)}`
+        : `（区別なし）・${pct(t.fireButtonFar, t.fireButton)}`,
+  ],
+  [
+    '  前の記録: 自動射撃の条件の外で撃っていた（= GUN ボタン）',
+    (t) => (t.fireKnown ? '-' : pct(t.fireSurelyButton, t.fireSteps)),
+  ],
+  [
+    '追い越し（射程内で前にいた対象が後ろへ。回・回/分）',
+    (t) => `${t.overtakes}・${per(t.overtakes, t.aliveMinutes)}`,
+  ],
   ['弾数・命中率', (t) => `${t.shots}・${pct(t.hits, t.shots)}`],
+  [
+    '真上・真下（±70° より先）の横回転 >120°/秒（秒）・最大（°/秒。機体の軸）',
+    (t) => `${num(t.verticalFastRoll / 60, 1)}・${num(t.verticalRollMax, 0)}`,
+  ],
   ['撃墜・被撃墜', (t) => `${t.kills}・${t.downs}`],
   '■ ミサイル',
   ['発射（回/分）', (t) => `${t.missiles}（${per(t.missiles, t.aliveMinutes)}）`],

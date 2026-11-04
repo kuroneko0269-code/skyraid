@@ -12,6 +12,10 @@ export interface CombatInput {
   bomb: boolean;
   /** 長押しでの爆弾の投下（タッチ AB・パッド RT。着弾予測点が出ているときだけ落とす） */
   bombHeld: boolean;
+  /**
+   * 9-5b: trigger が自動射撃から（GUN ボタンは押していない）。判定には使わず、リプレイの記録（flags の 8）と解析で区別するだけ
+   */
+  autoTrigger?: boolean;
 }
 
 /** 何も押していない入力（毎ステップ書き換えて使う入れ物） */

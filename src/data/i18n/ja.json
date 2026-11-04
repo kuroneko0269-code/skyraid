@@ -750,7 +750,8 @@
       "normal": "標準",
       "strong": "強"
     },
-    "autoFire": "自動射撃（タッチ）"
+    "autoFire": "自動射撃（タッチ）",
+    "speedMatch": "速度合わせ（タッチ）"
   },
   "settings": {
     "enemies": "敵",
@@ -1531,6 +1532,8 @@
     "assistShort": "補助 {level}",
     "autoFireOn": "自動射撃 ON",
     "autoFireOff": "自動射撃 OFF",
+    "speedMatchOn": "速度合わせ ON",
+    "speedMatchOff": "速度合わせ OFF",
     "curveShort": "カーブ {curve}",
     "separator": "・",
     "seconds": "{seconds} 秒",
@@ -1565,6 +1568,11 @@
       "overshoot": "行き過ぎて戻した回数",
       "overshootValue": "{count} 回（1 分あたり {perMinute} 回）",
       "overshootHint": "照準の近く（10° 内）で、的が機首の反対側へ抜けた回数",
+      "offRange": "射程外で撃った割合",
+      "offRangeHint": "撃っていた間に、いちばん近い的が機銃の射程（1.5km）より遠かった割合",
+      "overtakes": "追い越した回数",
+      "overtakesValue": "{count} 回",
+      "overtakesHint": "射程内で前にいた的を、速すぎて追い越して後ろへ回した回数（速度合わせで減らせます）",
       "record": "記録",
       "changed": "途中で設定を変えたので記録しません",
       "settingsRecord": "この設定の最高",

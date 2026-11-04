@@ -12,7 +12,8 @@ import type { SteerMode } from '../data/steer';
 import { createSteerModeChoice } from './tilt-settings';
 import type { TiltSource } from './tilt-source';
 
-type ToggleKey = 'invertPitch' | 'autoLevel' | 'swapSides' | 'vibration' | 'autoFire';
+type ToggleKey =
+  'invertPitch' | 'autoLevel' | 'swapSides' | 'vibration' | 'autoFire' | 'speedMatch';
 
 /**
  * 操作設定（4-11）: ポーズメニューの設定の「操作」。感度・デッドゾーンのスライダー、ピッチ反転・オートレベル・
@@ -118,6 +119,8 @@ export function createControlSettings(
     },
   );
   const autoFire = toggle('autoFire', AIM_ASSIST_LEVEL_LABELS.autoFire);
+  // 9-5b: タッチの速度合わせ
+  const speedMatch = toggle('speedMatch', AIM_ASSIST_LEVEL_LABELS.speedMatch);
 
   createKeybindSettings(box, c, (fn) => {
     changed(true, fn);
@@ -125,12 +128,13 @@ export function createControlSettings(
   panel.insertBefore(box, panel.querySelector(':scope > .save-settings'));
   return {
     syncSteerMode: steerChoice.sync,
-    // 9-5: 練習場の設定（方式・補助・自動射撃・カーブ）で変えた値を表示に合わせ直す
+    // 9-5: 練習場の設定（方式・補助・自動射撃・カーブ・速度合わせ）で変えた値を表示に合わせ直す
     sync: () => {
       steerChoice.sync(c.steerMode);
       curve.value = String(c.stickCurve);
       assist.value = c.aimAssist;
       autoFire(c.autoFire);
+      speedMatch(c.speedMatch);
     },
   };
 }

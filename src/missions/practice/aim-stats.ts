@@ -4,11 +4,14 @@
 //   「的の半径 × 判定の拡大 / 距離」の角度に入っていなかった（射程外・対象なしも外）割合
 // - 画面の外: 選んだ対象がいるステップのうち、追従カメラ ≒ 機首の向きで画面（縦の画角は速度の折れ線、横は縦横比）の外にいた割合
 // - 行き過ぎ: 選んだ対象（射程内は予測照準点）が機首から 10° 内にあるとき、機首の左右・上下の反対側へ 1° 以上抜けた回数
+// - 9-5b 射程外: 撃っていたステップのうち、機首にいちばん近い対象が機銃の射程より遠かった（対象なしも）割合
+// - 9-5b 追い越し: 射程内・前にいた選んだ対象が、射程内のまま後ろへ回った回数（overtake.ts）
 import type { CombatSystem } from '../../combat/combat-system';
 import { CAMERA_CONFIG } from '../../data/camera';
 import { GUN_CONFIG } from '../../data/weapons';
 import type { FlightState as AircraftState } from '../../flight/flight-model';
 import { inverseRotateVec3, vec3, type Vec3 } from '../../flight/math';
+import { OvertakeCounter } from './overtake';
 
 const DEG = 180 / Math.PI;
 const CROSS_NEAR_DEG = 10;
@@ -42,6 +45,10 @@ export interface AimStatsTotals {
   readonly overshoots: number;
   /** 飛んでいたステップ（1 分あたりの行き過ぎに使う） */
   readonly aliveSteps: number;
+  /** 9-5b: 撃っていたステップのうち射程外（対象なしも） */
+  readonly fireOutOfRange: number;
+  /** 9-5b: 追い越した回数 */
+  readonly overtakes: number;
 }
 
 export class AimStats implements AimStatsTotals {
@@ -51,6 +58,10 @@ export class AimStats implements AimStatsTotals {
   offScreenSteps = 0;
   overshoots = 0;
   aliveSteps = 0;
+  fireOutOfRange = 0;
+  /** 直前の nearestInCone で見た、機首にいちばん近い対象の距離（m。対象なしは Infinity） */
+  private nearestDistance = Infinity;
+  private readonly overtake = new OvertakeCounter();
   private crossX = 0;
   private crossY = 0;
   private readonly local: Vec3 = vec3();
@@ -70,9 +81,11 @@ export class AimStats implements AimStatsTotals {
     if (firing) {
       this.fireSteps++;
       if (this.nearestInCone(combat, st)) this.fireInCone++;
+      if (this.nearestDistance > GUN_CONFIG.range) this.fireOutOfRange++;
     }
     const sel = combat.targeting.selected;
     const target = sel && sel.active ? sel : null;
+    this.overtake.step(target, st.position, st.orientation);
     if (!target) return;
     this.engagedSteps++;
     const aim = combat.leadValid ? combat.lead : target.position;
@@ -100,6 +113,10 @@ export class AimStats implements AimStatsTotals {
     if (!onScreen) this.offScreenSteps++;
   }
 
+  get overtakes(): number {
+    return this.overtake.count;
+  }
+
   /** 機首にいちばん近い対象の予測照準点が当たる範囲（射程内）にあるか */
   private nearestInCone(combat: CombatSystem, st: Readonly<AircraftState>): boolean {
     const speed = st.speed + GUN_CONFIG.muzzleSpeed;
@@ -123,6 +140,7 @@ export class AimStats implements AimStatsTotals {
       bestDistance = d0;
       bestCone = Math.atan2(t.hitRadius * combat.gun.hitRadiusScale, Math.max(1, d0)) * DEG;
     }
+    this.nearestDistance = bestDistance;
     return bestDistance <= GUN_CONFIG.range && bestAngle <= bestCone;
   }
 

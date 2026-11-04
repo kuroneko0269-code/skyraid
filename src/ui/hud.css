@@ -506,3 +506,18 @@
 .hud.is-no-weapons .hud-bomb-impact {
   display: none !important;
 }
+
+/* 9-5b: 速度合わせでスロットルを下げている間は THR を AUTO（橙）に */
+.hud.is-auto-thr .hud-thr .hud-gauge-label {
+  font-size: 0;
+}
+
+.hud.is-auto-thr .hud-thr .hud-gauge-label::after {
+  content: 'AUTO';
+  font-size: 10px;
+  color: var(--hud-amber);
+}
+
+.hud.is-auto-thr .hud-thr .hud-gauge-fill {
+  background: var(--hud-amber);
+}

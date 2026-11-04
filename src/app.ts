@@ -253,8 +253,8 @@ export function startApp(renderer: WebGLRenderer): void {
     );
 
   // 天候（7-5）: 飛行・メニュー・ブリーフィング・ロビーの天候、HUD のマーカーと夜の減光、環境音
-  // エイムアシスト・自動射撃（9-3）と「方向へ倒す」方式（9-2）。部屋の補正と HUD の宙返りの速度不足も
-  const inputAssist = createInputAssist(session, assistFlags, input, save, activeMap, hudLink, pvp);
+  // エイムアシスト・自動射撃（9-3）・速度合わせ（9-5b）と「方向へ倒す」方式（9-2）。部屋の補正と HUD の宙返りの速度不足も
+  const inputAssist = createInputAssist(play, assistFlags, input, save, activeMap, hudLink, pvp);
   // 9-4: ドラッグ操作は画面の傾きで地平線の基準に戻す（宙返りの間は読み直さない）
   Object.assign(touch.controls.drag, {
     screenRoll: () => screenRoll(camera),

@@ -69,10 +69,12 @@ async function openPracticeResultSample(page) {
       offScreenSeconds: 14.6,
       overshoots: 52,
       overshootPerMinute: 34.7,
+      offRange: 0.312,
+      overtakes: 4,
       advice: 'offAim',
     };
     const best = {
-      settings: 'touch:direct:normal:1:1.5',
+      settings: 'touch:direct:normal:1:1.5:s',
       aircraftId: 'kestrel',
       score: 698,
       kills: 6,
@@ -84,7 +86,7 @@ async function openPracticeResultSample(page) {
       result,
       { kind: 'saved', out },
       {
-        settings: 'touch:direct:normal:1:1.5',
+        settings: 'touch:direct:normal:1:1.5:s',
         pilotName: 'ACE',
       },
     );

@@ -47,7 +47,8 @@ export function analyzeData(data: ReplayData, options: AnalyzerOptions): ReplayA
   const frame = createFrame();
   const cmds = data.commands;
   let ci = 0;
-  const step = { controls: w.controls, input, assist: false };
+  const known = h.fireSource === true;
+  const step = { controls: w.controls, input, assist: false, auto: false, autoKnown: known };
   for (let t = 0; t < h.steps; t++) {
     for (;;) {
       const c = cmds[ci];
@@ -60,6 +61,7 @@ export function analyzeData(data: ReplayData, options: AnalyzerOptions): ReplayA
     });
     applyFrame(frame, w.controls, input, play.session);
     step.assist = (frame.flags & 4) !== 0;
+    step.auto = (frame.flags & 8) !== 0;
     analyzer.before(step);
     stepWorld(play, w.buildings(), w.controls, input, 1 / 60);
     analyzer.after();
@@ -85,7 +87,7 @@ const LOCALES: readonly Locale[] = ['ja', 'en'];
  * 敵の設定（セーブの設定。記録のヘッダの値で代える）を入れ、記録した言語を候補から探す。どれも合わなければ日本語のまま。
  * それでも合わないのは、ブラウザと Node.js で Math.exp・Math.cos の結果が最後の桁で違うため（地形の高さに効く。docs/control-analysis.md）
  */
-function startWorld(h: ReplayHeader): { w: TestWorld; startMatches: boolean } {
+export function startWorld(h: ReplayHeader): { w: TestWorld; startMatches: boolean } {
   for (const locale of LOCALES) {
     useLocale(locale);
     const w = createWorld({ enemies: h.enemies });

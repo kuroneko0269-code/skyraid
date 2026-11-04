@@ -5,30 +5,32 @@
   content: '▸';
 }
 
-/* 爆弾の着弾予測点: 予測照準点（○ 10px）より大きい二重の円 */
+/*
+ * 爆弾の着弾予測点（9-5b: 機銃の印と間違えないよう、薄い破線の四角に「BMB」。地上の目標を爆撃するときに重ねる。
+ * 機銃だけの練習場では出さない）
+ */
 .hud-bomb-impact {
   position: absolute;
   left: 0;
   top: 0;
-  width: 22px;
-  height: 22px;
-  margin: -11px 0 0 -11px;
-  border: 1.5px solid var(--hud-color);
-  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 1.5px dashed var(--hud-dim);
   box-sizing: border-box;
   will-change: transform;
 }
 
 .hud-bomb-impact::after {
-  content: '';
+  content: 'BMB';
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: 4px;
-  height: 4px;
-  margin: -2px 0 0 -2px;
-  border-radius: 50%;
-  background: var(--hud-color);
+  top: 100%;
+  margin-top: 2px;
+  transform: translateX(-50%);
+  color: var(--hud-dim);
+  font-size: 9px;
+  font-family: var(--hud-mono);
 }
 
 /* 対空砲が撃つ前: MISSILE の警告（ラダーの窓の上端の上）のさらに上 */

@@ -179,7 +179,8 @@ export function captureFrame(
   out.flags =
     (o.autoLevel ? 1 : 0) |
     (o.invertPitch ? 2 : 0) |
-    (session.combat.gun.hitRadiusScale !== 1 ? 4 : 0);
+    (session.combat.gun.hitRadiusScale !== 1 ? 4 : 0) |
+    (input.trigger && input.autoTrigger === true ? 8 : 0);
   return out;
 }
 
@@ -202,6 +203,7 @@ export function applyFrame(
   BUTTONS.forEach((k, i) => {
     input[k] = (f.buttons & (2 << i)) !== 0;
   });
+  input.autoTrigger = (f.flags & 8) !== 0;
   const o = session.aircraft.flight.options;
   o.autoLevel = (f.flags & 1) !== 0;
   o.invertPitch = (f.flags & 2) !== 0;

@@ -29,6 +29,10 @@ import { DirectStick } from './direct';
 import { Hands, DEFAULT_HANDS, type HandsSpec } from './hands';
 import type { ControlAnalyzer } from './metrics';
 import type { GamePlay } from '../../src/missions/game-play';
+import type { PracticeRunner } from '../../src/missions/practice/runner';
+import { TEAM_PLAYER, type CombatTarget } from '../../src/combat/target';
+import { isPracticeDrill } from '../../src/data/practice';
+import { SpeedMatch } from '../../src/combat/speed-match';
 
 const DT = 1 / 60;
 const MAX_SECONDS = 480;
@@ -80,7 +84,16 @@ export interface FlightTweaks {
   readonly direct?: boolean | 'screen' | 'screen-comp';
   /** 腕前（省略は役の値） */
   readonly skill?: DifficultySpec;
+  /**
+   * 9-5b: スロットル。'ai'（省略）はボットの操縦の値（敵機の AI の速さの合わせ方）、'max' は実機の人と同じく最大のまま触らない
+   */
+  readonly throttle?: 'ai' | 'max';
+  /** 9-5b: 速度合わせ（本番と同じ SpeedMatch。タッチの初期値 ON） */
+  readonly speedMatch?: boolean;
 }
+
+/** 飛ばす課題: キャンペーンのミッション id か、練習場の課題（practice:moving など） */
+const PRACTICE_PREFIX = 'practice:';
 
 export interface FlightResult {
   readonly status: string;
@@ -120,20 +133,32 @@ export function flyMission(
     readonly analyzer?: (play: GamePlay) => ControlAnalyzer;
   } = {},
 ): FlightResult {
-  const def = MISSIONS.find((m) => m.id === missionId);
-  if (!def) throw new Error(`Mission not found: ${missionId}`);
+  const drill = missionId.startsWith(PRACTICE_PREFIX)
+    ? missionId.slice(PRACTICE_PREFIX.length)
+    : null;
+  const def = drill ? null : MISSIONS.find((m) => m.id === missionId);
+  if (!drill && !def) throw new Error(`Mission not found: ${missionId}`);
+  if (drill && !isPracticeDrill(drill)) throw new Error(`Drill not found: ${drill}`);
   const model = AIRCRAFT_MODELS[0];
   if (!model) throw new Error('No aircraft');
-  const start: ReplayStart = {
-    mode: 'mission',
-    mapId: def.mapId,
-    missionId: def.id,
+  const base = {
     aircraftId: model.id,
     upgrades: initialUpgrades(),
     enemies: { enabled: false, difficulty: 'normal', count: 0 },
     seed: 9100 + seed,
     weatherId: 'clear',
-  };
+  } as const;
+  const start: ReplayStart =
+    drill && isPracticeDrill(drill)
+      ? {
+          ...base,
+          mode: 'practice',
+          mapId: 'island',
+          practiceDrill: drill,
+          // 画面の縦横比（狙いの指標の「画面の外」。2.16 は iPhone の横画面）
+          practiceAspect: 2.16,
+        }
+      : { ...base, mode: 'mission', mapId: def?.mapId ?? 'island', missionId: def?.id };
   // 本番と同じく、起動のときの敵の設定を入れた世界（analyze.ts と同じ）
   const w = createWorld({ enemies: start.enemies });
   startFromHeader(w, start);
@@ -141,11 +166,12 @@ export function flyMission(
   const s = play.session;
   // ボットはロールを自分で操る（テストと同じ）。人の初期値はオートレベル ON
   s.aircraft.flight.options.autoLevel = false;
-  const runner = play.runner;
+  const practice = play.practice;
+  const runner = play.runner ?? (practice ? practiceRunnerShim(practice) : null);
   if (!runner) throw new Error('No runner');
   const rec = opts.record ? new ReplayRecorder() : null;
   rec?.begin(start, {
-    title: def.id,
+    title: missionId,
     pilotName: role.id,
     date: '2026-11-03T00:00:00Z',
     gameVersion: '1.0.1',
@@ -155,9 +181,11 @@ export function flyMission(
     s,
     opts.tweaks?.skill ?? role.skill,
     createRandom(500 + seed),
-    undefined,
+    practice ? () => nearestTarget(s) : undefined,
     getGroundHeight,
   );
+  const speedMatch = opts.tweaks?.speedMatch ? new SpeedMatch() : null;
+  const throttleMax = opts.tweaks?.throttle === 'max';
   const wp = new WaypointBot(s);
   const guard = new BoundsGuard(s, runner.boundary);
   const idle = createCombatInput();
@@ -212,6 +240,13 @@ export function flyMission(
     if (direct) direct.apply(s, goal, intent, out);
     else if (hands) hands.apply(intent, out);
     else Object.assign(out, intent);
+    if (throttleMax) {
+      // 人: 始めに最大へ上げて、あとは触らない（AB も使わない）
+      out.throttleTarget = steps === 1 ? 1 : null;
+      out.throttle = 0;
+      out.afterburner = false;
+    }
+    if (speedMatch) speedMatch.apply(out, s);
     Object.assign(input, combat);
     if (autoScale > 0 && autoFire(play, autoScale)) input.trigger = true;
     // エイムアシスト（AssistControl と同じ手順。タッチで ON の前提）
@@ -233,7 +268,46 @@ export function flyMission(
     analyzer?.after();
     lastSel = s.combat.targeting.selected;
   }
-  const status = runner.status;
+  const status = practice ? 'success' : runner.status;
   const data = rec?.finish({ label: status, success: status === 'success' }) ?? null;
   return { status, data, reason: runner.failReason ?? null, seconds: steps / 60 };
+}
+
+/** 練習場（9-5b の比較）: ミッションの runner の代わり（時間切れまで飛ぶ。戦域外では終わらないので戻らない） */
+function practiceRunnerShim(p: PracticeRunner): {
+  readonly running: boolean;
+  readonly status: string;
+  readonly failReason: string | null;
+  readonly activeRings: null;
+  readonly boundary: {
+    readonly outside: boolean;
+    readonly map: { readonly radius: number };
+    distance(x: number, z: number): number;
+  };
+} {
+  return {
+    get running() {
+      return p.phase !== 'finished';
+    },
+    status: 'success',
+    failReason: null,
+    activeRings: null,
+    boundary: { outside: false, map: { radius: 1e9 }, distance: () => 0 },
+  };
+}
+
+/** 練習場の的（風船・ドローン・模擬の敵）のうち、いちばん近いもの */
+function nearestTarget(s: GamePlay['session']): CombatTarget | null {
+  const p = s.aircraft.state.position;
+  let best: CombatTarget | null = null;
+  let bestD = Infinity;
+  for (const t of s.combat.allTargets) {
+    if (!t.active || t.team === TEAM_PLAYER) continue;
+    const d = Math.hypot(t.position.x - p.x, t.position.y - p.y, t.position.z - p.z);
+    if (d < bestD) {
+      bestD = d;
+      best = t;
+    }
+  }
+  return best;
 }

@@ -22,6 +22,7 @@ import {
   AIM_ASSIST_DEFAULT_LEVEL,
   AIM_ASSIST_LEVELS,
   AUTO_FIRE_CONFIG,
+  SPEED_MATCH_CONFIG,
   type AimAssistLevel,
 } from '../data/assist';
 import { ACTIONS, DEFAULT_KEYBINDS, type Action, type KeyBindings } from '../data/keybinds';
@@ -50,6 +51,8 @@ export interface ControlSettings {
   aimAssist: AimAssistLevel;
   /** 自動射撃（9-3。タッチだけ。初期値 ON） */
   autoFire: boolean;
+  /** 速度合わせ（9-5b。タッチだけ。初期値 ON。今の利用者にも初期値を当てる） */
+  speedMatch: boolean;
   /** キー割当の変更（アクション → 主キーの KeyboardEvent.code）。ないアクションは初期の割当 */
   keys: Partial<Record<RemappableAction, string>>;
 }
@@ -69,6 +72,7 @@ export function defaultControls(): ControlSettings {
     stickPosition: STEER_DEFAULTS.position,
     aimAssist: AIM_ASSIST_DEFAULT_LEVEL,
     autoFire: AUTO_FIRE_CONFIG.defaultOn,
+    speedMatch: SPEED_MATCH_CONFIG.defaultOn,
     keys: {},
   };
 }
@@ -93,7 +97,14 @@ export function normalizeControls(raw: unknown): ControlSettings {
   const r = raw as Record<string, unknown>;
   c.sensitivity = quantize(r.sensitivity, CONTROL_SETTINGS.sensitivity, c.sensitivity);
   c.deadzone = quantize(r.deadzone, CONTROL_SETTINGS.deadzone, c.deadzone);
-  for (const k of ['invertPitch', 'autoLevel', 'swapSides', 'vibration', 'autoFire'] as const) {
+  for (const k of [
+    'invertPitch',
+    'autoLevel',
+    'swapSides',
+    'vibration',
+    'autoFire',
+    'speedMatch',
+  ] as const) {
     const v = r[k];
     if (typeof v === 'boolean') c[k] = v;
   }
@@ -227,5 +238,6 @@ export function replayControlsOf(
     deadzone: c.deadzone,
     aimAssist: c.aimAssist,
     autoFire: c.autoFire,
+    speedMatch: c.speedMatch,
   };
 }

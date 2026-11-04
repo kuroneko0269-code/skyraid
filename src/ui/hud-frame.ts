@@ -24,9 +24,19 @@ export interface HudFrame {
   stall: number;
   /** 宙返り（9-3）: 上へ端まで倒しているのに速さが足りなくて入れない */
   loopSpeedLow: boolean;
+  /** 9-5b: 機銃だけで飛んでいる（練習場）。ミサイルのロックの円・爆弾の着弾予測点を出さない */
+  gunOnly: boolean;
+  /** 9-5b: 速度合わせでスロットルを下げている（THR のゲージの名前を AUTO に） */
+  speedMatching: boolean;
   orientation: Readonly<Quat>;
   /** 進行方向マーカーの画面座標（px、左上原点）。null なら隠す（カメラの後ろ） */
   flightPath: { x: number; y: number } | null;
+  /**
+   * 描く画面の大きさ（px）。9-5b: 中央の印（ピッチラダー・補助の円・命中の ×・OUT OF RANGE）を機首（進行方向マーカー）の
+   * 位置に合わせて動かす（ターゲットカメラ・旋回の遅れでカメラが機首からずれても、印が機首を囲む）。0 なら画面の中央のまま
+   */
+  viewWidth: number;
+  viewHeight: number;
   /** 機銃の熱（0〜1）とオーバーヒート中か（2-1） */
   gunHeat: number;
   gunOverheated: boolean;

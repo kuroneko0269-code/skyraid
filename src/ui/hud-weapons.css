@@ -81,7 +81,7 @@
   top: 0;
   width: 34px;
   height: 34px;
-  border: var(--hud-line) solid var(--hud-color);
+  border: 1.5px solid var(--hud-dim);
   border-radius: 50%;
   box-sizing: border-box;
   transform-origin: 50% 50%;
@@ -117,14 +117,69 @@
   border-left: 18px solid var(--hud-color);
 }
 
-/* 機銃の予測照準点: 小さな○。進行方向マーカーを重ねて撃つ */
+/*
+ * 機銃で狙う印（予測照準点。9-5b で大きく・中心の点）: 機首の印（進行方向マーカー -○-）をこの円に重ねて撃つ。
+ * 撃てば当たる（機首が当たる範囲に入った）ときは白く太く、射程外は破線で薄く
+ */
 .hud-lead {
-  width: 10px;
-  height: 10px;
-  margin: -5px 0 0 -5px;
-  border: 1.5px solid var(--hud-color);
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border: 2px solid var(--hud-color);
   border-radius: 50%;
   box-sizing: border-box;
+}
+
+.hud-lead::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: var(--hud-color);
+}
+
+.hud-lead.is-ready {
+  border-color: rgba(255, 255, 255, 0.95);
+  border-width: 3px;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+.hud-lead.is-ready::after {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.hud-lead.is-far {
+  border-style: dashed;
+  border-color: var(--hud-dim);
+}
+
+.hud-lead.is-far::after {
+  display: none;
+}
+
+/* 9-5b: 機銃だけの練習場ではミサイルのロック（円と LOCK）を出さない */
+.hud.is-gun-only .hud-lock-ring,
+.hud.is-gun-only .hud-lock-label {
+  display: none;
+}
+
+/* 9-5b: 射程外で撃っている（機首の下。位置は hud.ts が機首に合わせる。.hud-warn の赤より弱い橙） */
+.hud .hud-range-warn {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 30px);
+  transform: translateX(-50%);
+  color: var(--hud-amber);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.hud.is-out-of-range .hud-range-warn {
+  display: block;
 }
 
 /* 残弾（左のゲージ列の右） */
