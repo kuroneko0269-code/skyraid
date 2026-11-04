@@ -14,7 +14,15 @@ import {
 
 /** モードごとの起動の手順。kind: flight（飛行まで）/ lobby（ロビー画面まで） */
 const MODES = [
-  { name: 'tutorial', kind: 'flight', go: (p) => p.click('.mode-card[data-mode="tutorial"]') },
+  {
+    // 9-5c: 章の一覧から第 1 章
+    name: 'tutorial',
+    kind: 'flight',
+    go: async (p) => {
+      await p.click('.mode-card[data-mode="tutorial"]');
+      await p.locator('.tutorial-chapter[data-chapter="steer"]').click();
+    },
+  },
   {
     name: 'campaign-m1',
     kind: 'flight',

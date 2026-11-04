@@ -21,6 +21,7 @@ import type { SaveStore } from '../progression/save-store';
 import type { WeatherView } from '../render/weather/weather-view';
 import type { ReplayHub } from '../replay/hub';
 import { PracticeHud } from './practice-hud';
+import { adviceContext, tipText } from './practice-advice-text';
 import { PracticeResultScreen, type PracticeRecordState } from './practice-result';
 import { PracticeSelectScreen } from './practice-select';
 import { PracticeSettingsPanel } from './practice-settings';
@@ -97,7 +98,11 @@ export function createPracticeLink(p: PracticeLinkParts): PracticeLink {
     onRetry: () => game.transition('flight'),
     onList: () => game.transition('practice_select'),
   });
-  const hud = new PracticeHud(document.body);
+  // 9-5c: 飛行中の一言（設定で OFF にできる）。文は始めたときの設定（速度合わせの有無）に合わせる
+  const hud = new PracticeHud(document.body, {
+    enabled: () => save.settings.controls.practiceTips && !replay.playing,
+    text: (tip) => tipText(tip, adviceContext(startKey)),
+  });
   for (const slot of [select.settingsSlot, screens.pause.extra, result.settingsSlot])
     panels.push(new PracticeSettingsPanel(slot, save, p.tilt, changed));
   screens.inPractice = () => selection !== null;

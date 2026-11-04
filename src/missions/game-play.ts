@@ -16,11 +16,15 @@ import { DEFENSE_CONFIG, type DefenseDifficulty, type DefenseMapDef } from '../d
 import type { MissionDef, Pose } from './types';
 import { PracticeRunner } from './practice/runner';
 import { freeExtraOf } from './free-extra';
+import { TUTORIAL_CHAPTER_DEFS, type TutorialChapter } from '../data/tutorial';
+import { TutorialCoach } from './tutorial/coach';
 
 /** レース中（7-1）は武器を使わない */
 const NO_WEAPONS = createCombatInput();
 
 export class GamePlay {
+  /** 9-5c: チュートリアルの進行役は記録しない飛行だけの物（リプレイの状態のハッシュ・キーフレームに入れない） */
+  static readonly transientKeys = ['tutorial'];
   /** 進行中（または終わったばかり）のミッション。フリーフライトなら null */
   runner: MissionRunner | null = null;
   /** 進行中（または終わったばかり）のリングレース（7-1）。レースでなければ null */
@@ -30,6 +34,8 @@ export class GamePlay {
   /** 防衛戦の乱数（7-B。来る方向・目標の施設。reseed で掛け直す） */
   readonly defenseRandom = new SeededRandom(2);
   private readonly defenseListeners: ((d: DefenseRunner | null) => void)[] = [];
+  /** 進行中（または終わったばかり）のチュートリアルの章（9-5c）の進行役。チュートリアルでなければ null */
+  tutorial: TutorialCoach | null = null;
   /** 進行中（または終わったばかり）の練習場（9-5）。練習場でなければ null */
   practice: PracticeRunner | null = null;
   private readonly practiceListeners: ((p: PracticeRunner | null) => void)[] = [];
@@ -91,6 +97,7 @@ export class GamePlay {
   }
 
   startFree(): void {
+    this.tutorial = null;
     this.setPractice(null);
     this.setRace(null);
     this.setDefense(null);
@@ -101,6 +108,7 @@ export class GamePlay {
 
   /** PvP（5-1）: 敵・的・ミッションなしで世界を空にする（機体は net/ が動かし、session.step は呼ばない） */
   startEmpty(start: Readonly<Pose>): void {
+    this.tutorial = null;
     freeExtraOf(this)?.stop();
     this.setPractice(null);
     this.setRace(null);
@@ -109,7 +117,9 @@ export class GamePlay {
     this.setRunner(null);
   }
 
-  startMission(def: MissionDef): MissionRunner {
+  /** chapter: チュートリアルの章（9-5c。進行役を付けてからランナーの変化を知らせる） */
+  startMission(def: MissionDef, chapter: TutorialChapter | null = null): MissionRunner {
+    this.tutorial = null;
     freeExtraOf(this)?.stop();
     this.setPractice(null);
     this.setRace(null);
@@ -118,9 +128,17 @@ export class GamePlay {
     // 9-6b: ?dev=kaiju2 のレイドの怪獣は差し込み口が引き受ける（付けていなければ今までと同じ）
     const world = freeExtraOf(this)?.startMission?.(def) ?? this.session;
     const runner = new MissionRunner(def, world);
+    if (chapter) this.tutorial = new TutorialCoach(chapter, this.session, runner);
     this.setRunner(runner);
     runner.start();
     return runner;
+  }
+
+  /** チュートリアルの章（9-5c）: 章のミッションと進行役（飛ばない章は null） */
+  startTutorial(chapter: TutorialChapter): MissionRunner | null {
+    const def = TUTORIAL_CHAPTER_DEFS[chapter].mission;
+    if (!def) return null;
+    return this.startMission(def, chapter);
   }
 
   /**
@@ -128,6 +146,7 @@ export class GamePlay {
    * reference はベストの走行（ゴーストとの差・スプリットに使う）
    */
   startRace(course: CourseDef, reference: RaceReference | null = null): RaceRunner {
+    this.tutorial = null;
     freeExtraOf(this)?.stop();
     this.session.startMission(course.start, true);
     this.setPractice(null);
@@ -152,6 +171,7 @@ export class GamePlay {
     difficulty: DefenseDifficulty,
     seed?: () => number,
   ): DefenseRunner {
+    this.tutorial = null;
     freeExtraOf(this)?.stop();
     this.setPractice(null);
     this.setRace(null);
@@ -184,6 +204,7 @@ export class GamePlay {
 
   /** 練習場（9-5）: 練習扱いの世界で課題の開始位置から。aspect は指標（画面の外）の縦横比（記録のヘッダにも入れる） */
   startPractice(drill: PracticeRunner['drill'], aspect: number): PracticeRunner {
+    this.tutorial = null;
     freeExtraOf(this)?.stop();
     this.setRace(null);
     this.setDefense(null);
@@ -222,6 +243,7 @@ export class GamePlay {
     }
     this.session.step(controls, input, dt);
     this.runner?.step(dt);
+    this.tutorial?.step(input, dt);
     // 9-6a: フリーフライトの開発中の物（?dev=kaiju2 のときだけ付いている）。9-6b: 引き受けたミッションでも動く
     // （ほかのミッション・防衛戦などを始めると stop されて止まっている）
     if (this.defense === null) freeExtraOf(this)?.step(dt);

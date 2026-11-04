@@ -1,5 +1,7 @@
 // 練習場（9-5）の結果: スコア・命中率・撃墜までの平均時間と、狙いの指標から選ぶ一言の助言（Three.js・DOM 非依存）
 import { PRACTICE_CONFIG, type PracticeDrill } from '../../data/practice';
+import type { PracticeGood, PracticeIssue } from '../../data/practice-advice';
+import { practiceAdviceSet } from './advice';
 import type { AimStatsTotals } from './aim-stats';
 
 /** 助言の種類（表の practice.advice.<key>） */
@@ -37,6 +39,9 @@ export interface PracticeResult {
   readonly offRange: number | null;
   readonly overtakes: number;
   readonly advice: PracticeAdvice;
+  /** 9-5c: その回の問題（優先度の高い順・最大 3 つ）と良かった点（advice.ts） */
+  readonly issues: readonly PracticeIssue[];
+  readonly good: PracticeGood;
 }
 
 /** スコア = 撃墜 × (perKill + 命中率（%）)。四捨五入 */
@@ -45,7 +50,9 @@ export function practiceScore(kills: number, accuracy: number | null): number {
 }
 
 /** 一言の助言（data/practice.ts の閾値。上から順に最初に当てはまったもの） */
-export function practiceAdvice(r: Omit<PracticeResult, 'advice'>): PracticeAdvice {
+export function practiceAdvice(
+  r: Omit<PracticeResult, 'advice' | 'issues' | 'good'>,
+): PracticeAdvice {
   const a = PRACTICE_CONFIG.advice;
   if (r.shots === 0) return 'noShots';
   if (r.shots >= a.minShotsForAccuracy && r.offAim !== null && r.offAim > a.offAim) return 'offAim';
@@ -82,5 +89,5 @@ export function buildPracticeResult(
     offRange: aim.fireSteps > 0 ? aim.fireOutOfRange / aim.fireSteps : null,
     overtakes: aim.overtakes,
   };
-  return { ...base, advice: practiceAdvice(base) };
+  return { ...base, advice: practiceAdvice(base), ...practiceAdviceSet(base) };
 }

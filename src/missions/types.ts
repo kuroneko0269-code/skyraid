@@ -2,6 +2,8 @@
 // ミッションを増やすときはデータを足すだけで済むよう、出現物・目標・失敗条件・報酬をすべてここで表す。
 // 表示する文（タイトル・ブリーフィング）は言語ごとに src/data/i18n/*.json に置き、ミッションの id で引く（2-5）
 import type { Difficulty, PatrolPoint } from '../data/ai';
+import type { DronePathDef } from '../data/practice';
+import type { TutorialTask } from '../data/tutorial-tasks';
 import type { GroundTargetType } from '../data/ground-targets';
 import type { KaijuAttack } from '../data/kaiju';
 import type { RaidDifficulty } from '../data/raid';
@@ -65,6 +67,8 @@ export interface TargetSpawn {
   readonly kind: 'targets';
   readonly count: number;
   readonly trigger: SpawnTrigger;
+  /** 9-5c: 撃墜から出直す（フリーフライトと同じく別の地点へ）。省略は出直さない */
+  readonly respawns?: boolean;
 }
 
 /** 周回ドローン（軌道は src/data/targets.ts の先頭から count 機）。再出現しない */
@@ -72,6 +76,10 @@ export interface DroneSpawn {
   readonly kind: 'drones';
   readonly count: number;
   readonly trigger: SpawnTrigger;
+  /** 9-5c: 経路（練習場の動く的と同じ。先頭から 1 機ずつ）。省略は周回 */
+  readonly paths?: readonly DronePathDef[];
+  /** 9-5c: 撃墜から出直す。省略は出直さない */
+  readonly respawns?: boolean;
 }
 
 /**
@@ -200,7 +208,18 @@ export interface SpeedObjective extends ObjectiveBase {
   readonly speed: number;
 }
 
+/**
+ * 課題（9-5c。チュートリアルの章）: 条件の判定は src/missions/tutorial/（ランナーの外）が毎ステップ行い、進み具合を知らせる。
+ * count 回（または count 秒など、課題ごとの数）で達成
+ */
+export interface TaskObjective extends ObjectiveBase {
+  readonly type: 'task';
+  readonly task: TutorialTask;
+  readonly count: number;
+}
+
 export type ObjectiveDef =
+  | TaskObjective
   | SpeedObjective
   | KillObjective
   | SurviveObjective

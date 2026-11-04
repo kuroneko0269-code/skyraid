@@ -18,8 +18,8 @@ export interface ResultExtras {
   readonly pilotName: string | null;
   /** 報酬で新しい機体・強化が買える残高になった（3-3） */
   readonly newGear: boolean;
-  /** チュートリアル（4-11）の文: 見出しと「モード選択へ」。通常のミッションは省略 */
-  readonly tutorial?: { readonly title: string; readonly back: string };
+  /** チュートリアル（4-11）の文: 見出しと「章の一覧へ」、次の章があれば「次の章へ」（9-5c）。通常のミッションは省略 */
+  readonly tutorial?: { readonly title: string; readonly back: string; readonly next: boolean };
   /** 練習場への案内（9-5。チュートリアルの完了・M1 / M2 の失敗）。省略は出さない */
   readonly practiceHint?: 'tutorial' | 'failed';
 }
@@ -45,10 +45,17 @@ export class ResultScreen {
   private readonly practiceText: HTMLSpanElement;
   private readonly retry: HTMLButtonElement;
   private readonly back: HTMLButtonElement;
+  private readonly next: HTMLButtonElement;
 
   constructor(
     parent: HTMLElement,
-    handlers: { onRetry: () => void; onList: () => void; onPractice: () => void },
+    handlers: {
+      onRetry: () => void;
+      onList: () => void;
+      onPractice: () => void;
+      /** 9-5c: チュートリアルの「次の章へ」 */
+      onNext: () => void;
+    },
   ) {
     const root = createScreen(parent, 'campaign-screen result-screen');
     const panel = el('div', 'ui-panel campaign-panel', root);
@@ -83,6 +90,13 @@ export class ResultScreen {
       t('campaign.result.retry'),
       handlers.onRetry,
     );
+    this.next = createButton(
+      buttons,
+      'ui-button is-primary campaign-go',
+      t('tutorial.result.next'),
+      handlers.onNext,
+    );
+    this.next.hidden = true;
     this.root = root;
   }
 
@@ -92,6 +106,12 @@ export class ResultScreen {
     this.outcome.textContent =
       extras.tutorial?.title ?? (success ? 'MISSION COMPLETE' : 'MISSION FAILED');
     this.back.textContent = extras.tutorial?.back ?? t('campaign.result.toMissions');
+    // 9-5c: 次の章があれば「次の章へ」を主に、「もう一度」は控えめに
+    const next = extras.tutorial?.next === true && success;
+    this.next.hidden = !next;
+    this.retry.classList.toggle('is-primary', !next);
+    this.retry.classList.toggle('is-ghost', next);
+    this.nextShown = next;
     this.pilot.textContent = extras.pilotName === null ? '' : `PILOT  ${extras.pilotName}`;
     this.pilot.hidden = extras.pilotName === null;
     this.reason.textContent = r.failReason ? FAIL_REASON_TEXT[r.failReason] : '';
@@ -131,8 +151,10 @@ export class ResultScreen {
     if (hint) this.practiceText.textContent = t(`practice.hint.${hint}`);
   }
 
+  private nextShown = false;
+
   setShown(shown: boolean): void {
     setScreenShown(this.root, shown);
-    if (shown) this.retry.focus({ preventScroll: true });
+    if (shown) (this.nextShown ? this.next : this.retry).focus({ preventScroll: true });
   }
 }

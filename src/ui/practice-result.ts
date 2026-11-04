@@ -10,6 +10,7 @@ import type { PracticeResult } from '../missions/practice/score';
 import type { PracticeRecordOutcome } from '../progression/practice-records';
 import { el } from './hud-dom';
 import { formatRatio, formatSeconds, practiceSettingsLabel } from './practice-text';
+import { adviceContext, goodText, issueText } from './practice-advice-text';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 /** 記録の扱い（saved: 記録した / changed: 途中で設定を変えたので記録しない / replay: 再生中） */
@@ -25,7 +26,9 @@ export class PracticeResultScreen {
   private readonly drill: HTMLDivElement;
   private readonly score: HTMLDivElement;
   private readonly badges: HTMLDivElement;
-  private readonly advice: HTMLParagraphElement;
+  private readonly advice: HTMLDivElement;
+  private readonly issues: HTMLOListElement;
+  private readonly good: HTMLParagraphElement;
   private readonly facts: HTMLDivElement;
   private readonly retry: HTMLButtonElement;
 
@@ -36,7 +39,11 @@ export class PracticeResultScreen {
     this.drill = el('div', 'result-pilot', panel);
     this.score = el('div', 'race-result-time practice-result-score', panel);
     this.badges = el('div', 'race-result-badges', panel);
-    this.advice = el('p', 'practice-advice', panel);
+    // 9-5c: その回の問題（優先度順に最大 3 つ・直し方つき）と良かった点
+    this.advice = el('div', 'practice-advice', panel);
+    el('div', 'practice-advice-heading', this.advice, t('practice.result.issuesHeading'));
+    this.issues = el('ol', 'practice-issues', this.advice);
+    this.good = el('p', 'practice-good', this.advice);
     this.facts = el('div', 'campaign-facts', panel);
     this.settingsSlot = el('div', 'practice-settings-slot', panel);
     this.extras = el('div', 'result-extras', panel);
@@ -66,7 +73,12 @@ export class PracticeResultScreen {
     if (record.kind === 'saved' && record.out.newBest) el('span', '', this.badges, 'NEW RECORD');
     else if (record.kind === 'saved' && record.out.newSettingsBest)
       el('span', '', this.badges, t('practice.result.settingsBest'));
-    this.advice.textContent = t(`practice.advice.${r.advice}`);
+    const ctx = adviceContext(extras.settings);
+    this.issues.replaceChildren();
+    for (const k of r.issues) el('li', 'practice-issue', this.issues, issueText(k, r, ctx));
+    if (r.issues.length === 0)
+      el('li', 'practice-issue is-none', this.issues, t('practice.result.noIssues'));
+    this.good.textContent = goodText(r.good, r);
     this.facts.replaceChildren();
     const fact = (label: string, value: string, hint = ''): void => {
       const row = el('div', 'campaign-fact', this.facts);

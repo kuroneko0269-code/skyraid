@@ -24,7 +24,11 @@ function isPlural(v: MessageTree): boolean {
 }
 
 /** 葉のキーと値（複数形のまとまりは 1 つの葉: 値は other） */
-function leaves(tree: MessageTree, prefix = '', out = new Map<string, string>()): Map<string, string> {
+function leaves(
+  tree: MessageTree,
+  prefix = '',
+  out = new Map<string, string>(),
+): Map<string, string> {
   for (const [k, v] of Object.entries(tree)) {
     const key = prefix ? `${prefix}.${k}` : k;
     if (typeof v === 'string') out.set(key, v);

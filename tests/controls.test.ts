@@ -52,6 +52,7 @@ describe('感度とデッドゾーンの変換', () => {
       aimAssist: 'normal',
       autoFire: true,
       speedMatch: true,
+      practiceTips: true,
       keys: {},
     });
     expect(CONTROL_SETTINGS.buttonScale[c.buttonSize]).toBe(1);
@@ -202,6 +203,7 @@ describe('セーブ v5（操作設定と案内の記録）', () => {
       hintsMission: false,
       raidBriefing: false,
       steerNotice: false,
+      tutorialNotice: false,
     });
     expect(save?.settings.hud).toBe(false);
     expect(save?.settings.difficulty).toBe('hard');

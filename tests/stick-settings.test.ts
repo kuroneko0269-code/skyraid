@@ -170,46 +170,34 @@ describe('「操作方法が新しくなりました」は今の利用者に一�
   });
 });
 
-describe('チュートリアルの文', () => {
+describe('チュートリアルの文（9-5c で章ごと・方式ごとに）', () => {
   beforeAll(() => {
     useLocale('ja');
   });
 
-  it('タッチは方式に合わせる（方向へ倒す / ピッチ・ロール）。キーボード・パッドは今までどおり', () => {
+  it('操縦の章: 方式ごとの文（方向へ倒す / ピッチ・ロール / 傾き / ドラッグ）。キーボード・パッドは別の文', () => {
     const name = (a: string): string => a;
-    const direct = tutorialStepText('rings', 'touch', name);
-    const classic = tutorialStepText('rings', 'touch', name, 'classic');
-    expect(direct).toContain('行きたい方向');
-    expect(classic).toContain('傾けて');
-    expect(tutorialStepText('rings', 'keyboard', name, 'classic')).toBe(
-      tutorialStepText('rings', 'keyboard', name),
-    );
-    // 方式で文の違わない段階は同じ
-    expect(tutorialStepText('speed', 'touch', name, 'classic')).toBe(
-      tutorialStepText('speed', 'touch', name),
-    );
-  });
-
-  it('9-3: 方向へ倒す方式は宙返り（上へ倒し続ける）、自動射撃が ON なら的の段階で自動で撃つことを書く', () => {
-    const name = (a: string): string => a;
-    expect(tutorialStepText('rings', 'touch', name)).toContain('上へ倒し続けると宙返り');
-    expect(tutorialStepText('rings', 'touch', name, 'classic')).not.toContain('宙返り');
-    expect(tutorialStepText('targets', 'touch', name, 'direct', true)).toContain('自動で撃つ');
-    expect(tutorialStepText('targets', 'touch', name, 'direct', false)).not.toContain('自動');
-    expect(tutorialStepText('targets', 'keyboard', name, 'direct', true)).not.toContain('自動');
-  });
-
-  it('9-4: 傾き・ドラッグはそれぞれの文（日本語・英語）。ほかの段階は方式によらず同じ', () => {
-    const name = (a: string): string => a;
-    expect(tutorialStepText('rings', 'touch', name, 'tilt')).toContain('傾ける');
-    expect(tutorialStepText('rings', 'touch', name, 'drag')).toContain('指で押さえる');
-    expect(tutorialStepText('rings', 'touch', name, 'drag')).toContain('宙返り');
-    expect(tutorialStepText('speed', 'touch', name, 'tilt')).toBe(
-      tutorialStepText('speed', 'touch', name),
+    expect(tutorialStepText('steer', 'rings', 'direct', name)).toContain('行きたい方向');
+    expect(tutorialStepText('steer', 'rings', 'classic', name)).toContain('傾け');
+    expect(tutorialStepText('steer', 'rings', 'tilt', name)).toContain('端末');
+    expect(tutorialStepText('steer', 'rings', 'drag', name)).toContain('指で押さえる');
+    expect(tutorialStepText('steer', 'rings', 'keys', name)).toContain('pitchUp');
+    expect(tutorialStepText('steer', 'rings', 'pad', name)).toContain('左スティック');
+    // 方式で文の違わない段階（ボタン）は、タッチの 4 方式で同じ
+    expect(tutorialStepText('speed', 'ab', 'classic', name)).toBe(
+      tutorialStepText('speed', 'ab', 'direct', name),
     );
     useLocale('en');
-    expect(tutorialStepText('rings', 'touch', name, 'tilt')).toContain('Tilt the device');
-    expect(tutorialStepText('rings', 'touch', name, 'drag')).toContain('Hold your finger');
+    expect(tutorialStepText('steer', 'rings', 'tilt', name)).toContain('Tilt the device');
+    expect(tutorialStepText('steer', 'rings', 'drag', name)).toContain('Hold your finger');
     useLocale('ja');
+  });
+
+  it('宙返りの章は方式ごとに倒し方を書く（方向へ倒す = 上へ倒し続ける・ピッチとロール = 引き続ける）', () => {
+    const name = (a: string): string => a;
+    expect(tutorialStepText('loop', 'loopTop', 'direct', name)).toContain('上へ倒し続ける');
+    expect(tutorialStepText('loop', 'loopTop', 'classic', name)).toContain('引き続ける');
+    expect(tutorialStepText('gun', 'targets', 'direct', name)).toContain('自動');
+    expect(tutorialStepText('gun', 'targets', 'keys', name)).toContain('fire');
   });
 });

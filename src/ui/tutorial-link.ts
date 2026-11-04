@@ -3,6 +3,7 @@
 import { buildKeyBindings, keyLabel } from '../core/control-settings';
 import type { Input } from '../core/input';
 import type { MissionRunner } from '../missions/runner';
+import type { TutorialCoach } from '../missions/tutorial/coach';
 import type { SaveStore } from '../progression/save-store';
 import { bindTutorialReward, type TutorialReward } from '../progression/tutorial-reward';
 import type { Hud } from './hud';
@@ -42,24 +43,23 @@ export class TutorialLink {
       onAbort,
       // 9-4: 効いている方式（傾きの許可を待つ間は「方向へ倒す」）
       () => touch.controls.mode,
-      () => save.settings.controls.autoFire,
     );
     this.hints = new TouchHints(parent, gameHud.root, tutorialStrings().hints);
     // 9-2: 初回起動の人（名前がまだ）は新しい操作から始めるので、「操作方法が新しくなりました」は出さない
     markSteerNoticeForNewPilot(save);
   }
 
-  /** このチュートリアルで払ったクレジット（リザルト。初回だけ 500） */
+  /** この章で払ったクレジット（リザルト。飛ぶ章をすべて終えた初回だけ 500） */
   get paid(): number {
     return this.reward?.paid ?? 0;
   }
 
-  /** ランナーが変わったとき（tutorial: チュートリアルのランナーか） */
-  attach(runner: MissionRunner | null, tutorial: boolean): void {
+  /** ランナーが変わったとき（coach: チュートリアルの章の進行役。チュートリアルでなければ null） */
+  attach(runner: MissionRunner | null, coach: TutorialCoach | null): void {
     this.reward?.off();
     this.reward = null;
-    this.hud.attach(tutorial ? runner : null);
-    if (runner && tutorial) this.reward = bindTutorialReward(runner.bus, this.save);
+    this.hud.attach(coach ? runner : null, coach);
+    if (runner && coach) this.reward = bindTutorialReward(runner.bus, this.save, coach.chapter);
   }
 
   /**
@@ -87,7 +87,7 @@ export class TutorialLink {
     // タッチ操作が出ていて、まだパッドを触っていなければタッチの文（Input.lastDevice の初期値はキーボード）
     const device = this.input.lastDevice;
     const touch = this.touch.controls.isVisible && device === 'keyboard';
-    this.hud.update(touch ? 'touch' : device);
+    this.hud.update(touch ? 'touch' : device, dt);
     if (this.hints.running) this.hints.update(dt);
   }
 }

@@ -9,6 +9,7 @@ import { findMap, ISLAND_MAP } from '../data/maps';
 import { WORLD_CONFIG } from '../data/terrain';
 import { DEFAULT_WEATHER_ID, weatherForFlight } from '../data/weather';
 import type { PracticeDrill } from '../data/practice';
+import { tutorialChapterOf } from '../data/tutorial';
 import { freshSeed } from '../core/random';
 import type { ActiveMap } from '../missions/active-map';
 import type { FlightSession } from '../missions/flight-session';
@@ -184,6 +185,10 @@ function startUnrecorded(p: FlightStartParts, def: MissionDef | null, net: boole
   if (net) {
     p.play.startEmpty({ ...WORLD_CONFIG.start, headingDeg: 0 });
     p.pvp.beginFlight();
-  } else if (def) p.play.startMission(def);
-  else p.play.startFree();
+  } else if (def) {
+    // 9-5c: チュートリアルの章は進行役も付ける
+    const chapter = tutorialChapterOf(def.id);
+    if (chapter) p.play.startTutorial(chapter);
+    else p.play.startMission(def);
+  } else p.play.startFree();
 }

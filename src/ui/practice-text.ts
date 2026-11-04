@@ -3,6 +3,7 @@ import { formatDecimal } from '../core/format';
 import { t } from '../core/i18n';
 import { AIM_ASSIST_LEVEL_LABELS } from '../data/assist';
 import { PRACTICE_CONFIG } from '../data/practice';
+import { tutorialChapterOf } from '../data/tutorial';
 import { STEER_LABELS } from '../data/steer';
 import type { MissionResult } from '../missions/runner';
 import { parsePracticeSettings } from '../progression/practice-records';
@@ -37,12 +38,16 @@ export function formatSeconds(v: number | null): string {
   return v === null ? '—' : t('practice.seconds', { seconds: formatDecimal(v, 1) });
 }
 
-/** 練習場への案内（9-5）: チュートリアルの完了、M1・M2 の失敗（狙いの練習が要りそうなとき） */
+/** 練習場への案内（9-5）: チュートリアル（9-5c: 狙いの章・最後に飛ぶ章）の完了、M1・M2 の失敗（狙いの練習が要りそうなとき） */
 export function practiceHintFor(
   tutorial: boolean,
   r: Pick<MissionResult, 'outcome' | 'missionId'>,
 ): 'tutorial' | 'failed' | undefined {
-  if (tutorial) return r.outcome === 'success' ? 'tutorial' : undefined;
+  if (tutorial) {
+    const c = tutorialChapterOf(r.missionId);
+    const aim = c === 'gun' || c === 'moving' || c === 'find';
+    return r.outcome === 'success' && aim ? 'tutorial' : undefined;
+  }
   const ids: readonly string[] = PRACTICE_CONFIG.guideMissions;
   return r.outcome === 'failed' && ids.includes(r.missionId) ? 'failed' : undefined;
 }

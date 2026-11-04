@@ -35,7 +35,7 @@ const SAVE = {
     owned: { kestrel: { engine: 0, airframe: 0, weapons: 0, avionics: 0 } },
   },
   settings: {},
-  flags: { tutorialOffered: true },
+  flags: { tutorialOffered: true, tutorialNotice: true },
 };
 
 async function touchContext(browser, viewport = VIEW) {

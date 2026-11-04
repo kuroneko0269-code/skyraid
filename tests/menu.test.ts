@@ -24,7 +24,7 @@ describe('自己ベスト（セーブ v9）', () => {
     delete v8.records;
     const save = migrateSave(v8);
     expect(save?.version).toBe(9);
-    expect(save?.records).toEqual({ defenseWaves: {}, raidBestMs: {}, practice: {} });
+    expect(save?.records).toEqual({ defenseWaves: {}, raidBestMs: {}, practice: {}, tutorial: [] });
     expect(save?.credits).toBe(777);
   });
 
@@ -48,7 +48,12 @@ describe('自己ベスト（セーブ v9）', () => {
       defenseWaves: { a: 3, b: -1, c: 11, d: 'x' },
       raidBestMs: { normal: 5000, hard: 0, x: Number.NaN },
     });
-    expect(r).toEqual({ defenseWaves: { a: 3 }, raidBestMs: { normal: 5000 }, practice: {} });
+    expect(r).toEqual({
+      defenseWaves: { a: 3 },
+      raidBestMs: { normal: 5000 },
+      practice: {},
+      tutorial: [],
+    });
   });
 });
 

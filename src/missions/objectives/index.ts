@@ -8,6 +8,7 @@ import type { Objective } from './objective';
 import { RingPassObjective } from './ring-pass';
 import { SpeedObjective } from './speed';
 import { SurviveTimeObjective } from './survive-time';
+import { TaskObjective } from './task';
 
 export function createObjective(def: ObjectiveDef): Objective {
   switch (def.type) {
@@ -25,8 +26,11 @@ export function createObjective(def: ObjectiveDef): Objective {
       return new KaijuObjective(def);
     case 'speed':
       return new SpeedObjective(def);
+    case 'task':
+      return new TaskObjective(def);
   }
 }
 
 export { Objective, type ObjectiveStatus } from './objective';
 export { RingPassObjective } from './ring-pass';
+export { TaskObjective } from './task';

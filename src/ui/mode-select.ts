@@ -80,6 +80,10 @@ export class ModeSelectScreen {
   private readonly progressLines = new Map<GameMode, HTMLSpanElement>();
   /** モード選択の上に重ねた画面（7-4: ランキング、7-D: 情報）。Esc で閉じる。閉じたら true を返す */
   private readonly overlays: (() => boolean)[] = [];
+  /** 初回の「チュートリアルを始めますか？」の「始める」（9-5c: 第 1 章から。ui/tutorial-entry.ts が差し込む） */
+  onTutorialStart: () => void = () => undefined;
+  /** チュートリアルのカード（9-5c: 章の一覧を出す） */
+  onTutorialList: () => void = () => undefined;
   /** カードの進捗（7-D。出すたびに読む。Screens が差し込む） */
   progress: () => Partial<Record<GameMode, string>> = () => ({});
 
@@ -102,8 +106,9 @@ export class ModeSelectScreen {
     el('h2', 'ui-heading menu-heading', header, t('modes.heading'));
 
     const select = (mode: GameMode): void => {
-      // 6-4: フリーフライトはマップを選んでから
+      // 6-4: フリーフライトはマップを選んでから。9-5c: チュートリアルは章の一覧
       if (mode === 'free') this.showMapPrompt();
+      else if (mode === 'tutorial') this.onTutorialList();
       else handlers.onSelect(mode);
     };
 
@@ -139,7 +144,8 @@ export class ModeSelectScreen {
 
     this.dialogs = new ModeDialogs(root, tutorial, {
       onStart: (mode) => {
-        handlers.onSelect(mode);
+        if (mode === 'tutorial') this.onTutorialStart();
+        else handlers.onSelect(mode);
       },
       onRaid: handlers.onRaid,
       onDefense: handlers.onDefense,

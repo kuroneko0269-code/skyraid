@@ -86,3 +86,5 @@ export function makeBotReplays(
 export const ROLE_IDS = ROLES.map((r) => r.id);
 export { runExperiments } from './experiments';
 export { runDeviceFix } from './device-fix';
+export { runAdvice } from './advice';
+export { runTutorialMatrix } from './tutorial';

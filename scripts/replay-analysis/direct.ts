@@ -90,6 +90,29 @@ export class DirectStick {
       it.pitch = this.v.y;
       it.roll = this.v.x;
     }
+    this.drive(session, base, out);
+  }
+
+  /** 9-5c: スティックの値（右・上が正）をそのまま倒す（宙返りの「上へ倒し続ける」など） */
+  applyStick(
+    session: FlightSession,
+    x: number,
+    y: number,
+    base: Readonly<AircraftControls>,
+    out: AircraftControls,
+  ): void {
+    this.intent.pitch = y;
+    this.intent.roll = x;
+    this.drive(session, base, out);
+  }
+
+  private drive(
+    session: FlightSession,
+    base: Readonly<AircraftControls>,
+    out: AircraftControls,
+  ): void {
+    const st = session.aircraft.state;
+    const it = this.intent;
     it.throttle = base.throttle;
     it.afterburner = base.afterburner;
     it.throttleTarget = base.throttleTarget;

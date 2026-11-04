@@ -4,8 +4,9 @@
 // キャンペーン（ミッション一覧・ブリーフィング）・リングレース・フリーフライト / レイド / 防衛戦のダイアログ・ハンガー（性能・塗装の
 // 翼 / 尾翼）・リプレイ・PvP のロビー・セーブデータの削除の確認・記録カードの画面・設定のデータ（オンライン連携中・メンバー管理の
 // 見本。環境変数なしでも画面の部品を作って差し込む）・メンバーの取り消しの確認・練習場（9-5: 課題の一覧・飛行の HUD・ポーズの
-// 「やり直す」と設定の欄・結果の見本と M1 の失敗の案内）
+// 「やり直す」と設定の欄・結果の見本と M1 の失敗の案内）・チュートリアル（9-5c。ui-audit-tutorial.js）
 import { L } from './audit-lang.js';
+import { auditTutorialScreens } from './ui-audit-tutorial.js';
 
 /** M1 の失敗のリザルトを見本で出す（練習場への案内つき） */
 async function openFailedResultSample(page) {
@@ -72,6 +73,9 @@ async function openPracticeResultSample(page) {
       offRange: 0.312,
       overtakes: 4,
       advice: 'offAim',
+      // 9-5c: 問題を 3 つ（いちばん長い組み合わせ）と良かった点
+      issues: ['overtake', 'offRange', 'offAim'],
+      good: 'fastKills',
     };
     const best = {
       settings: 'touch:direct:normal:1:1.5:s',
@@ -219,6 +223,9 @@ export async function auditMoreScreens(page, base, size, shot, shown) {
       );
     if (open) await shot(`dialog-${mode}`, dialog);
   }
+
+  // 9-5c: チュートリアル（scripts/ui-audit-tutorial.js）
+  await auditTutorialScreens(page, shot, toModeSelect, dialog);
 
   // ハンガー: 性能 → 塗装（翼・尾翼）
   await toModeSelect();

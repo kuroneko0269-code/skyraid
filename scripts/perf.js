@@ -80,7 +80,11 @@ async function measureStartup(browser, base, sizes) {
   const second = [];
   let detail = null;
   for (let i = 0; i < runs; i++) {
-    const context = await browser.newContext({ viewport: VIEWPORT, hasTouch: true, locale: 'ja-JP' });
+    const context = await browser.newContext({
+      viewport: VIEWPORT,
+      hasTouch: true,
+      locale: 'ja-JP',
+    });
     await watch(context);
     const page = await context.newPage();
     const a = await loadTitle(page, base, false);
@@ -154,7 +158,11 @@ async function measureModes(browser, base) {
   const result = [];
   let prefetch = null;
   for (const m of MODES) {
-    const context = await browser.newContext({ viewport: VIEWPORT, hasTouch: true, locale: 'ja-JP' });
+    const context = await browser.newContext({
+      viewport: VIEWPORT,
+      hasTouch: true,
+      locale: 'ja-JP',
+    });
     const log = await watch(context);
     const page = await context.newPage();
     await page.goto(base);

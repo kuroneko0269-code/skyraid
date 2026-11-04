@@ -22,7 +22,7 @@ import { InfoEntry } from './info-entry';
 import { SettingsNav } from './settings-nav';
 import { SettingsScreen } from './settings-screen';
 import { modeProgress } from '../progression/mode-progress';
-import { TUTORIAL_MISSION } from '../data/tutorial';
+import { TutorialEntry } from './tutorial-entry';
 import { MAPS } from '../data/maps';
 import { RAID_MISSION, raidMission } from '../data/missions-special';
 import { findRaidVariant } from '../missions/raid-variants';
@@ -80,6 +80,7 @@ export class Screens {
   nextMission: MissionDef | null = null;
   /** チュートリアルの文（4-11） */
   readonly tutorialText: TutorialStrings;
+  readonly tutorial: TutorialEntry;
   /** ミッションの解放とクリア済みのランク（2-5。3-1 からセーブに記録） */
   readonly progress: CampaignProgress;
   private readonly curtain: FadeCurtain;
@@ -148,8 +149,8 @@ export class Screens {
     });
     this.modeSelect = new ModeSelectScreen(parent, this.tutorialText, {
       onSelect: (mode) => {
-        if (mode === 'free' || mode === 'tutorial') {
-          this.nextMission = mode === 'tutorial' ? TUTORIAL_MISSION : null;
+        if (mode === 'free') {
+          this.nextMission = null;
           game.transition('flight');
         } else if (mode === 'campaign') game.transition('mission_select');
         else if (mode === 'race') game.transition('race_select');
@@ -228,6 +229,9 @@ export class Screens {
       onRetry: () => game.transition('flight'),
       onList: () => game.transition(this.listState()),
       onPractice: () => game.transition('practice_select'),
+      onNext: () => {
+        this.tutorial.next();
+      },
     });
     this.pause = new PauseMenu(parent, {
       onResume: () => game.transition('flight'),
@@ -244,6 +248,7 @@ export class Screens {
       modeSelect: this.modeSelect,
       pause: this.pause,
     });
+    this.tutorial = new TutorialEntry(game, this);
     // PvP の飛行中はゲームを止めずに PvP のメニュー
     this.pauseButton = createPauseButton(parent, () => {
       if (!this.pvp?.onPause()) game.transition('pause');
@@ -271,9 +276,9 @@ export class Screens {
     game.transition('mode_select');
   }
 
-  /** チュートリアル（4-11）を飛んでいる（または終えたばかり） */
+  /** チュートリアル（4-11。9-5c から章）を飛んでいる（または終えたばかり） */
   get inTutorial(): boolean {
-    return this.nextMission?.id === TUTORIAL_MISSION.id;
+    return this.tutorial.chapter !== null;
   }
 
   /** ソロのレイド（6-2。9-6b からヴォルガス以外の怪獣も）を飛んでいる（または終えたばかり） */
