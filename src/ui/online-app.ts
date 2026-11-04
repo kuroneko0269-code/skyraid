@@ -45,6 +45,7 @@ export function startOnline(env: OnlineEnv, p: OnlineLinkParts): void {
     data: () => save.snapshot,
     version: SAVE_CONFIG.version,
     apply: (data) => save.replaceWith(data),
+    locked: () => save.isLocked,
     reload: () => {
       window.location.reload();
     },
@@ -57,7 +58,8 @@ export function startOnline(env: OnlineEnv, p: OnlineLinkParts): void {
       const text = SYNC_TEXT[event];
       if (text === '') return;
       say(text);
-      showToast(document.body, text, TOAST_SECONDS);
+      // 端末のセーブが新しい版のお知らせは起動時に出している（save-link.ts）。設定の欄にだけ書く
+      if (event !== 'localTooNew') showToast(document.body, text, TOAST_SECONDS);
     },
   };
   const backend = new SupabaseBackend(env);

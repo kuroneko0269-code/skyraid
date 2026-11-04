@@ -23,6 +23,11 @@ export interface SaveAccess {
   apply(data: unknown): boolean;
   /** 置き換えた後に読み込み直す（ページの再読み込み） */
   reload(): void;
+  /**
+   * 端末のセーブがこのアプリより新しい版で、守っている（9-6a の事前修正）。true の間は送りも受け取りもしない
+   * （送ると初期値でサーバーを上書きし、受け取ると端末の新しいセーブを古いもので上書きする）
+   */
+  locked?(): boolean;
 }
 
 export type ConflictChoice = 'local' | 'server' | null;
@@ -37,7 +42,7 @@ export interface SyncHooks {
 }
 
 export type SyncEvent =
-  'pushed' | 'pulled' | 'upToDate' | 'tooNew' | 'tooLarge' | 'failed' | 'later';
+  'pushed' | 'pulled' | 'upToDate' | 'tooNew' | 'localTooNew' | 'tooLarge' | 'failed' | 'later';
 
 export interface Timers {
   setTimeout(fn: () => void, ms: number): unknown;
@@ -112,6 +117,10 @@ export class SaveSync {
     }
     const user = this.activeUser();
     if (user === null) return null;
+    if (this.save.locked?.() === true) {
+      this.hooks.report('localTooNew');
+      return null;
+    }
     this.busy = true;
     try {
       return mode === 'push' ? await this.pushOrResolve(user) : await this.resolve(user);

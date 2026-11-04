@@ -62,6 +62,8 @@ function setup(
     /** 前回の起動で端末に残った状態（skyraid.online） */
     storage?: MemoryStorage;
     backend?: MockBackend;
+    /** 端末のセーブがこのアプリより新しい版で守っている（9-6a の事前修正） */
+    locked?: boolean;
   } = {},
 ) {
   const backend = opts.backend ?? new MockBackend();
@@ -79,6 +81,7 @@ function setup(
       return true;
     },
     reload: vi.fn<() => void>(),
+    locked: () => opts.locked === true,
   } satisfies SaveAccess;
   const waiting: (() => void)[] = [];
   const hooks = {
@@ -265,5 +268,28 @@ describe('同期の動き（OnlineService + SaveSync）', () => {
     await settle();
     expect(t.backend.server).toBeNull();
     expect(t.hooks.report).toHaveBeenCalledWith('tooLarge');
+  });
+
+  it('端末のセーブが新しい版（守っている）なら送りも受け取りもしない（9-6a の事前修正）', async () => {
+    const backend = new MockBackend();
+    backend.server = { version: 8, data: { credits: 5 }, updatedAt: 'T1' };
+    const t = setup({ backend, locked: true });
+    await t.service.start();
+    await settle();
+    expect(t.backend.calls.fetchSaveInfo + t.backend.calls.insertSave).toBe(0);
+    expect(t.backend.server?.data).toEqual({ credits: 5 });
+    expect(t.local()).toEqual({ credits: 100, pilotName: 'ACE' });
+    expect(t.hooks.report).toHaveBeenCalledWith('localTooNew');
+  });
+
+  it('サーバーのセーブが新しい版なら受け取らず、送って上書きもしない', async () => {
+    const backend = new MockBackend();
+    backend.server = { version: 99, data: { credits: 5 }, updatedAt: 'T1' };
+    const t = setup({ backend });
+    await t.service.start();
+    await settle();
+    expect(t.backend.server?.data).toEqual({ credits: 5 });
+    expect(t.backend.calls.insertSave + t.backend.calls.updateSave).toBe(0);
+    expect(t.hooks.report).toHaveBeenCalledWith('tooNew');
   });
 });

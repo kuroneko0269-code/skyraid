@@ -9,6 +9,7 @@ import { SAVE_CONFIG } from '../data/save';
 import {
   clampCredits,
   createInitialSave,
+  isNewerSave,
   parseSave,
   sanitizePilotName,
   type MissionRecord,
@@ -23,9 +24,10 @@ export type SaveStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 /**
  * 読み込みの結果。new: セーブなし（初回起動）/ loaded: 読めた / migrated: 古い設定のキーから作った /
- * reset: 壊れていたので初期値に戻した（HUD にお知らせを出す）
+ * reset: 壊れていたので初期値に戻した（HUD にお知らせを出す）/
+ * tooNew: このアプリより新しい版のセーブ（9-6a の事前修正）。消さずに残し、初期値で遊べるが保存しない（お知らせを出す）
  */
-export type SaveLoadStatus = 'new' | 'loaded' | 'migrated' | 'reset';
+export type SaveLoadStatus = 'new' | 'loaded' | 'migrated' | 'reset' | 'tooNew';
 
 export class SaveStore {
   private data: SaveData;
@@ -34,6 +36,11 @@ export class SaveStore {
   /** 8-3: 書けなかったときに 1 回だけ呼ぶ（容量超過・プライベートブラウズ・ストレージ無効） */
   private writeFailListener: (() => void) | null = null;
   private writeFailed = false;
+  /**
+   * 新しい版のセーブを守っている（9-6a の事前修正）: 自動の保存（設定・報酬・クラウドの受け取り）では書かない。
+   * 遊ぶ人がはっきり選んだ操作（復元・削除）だけが解く
+   */
+  private locked = false;
   /** 設定の部品に渡す StorageLike。古いキーで読み書きすると、セーブの設定に振り分けて保存する */
   readonly settingsStorage: StorageLike;
 
@@ -63,6 +70,11 @@ export class SaveStore {
       text = null;
     }
     if (text !== null) {
+      if (isNewerSave(text)) {
+        const store = new SaveStore(storage, createInitialSave());
+        store.locked = true;
+        return { store, status: 'tooNew' };
+      }
       const data = parseSave(text);
       const store = new SaveStore(storage, data ?? createInitialSave());
       if (data) {
@@ -76,6 +88,11 @@ export class SaveStore {
     const store = new SaveStore(storage, createInitialSave());
     const migrated = store.migrateLegacySettings();
     return { store, status: migrated ? 'migrated' : 'new' };
+  }
+
+  /** 新しい版のセーブを守っていて保存しない（クラウドの同期も止める） */
+  get isLocked(): boolean {
+    return this.locked;
   }
 
   /** 今のデータ（書き換えはメソッドで） */
@@ -173,6 +190,7 @@ export class SaveStore {
     const data = decodeSave(text);
     if (!data) return false;
     this.data = data;
+    this.locked = false;
     return this.persist();
   }
 
@@ -181,6 +199,8 @@ export class SaveStore {
    * 読めなければ何もせず false
    */
   replaceWith(raw: unknown): boolean {
+    // 端末の新しい版のセーブを古いサーバーのセーブで上書きしない
+    if (this.locked) return false;
     let data: SaveData | null;
     try {
       data = parseSave(JSON.stringify(raw));
@@ -200,6 +220,7 @@ export class SaveStore {
   /** セーブデータを消して初期値に戻す（ポーズメニューの「セーブデータを削除」） */
   clear(): void {
     this.data = createInitialSave();
+    this.locked = false;
     try {
       this.storage?.removeItem(SAVE_CONFIG.storageKey);
     } catch {
@@ -215,6 +236,7 @@ export class SaveStore {
 
   /** 保存する。書けなければ（容量超過・プライベートモード等）false */
   persist(): boolean {
+    if (this.locked) return false;
     for (const fn of this.persistListeners) fn();
     if (!this.storage) return this.failWrite();
     try {
