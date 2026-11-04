@@ -34,6 +34,7 @@ for (let i = 0; i < args.length; i++) {
       '--assist',
       '--tilt',
       '--device-fix',
+      '--presets',
       '--advice',
       '--tutorial',
     ].includes(a)
@@ -57,6 +58,16 @@ if (flags.get('--advice')) {
   // 9-5c: チュートリアルの通し
   console.log(
     m.runTutorialMatrix(seeds, (l) => console.error(l), list('--roles', ['human', 'beginner'])),
+  );
+} else if (flags.get('--presets')) {
+  // 9-5d: 補助の組ごとの練習場の動く的・M1・M2（docs/control-analysis.md）
+  console.log(
+    m.runPresets(
+      seeds,
+      (l) => console.error(l),
+      list('--roles', ['human', 'beginner']),
+      list('--courses', ['practice:moving', 'training', 'first-sortie']),
+    ),
   );
 } else if (flags.get('--device-fix')) {
   // 9-5b: 練習場の動く的・M1・M2 で速度合わせの有無（docs/control-analysis.md）

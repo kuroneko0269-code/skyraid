@@ -11,6 +11,8 @@ import { createToggleButton } from './mobile';
 import type { SteerMode } from '../data/steer';
 import { createSteerModeChoice } from './tilt-settings';
 import type { TiltSource } from './tilt-source';
+import { applyAssistPreset } from '../core/assist-preset';
+import { AssistPresetChoice } from './assist-preset';
 
 type ToggleKey =
   'invertPitch' | 'autoLevel' | 'swapSides' | 'vibration' | 'autoFire' | 'speedMatch';
@@ -26,12 +28,16 @@ export function createControlSettings(
   vibrationSupported: boolean,
   tilt: TiltSource,
   apply: (c: Readonly<ControlSettings>) => void,
+  /** 9-5d: 補助の組を置く場所（操作のタブの先頭）と、組を選んだ後（ほかの欄の表示を合わせ直す） */
+  preset?: { readonly slot: HTMLElement; readonly onPick: () => void },
 ): { syncSteerMode: (mode: SteerMode) => void; sync: () => void } {
   const c = save.settings.controls;
+  let presetChoice: AssistPresetChoice | null = null;
   const changed = (persist: boolean, fn: (c: ControlSettings) => void): void => {
     if (persist) save.updateControls(fn);
     else fn(c);
     apply(c);
+    presetChoice?.sync();
   };
   apply(c);
 
@@ -126,16 +132,34 @@ export function createControlSettings(
     changed(true, fn);
   });
   panel.insertBefore(box, panel.querySelector(':scope > .save-settings'));
+  const sync = (): void => {
+    steerChoice.sync(c.steerMode);
+    curve.value = String(c.stickCurve);
+    assist.value = c.aimAssist;
+    autoFire(c.autoFire);
+    speedMatch(c.speedMatch);
+    presetChoice?.sync();
+  };
+  // 9-5d: 補助の組（選ぶと 3 つの値を書き、個別の欄の表示も合わせる）
+  if (preset) {
+    const box = el('div', 'control-settings assist-preset-settings', preset.slot);
+    presetChoice = new AssistPresetChoice(
+      box,
+      () => c,
+      (p) => {
+        changed(true, (x) => {
+          applyAssistPreset(x, p);
+        });
+        sync();
+        preset.onPick();
+      },
+      { note: true },
+    );
+  }
   return {
     syncSteerMode: steerChoice.sync,
     // 9-5: 練習場の設定（方式・補助・自動射撃・カーブ・速度合わせ）で変えた値を表示に合わせ直す
-    sync: () => {
-      steerChoice.sync(c.steerMode);
-      curve.value = String(c.stickCurve);
-      assist.value = c.aimAssist;
-      autoFire(c.autoFire);
-      speedMatch(c.speedMatch);
-    },
+    sync,
   };
 }
 

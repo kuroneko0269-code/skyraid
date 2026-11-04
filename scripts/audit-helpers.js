@@ -63,7 +63,7 @@ export async function seed(page) {
           owned: { kestrel: { engine: 0, airframe: 0, weapons: 0, avionics: 0 } },
         },
         settings: {},
-        flags: { tutorialOffered: true, tutorialNotice: true },
+        flags: { tutorialOffered: true, tutorialNotice: true, assistPreset: true },
       }),
     );
   });

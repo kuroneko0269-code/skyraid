@@ -8,14 +8,28 @@ import { STEER_LABELS } from '../data/steer';
 import type { MissionResult } from '../missions/runner';
 import { parsePracticeSettings } from '../progression/practice-records';
 import { curveLabel } from './control-settings';
+import { assistPresetOf } from '../core/assist-preset';
+import { assistPresetName } from './assist-preset';
 
-/** 設定の見出し（「タッチ・方向へ倒す・補助 標準・自動射撃 ON・カーブ 1.5」「キーボード」）。読めなければそのまま */
-export function practiceSettingsLabel(key: string): string {
+/**
+ * 設定の見出し（「タッチ・方向へ倒す・補助 標準・自動射撃 ON・カーブ 1.5」「キーボード」）。読めなければそのまま。
+ * short（9-5d: 練習場の一覧の狭い欄）: 補助の 3 つが補助の組と同じなら組の名前にまとめる（「タッチ・方向へ倒す・かんたん・カーブ 1.5」）
+ */
+export function practiceSettingsLabel(key: string, short = false): string {
   const s = parsePracticeSettings(key);
   if (!s) return key;
   const device = t(`practice.device.${s.device}`);
   const c = s.touch;
   if (!c) return device;
+  const preset =
+    c.aimAssist === 'off' ? 'custom' : assistPresetOf({ ...c, aimAssist: c.aimAssist });
+  if (short && preset !== 'custom')
+    return [
+      device,
+      STEER_LABELS.modes[c.steerMode],
+      assistPresetName(preset),
+      t('practice.curveShort', { curve: curveLabel(c.curve) }),
+    ].join(t('practice.separator'));
   const assist =
     c.aimAssist === 'off' ? t('practice.assistOff') : AIM_ASSIST_LEVEL_LABELS.levels[c.aimAssist];
   return [

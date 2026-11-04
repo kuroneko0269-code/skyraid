@@ -129,6 +129,28 @@ export const AIM_ASSIST_LEVEL_LABELS = {
 } as const;
 
 /**
+ * 補助の組（9-5d。タッチだけ）: 狙いの補助・自動射撃・速度合わせの 3 つをまとめて選ぶ。組は保存せず、今の 3 つの値が
+ * どれかの組と同じならその組・違えば「カスタム」（src/core/assist-preset.ts）。初期値（defaultControls）は かんたん
+ */
+export const ASSIST_PRESETS = ['easy', 'normal', 'hard'] as const;
+export type AssistPreset = (typeof ASSIST_PRESETS)[number];
+
+export interface AssistPresetValues {
+  readonly aimAssist: AimAssistLevel;
+  readonly autoFire: boolean;
+  readonly speedMatch: boolean;
+}
+
+export const ASSIST_PRESET_VALUES: Readonly<Record<AssistPreset, AssistPresetValues>> = {
+  /** 今の（9-5b からの）初期値 */
+  easy: { aimAssist: 'normal', autoFire: true, speedMatch: true },
+  normal: { aimAssist: 'normal', autoFire: false, speedMatch: false },
+  hard: { aimAssist: 'weak', autoFire: false, speedMatch: false },
+};
+
+export const ASSIST_PRESET_DEFAULT: AssistPreset = 'easy';
+
+/**
  * ターゲットカメラ（追従カメラのときだけ）。選択中の対象が画面の端に近づく（視線から「画面の半分の画角 − startMarginDeg」を超える）と、
  * 注視点を対象の側へ回し、「半分の画角 + fullMarginDeg」で最大 maxShiftDeg。自機は画面の端から aircraftMarginDeg 内側に残す。
  * 寄せる量は response（1/秒）でなめらかに追う

@@ -142,9 +142,10 @@ export class Screens {
           return;
         }
         // 初回起動だけ「チュートリアルを始めますか？」（4-11。1 度だけ）
+        // 9-5d: その前に「補助の組を選んでください」（タッチの端末・1 度だけ）
         if (!save.flag('tutorialOffered')) {
           save.setFlag('tutorialOffered');
-          this.modeSelect.showTutorialPrompt();
+          this.tutorial.offerFirstRun();
         }
       },
     });

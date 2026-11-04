@@ -1,4 +1,4 @@
-// 練習場（9-5）の設定の欄: 操縦（タッチ）の方式・狙いの補助・自動射撃・速度合わせ（9-5b）・感度のカーブを、課題の一覧・ポーズ・結果の画面からその場で変える。
+// 練習場（9-5）の設定の欄: 補助の組（9-5d）・操縦（タッチ）の方式・狙いの補助・自動射撃・速度合わせ（9-5b）・感度のカーブを、課題の一覧・ポーズ・結果の画面からその場で変える。
 // 値は設定画面の「操作」と同じ（セーブの settings.controls）。変えるとすぐ効かせ、設定画面とほかの欄の表示を合わせ直す（onChange）。
 // 傾きは設定画面と同じ選択肢（使えない端末には出さない・iOS は許可のボタン）
 import { t } from '../core/i18n';
@@ -11,6 +11,8 @@ import { el } from './hud-dom';
 import { createToggleButton } from './mobile';
 import { createSteerModeChoice } from './tilt-settings';
 import type { TiltSource } from './tilt-source';
+import { applyAssistPreset } from '../core/assist-preset';
+import { AssistPresetChoice } from './assist-preset';
 
 export class PracticeSettingsPanel {
   readonly root: HTMLDivElement;
@@ -25,12 +27,26 @@ export class PracticeSettingsPanel {
   ) {
     const root = el('div', 'practice-settings', parent);
     el('div', 'practice-settings-heading', root, t('practice.settings.heading'));
-    const grid = el('div', 'control-settings-toggles practice-settings-grid', root);
     const c = save.settings.controls;
     const commit = (fn: (x: ControlSettings) => void): void => {
       save.updateControls(fn);
       onChange();
     };
+    // 9-5d: 補助の組（3 つの値をまとめて。個別に変えると「カスタム」）
+    const preset = new AssistPresetChoice(
+      root,
+      () => this.save.settings.controls,
+      (p) => {
+        commit((x) => {
+          applyAssistPreset(x, p);
+        });
+      },
+      { className: 'practice-preset', short: true },
+    );
+    this.syncers.push(() => {
+      preset.sync();
+    });
+    const grid = el('div', 'control-settings-toggles practice-settings-grid', root);
     const steer = createSteerModeChoice(grid, c, tilt, (v) => {
       commit((x) => (x.steerMode = v));
     });

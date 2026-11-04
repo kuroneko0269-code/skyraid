@@ -12,6 +12,9 @@ import {
 import { el } from './hud-dom';
 import { createButton } from './screen';
 import { tutorialChapterName, tutorialChapterNumber, tutorialStrings } from './tutorial-text';
+import { AssistPresetChoice } from './assist-preset';
+import type { ControlSettings } from '../core/control-settings';
+import type { AssistPreset } from '../data/assist';
 
 export interface TutorialListHandlers {
   /** 飛ぶ章を始める */
@@ -23,6 +26,9 @@ export interface TutorialListHandlers {
   readonly onRead: () => void;
   /** 閉じた（モードの一覧にフォーカスを戻す） */
   readonly onClose: () => void;
+  /** 9-5d: 補助の章で補助の組を選ぶ（今の値と、選んだとき） */
+  readonly controls: () => Readonly<ControlSettings>;
+  readonly onPreset: (preset: AssistPreset) => void;
 }
 
 export class TutorialList {
@@ -33,6 +39,7 @@ export class TutorialList {
   private readonly noticeWrap: HTMLDivElement;
   private readonly noticeOpen: HTMLButtonElement;
   private readonly first: HTMLButtonElement;
+  private readonly preset: AssistPresetChoice;
   private readonly rows = new Map<
     TutorialChapter,
     { button: HTMLButtonElement; mark: HTMLSpanElement }
@@ -82,6 +89,10 @@ export class TutorialList {
     const a = s.chapters.assist;
     el('h3', 'ui-heading mode-prompt-title', this.page, a.name);
     for (const line of a.page) el('p', 'mode-prompt-text', this.page, line);
+    // 9-5d: ここで補助の組を選べる（個別の設定は「設定を開く」）
+    this.preset = new AssistPresetChoice(this.page, h.controls, (p) => {
+      h.onPreset(p);
+    });
     const pageButtons = el('div', 'campaign-buttons', this.page);
     createButton(pageButtons, 'ui-button is-ghost campaign-back', s.list.close, () => {
       this.showList();
@@ -161,6 +172,7 @@ export class TutorialList {
   private showPage(): void {
     this.listBox.hidden = true;
     this.page.hidden = false;
+    this.preset.sync();
   }
 
   private choose(c: TutorialChapter): void {

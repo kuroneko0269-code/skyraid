@@ -204,6 +204,7 @@ describe('セーブ v5（操作設定と案内の記録）', () => {
       raidBriefing: false,
       steerNotice: false,
       tutorialNotice: false,
+      assistPreset: false,
     });
     expect(save?.settings.hud).toBe(false);
     expect(save?.settings.difficulty).toBe('hard');

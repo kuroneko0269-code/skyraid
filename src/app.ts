@@ -170,7 +170,7 @@ export function startApp(renderer: WebGLRenderer): void {
     save,
   );
   // 操作設定（4-11）: 感度・デッドゾーン・反転・オートレベル（URL の ?invert / ?autolevel が優先）・左右入替・振動・大きさ・キー割当
-  const controlsLink = createControlsLink(settingsUi.slot('controls'), save, input, touch, {
+  const controlsLink = createControlsLink(settingsUi, save, input, touch, {
     session,
     fxEvents,
     urlOverrides: parseFlightOverrides(window.location.search),
