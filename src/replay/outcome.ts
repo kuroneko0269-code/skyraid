@@ -3,6 +3,7 @@ import { t, tn } from '../core/i18n';
 import { findCourse } from '../data/courses';
 import { findDefenseMap } from '../data/defense';
 import { findMap } from '../data/maps';
+import { isPracticeDrill, PRACTICE_DRILL_LABELS } from '../data/practice';
 import type { DefenseRunner } from '../missions/defense/runner';
 import type { GamePlay } from '../missions/game-play';
 import { missionStrings } from '../ui/mission-text';
@@ -28,6 +29,10 @@ export function replayTitle(s: ReplayStart): string {
       const map = findDefenseMap(s.mapId).name;
       return s.defenseDifficulty === 'hard' ? t('replay.title.defenseHard', { map }) : map;
     }
+    case 'practice':
+      return isPracticeDrill(s.practiceDrill)
+        ? PRACTICE_DRILL_LABELS[s.practiceDrill].name
+        : t('replay.modes.practice');
     default:
       return findMap(s.mapId).name;
   }
@@ -85,6 +90,11 @@ function outcomeResult(
       if (d.phase === 'failed') return [{ kind: 'fallen', count: d.wavesCleared }, false];
       return [{ kind: 'abortedWaves', count: d.wavesCleared }, false];
     }
+    case 'practice': {
+      const r = play.practice?.result;
+      if (!r) return [{ kind: 'aborted' }, false];
+      return [{ kind: 'practice', score: r.score, kills: r.kills }, true];
+    }
     default:
       return [{ kind: 'kills', count: play.session.combat.kills }, true];
   }
@@ -111,6 +121,8 @@ function resultLabel(r: ReplayResult): string {
       return tn('replay.outcome.abortedWaves', r.count);
     case 'kills':
       return tn('replay.outcome.kills', r.count);
+    case 'practice':
+      return t('replay.outcome.practice', { score: String(r.score), kills: String(r.kills) });
   }
 }
 
@@ -150,6 +162,10 @@ function validResult(v: unknown): ReplayResult | null {
     case 'abortedWaves':
     case 'kills':
       return count(r.count) ? { kind: r.kind, count: r.count } : null;
+    case 'practice':
+      return count(r.score) && count(r.kills)
+        ? { kind: 'practice', score: r.score, kills: r.kills }
+        : null;
     default:
       return null;
   }

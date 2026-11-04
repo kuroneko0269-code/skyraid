@@ -25,6 +25,7 @@ import type { ChaseCamera } from '../render/chase-camera';
 import type { HangarStage } from '../render/hangar-stage';
 import type { PvpEntry } from './pvp-entry';
 import type { Screens } from './screens';
+import { showMissionResult } from './mission-result';
 import type { TouchLink } from './touch-link';
 import type { TutorialLink } from './tutorial-link';
 import type { ReplayHub } from '../replay/hub';
@@ -142,7 +143,7 @@ function createFlightUpdate(p: FlightLoopParts): {
     // ミッションが終わり、大きな文字を出し終えたらリザルトへ（固定更新もここで止まる）
     const runner = play.runner;
     if (runner?.readyForResult && runner.result) {
-      p.screens.showResult(runner.result, p.tutorial.paid);
+      showMissionResult(p.screens, runner.result, p.tutorial.paid);
       game.transition('result');
     }
   };
@@ -152,17 +153,18 @@ function createFlightUpdate(p: FlightLoopParts): {
 /** 画面の遷移: 飛行の始め・ポーズ・再開・機体と展示の表示・タッチ操作・チュートリアル */
 function linkScreenChanges(p: FlightLoopParts): void {
   const { game, play, screens } = p;
-  game.onChange(({ from, to }) => {
+  game.onChange(({ from, to, restart }) => {
+    const resume = isResume(from, restart);
     // 6-4: タイトルの背景（デモカメラ）は島
     if (to === 'title') p.activeMap.use('island');
-    if (to === 'flight' && !isResume(from)) p.startFlight(screens.nextMission, from === 'lobby');
+    if (to === 'flight' && !resume) p.startFlight(screens.nextMission, from === 'lobby');
     if (isFrozenFlight(to)) play.runner?.pause();
     else if (to === 'flight') play.runner?.resume();
     // 止めている間に押されたキー（再開に使った Esc など）を飛行に持ち込まない
     if (to === 'flight') {
       p.input.endStep();
       p.weaponInput.reset();
-      if (!isResume(from)) {
+      if (!resume) {
         p.steer.reset();
         // 9-4: 飛び始めたときの持ち方を傾きの中立にする
         p.touch.tilt.calibrate();
@@ -172,7 +174,7 @@ function linkScreenChanges(p: FlightLoopParts): void {
     p.aircraftMesh.visible = !usesDemoCamera(to) && to !== 'hangar' && p.session.player.active;
     p.hangarStage.setShown(to === 'hangar');
     p.touch.refresh();
-    if (to === 'flight' && !isResume(from) && !p.replay.hub.playing)
+    if (to === 'flight' && !resume && !p.replay.hub.playing)
       p.tutorial.onFlightStart(screens.inTutorial ? 'tutorial' : play.runner ? 'mission' : 'free');
   });
 }

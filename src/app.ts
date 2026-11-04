@@ -40,14 +40,11 @@ import { createPvpWiring } from './ui/pvp-wiring';
 import { createInputAssist } from './ui/input-assist-link';
 import { linkMissionEvents } from './ui/mission-wiring';
 import { createAppControls } from './ui/app-controls';
-import { createRaceLink } from './ui/race-link';
-import { GhostView } from './render/ghost-view';
 import { createDefenseLink } from './ui/defense-link';
+import { createSimWorld, createSoloLinks } from './ui/solo-links';
 import { FREE_FLIGHT_ENEMIES } from './data/ai';
 import { DEFENSE_CONFIG } from './data/defense';
 import { ReplayHub } from './replay/hub';
-import type { SimWorld } from './replay/sim';
-import { StateSnapshot } from './replay/state-walk';
 import { startFlightRuntime } from './ui/flight-runtime';
 import { linkOnline } from './ui/online-link';
 import { linkContextLoss } from './ui/context-loss';
@@ -143,14 +140,7 @@ export function startApp(renderer: WebGLRenderer): void {
   const play = new GamePlay(session);
   // リプレイ（7-B）: 本番の飛行の記録・再生中かどうか・外部の操作の通り道。world は記録と再生で同じ始め方をする世界
   const replayHub = new ReplayHub(play);
-  const simWorld: SimWorld & { pristine: StateSnapshot | null } = {
-    play,
-    useMap: (id) => {
-      activeMap.use(id);
-    },
-    buildings: () => activeMap.buildings,
-    pristine: null,
-  };
+  const simWorld = createSimWorld(play, activeMap);
   // 怪獣の HUD（6-2）: 体力バー・フェーズ・ロック中の部位・予兆・スタンのノイズ
   const kaijuHud = new KaijuHudLink(new KaijuHud(document.body), hud, session);
   const assistFlags = createGameSettings(settingsParts, session, (enabled, difficulty) => {
@@ -179,8 +169,11 @@ export function startApp(renderer: WebGLRenderer): void {
     save,
   );
   // 操作設定（4-11）: 感度・デッドゾーン・反転・オートレベル（URL の ?invert / ?autolevel が優先）・左右入替・振動・大きさ・キー割当
-  const overrides = parseFlightOverrides(window.location.search);
-  createControlsLink(settingsUi.slot('controls'), save, input, touch, session, fxEvents, overrides);
+  const controlsLink = createControlsLink(settingsUi.slot('controls'), save, input, touch, {
+    session,
+    fxEvents,
+    urlOverrides: parseFlightOverrides(window.location.search),
+  });
   // 9-4: ポーズの「傾きを合わせ直す」（傾き操作のときだけ）
   linkTiltPause(game, screens.pause, touch);
   // チュートリアル（4-11）の指示と、タッチ操作のヒント。指示の「中断」はモード選択へ
@@ -267,18 +260,21 @@ export function startApp(renderer: WebGLRenderer): void {
     looping: () => inputAssist.steer.looping,
   });
   linkWeather(world.weather, { game, screens, pvp, hud, hudLink, audio, save });
-  // リングレース（7-1）: コース一覧・HUD・リザルト・音・ゴースト（天候の配線の後: レースの天候で上書きする）
-  const ghost = new GhostView(scene);
-  const race = createRaceLink({
+  // リングレース（7-1）: コース一覧・HUD・リザルト・音・ゴースト、練習場（9-5）: 課題の一覧・HUD・結果・設定の欄・記録
+  // （天候の配線の後: レースの天候・練習場の昼の快晴で上書きする）
+  const { race, practice } = createSoloLinks({
     game,
     screens,
     play,
     save,
     audio,
-    weather: world.weather,
-    ghost,
+    scene,
     hud,
     activeMap,
+    input,
+    weather: world.weather,
+    tilt: touch.tilt,
+    controls: controlsLink,
     replay: replayHub,
   });
   // 飛行の始め・固定ステップ・描画・フォトモード（7-A）・リプレイ（7-B）を組み立ててゲームループを回す
@@ -294,6 +290,7 @@ export function startApp(renderer: WebGLRenderer): void {
     pvp,
     race,
     defense,
+    practice,
     game,
     input,
     gamepad,

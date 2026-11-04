@@ -22,6 +22,10 @@
     "/src/ui/online-settings.ts",
     "/src/ui/card/card-dialog.ts",
     "/src/core/viewport-log.ts",
-    "/src/render/aircraft-model/aircraft-object.ts"
+    "/src/render/aircraft-model/aircraft-object.ts",
+    "/src/ui/result.ts",
+    "/src/ui/practice-result.ts",
+    "/src/ui/practice-settings.ts",
+    "/src/core/control-settings.ts"
   ]
 }

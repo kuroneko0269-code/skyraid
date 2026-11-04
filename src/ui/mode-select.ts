@@ -12,6 +12,7 @@ export const GAME_MODES = [
   'tutorial',
   'free',
   'campaign',
+  'practice',
   'race',
   'defense',
   'hangar',
@@ -46,6 +47,8 @@ const PLAY_ENTRIES: readonly PlayEntry[] = [
   { mode: 'tutorial', players: 'solo', glyph: 'fighter' },
   { mode: 'campaign', players: 'solo', glyph: 'star' },
   { mode: 'free', players: 'solo', glyph: 'cloudWing' },
+  // 9-5: 練習場（課題 3 つ・結果の指標と助言・設定ごとの記録）
+  { mode: 'practice', players: 'solo', glyph: 'target' },
   { mode: 'race', players: 'solo', glyph: 'ring' },
   { mode: 'pvp', players: 'versus', glyph: 'crossedJets' },
   { mode: 'raid', players: 'party', glyph: 'kaiju' },
@@ -65,7 +68,7 @@ const MANAGE_ENTRIES: readonly { mode: GameMode; glyph: GlyphKind }[] = [
 const INITIALLY_HIDDEN: readonly GameMode[] = ['ranking'];
 
 /**
- * モード選択画面（7-D で 2 段に）。上段「遊ぶ」7 枚のカード、下段「管理」のタイル。各カード・タイルの右下に線画のグリフ。
+ * モード選択画面（7-D で 2 段に）。上段「遊ぶ」8 枚のカード（9-5 で練習場）、下段「管理」のタイル。各カード・タイルの右下に線画のグリフ。
  * 初回起動（パイロット名の入力の後）に 1 度だけ「チュートリアルを始めますか？」を重ねて出す。重ねるダイアログは mode-dialogs.ts
  */
 export class ModeSelectScreen {

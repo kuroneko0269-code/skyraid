@@ -65,10 +65,16 @@ export class DroneView {
       const y = q.y + (p.y - q.y) * alpha;
       const z = q.z + (p.z - q.z) * alpha;
       forward.set(d.velocity.x, d.velocity.y, d.velocity.z).normalize();
-      inward.set(d.orbit.centerX - x, 0, d.orbit.centerZ - z).normalize();
-      const v = DRONE_CONFIG.speed;
-      const bank = Math.atan((v * v) / (d.orbit.radius * GRAVITY));
-      up.set(0, Math.cos(bank), 0).addScaledVector(inward, Math.sin(bank));
+      if (d.path) {
+        // 9-5: 練習場の経路は蛇行の横の加速度で傾ける（右へ曲がるときは右翼が下）
+        right.set(-forward.z, 0, forward.x).normalize();
+        up.set(0, Math.cos(d.pathBank), 0).addScaledVector(right, Math.sin(d.pathBank));
+      } else {
+        inward.set(d.orbit.centerX - x, 0, d.orbit.centerZ - z).normalize();
+        const v = DRONE_CONFIG.speed;
+        const bank = Math.atan((v * v) / (d.orbit.radius * GRAVITY));
+        up.set(0, Math.cos(bank), 0).addScaledVector(inward, Math.sin(bank));
+      }
       right.crossVectors(forward, up).normalize();
       back.copy(forward).negate();
       matrix.makeBasis(right, up, back).setPosition(x, y, z);

@@ -1,5 +1,5 @@
 /*
- * モード選択（7-D で 2 段に）: 上段「遊ぶ」の大きなカード 7 枚（横画面のスマホ・PC は 4 + 3 の 2 行、広い PC は 1 行）、
+ * モード選択（7-D で 2 段に）: 上段「遊ぶ」の大きなカード 8 枚（9-5 で練習場。横画面のスマホ・PC は 4 + 4 の 2 行、広い PC は 1 行）、
  * 下段「管理」の小さなタイル 1 行。各カード・タイルの右下に線画のグリフ（高さの 140%・枠で切り落とす）
  */
 .mode-select-screen {
@@ -13,7 +13,7 @@
   margin-top: var(--ui-space-1);
 }
 
-/* 上段: 12 列のグリッドで 1 行目 4 枚（3 列ずつ）・2 行目 3 枚（4 列ずつ） */
+/* 上段: 12 列のグリッドで 4 枚ずつ 2 行（3 列ずつ。9-5 まで 2 行目は 3 枚で 4 列ずつ） */
 .mode-play {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -32,35 +32,29 @@
   overflow: hidden;
 }
 
-.mode-card:nth-child(n + 5) {
-  grid-column: span 4;
-}
-
-/* 広い PC は 1 行に 7 枚 */
+/* 広い PC は 1 行に 8 枚 */
 @media (min-width: 1500px) and (min-height: 600px) {
   .mode-select-screen {
     --menu-width: min(1560px, calc(100% - var(--ui-space-6)));
   }
 
   .mode-play {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 
-  .mode-card,
-  .mode-card:nth-child(n + 5) {
+  .mode-card {
     grid-column: span 1;
     min-height: 150px;
   }
 }
 
-/* 狭い縦画面は 2 列（背の低い横画面は 4 + 3 のまま） */
+/* 狭い縦画面は 2 列（背の低い横画面は 4 + 4 のまま） */
 @media (max-width: 600px) and (min-height: 481px) {
   .mode-play {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .mode-card,
-  .mode-card:nth-child(n + 5) {
+  .mode-card {
     grid-column: span 1;
   }
 }

@@ -17,10 +17,16 @@ export function createControlsLink(
   save: SaveStore,
   input: Input,
   touchLink: TouchLink,
-  session: FlightSession,
-  fxEvents: FxEvents,
-  urlOverrides: Readonly<Partial<FlightControlOptions>>,
-): void {
+  {
+    session,
+    fxEvents,
+    urlOverrides,
+  }: {
+    session: FlightSession;
+    fxEvents: FxEvents;
+    urlOverrides: Readonly<Partial<FlightControlOptions>>;
+  },
+): { apply: () => void; sync: () => void } {
   const vibrator = new Vibrator(typeof navigator === 'undefined' ? undefined : navigator);
   // 振動: 被弾・自機のミサイル発射・撃墜
   fxEvents.add({
@@ -72,5 +78,12 @@ export function createControlsLink(
   );
   touch.onTiltLevel = () => {
     levelTilt(tilt);
+  };
+  // 9-5: 練習場の設定から変えたとき（効かせて、設定画面の表示を合わせ直す）
+  return {
+    apply: () => {
+      apply(save.settings.controls);
+    },
+    sync: ui.sync,
   };
 }

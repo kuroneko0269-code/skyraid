@@ -2,11 +2,12 @@
 import { t } from '../core/i18n';
 import type { Difficulty } from '../data/ai';
 import type { DefenseDifficulty } from '../data/defense';
+import type { PracticeDrill } from '../data/practice';
 import type { RaidDifficulty } from '../data/raid';
 import type { UpgradeLevels } from '../progression/save';
 
-/** 記録するモード（シングルプレイだけ。チュートリアル・PvP・協力は記録しない） */
-export const REPLAY_MODES = ['free', 'mission', 'raid', 'race', 'defense'] as const;
+/** 記録するモード（シングルプレイだけ。チュートリアル・PvP・協力は記録しない。9-5 で練習場） */
+export const REPLAY_MODES = ['free', 'mission', 'raid', 'race', 'defense', 'practice'] as const;
 export type ReplayMode = (typeof REPLAY_MODES)[number];
 
 export const REPLAY_MODE_LABELS: Readonly<Record<ReplayMode, string>> = {
@@ -25,6 +26,9 @@ export const REPLAY_MODE_LABELS: Readonly<Record<ReplayMode, string>> = {
   get defense() {
     return t('replay.modes.defense');
   },
+  get practice() {
+    return t('replay.modes.practice');
+  },
 };
 
 /** 再生で同じ世界を作り直すための初期状態 */
@@ -41,6 +45,9 @@ export interface ReplayStart {
   readonly raceReference?: readonly number[] | null;
   /** 防衛戦の難易度（defense のとき。マップは mapId） */
   readonly defenseDifficulty?: DefenseDifficulty;
+  /** 練習場の課題と、狙いの指標（画面の外）に使った画面の縦横比（practice のとき。9-5） */
+  readonly practiceDrill?: PracticeDrill;
+  readonly practiceAspect?: number;
   readonly aircraftId: string;
   readonly upgrades: Readonly<UpgradeLevels>;
   /** フリーフライトの敵の設定（ほかのモードでも次のフリーフライト用に残す） */
@@ -62,13 +69,16 @@ export interface ReplayStart {
 
 /**
  * 記録の結果の種類と数値（8-5。表示は replayOutcomeLabel が今の言語で組み立てる）。
- * rank はミッション・レイド・レースのランク（無ければ null）、time はレースのタイム（秒）、count は波数・撃墜数
+ * rank はミッション・レイド・レースのランク（無ければ null）、time はレースのタイム（秒）、count は波数・撃墜数、
+ * score は練習場のスコア
  */
 export type ReplayResult =
   | { readonly kind: 'aborted' | 'failed' | 'defended' | 'timeout' }
   | { readonly kind: 'success'; readonly rank: string | null }
   | { readonly kind: 'race'; readonly time: number; readonly rank: string | null }
-  | { readonly kind: 'fallen' | 'abortedWaves' | 'kills'; readonly count: number };
+  | { readonly kind: 'fallen' | 'abortedWaves' | 'kills'; readonly count: number }
+  /** 練習場（9-5）: スコアと撃墜数 */
+  | { readonly kind: 'practice'; readonly score: number; readonly kills: number };
 
 /** 記録の結果（一覧の「結果」） */
 export interface ReplayOutcome {

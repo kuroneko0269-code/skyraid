@@ -14,6 +14,7 @@ import { SeededRandom } from '../core/random';
 import { DefenseRunner } from './defense/runner';
 import { DEFENSE_CONFIG, type DefenseDifficulty, type DefenseMapDef } from '../data/defense';
 import type { MissionDef, Pose } from './types';
+import { PracticeRunner } from './practice/runner';
 
 /** レース中（7-1）は武器を使わない */
 const NO_WEAPONS = createCombatInput();
@@ -28,6 +29,9 @@ export class GamePlay {
   /** 防衛戦の乱数（7-B。来る方向・目標の施設。reseed で掛け直す） */
   readonly defenseRandom = new SeededRandom(2);
   private readonly defenseListeners: ((d: DefenseRunner | null) => void)[] = [];
+  /** 進行中（または終わったばかり）の練習場（9-5）。練習場でなければ null */
+  practice: PracticeRunner | null = null;
+  private readonly practiceListeners: ((p: PracticeRunner | null) => void)[] = [];
   private readonly defender = { id: 0, position: vec3(), speed: 0, active: false };
   private readonly runnerListeners: ((runner: MissionRunner | null) => void)[] = [];
   private readonly raceListeners: ((race: RaceRunner | null) => void)[] = [];
@@ -70,6 +74,11 @@ export class GamePlay {
     this.defenseListeners.push(fn);
   }
 
+  /** 練習場が変わったとき（9-5） */
+  onPracticeChange(fn: (p: PracticeRunner | null) => void): void {
+    this.practiceListeners.push(fn);
+  }
+
   /** ランナーが変わったとき（ミッションの開始・フリーフライトの開始）。HUD がイベントを購読し直す */
   onRunnerChange(fn: (runner: MissionRunner | null) => void): void {
     this.runnerListeners.push(fn);
@@ -81,6 +90,7 @@ export class GamePlay {
   }
 
   startFree(): void {
+    this.setPractice(null);
     this.setRace(null);
     this.setDefense(null);
     this.session.startFree();
@@ -89,6 +99,7 @@ export class GamePlay {
 
   /** PvP（5-1）: 敵・的・ミッションなしで世界を空にする（機体は net/ が動かし、session.step は呼ばない） */
   startEmpty(start: Readonly<Pose>): void {
+    this.setPractice(null);
     this.setRace(null);
     this.setDefense(null);
     this.session.startMission(start);
@@ -96,6 +107,7 @@ export class GamePlay {
   }
 
   startMission(def: MissionDef): MissionRunner {
+    this.setPractice(null);
     this.setRace(null);
     this.setDefense(null);
     this.session.startMission(def.start, def.practice === true);
@@ -111,6 +123,7 @@ export class GamePlay {
    */
   startRace(course: CourseDef, reference: RaceReference | null = null): RaceRunner {
     this.session.startMission(course.start, true);
+    this.setPractice(null);
     this.setRunner(null);
     this.setDefense(null);
     const race = new RaceRunner(course, reference);
@@ -132,6 +145,7 @@ export class GamePlay {
     difficulty: DefenseDifficulty,
     seed?: () => number,
   ): DefenseRunner {
+    this.setPractice(null);
     this.setRace(null);
     this.session.startMission(map.start, false);
     this.setRunner(null);
@@ -160,6 +174,19 @@ export class GamePlay {
     return d;
   }
 
+  /** 練習場（9-5）: 練習扱いの世界で課題の開始位置から。aspect は指標（画面の外）の縦横比（記録のヘッダにも入れる） */
+  startPractice(drill: PracticeRunner['drill'], aspect: number): PracticeRunner {
+    this.setRace(null);
+    this.setDefense(null);
+    const p = new PracticeRunner(drill, this.session, aspect);
+    this.session.startMission(p.start, true);
+    this.setRunner(null);
+    this.place(p.start, true);
+    p.begin();
+    this.setPractice(p);
+    return p;
+  }
+
   /** 判定の乱数を掛け直す（7-B: 記録する飛行の始め。再生も同じシードで始める） */
   reseed(seed: number): void {
     this.session.random.reseed(seed);
@@ -168,6 +195,13 @@ export class GamePlay {
 
   /** 固定ステップ 1 回分（世界 → ミッションの順。ランナーはこのステップの結果を読む） */
   step(controls: Readonly<AircraftControls>, input: Readonly<CombatInput>, dt: number): void {
+    const practice = this.practice;
+    if (practice) {
+      practice.stepWorld(controls, input, dt, (pose) => {
+        this.place(pose, true);
+      });
+      return;
+    }
     const race = this.race;
     if (race) {
       // カウントダウン中はスタート地点に止め、スロットル全開で待つ。レース中は武器なし
@@ -229,14 +263,22 @@ export class GamePlay {
     for (const fn of this.runnerListeners) fn(this.runner);
     for (const fn of this.raceListeners) fn(this.race);
     for (const fn of this.defenseListeners) fn(this.defense);
+    for (const fn of this.practiceListeners) fn(this.practice);
   }
 
   /** ミッションを中断する（ポーズメニュー） */
   abortMission(): void {
     this.runner?.abort();
-    // レース（7-1）・防衛戦（7-2）は捨てる（記録・報酬なし）
+    // レース（7-1）・防衛戦（7-2）・練習場（9-5）は捨てる（記録・報酬なし）
     this.setRace(null);
     this.setDefense(null);
+    this.setPractice(null);
+  }
+
+  private setPractice(p: PracticeRunner | null): void {
+    if (this.practice === p) return;
+    this.practice = p;
+    for (const fn of this.practiceListeners) fn(p);
   }
 
   private setDefense(d: DefenseRunner | null): void {

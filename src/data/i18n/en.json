@@ -401,7 +401,8 @@
     "campaign": "{cleared}/{total} cleared",
     "separator": " · ",
     "defense": "Best: Wave {waves}",
-    "raid": "Best {time}"
+    "raid": "Best {time}",
+    "practice": "Best {scores}"
   },
   "campaign": {
     "heading": "Campaign",
@@ -452,7 +453,8 @@
     "tiltLevel": "Re-center tilt",
     "allSettings": "All Settings",
     "abortMission": "Abort Mission",
-    "toTitle": "Title"
+    "toTitle": "Title",
+    "restart": "Restart"
   },
   "race": {
     "hud": {
@@ -565,6 +567,10 @@
     "defenseDialog": {
       "body": "Defend the base HQ from all 10 waves. Between waves, pass low and slow over the base (below 300 m, speed under 150) to resupply. Hard: enemies ×1.3, HQ HP 1500. For 2–4 players, create a room or join with a room code (everyone on one team).",
       "difficulty": "Difficulty"
+    },
+    "practice": {
+      "label": "Practice Range",
+      "note": "Aim drills: targets and a dummy bandit"
     }
   },
   "language": {
@@ -858,7 +864,8 @@
       "mission": "Campaign",
       "raid": "Solo Raid",
       "race": "Ring Race",
-      "defense": "Defense"
+      "defense": "Defense",
+      "practice": "Practice Range"
     },
     "camera": {
       "follow": "Follow",
@@ -889,7 +896,8 @@
       "kills": {
         "one": "{count} kill",
         "other": "{count} kills"
-      }
+      },
+      "practice": "Score {score} ({kills} kills)"
     },
     "bar": {
       "back10": "Back 10s (←)",
@@ -1496,6 +1504,93 @@
       "timeout": "No response (timed out)",
       "network": "Couldn't connect",
       "unsupported": "This browser doesn't support P2P (WebRTC)"
+    }
+  },
+  "practice": {
+    "abort": "Abort Practice",
+    "drills": {
+      "static": {
+        "name": "Fixed Targets",
+        "note": "Shoot down as many balloons over the island as you can. A downed target reappears elsewhere after 10 seconds."
+      },
+      "moving": {
+        "name": "Moving Targets",
+        "note": "Shoot down three drones flying straight, weaving and bobbing. A downed drone restarts its path after 3 seconds."
+      },
+      "bandit": {
+        "name": "Dummy Bandit",
+        "note": "Chase down a rookie fighter that never shoots back. The next one appears ahead 3 seconds after each kill."
+      }
+    },
+    "hud": {
+      "gunOnly": "Guns only",
+      "count": "Kills {kills}  Score {score}",
+      "final": "Score {score} · {kills} kills"
+    },
+    "advice": {
+      "noShots": "Try firing your guns. Shots hit when the target is inside the aiming circle.",
+      "offAim": "Wait until the target is in your sights before firing to raise your accuracy.",
+      "offScreen": "The enemy was off-screen for a long time. Turn toward the edge arrow and the radar to find it faster.",
+      "overshoot": "You often overshot near the sights. Use small inputs when close (or try curve 2.0).",
+      "noKills": "Almost there. Close in (within 1 km) before firing to land more hits.",
+      "steady": "Steady aim. Try weaker aim assist or auto-fire off to test your skill."
+    },
+    "settings": {
+      "heading": "SETTINGS (TOUCH)",
+      "note": "Changes apply at once (same as Settings → Controls). Records are kept per setting."
+    },
+    "device": {
+      "keyboard": "Keyboard",
+      "touch": "Touch",
+      "gamepad": "Gamepad"
+    },
+    "assistOff": "Off",
+    "assistShort": "Assist {level}",
+    "autoFireOn": "Auto-fire on",
+    "autoFireOff": "Auto-fire off",
+    "curveShort": "Curve {curve}",
+    "separator": " · ",
+    "seconds": "{seconds} s",
+    "select": {
+      "heading": "Practice Range",
+      "lead": "Short drills to practice your aim. You can't be shot down, and crashing or leaving the area doesn't end the run. Change settings and retry right away to compare.",
+      "duration": "{seconds} s",
+      "best": "Best {score}",
+      "notRun": "No record",
+      "records": "Records by setting (top {count})",
+      "start": "Start",
+      "settings": "Settings",
+      "rules": "Rules",
+      "rulesValue": "Guns only · can't be shot down",
+      "noRecords": "No records yet",
+      "row": "{kills} kills · {accuracy} hit"
+    },
+    "result": {
+      "toList": "Practice Range",
+      "score": "Score {score}",
+      "settingsBest": "Best for this setting",
+      "kills": "Kills",
+      "accuracy": "Accuracy",
+      "noShots": "No shots fired",
+      "accuracyValue": "{ratio} ({hits} / {shots} rounds)",
+      "avgKill": "Average time to kill",
+      "offAim": "Shots fired off-target",
+      "offAimHint": "Share of firing time when the nearest target's lead point was outside the hit area",
+      "offScreen": "Enemy off-screen",
+      "offScreenValue": "{seconds} ({ratio})",
+      "offScreenHint": "Time the selected target was outside the screen (nose direction)",
+      "overshoot": "Overshoots",
+      "overshootValue": "{count} ({perMinute} per minute)",
+      "overshootHint": "Times the target crossed to the other side of the nose within 10° of the sights",
+      "record": "Record",
+      "changed": "Not recorded: settings were changed during the run",
+      "settingsRecord": "Best for this setting",
+      "drillBest": "Drill best"
+    },
+    "hint": {
+      "go": "Practice Range",
+      "tutorial": "Practice your aim at the Practice Range: fixed targets, moving targets and a dummy bandit, with settings you can change.",
+      "failed": "Having trouble hitting? Practice your aim at the Practice Range (you can't be shot down, and you can compare settings)."
     }
   }
 }

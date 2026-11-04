@@ -46,8 +46,8 @@ export function linkWeather(weather: WeatherView, p: WeatherLinkParts): void {
   if (isWeatherId(q)) screens.modeSelect.freeWeatherId = q;
   if (params.has('timeflow')) screens.modeSelect.freeTimeFlow = true;
 
-  p.game.onChange(({ from, to }) => {
-    if (to === 'flight' && !isResume(from)) {
+  p.game.onChange(({ from, to, restart }) => {
+    if (to === 'flight' && !isResume(from, restart)) {
       const net = from === 'lobby';
       const def = screens.nextMission;
       const mode = screens.modeSelect;
