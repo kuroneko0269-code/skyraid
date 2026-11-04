@@ -18,6 +18,12 @@ import {
   type StickCurve,
   type StickPosition,
 } from '../data/steer';
+import {
+  AIM_ASSIST_DEFAULT_LEVEL,
+  AIM_ASSIST_LEVELS,
+  AUTO_FIRE_CONFIG,
+  type AimAssistLevel,
+} from '../data/assist';
 import { ACTIONS, DEFAULT_KEYBINDS, type Action, type KeyBindings } from '../data/keybinds';
 import type { ReplayControls } from '../replay/types';
 import type { InputDevice } from './input';
@@ -40,6 +46,10 @@ export interface ControlSettings {
   stickCurve: StickCurve;
   /** タッチのスティックの位置（9-2） */
   stickPosition: StickPosition;
+  /** 狙いの補助の強さ（9-3。タッチだけ。初期値は標準。今の利用者にも初期値を当てる） */
+  aimAssist: AimAssistLevel;
+  /** 自動射撃（9-3。タッチだけ。初期値 ON） */
+  autoFire: boolean;
   /** キー割当の変更（アクション → 主キーの KeyboardEvent.code）。ないアクションは初期の割当 */
   keys: Partial<Record<RemappableAction, string>>;
 }
@@ -57,6 +67,8 @@ export function defaultControls(): ControlSettings {
     steerMode: STEER_DEFAULTS.mode,
     stickCurve: STEER_DEFAULTS.curve,
     stickPosition: STEER_DEFAULTS.position,
+    aimAssist: AIM_ASSIST_DEFAULT_LEVEL,
+    autoFire: AUTO_FIRE_CONFIG.defaultOn,
     keys: {},
   };
 }
@@ -81,7 +93,7 @@ export function normalizeControls(raw: unknown): ControlSettings {
   const r = raw as Record<string, unknown>;
   c.sensitivity = quantize(r.sensitivity, CONTROL_SETTINGS.sensitivity, c.sensitivity);
   c.deadzone = quantize(r.deadzone, CONTROL_SETTINGS.deadzone, c.deadzone);
-  for (const k of ['invertPitch', 'autoLevel', 'swapSides', 'vibration'] as const) {
+  for (const k of ['invertPitch', 'autoLevel', 'swapSides', 'vibration', 'autoFire'] as const) {
     const v = r[k];
     if (typeof v === 'boolean') c[k] = v;
   }
@@ -94,6 +106,9 @@ export function normalizeControls(raw: unknown): ControlSettings {
     c.stickCurve = r.stickCurve as StickCurve;
   if ((STICK_POSITIONS as readonly unknown[]).includes(r.stickPosition))
     c.stickPosition = r.stickPosition as StickPosition;
+  // 9-3: 無い（9-2 までのセーブ）・不正なら初期値
+  if ((AIM_ASSIST_LEVELS as readonly unknown[]).includes(r.aimAssist))
+    c.aimAssist = r.aimAssist as AimAssistLevel;
   const keys = r.keys;
   if (typeof keys === 'object' && keys !== null) {
     for (const a of REMAPPABLE_ACTIONS) {
@@ -206,5 +221,7 @@ export function replayControlsOf(
     stickPosition: c.stickPosition,
     sensitivity: c.sensitivity,
     deadzone: c.deadzone,
+    aimAssist: c.aimAssist,
+    autoFire: c.autoFire,
   };
 }

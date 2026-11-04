@@ -221,11 +221,11 @@ describe('低空の安全（地面・海面に近いと引き起こしを補助�
     expect(t.crashes).toBe(0);
   });
 
-  it('リングレースの 4 コース: 自分では地面を避けないボットでも墜落しない。宙返りの無い 3 コースは完走する', () => {
+  it('リングレースの 4 コース: 自分では地面を避けないボットでも墜落せず完走する（9-3: アクロバットは宙返りで）', () => {
     for (const course of COURSES) {
       const r = runDirectRace(course);
       expect(r.crashes, course.id).toBe(0);
-      if (course.id !== 'acro') expect(r.result?.outcome, course.id).toBe('finished');
+      expect(r.result?.outcome, course.id).toBe('finished');
     }
   });
 });

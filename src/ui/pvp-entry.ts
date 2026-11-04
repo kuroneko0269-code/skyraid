@@ -11,6 +11,7 @@ import type { AircraftControls } from '../entities/aircraft';
 import type { PvpDeps, PvpLink } from './pvp-link';
 import type { Screens } from './screens';
 import type { GameState } from '../core/game-state';
+import type { NetAssistRules } from '../core/assist-control';
 
 /** ?room=XXXXXX（部屋コードは pvp-link 側で検査する）。なければ null */
 export function parseRoomParam(search: string): string | null {
@@ -56,6 +57,10 @@ export function parseNetDebug(search: string): boolean {
 
 export class PvpEntry {
   private link: PvpLink | null = null;
+  private readonly rules: { aimAssist: boolean; autoFire: boolean } = {
+    aimAssist: false,
+    autoFire: false,
+  };
   private readonly chunk = lazyChunk(() => import('./pvp-link'));
   private detail: AircraftDetail = 'high';
   private readonly deps: Omit<PvpDeps, 'aircraftDetail'>;
@@ -142,6 +147,20 @@ export class PvpEntry {
   /** ロビーのホスト設定の天候（7-5。未接続なら初期値） */
   get weatherId(): string {
     return this.link?.settings?.weather ?? DEFAULT_WEATHER_ID;
+  }
+
+  /**
+   * 部屋の補正の狙いの補助・自動射撃（9-3）。個人戦・チーム戦だけ（協力は各自の設定のまま = null）。未接続も null
+   */
+  get assistRules(): NetAssistRules | null {
+    const s = this.link?.settings;
+    // 協力（レイド・防衛戦）は全員が味方なので補正しない（net/lobby-rules.ts の isCoopMode と同じ。通信のチャンクを読まない）
+    if (!s || s.mode === 'raid' || s.mode === 'defense') return null;
+    // 固定ステップごとに読むので使い回す
+    const r = this.rules;
+    r.aimAssist = s.aimAssist;
+    r.autoFire = s.autoFire;
+    return r;
   }
 
   get mapId(): string {

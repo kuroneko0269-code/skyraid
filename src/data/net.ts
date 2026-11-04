@@ -7,9 +7,10 @@ export const NET_CONFIG = {
    * 5-4 で 3: ロビーの準備・機体変更・定型文・チーム・再接続・最長連続撃墜。6-2 で 4: レイドのモード・怪獣の状態・スタン。
    * 6-6 で 5: 怪獣の状態を 40 バイト以下に・岩 / ブレイク / ブリーフィングの event・壊れた建物（ruin）・ロック中の部位・
    * 成績の部位別の与ダメージ・高難度。7-5 で 6: 天候。7-2 で 7: 防衛戦のモード・state の防衛戦の部分・
-   * 出現 / 消滅 / 補給の event・敵のミサイル）
+   * 出現 / 消滅 / 補給の event・敵のミサイル。7-3 で 8: 塗装。9-3 で 9: 補正の狙いの補助・自動射撃（設定のビット。
+   * 古い版はビットを読まず補正なしで飛ぶので、同じ部屋で効き方がそろわない）
    */
-  protocolVersion: 8,
+  protocolVersion: 9,
   /** 部屋の最大人数（ホストを含む） */
   maxPlayers: 4,
   room: {
@@ -114,6 +115,9 @@ export const NET_CONFIG = {
     rookieGuard: false,
     hard: false,
     weather: DEFAULT_WEATHER_ID,
+    // 9-3: 狙いの補助・自動射撃の補正は既定 OFF（今の PvP と同じ判定）
+    aimAssist: false,
+    autoFire: false,
   },
   /** ?netdebug の表示を書き換える間隔（秒） */
   debugRefreshSeconds: 0.25,

@@ -1,6 +1,7 @@
 import './control-settings.css';
 import type { ControlSettings } from '../core/control-settings';
 import { t } from '../core/i18n';
+import { AIM_ASSIST_LEVEL_LABELS, AIM_ASSIST_LEVELS } from '../data/assist';
 import { BUTTON_SIZES, CONTROL_LABELS, CONTROL_SETTINGS } from '../data/controls';
 import {
   STEER_LABELS,
@@ -14,11 +15,11 @@ import { el } from './hud-dom';
 import { createKeybindSettings } from './keybind-settings';
 import { createToggleButton } from './mobile';
 
-type ToggleKey = 'invertPitch' | 'autoLevel' | 'swapSides' | 'vibration';
+type ToggleKey = 'invertPitch' | 'autoLevel' | 'swapSides' | 'vibration' | 'autoFire';
 
 /**
  * 操作設定（4-11）: ポーズメニューの設定の「操作」。感度・デッドゾーンのスライダー、ピッチ反転・オートレベル・
- * 左右入替・振動の ON/OFF、ボタンの大きさ、スティックの方式・感度のカーブ・位置（9-2）、キー割当。変えるとすぐ apply で効かせ、セーブの settings.controls に保存する
+ * 左右入替・振動の ON/OFF、ボタンの大きさ、スティックの方式・感度のカーブ・位置（9-2）、狙いの補助の強さ・自動射撃（9-3）、キー割当。変えるとすぐ apply で効かせ、セーブの settings.controls に保存する
  * （スライダーは離したときだけ保存）。設定の最下部（セーブデータ）より上に置く
  */
 export function createControlSettings(
@@ -111,6 +112,18 @@ export function createControlSettings(
       changed(true, (x) => (x.stickPosition = v));
     },
   );
+
+  // 9-3: タッチの狙いの補助の強さと自動射撃
+  choice(
+    toggles,
+    AIM_ASSIST_LEVEL_LABELS.title,
+    AIM_ASSIST_LEVELS.map((v) => [v, AIM_ASSIST_LEVEL_LABELS.levels[v]] as const),
+    c.aimAssist,
+    (v) => {
+      changed(true, (x) => (x.aimAssist = v));
+    },
+  );
+  toggle('autoFire', AIM_ASSIST_LEVEL_LABELS.autoFire);
 
   createKeybindSettings(box, c, (fn) => {
     changed(true, fn);

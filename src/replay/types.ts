@@ -94,6 +94,9 @@ export interface ReplayControls {
   readonly stickPosition: string;
   readonly sensitivity: number;
   readonly deadzone: number;
+  /** 狙いの補助の強さ・自動射撃（9-3 から。それより前の記録には無い） */
+  readonly aimAssist?: string;
+  readonly autoFire?: boolean;
 }
 
 /** 記録のヘッダ（JSON で保存） */
@@ -197,7 +200,9 @@ export function replayControls(header: ReplayHeader): ReplayControls | null {
     typeof r.stickPosition !== 'string' ||
     !num(r.stickCurve) ||
     !num(r.sensitivity) ||
-    !num(r.deadzone)
+    !num(r.deadzone) ||
+    (r.aimAssist !== undefined && typeof r.aimAssist !== 'string') ||
+    (r.autoFire !== undefined && typeof r.autoFire !== 'boolean')
   )
     return null;
   return c as ReplayControls;

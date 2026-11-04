@@ -29,7 +29,7 @@ export const STEER_DEFAULTS = {
 export const DIRECT_STEER_CONFIG = {
   /** 端まで倒したときに向かわせる、機首からの角度（度。9-1 の模擬と同じ） */
   fullDeg: 30,
-  /** 上下の角度の上限（度。宙返りはしない。真上・真下では方位が決まらないため） */
+  /** 上下の角度の上限（度。真上・真下では方位が決まらないため。9-3: 上へ端まで倒し続けると宙返りで越える。下は越えない） */
   maxElevationDeg: 80,
   /**
    * 上下に倒していないとき、水平へ戻すずれの上限（度）。旋回で引くと機首が少しずつ上がるのを溜めない。
@@ -63,6 +63,38 @@ export const DIRECT_STEER_CONFIG = {
    * （離していても引き起こす）
    */
   ground: { clearance: 25, aheadSeconds: 1, pullRateDeg: 40, reactSeconds: 0.4, climbDeg: 15 },
+  /**
+   * 宙返り（9-3。src/flight/loop-steer.ts）: 上へ端まで倒し続けて（stickY ≥ entryStick）上下の角度が entryElevationDeg 以上になると、
+   * maxElevationDeg の上限を越えて縦に回る。翼は入ったときの向きのまま水平に保つ（機首は入ったときの方位を含む縦の面の中）。
+   * 回る間は stickY ≥ holdStick なら続け、離すと抜ける（頂点付近で離すと、背面から水平に戻って反対向きに飛ぶ = インメルマン）。
+   * 1 回転して水平に戻ると抜ける（まだ端まで倒していれば、上がってもう一度回る）
+   */
+  loop: {
+    entryStick: 0.9,
+    entryElevationDeg: 75,
+    holdStick: 0.5,
+    /** 端まで倒したときの輪の半径（m）。holdStick まで戻すと 2 倍（大きな輪） */
+    radius: 320,
+    /**
+     * 失速しない引き: 頂点までの残りの高さで失う速さ（重力の効き × 速度の倍率。エンジンは見込まない）を引いて、
+     * 頂点で 失速速度 × topSpeedRatio 以上が残る半径より大きくしない（遅いほど強く引く）
+     */
+    topSpeedRatio: 1.4,
+    /**
+     * 入るのに要る速さ: 上の半径で回るのに要る角速度が、機体の引きの角速度（速さで変わる）× entryMargin 以下のとき。
+     * 足りなければ今までどおり maxElevationDeg で止まる（HUD に「速度不足」）
+     */
+    entryMargin: 0.85,
+    /** 翼を水平に保つ（ずれの角度 rad → ロールの入力）・面からのずれ → ヨーの入力 */
+    rollGain: 3,
+    rollDamping: 0.25,
+    yawGain: 3,
+    /**
+     * 離して抜けられる所（度）: 真上 + verticalDeg まで・頂点 ± topDeg・1 回転の手前 pullOutDeg から（背中が上を向いて下っている）。
+     * 間で離すと、抜けられる所まで端の輪で回る（真上を過ぎてから離す = インメルマン、下りで離す = 引き起こし）
+     */
+    release: { verticalDeg: 5, topDeg: 25, pullOutDeg: 60 },
+  },
 } as const;
 
 /** 設定の表示名 */

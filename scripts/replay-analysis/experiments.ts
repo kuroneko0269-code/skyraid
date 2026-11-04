@@ -1,10 +1,15 @@
 // 9-1 操作の診断: 9-2（スティック）・9-3（自動追尾・自動射撃）の推奨値を決める実験。
 // 「模擬の人」に同じミッションを飛ばし、スティックのカーブ・感度・エイムアシストの強さ・自動射撃を 1 つずつ変えて比べる。
 // ゲームの数値（src/data）は変えず、この実験の中だけで差し替える
-import { AIM_ASSIST_CONFIG } from '../../src/data/assist';
+import {
+  AIM_ASSIST_CONFIG,
+  AIM_ASSIST_LEVEL_SPECS,
+  AIM_ASSIST_LEVELS,
+} from '../../src/data/assist';
 import { BEGINNER_SKILL, findRole, flyMission, type FlightTweaks } from './flight';
 import { DEFAULT_HANDS } from './hands';
-import { ControlAnalyzer } from './metrics';
+import { TimedAnalyzer } from './kill-timer';
+import type { ControlAnalyzer } from './metrics';
 import { median, Totals } from './totals';
 
 export interface Experiment {
@@ -160,7 +165,30 @@ export const STICK_COMPARE: readonly Experiment[] = [
   { id: 'classic2', label: 'ピッチ・ロール・カーブ 2.0', tweaks: { hands: hands({ curve: 2 }) } },
 ];
 
-const SETS = { tune: EXPERIMENTS, decompose: DECOMPOSE, compare: STICK_COMPARE } as const;
+/**
+ * 9-3 の効果（`--assist`）: 9-2 の初期値（方向へ倒す・カーブ 1.5）の模擬の人で、狙いの補助の強さ（弱 = 4-12 の値・標準・強）×
+ * 自動射撃（OFF / ON）。補助・自動射撃は本番と同じ数値と判定（AIM_ASSIST_LEVEL_SPECS・autoFireReady）
+ */
+const LEVEL_LABELS = { weak: '弱', normal: '標準', strong: '強' } as const;
+export const ASSIST_COMPARE: readonly Experiment[] = AIM_ASSIST_LEVELS.flatMap((level) =>
+  [false, true].map((auto): Experiment => ({
+    id: `${level}${auto ? '-auto' : ''}`,
+    label: `補助 ${LEVEL_LABELS[level]}・自動射撃 ${auto ? 'ON' : 'OFF'}`,
+    tweaks: {
+      direct: true,
+      hands: hands({ curve: 1.5 }),
+      assist: AIM_ASSIST_LEVEL_SPECS[level],
+      autoFireScale: auto ? 1 : 0,
+    },
+  })),
+);
+
+const SETS = {
+  tune: EXPERIMENTS,
+  decompose: DECOMPOSE,
+  compare: STICK_COMPARE,
+  assist: ASSIST_COMPARE,
+} as const;
 export type ExperimentSet = keyof typeof SETS;
 
 const pct = (n: number, d: number): string => (d > 0 ? `${((100 * n) / d).toFixed(1)}%` : '-');
@@ -186,6 +214,8 @@ export function runExperiments(
       '往復/分',
       '端',
       '見失い→戻す秒',
+      '撃墜',
+      '撃墜まで秒（中央値）',
       '被撃墜',
       '戦域外',
       '墜落',
@@ -202,7 +232,7 @@ export function runExperiments(
         const r = flyMission(m, seed, role, {
           tweaks: ex.tweaks,
           analyzer: (play) =>
-            (box.a = new ControlAnalyzer(play, { aspect: 2.16, assist: ex.tweaks.assist })),
+            (box.a = new TimedAnalyzer(play, { aspect: 2.16, assist: ex.tweaks.assist })),
         });
         if (r.status === 'success') n++;
         if (box.a) total.merge(box.a.finish());
@@ -223,6 +253,8 @@ export function runExperiments(
         (quick / Math.max(1e-9, t.aliveMinutes)).toFixed(1),
         pct(t.stick.edge, t.aliveSteps),
         median(t.reacquire).toFixed(1),
+        String(t.kills),
+        t.killSeconds.length > 0 ? median(t.killSeconds).toFixed(1) : '-',
         String(t.downs),
         pct(t.outsideSteps, t.aliveSteps),
         String(t.crashes),

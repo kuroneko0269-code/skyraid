@@ -74,10 +74,28 @@ export function rulesSummary(st: Readonly<GameSettings>): string {
   });
 }
 
-/** 補正の 1 行（強化の有効・無効と初心者保護） */
+/** 補正の 1 行（強化の有効・無効と初心者保護。9-3: 個人戦・チーム戦は狙いの補助・自動射撃も） */
 export function optionsSummary(st: Readonly<GameSettings>): string {
-  return t('lobby.options', {
+  const base = t('lobby.options', {
     upgrades: st.noUpgrades ? t('lobby.upgradesOff') : t('lobby.upgradesOn'),
     rookie: st.rookieGuard ? 'ON' : 'OFF',
   });
+  if (st.mode === 'raid' || st.mode === 'defense') return base;
+  return (
+    base +
+    t('lobby.optionsAssist', {
+      aim: st.aimAssist ? 'ON' : 'OFF',
+      fire: st.autoFire ? 'ON' : 'OFF',
+    })
+  );
 }
+
+export type RuleToggle = 'noUpgrades' | 'rookieGuard' | 'aimAssist' | 'autoFire';
+
+/** 補正の ON/OFF の並び（設定の項目・文言のキー） */
+export const RULE_TOGGLES: readonly (readonly [RuleToggle, string])[] = [
+  ['noUpgrades', 'lobby.rule.noUpgrades'],
+  ['rookieGuard', 'lobby.rule.rookie'],
+  ['aimAssist', 'lobby.rule.aimAssist'],
+  ['autoFire', 'lobby.rule.autoFire'],
+];

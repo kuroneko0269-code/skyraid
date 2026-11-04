@@ -18,6 +18,9 @@ const SET_RAID = 8;
 const SET_HARD = 16;
 /** 防衛戦（7-2） */
 const SET_DEFENSE = 32;
+/** 補正の狙いの補助・自動射撃（9-3） */
+const SET_AIM_ASSIST = 64;
+const SET_AUTO_FIRE = 128;
 export const PL_READY = 1;
 export const PL_AGAIN = 2;
 const PL_AWAY = 4;
@@ -57,7 +60,9 @@ export function writeSettings(w: ByteWriter, s: Readonly<GameSettings>): void {
           : 0) |
       (s.noUpgrades ? SET_NO_UPGRADES : 0) |
       (s.rookieGuard ? SET_ROOKIE : 0) |
-      (s.hard ? SET_HARD : 0),
+      (s.hard ? SET_HARD : 0) |
+      (s.aimAssist ? SET_AIM_ASSIST : 0) |
+      (s.autoFire ? SET_AUTO_FIRE : 0),
   );
   // 7-5: 天候
   w.str(s.weather);
@@ -78,6 +83,8 @@ export function readSettings(r: ByteReader): GameSettings {
     rookieGuard: (f & SET_ROOKIE) !== 0,
     hard: (f & SET_HARD) !== 0,
     weather,
+    aimAssist: (f & SET_AIM_ASSIST) !== 0,
+    autoFire: (f & SET_AUTO_FIRE) !== 0,
   };
 }
 

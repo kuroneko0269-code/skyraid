@@ -46,6 +46,8 @@ export class Totals {
   /** 角度の分布（度の区切りごとのステップ数） */
   readonly angleBins = [0, 0, 0, 0, 0, 0];
   readonly reacquire: number[] = [];
+  /** 撃墜までの秒数（9-3）: 対象を選んで 2km 内に入ってから、その対象が落ちるまで（落とした対象ごと） */
+  readonly killSeconds: number[] = [];
   readonly fire: FireCounts = {
     inHitCone: 0,
     within2: 0,
@@ -137,6 +139,7 @@ export class Totals {
     });
     for (const k of Object.keys(this.fire) as (keyof FireCounts)[]) this.fire[k] += o.fire[k];
     this.reacquire.push(...o.reacquire);
+    this.killSeconds.push(...o.killSeconds);
     this.missileAngles.push(...o.missileAngles);
     this.missionStatus = first ? o.missionStatus : '';
   }

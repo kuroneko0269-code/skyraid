@@ -5,14 +5,13 @@ import type { HudFrame } from './hud-frame';
 import { HudOrdnance } from './hud-ordnance';
 import { HudAssist } from './hud-assist';
 import { HudRadar } from './hud-radar';
+import { HudWarnings } from './hud-warnings';
 import { HudWeapons } from './hud-weapons';
 import {
   attitudeFromQuat,
   changed,
   formatAltitude,
   formatSpeed,
-  isGroundWarning,
-  isStallWarning,
   ladderRungs,
   ladderTransform,
   type Attitude,
@@ -43,6 +42,7 @@ export class Hud {
   private readonly weapons: HudWeapons;
   private readonly ordnance: HudOrdnance;
   private readonly notice: HTMLDivElement;
+  private readonly warnings: HudWarnings;
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly attitude: Attitude = { pitch: 0, roll: 0, heading: 0 };
@@ -54,8 +54,6 @@ export class Hud {
     throttle: NaN,
     ab: NaN,
     abState: '',
-    ground: false,
-    stall: false,
     pitch: NaN,
     roll: NaN,
     fpmX: NaN,
@@ -93,6 +91,9 @@ export class Hud {
     this.fpm = el('div', 'hud-fpm', root);
     el('div', 'hud-hitmarker', root);
     el('div', 'hud-warn hud-stall', root, 'STALL');
+    // 9-3: 宙返りに入るには速さが足りない（失速と同じ位置）
+    el('div', 'hud-warn hud-loop-speed', root, 'NEED SPEED');
+    this.warnings = new HudWarnings(root);
     el('div', 'hud-warn hud-missile', root, 'MISSILE');
     // お知らせ（自動ダウングレードなど）。画面上端の中央に数秒だけ出す
     this.notice = el('div', 'hud-notice', root);
@@ -208,16 +209,7 @@ export class Hud {
 
     this.updateCombat(f);
 
-    const ground = isGroundWarning(f.altitudeAboveGround, HUD_CONFIG.groundWarningAgl);
-    if (ground !== last.ground) {
-      last.ground = ground;
-      this.root.classList.toggle('is-ground-warning', ground);
-    }
-    const stall = isStallWarning(f.stall, HUD_CONFIG.stallThreshold);
-    if (stall !== last.stall) {
-      last.stall = stall;
-      this.root.classList.toggle('is-stall', stall);
-    }
+    this.warnings.update(f);
 
     const att = attitudeFromQuat(this.attitude, f.orientation);
     if (

@@ -30,6 +30,7 @@ export class TutorialHud {
   private complete = false;
   private device: InputDevice | null = null;
   private classic = false;
+  private autoFire = false;
 
   constructor(
     parent: HTMLElement,
@@ -38,6 +39,8 @@ export class TutorialHud {
     onAbort: () => void,
     /** タッチのスティックがピッチ・ロールの方式か（9-2。文を選ぶ） */
     private readonly classicTouch: () => boolean = () => false,
+    /** タッチの自動射撃が ON か（9-3。文を選ぶ） */
+    private readonly autoFireTouch: () => boolean = () => false,
   ) {
     const t = tutorialStrings();
     this.root = el('div', 'tutorial-hud', parent);
@@ -79,12 +82,18 @@ export class TutorialHud {
     if (active && isStep(active)) this.show(active);
   }
 
-  /** 描画フレームごと。入力系統・スティックの方式が変わったら文を書き直す */
+  /** 描画フレームごと。入力系統・スティックの方式・自動射撃が変わったら文を書き直す */
   update(device: InputDevice): void {
     const classic = this.classicTouch();
-    if (this.root.hidden || (device === this.device && classic === this.classic)) return;
+    const autoFire = this.autoFireTouch();
+    if (
+      this.root.hidden ||
+      (device === this.device && classic === this.classic && autoFire === this.autoFire)
+    )
+      return;
     this.device = device;
     this.classic = classic;
+    this.autoFire = autoFire;
     this.render();
   }
 
@@ -103,7 +112,13 @@ export class TutorialHud {
     this.text.textContent =
       this.complete || !this.step
         ? ''
-        : tutorialStepText(this.step, this.device ?? 'keyboard', this.keyName, this.classic);
+        : tutorialStepText(
+            this.step,
+            this.device ?? 'keyboard',
+            this.keyName,
+            this.classic,
+            this.autoFire,
+          );
     this.text.hidden = this.text.textContent === '';
     // 練習の注意は最初の段階だけ
     this.note.hidden = this.complete || index !== 0;

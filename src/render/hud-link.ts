@@ -17,6 +17,8 @@ export class HudLink {
   private readonly impact = { x: 0, y: 0 };
   /** 視認性の悪さ（0〜1。霧・雨・夜。7-5）。マーカーを出す距離を索敵距離の 60% まで縮める */
   visibility: () => number = () => 0;
+  /** 宙返り（9-3）の速度不足（「方向へ倒す」方式の SteerControl。app.ts が入れる） */
+  loopSpeedLow: () => boolean = () => false;
 
   constructor(
     private readonly hud: Hud,
@@ -38,6 +40,7 @@ export class HudLink {
   update(alpha: number, width: number, height: number): void {
     const f = this.frame;
     fillHudFrame(f, this.ff, this.groundHeight, this.assist());
+    f.loopSpeedLow = this.ff.player.active && this.loopSpeedLow();
     const fpm = projectFlightPath(this.camera, this.aircraftMesh, width, height, this.flightPath);
     f.flightPath = fpm ? this.flightPath : null;
     this.projector.fill(

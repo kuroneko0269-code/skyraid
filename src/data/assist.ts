@@ -56,6 +56,52 @@ export const AIM_ASSIST_CONFIG = {
 export type AimAssistSpec = { readonly [K in keyof typeof AIM_ASSIST_CONFIG]: number };
 
 /**
+ * 狙いの補助の強さ（9-3。タッチだけ。設定 settings.controls.aimAssist）: 弱 = 4-12 の値（AIM_ASSIST_CONFIG。パッド・
+ * ネット対戦で部屋の補正が OFF のときもこれ）、標準 = 9-1 の推奨値（円錐 15°・補正の最大 0.5・1.5° で最大）、強 = さらに広く強く。
+ * 判定の拡大（gunHitRadiusScale）はどれも同じ
+ */
+export const AIM_ASSIST_LEVELS = ['weak', 'normal', 'strong'] as const;
+export type AimAssistLevel = (typeof AIM_ASSIST_LEVELS)[number];
+
+export const AIM_ASSIST_LEVEL_SPECS: Readonly<Record<AimAssistLevel, AimAssistSpec>> = {
+  weak: AIM_ASSIST_CONFIG,
+  normal: { ...AIM_ASSIST_CONFIG, coneDeg: 15, maxCorrection: 0.5, fullCorrectionDeg: 1.5 },
+  strong: { ...AIM_ASSIST_CONFIG, coneDeg: 20, maxCorrection: 0.7, fullCorrectionDeg: 1.5 },
+};
+
+/**
+ * 自動射撃（9-3。タッチだけ。設定 settings.controls.autoFire）: 選んだ対象の予測照準点（機銃の射程内のときだけ出る）が、
+ * 当たる範囲（的の半径 × 判定の拡大 / 距離 の角度 × hitConeScale）に入っているときだけ撃つ。射撃ボタンはそのまま効く
+ */
+export const AUTO_FIRE_CONFIG = {
+  defaultOn: true,
+  hitConeScale: 1,
+} as const;
+
+/** 初期値（タッチ。今の利用者にも当てる） */
+export const AIM_ASSIST_DEFAULT_LEVEL: AimAssistLevel = 'normal';
+
+export const AIM_ASSIST_LEVEL_LABELS = {
+  get title() {
+    return t('controls.aimAssist.title');
+  },
+  get autoFire() {
+    return t('controls.autoFire');
+  },
+  levels: {
+    get weak() {
+      return t('controls.aimAssist.weak');
+    },
+    get normal() {
+      return t('controls.aimAssist.normal');
+    },
+    get strong() {
+      return t('controls.aimAssist.strong');
+    },
+  } satisfies Record<AimAssistLevel, string>,
+} as const;
+
+/**
  * ターゲットカメラ（追従カメラのときだけ）。選択中の対象が画面の端に近づく（視線から「画面の半分の画角 − startMarginDeg」を超える）と、
  * 注視点を対象の側へ回し、「半分の画角 + fullMarginDeg」で最大 maxShiftDeg。自機は画面の端から aircraftMarginDeg 内側に残す。
  * 寄せる量は response（1/秒）でなめらかに追う

@@ -116,6 +116,7 @@
 | 島（東岸の基地） / 港湾都市（港の基地） | Island (East Shore Base) / Harbor City (Port Base) |
 | 北東 / 東 / 南東 / 南西 / 南 | NE / E / SE / SW / S |
 | 初心者保護 / 補正 / 部屋コード | Rookie boost / Modifiers / Room code |
+| 狙いの補助（ロビーの補正） / 自動射撃 | Aim assist+ / Auto-fire |
 | 準備OK / ちょっと待って / もう一戦 / よろしく / ナイス！ / ありがとう（定型文） | Ready / Wait / Rematch / GL HF / Nice! / Thanks |
 | 時間 止める / 流れる | Fixed / Flowing |
 
