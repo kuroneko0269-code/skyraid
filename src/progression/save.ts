@@ -277,6 +277,21 @@ export function clampCredits(credits: number): number {
   return Math.min(SAVE_CONFIG.maxCredits, Math.max(0, Math.round(credits)));
 }
 
+/**
+ * 9-6a の事前修正: このアプリより新しい版のセーブか（読めない理由が「版が新しい」だけのとき true）。
+ * 古い版のアプリ（Service Worker のキャッシュ・別の端末）が新しい版のセーブを壊れたものとして初期化しないために使う
+ */
+export function isNewerSave(text: string, current: number = SAVE_CONFIG.version): boolean {
+  try {
+    const raw: unknown = JSON.parse(text);
+    if (!isObject(raw)) return false;
+    const v = raw.version;
+    return typeof v === 'number' && Number.isInteger(v) && v > current;
+  } catch {
+    return false;
+  }
+}
+
 /** JSON 文字列から読む。壊れていれば null */
 export function parseSave(text: string): SaveData | null {
   try {

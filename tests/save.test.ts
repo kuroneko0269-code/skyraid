@@ -91,7 +91,6 @@ describe('壊れたセーブデータの復旧', () => {
     ['オブジェクトでない', '[1,2,3]'],
     ['クレジットが文字列', JSON.stringify({ ...createInitialSave(), credits: 'many' })],
     ['設定がない', JSON.stringify({ ...createInitialSave(), settings: null })],
-    ['未知の新しい版', JSON.stringify({ ...createInitialSave(), version: 99 })],
   ])('%s → 初期値にして上書き（status reset）', (_label, text) => {
     const storage = new FakeStorage();
     storage.map.set(KEY, text);

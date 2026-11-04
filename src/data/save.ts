@@ -16,6 +16,11 @@ export const SAVE_CONFIG = {
     return t('save.resetNotice');
   },
   noticeSeconds: 3,
+  /** 9-6a の事前修正: このアプリより新しい版のセーブを読んだときのお知らせ（消さずに残す）。閉じるまで出す秒数 */
+  get tooNewNotice(): string {
+    return t('save.tooNewNotice');
+  },
+  tooNewNoticeSeconds: 12,
   /** クレジット残高の上限（表示とオーバーフロー対策。普通に遊んで届かない値） */
   maxCredits: 999_999_999,
 } as const;

@@ -45,6 +45,9 @@ export const SYNC_TEXT: Readonly<Record<SyncEvent, string>> = {
   get tooNew() {
     return t('sync.event.tooNew');
   },
+  get localTooNew() {
+    return t('save.tooNewNotice');
+  },
   get tooLarge() {
     return t('sync.event.tooLarge');
   },

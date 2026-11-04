@@ -656,6 +656,7 @@
   },
   "save": {
     "resetNotice": "Save data was reset",
+    "tooNewNotice": "This save is from a newer version. Please update the app",
     "close": "Close",
     "heading": "Save Data",
     "copy": "Copy save data",
