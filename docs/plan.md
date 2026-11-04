@@ -123,7 +123,7 @@
 
 - [x] 9-1 操作の診断（リプレイの入力を解析するツール `npm run analyze-replay`・実機とボットの比較・docs/control-analysis.md に難しさの原因と 9-2 / 9-3 の推奨値） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/950c536d3d60791aa5eb76e2bc72a4b65c91be9a
 - [x] 9-2 スティックの改善（感度のカーブ・スティックの方式・感度の設定の範囲。9-1 の推奨値から） — main マージ: https://github.com/kuroneko0269-code/skyraid/commit/765e67008fb876f528215ab516e851f8ffbcf8fd
-- [ ] 9-3 狙いの補助と宙返り（エイムアシストの強さ・自動射撃・「方向へ倒す」方式の宙返り。P-3 を含む）
+- [x] 9-3 狙いの補助と宙返り（エイムアシストの強さ（弱・標準・強）・自動射撃・PvP の部屋の補正・「方向へ倒す」方式の宙返りと NEED SPEED・チュートリアル・効果の表・端末をまたいだずれの調査。P-3 を含む） — main squash マージ: https://github.com/kuroneko0269-code/skyraid/commit/7827fbe46f18bfb49dfa139262f8cf119703c3ad
 - [ ] 9-4 傾き操作とドラッグ操作
 - [ ] 9-5 練習場
 - [ ] 9-6a 新しい怪獣（空を飛ぶ）その 1
