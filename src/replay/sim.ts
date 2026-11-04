@@ -19,6 +19,7 @@ import type { FlightSession } from '../missions/flight-session';
 import type { GamePlay } from '../missions/game-play';
 import type { MissionDef } from '../missions/types';
 import { resolveLoadout, type Loadout } from '../progression/loadout';
+import { freeExtraOf } from '../missions/free-extra';
 import { hashState, hashStateRounded, type StateSnapshot, type WalkSkip } from './state-walk';
 import type { ReplayCommand, ReplayFrame, ReplayStart } from './types';
 
@@ -32,10 +33,16 @@ export interface SimWorld {
   readonly pristine?: StateSnapshot | null;
 }
 
-/** 状態の走査の根（ハッシュ・キーフレーム）: ゲームの進行と街の建物 */
+/**
+ * 状態の走査の根（ハッシュ・キーフレーム）: ゲームの進行と街の建物。9-6a: フリーフライトに開発中の物が付いていれば
+ * それも（付いていなければ今までと同じ根）
+ */
 export function simRoots(w: Pick<SimWorld, 'play' | 'buildings'>): object[] {
   const b = w.buildings();
-  return b ? [w.play, b] : [w.play];
+  const roots: object[] = b ? [w.play, b] : [w.play];
+  const extra = freeExtraOf(w.play);
+  if (extra) roots.push(extra.stateRoot);
+  return roots;
 }
 
 /** 走査しないもの: 操作設定（オートレベル・反転は毎ステップの入力に入れて書く） */

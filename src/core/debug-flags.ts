@@ -30,3 +30,17 @@ export function parseUnlockAll(search: string): boolean {
   const params = new URLSearchParams(search);
   return params.has('unlockAll') || params.has('unlockall');
 }
+
+/**
+ * ?dev=<名前>（9-6a。開発中で隠している機能）: 付いている名前の一覧。`?dev=kaiju2` や `?dev=a,b`・`?dev=a&dev=b`。
+ * 名前は英数字と - だけ（それ以外は捨てる）
+ */
+export function parseDevFlags(search: string): ReadonlySet<string> {
+  const out = new Set<string>();
+  for (const v of new URLSearchParams(search).getAll('dev'))
+    for (const name of v.split(',')) {
+      const n = name.trim().toLowerCase();
+      if (/^[a-z0-9-]+$/.test(n)) out.add(n);
+    }
+  return out;
+}

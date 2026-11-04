@@ -88,7 +88,11 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
         // 8-2 の事前修正: 環境変数なしのビルドではオンライン連携（Supabase）のチャンクは読まないのでプリキャッシュしない
         // （判定はアプリの src/ui/online-link.ts と同じ readOnlineEnv）
-        globIgnores: readOnlineEnv(loadEnv(mode, root, 'VITE_')) ? [] : ['**/assets/online-app-*'],
+        // 9-6a: ?dev=<名前> の開発中の機能のチャンク（kaiju2-dev）も遊ぶ人は読まないのでプリキャッシュしない
+        globIgnores: [
+          '**/assets/kaiju2-dev-*',
+          ...(readOnlineEnv(loadEnv(mode, root, 'VITE_')) ? [] : ['**/assets/online-app-*']),
+        ],
         // 8-2: 遅延読み込みのチャンク（PvP・怪獣・フォトモード・リプレイ・情報画面）もすべてプリキャッシュする（オフラインで
         // 全モードが動き、デプロイの直後も古い SW が古いチャンクを返せる）。8-2 のチャンク分けで 2MiB を超えるファイルは
         // 無くなったが、上限は念のため 7-x までと同じにしておく

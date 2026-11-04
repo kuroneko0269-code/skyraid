@@ -1,0 +1,33 @@
+/* 9-6a: ?dev=kaiju2 の値の表示（開発用。遊ぶ人には出ない） */
+.kaiju2-dev {
+  position: fixed;
+  left: calc(8px + env(safe-area-inset-left, 0px));
+  top: 38%;
+  z-index: 10;
+  padding: 6px 8px;
+  font:
+    11px/1.35 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: pre;
+  color: #e6defe;
+  background: rgba(16, 10, 40, 0.62);
+  border-left: 3px solid #b9a6ff;
+  border-radius: 4px;
+  user-select: none;
+  cursor: pointer;
+}
+
+.kaiju2-dev[hidden] {
+  display: none;
+}
+
+.kaiju2-dev.is-collapsed {
+  opacity: 0.6;
+}
+
+.kaiju2-dev .is-warn {
+  color: #ffd27a;
+}
