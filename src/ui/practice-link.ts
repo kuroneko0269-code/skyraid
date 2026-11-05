@@ -25,6 +25,7 @@ import { adviceContext, tipText } from './practice-advice-text';
 import { HudTip } from './hud-tip';
 import type { Hud } from './hud';
 import { PRACTICE_TIPS_CONFIG } from '../data/practice-advice';
+import { dailyKindLabel } from '../data/daily';
 import { tipAllowed, tipDirection, type TipDirection } from '../missions/practice/tips';
 import { PracticeResultScreen, type PracticeRecordState } from './practice-result';
 import { PracticeSelectScreen } from './practice-select';
@@ -108,28 +109,36 @@ export function createPracticeLink(p: PracticeLinkParts): PracticeLink {
   // 速度合わせ ON の追い越し）は出さない（今の設定で決める）。見失いは的の向きの矢印と曲がる向き
   const tipView = new HudTip(p.hud);
   const dir: TipDirection = { side: 'right', angleDeg: 0, arrowDeg: 0 };
-  const hud = new PracticeHud(document.body, {
-    enabled: () => save.settings.controls.practiceTips && !replay.playing,
-    allow: (tip) => tipAllowed(tip, adviceContext(settingsKey())),
-    show: (tip) => {
-      const s = play.session;
-      const target = s.combat.targeting.selected;
-      const d =
-        tip === 'lost' && target
-          ? tipDirection(
-              dir,
-              s.aircraft.state.orientation,
-              s.aircraft.state.position,
-              target.position,
-            )
-          : null;
-      const text = tipText(tip, adviceContext(settingsKey()), d);
-      if (text) tipView.show(text, PRACTICE_TIPS_CONFIG.showSeconds, d ? d.arrowDeg : null);
+  const hud = new PracticeHud(
+    document.body,
+    {
+      enabled: () => save.settings.controls.practiceTips && !replay.playing,
+      allow: (tip) => tipAllowed(tip, adviceContext(settingsKey())),
+      show: (tip) => {
+        const s = play.session;
+        const target = s.combat.targeting.selected;
+        const d =
+          tip === 'lost' && target
+            ? tipDirection(
+                dir,
+                s.aircraft.state.orientation,
+                s.aircraft.state.position,
+                target.position,
+              )
+            : null;
+        const text = tipText(tip, adviceContext(settingsKey()), d);
+        if (text) tipView.show(text, PRACTICE_TIPS_CONFIG.showSeconds, d ? d.arrowDeg : null);
+      },
+      hide: () => {
+        tipView.hide();
+      },
     },
-    hide: () => {
-      tipView.hide();
+    // 9-10 の事前修正: 日替わり（記録・再生とも初期状態に条件がある）は日替わりの課題名
+    () => {
+      const daily = replay.current?.daily;
+      return daily ? dailyKindLabel(daily.kind).name : null;
     },
-  });
+  );
   for (const slot of [select.settingsSlot, screens.pause.extra, result.settingsSlot])
     panels.push(new PracticeSettingsPanel(slot, save, p.tilt, changed));
   // 9-5d: 設定画面で補助の組を選んだとき（ポーズから開いた設定など）

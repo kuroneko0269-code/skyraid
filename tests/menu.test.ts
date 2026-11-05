@@ -19,11 +19,11 @@ import { GLYPH_KINDS, glyphShapeCount } from '../src/ui/glyphs';
 
 describe('自己ベスト（セーブ v9）', () => {
   it('v8 のデータに空の記録を足す。ほかはそのまま', () => {
-    expect(SAVE_CONFIG.version).toBe(9);
+    expect(SAVE_CONFIG.version).toBe(10);
     const v8: Record<string, unknown> = { ...createInitialSave(), version: 8, credits: 777 };
     delete v8.records;
     const save = migrateSave(v8);
-    expect(save?.version).toBe(9);
+    expect(save?.version).toBe(SAVE_CONFIG.version);
     expect(save?.records).toEqual({
       defenseWaves: {},
       raidBestMs: {},
@@ -129,8 +129,8 @@ describe('情報画面（版・更新履歴・ライセンス）', () => {
 });
 
 describe('背景グリフ', () => {
-  it('14 種類（9-5 で練習場の的・9-9 で日めくり）それぞれに線がある', () => {
-    expect(GLYPH_KINDS).toHaveLength(14);
+  it('15 種類（9-5 で練習場の的・9-9 で日めくり・9-10 で勲章）それぞれに線がある', () => {
+    expect(GLYPH_KINDS).toHaveLength(15);
     for (const k of GLYPH_KINDS) expect(glyphShapeCount(k), k).toBeGreaterThan(0);
   });
 });

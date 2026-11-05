@@ -51,6 +51,8 @@ export class DailyScreen {
   private readonly note: HTMLParagraphElement;
   private readonly facts: HTMLDivElement;
   private readonly last: HTMLDivElement;
+  /** 9-10 の事前修正: 今回の結果の下の追加の欄（リプレイを保存。ui/replay-link.ts が入れる） */
+  readonly extras: HTMLDivElement;
   private readonly best: HTMLDivElement;
   private readonly side: HTMLDivElement;
   private readonly table: HTMLTableElement;
@@ -75,6 +77,8 @@ export class DailyScreen {
     this.note = el('p', 'campaign-text daily-note', main);
     this.facts = el('div', 'race-facts daily-facts', main);
     this.last = el('div', 'daily-last', main);
+    // 9-10 の事前修正: 「今回」の行の右端に置く（背の低い画面で「挑戦する」を押し出さない）
+    this.extras = el('div', 'daily-extras', this.last);
     this.best = el('div', 'daily-best', main);
     this.side = el('div', 'race-detail daily-side', layout);
     el('div', 'campaign-label', this.side, t('daily.ranking.heading'));
@@ -140,6 +144,7 @@ export class DailyScreen {
     el('span', 'daily-last-value', this.last, formatDailyValue(kind, p.value));
     if (p.value === null) el('span', 'daily-last-badge', this.last, t('daily.notFinished'));
     else if (p.newBest) el('span', 'daily-last-badge is-best', this.last, t('daily.newBest'));
+    this.last.appendChild(this.extras);
   }
 
   private renderBest(kind: DailyKind): void {

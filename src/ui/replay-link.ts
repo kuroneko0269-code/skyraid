@@ -252,7 +252,8 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
       finishLive();
       playback.stop();
     }
-    if (to === 'result') {
+    // 9-10 の事前修正: 日替わりは結果を日替わりの画面に出す（リザルトを挟まない）ので、そこにも「リプレイを保存」
+    if (to === 'result' || (to === 'daily_select' && inFlight(from))) {
       for (const b of boxes) b.reset(lastTitle, false);
       void lastAuto.then((id) => {
         for (const b of boxes) b.reset(lastTitle, id !== null);
@@ -269,9 +270,11 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
       // 世界を作る前に再生中にする（ミッションの報酬・記録の配線が見る）
       if (d) hub.playing = true;
       playbackData = d;
+      hub.current = d ? d.header : null;
       return d;
     },
     liveStarted(start) {
+      hub.current = start;
       liveMode = start.mode;
       lastTitle = replayTitle(start);
       hub.recorder.begin(start, {
@@ -286,6 +289,7 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
       hub.checkpoint(p.world.buildings());
     },
     unrecordedStarted() {
+      hub.current = null;
       liveMode = null;
     },
     replayStarted() {

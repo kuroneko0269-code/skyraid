@@ -29,6 +29,7 @@
 | 練習場（9-5） | Practice Range |
 | 日替わり / 日替わりチャレンジ（9-9） | Daily / Daily Challenge |
 | 的あて / 動く的 / 敵機の連戦 / 周回レース（日替わりの課題。9-9） | Target Shoot / Moving Targets / Bandit Gauntlet / Lap Race |
+| 勲章 / 銅・銀・金 / 補助ふつう以上（9-10） | Badge / Bronze・Silver・Gold / Assist: Normal or less |
 | 連続（続けて遊んだ日数。9-9） | Streak |
 | 挑戦する（9-9） | Take It On |
 | 止まった的 / 動く的 / 模擬の敵 | Fixed Targets / Moving Targets / Dummy Bandit |

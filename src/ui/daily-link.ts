@@ -44,6 +44,8 @@ export interface DailyLink {
   readonly selection: DailySpec | null;
   afterStart(replaying: boolean, spec: DailySpec): void;
   render(): void;
+  /** 今回の結果の下の追加の欄（9-10 の事前修正: リプレイを保存） */
+  readonly resultExtras: HTMLElement;
 }
 
 /** 今の補助の組（タッチの端末だけ組で数える。キーボード・パッドは組の補助を使わないのでカスタム） */
@@ -157,6 +159,7 @@ export function createDailyLink(p: DailyLinkParts): DailyLink {
   };
 
   return {
+    resultExtras: screen.extras,
     get selection() {
       return selection;
     },

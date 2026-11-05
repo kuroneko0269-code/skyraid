@@ -93,6 +93,8 @@ export class Screens {
   inPractice: () => boolean = () => false;
   /** 日替わり（9-9。ui/daily-link.ts）を飛んでいるか */
   inDaily: () => boolean = () => false;
+  /** モード選択の「勲章」（9-10。ui/badge-link.ts が差し込む） */
+  onBadges: () => void = () => undefined;
   /** ランキング（7-4。ui/online-app.ts が差し込む。オンライン連携が無ければ何もしない） */
   onRanking: () => void = () => undefined;
   /** PvP（5-1）: モード選択の「PvP」（raid: 協力レイド（6-2）の部屋）・ロビーの Esc・飛行中の ⏸（main が差し込む） */
@@ -157,6 +159,7 @@ export class Screens {
         else if (mode === 'ranking') this.onRanking();
         else if (mode === 'settings') this.settingsNav.open();
         else if (mode === 'info') void this.info.show();
+        else if (mode === 'badges') this.onBadges();
         else if (mode === 'hangar') this.openHangar(game, 'mode_select');
         else if (mode === 'pvp') this.pvp?.onSelect(false);
         else if (mode === 'defense') this.modeSelect.showDefensePrompt();

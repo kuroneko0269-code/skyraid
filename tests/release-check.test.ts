@@ -6,14 +6,15 @@ import { parseChangelog } from '../src/core/changelog';
 import { DATA_POLICY } from '../src/data/data-policy';
 
 describe('版と更新履歴', () => {
-  it('版は 1.0.13（9-9 日替わりチャレンジ）', () => {
-    expect(APP_VERSION).toBe('1.0.13');
+  it('版は 1.0.14（9-10 勲章・実績）', () => {
+    expect(APP_VERSION).toBe('1.0.14');
   });
 
-  it('更新履歴は新しい順に 1.0.13・1.0.12・1.0.11・1.0.10・1.0.9・1.0.8・1.0.7・1.0.6・1.0.5・1.0.4・1.0.3・1.0.2・1.0.1・1.0.0・0.9.0〜0.1.0、各版 3〜5 行', () => {
+  it('更新履歴は新しい順に 1.0.14・1.0.13・1.0.12・1.0.11・1.0.10・1.0.9・1.0.8・1.0.7・1.0.6・1.0.5・1.0.4・1.0.3・1.0.2・1.0.1・1.0.0・0.9.0〜0.1.0、各版 3〜5 行', () => {
     const entries = parseChangelog(changelogText);
     const versions = entries.map((e) => /^(\d+\.\d+\.\d+)/.exec(e.title)?.[1]);
     expect(versions).toEqual([
+      '1.0.14',
       '1.0.13',
       '1.0.12',
       '1.0.11',

@@ -180,8 +180,8 @@ describe('送信（まだ送っていない最高だけ）', () => {
     expect(s.backend.dailyScores).toHaveLength(0);
     expect(await s.sender.ranking('2026-11-05', 'k')).toEqual([]);
     expect(s.backend.fetchDailyRanking).not.toHaveBeenCalled();
-    // 今の版は SQL 0005 を流すまで止めておく
-    expect(DAILY_RANKING_ENABLED).toBe(false);
+    // 9-10 の事前修正: SQL 0005 を流したので今の版は送る
+    expect(DAILY_RANKING_ENABLED).toBe(true);
   });
 
   it('時間切れのレース（最高なし）・完走していない日は送らない', async () => {

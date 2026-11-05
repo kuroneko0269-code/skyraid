@@ -21,7 +21,7 @@ export class PracticeHud {
   private runner: PracticeRunner | null = null;
   private off: (() => void)[] = [];
   private bigUntil = 0;
-  private last = { time: '', count: '' };
+  private last = { time: '', count: '', name: '' };
 
   constructor(
     parent: HTMLElement,
@@ -32,6 +32,11 @@ export class PracticeHud {
       readonly show: (tip: FlightTip) => void;
       readonly hide: () => void;
     } = { enabled: () => false, allow: () => false, show: () => undefined, hide: () => undefined },
+    /**
+     * 9-10 の事前修正: 課題名（日替わりは日替わりの課題名。null は練習場の課題名）。飛行の初期状態は練習場を付けた後に決まるので
+     * 描画のたびに読む
+     */
+    private readonly title: () => string | null = () => null,
   ) {
     const root = el('div', 'race-hud practice-hud', parent);
     root.hidden = true;
@@ -56,9 +61,9 @@ export class PracticeHud {
     this.big.hidden = true;
     this.tipOptions.hide();
     this.tips.reset();
-    this.last = { time: '', count: '' };
+    this.last = { time: '', count: '', name: '' };
     if (!runner) return;
-    this.name.textContent = `${PRACTICE_DRILL_LABELS[runner.drill].name} · ${t('practice.hud.gunOnly')}`;
+    this.updateName(runner);
     const bus = runner.bus;
     this.off.push(
       bus.on('practice:countdown', ({ count }) => {
@@ -82,6 +87,7 @@ export class PracticeHud {
   update(): void {
     const r = this.runner;
     if (!r) return;
+    this.updateName(r);
     if (!this.big.hidden && performance.now() > this.bigUntil) this.big.hidden = true;
     const left = r.phase === 'countdown' ? r.duration : r.timeLeft;
     const time = left.toFixed(1);
@@ -93,6 +99,12 @@ export class PracticeHud {
     const o = this.tipOptions;
     const tip = this.tips.update(r.elapsed, r.aim, o.allow);
     if (tip && o.enabled()) o.show(tip);
+  }
+
+  private updateName(r: PracticeRunner): void {
+    const title = this.title() ?? PRACTICE_DRILL_LABELS[r.drill].name;
+    const name = `${title} · ${t('practice.hud.gunOnly')}`;
+    if (name !== this.last.name) this.name.textContent = this.last.name = name;
   }
 
   private showBig(main: string, sub: string, kind: string, seconds = 1): void {

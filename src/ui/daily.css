@@ -64,6 +64,21 @@
   display: none;
 }
 
+/* 9-10 の事前修正: 「リプレイを保存」は「今回」の行の右端に小さく（名前の欄を開くと次の行へ折り返す） */
+.daily-extras {
+  margin-left: auto;
+}
+
+.daily-extras .replay-save .ui-button {
+  min-height: 28px;
+  padding: 2px 12px;
+  font-size: 13px;
+}
+
+.daily-extras .replay-save-form .replay-name {
+  min-height: 28px;
+}
+
 .daily-last-label {
   font-size: 12px;
   color: var(--ui-text-dim);

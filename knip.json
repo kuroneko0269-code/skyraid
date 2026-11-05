@@ -26,6 +26,7 @@
     "/src/ui/result.ts",
     "/src/ui/practice-result.ts",
     "/src/ui/practice-settings.ts",
-    "/src/core/control-settings.ts"
+    "/src/core/control-settings.ts",
+    "/src/ui/badge-link.ts"
   ]
 }

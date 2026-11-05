@@ -17,6 +17,7 @@ export const GLYPH_KINDS = [
   'gear',
   'info',
   'calendar',
+  'medal',
 ] as const;
 export type GlyphKind = (typeof GLYPH_KINDS)[number];
 
@@ -142,6 +143,12 @@ const GLYPHS: Readonly<Record<GlyphKind, readonly Shape[]>> = {
     { p: 'M10 25 L54 25' },
     { p: 'M21 9 L21 19 M43 9 L43 19' },
     { p: radial(32, 41, [10, 4.2], 5, -Math.PI / 2) },
+  ],
+  // 勲章（9-10。リボンと円と星）
+  medal: [
+    { p: 'M22 8 L30 28 M42 8 L34 28 M22 8 L30 8 M42 8 L34 8' },
+    { c: [32, 40, 16] },
+    { p: radial(32, 40.5, [9, 3.8], 5, -Math.PI / 2) },
   ],
   // i
   info: [
