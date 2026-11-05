@@ -14,6 +14,11 @@ import type { TiltSource } from './tilt-source';
 import { applyAssistPreset } from '../core/assist-preset';
 import { AssistPresetChoice } from './assist-preset';
 
+/** 9-5d: 欄の見出しの「（タッチ）」を外す（上の「補助の組（タッチ）」で分かる。狭い画面のタブに収める） */
+function short(label: string): string {
+  return label.replace(/\s*[（(](タッチ|touch)[）)]\s*$/i, '');
+}
+
 export class PracticeSettingsPanel {
   readonly root: HTMLDivElement;
   private readonly syncers: (() => void)[] = [];
@@ -47,29 +52,40 @@ export class PracticeSettingsPanel {
       preset.sync();
     });
     const grid = el('div', 'control-settings-toggles practice-settings-grid', root);
-    const steer = createSteerModeChoice(grid, c, tilt, (v) => {
-      commit((x) => (x.steerMode = v));
-    });
+    const steer = createSteerModeChoice(
+      grid,
+      c,
+      tilt,
+      (v) => {
+        commit((x) => (x.steerMode = v));
+      },
+      short(STEER_LABELS.mode),
+    );
     this.syncers.push(() => {
       steer.sync(this.save.settings.controls.steerMode);
     });
     const assist = choice(
       grid,
-      AIM_ASSIST_LEVEL_LABELS.title,
+      short(AIM_ASSIST_LEVEL_LABELS.title),
       AIM_ASSIST_LEVELS.map((v) => [v, AIM_ASSIST_LEVEL_LABELS.levels[v]] as const),
       c.aimAssist,
       (v) => {
         commit((x) => (x.aimAssist = v));
       },
     );
-    const autoFire = createToggleButton(grid, AIM_ASSIST_LEVEL_LABELS.autoFire, c.autoFire, () => {
-      commit((x) => (x.autoFire = !x.autoFire));
-      return this.save.settings.controls.autoFire;
-    });
+    const autoFire = createToggleButton(
+      grid,
+      short(AIM_ASSIST_LEVEL_LABELS.autoFire),
+      c.autoFire,
+      () => {
+        commit((x) => (x.autoFire = !x.autoFire));
+        return this.save.settings.controls.autoFire;
+      },
+    );
     // 9-5b: 速度合わせ
     const speedMatch = createToggleButton(
       grid,
-      AIM_ASSIST_LEVEL_LABELS.speedMatch,
+      short(AIM_ASSIST_LEVEL_LABELS.speedMatch),
       c.speedMatch,
       () => {
         commit((x) => (x.speedMatch = !x.speedMatch));
@@ -78,7 +94,7 @@ export class PracticeSettingsPanel {
     );
     const curve = choice(
       grid,
-      STEER_LABELS.curve,
+      short(STEER_LABELS.curve),
       STICK_CURVES.map((v) => [v, curveLabel(v)] as const),
       c.stickCurve,
       (v) => {

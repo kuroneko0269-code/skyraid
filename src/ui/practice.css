@@ -353,10 +353,17 @@
 
 @media (max-width: 600px) {
   .practice-select .race-course-list {
-    flex-basis: 150px;
+    flex-basis: 172px;
   }
 
   .practice-select .race-course {
     padding-inline: 10px;
+  }
+}
+
+/* 狭くて背の低い画面（568×320）: 概要の中の説明（上の説明の写し）も出さない（決まり・設定のタブで分かる） */
+@media (max-width: 600px) and (max-height: 480px) {
+  .practice-detail .practice-lead-inline {
+    display: none;
   }
 }
