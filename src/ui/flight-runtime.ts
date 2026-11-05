@@ -16,6 +16,7 @@ import { createPhotoMode, type PhotoEntry } from './photo/photo-entry';
 import type { RaceLink } from './race-link';
 import type { PracticeLink } from './practice-link';
 import type { DailyLink } from './daily-link';
+import type { BadgeLink } from './badge-link';
 import { createReplayWiring } from './replay-wiring';
 import { viewport } from '../core/viewport';
 
@@ -31,6 +32,8 @@ export type FlightRuntimeParts = Omit<
     readonly defense: DefenseLink;
     readonly practice: PracticeLink;
     readonly daily: DailyLink;
+    /** 勲章（9-10）: 記録する飛行の始めと固定ステップの後 */
+    readonly badges: BadgeLink;
     readonly canvas: HTMLElement;
     readonly audio: GameAudio;
     readonly save: SaveStore;
@@ -53,6 +56,7 @@ export function startFlightRuntime(p: FlightRuntimeParts): {
       takePending: () => replay.link.hooks.takePending(),
       liveStarted: (s) => {
         replay.link.hooks.liveStarted(s);
+        p.badges.begin(s);
       },
       unrecordedStarted: () => {
         replay.link.hooks.unrecordedStarted();
@@ -78,6 +82,7 @@ export function startFlightRuntime(p: FlightRuntimeParts): {
     },
     afterStep: () => {
       race.afterStep();
+      p.badges.step(loop.stepSeconds);
     },
     holdSim: () => race.guide.holdSim(),
   });
@@ -133,6 +138,7 @@ export function startFlightRuntime(p: FlightRuntimeParts): {
       race.resultExtras,
       defense.resultExtras,
       practice.resultExtras,
+      p.daily.resultExtras,
     ],
   });
   // 起動直後の世界の写し（飛行の始めに前の飛行の名残を消す）は配線の最後に撮る

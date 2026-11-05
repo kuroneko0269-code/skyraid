@@ -929,6 +929,9 @@
     "ranking": {
       "label": "Rankings"
     },
+    "badges": {
+      "label": "Badges"
+    },
     "settings": {
       "label": "Settings"
     },
@@ -2139,6 +2142,159 @@
       "empty": "No scores yet. Be the first",
       "failed": "Could not load the ranking",
       "pending": "Rankings are coming soon (scores stay on this device and are sent once available)"
+    }
+  },
+  "badges": {
+    "title": "Badges",
+    "back": "← Modes",
+    "summary": "Earned {earned} / {total} · Tiers {tiers} / {totalTiers}",
+    "skill": "Assist: Normal or less",
+    "earnedOn": "Earned {dates}",
+    "reward": "Reward {credits}",
+    "progress": "{current} / {goal}",
+    "tier": {
+      "1": "Bronze",
+      "2": "Silver",
+      "3": "Gold"
+    },
+    "groups": {
+      "flight": "Flying",
+      "combat": "Combat",
+      "campaign": "Campaign & Tutorial",
+      "raid": "Raid",
+      "race": "Ring Race",
+      "defense": "Defense",
+      "practice": "Practice",
+      "daily": "Daily",
+      "coop": "Co-op",
+      "pvp": "PvP"
+    },
+    "toast": {
+      "earned": "Badge earned: {names} (+{credits})",
+      "backfill": "Awarded {count} badges from your past records: {names} (+{credits})",
+      "more": " and {count} more",
+      "separator": ", ",
+      "tiered": "{name} ({tier})"
+    },
+    "items": {
+      "loop": {
+        "name": "Loop",
+        "note": "Fly a full vertical loop (nose straight up, inverted, then down)"
+      },
+      "immelmann": {
+        "name": "Immelmann",
+        "note": "Half loop up, then roll upright (reversed heading, 150 m+ higher)"
+      },
+      "lowPass": {
+        "name": "Low Pass",
+        "note": "Fly below 30 m above ground or sea at 200 m/s+ for 8 s"
+      },
+      "inverted": {
+        "name": "Inverted",
+        "note": "Fly inverted for 10 s (100 m+ above ground)"
+      },
+      "topSpeed": {
+        "name": "Top Speed",
+        "note": "Reach 430 m/s (dive to build speed)"
+      },
+      "firstKill": {
+        "name": "First Kill",
+        "note": "Shoot down an enemy fighter"
+      },
+      "ace": {
+        "name": "Ace",
+        "note": "Down 5 enemy fighters in one sortie (Campaign, Raid, Defense)"
+      },
+      "gunsOnly": {
+        "name": "Guns Only",
+        "note": "Clear a Campaign mission from M2 on without missiles, rockets or bombs"
+      },
+      "flawless": {
+        "name": "Flawless",
+        "note": "Clear a Campaign mission from M2 on without taking a hit"
+      },
+      "campaign": {
+        "name": "Campaign",
+        "tier1": "Clear all 8 missions",
+        "tier2": "Clear every mission with A or better",
+        "tier3": "Clear every mission with S"
+      },
+      "tutorial": {
+        "name": "Flight School",
+        "note": "Finish all 9 tutorial chapters"
+      },
+      "vorgas": {
+        "name": "Vorgas Down",
+        "note": "Defeat Vorgas in a solo raid"
+      },
+      "nephirga": {
+        "name": "Nephirga Down",
+        "note": "Defeat Nephirga in a solo raid"
+      },
+      "nephirgaParts": {
+        "name": "Dismantled",
+        "note": "Break both wings, head and tail of Nephirga, then defeat it (solo raid, M8)"
+      },
+      "raidNoLoss": {
+        "name": "Unsinkable",
+        "note": "Clear a solo raid without being shot down"
+      },
+      "raidHard": {
+        "name": "Hard Raid",
+        "note": "Clear a solo raid on Hard"
+      },
+      "raceMedals": {
+        "name": "Ring Race",
+        "tier1": "Finish every course",
+        "tier2": "Finish every course with A or better",
+        "tier3": "Finish every course with Gold (S)"
+      },
+      "cleanRun": {
+        "name": "Clean Run",
+        "note": "Finish a race without missing a ring (daily laps count)"
+      },
+      "defenseAll": {
+        "name": "Defended",
+        "note": "Hold all 10 waves in solo Defense"
+      },
+      "defenseHard": {
+        "name": "Iron Wall",
+        "note": "Hold all 10 waves in solo Defense on Hard"
+      },
+      "practiceAll": {
+        "name": "Dedicated",
+        "note": "Set a record in all 3 Practice drills"
+      },
+      "sharpshooter": {
+        "name": "Sharpshooter",
+        "note": "10+ kills at 50%+ accuracy in one Practice run"
+      },
+      "dailyStreak": {
+        "name": "Daily Streak",
+        "tier1": "Play the daily challenge 3 days in a row",
+        "tier2": "Play the daily challenge 7 days in a row",
+        "tier3": "Play the daily challenge 30 days in a row"
+      },
+      "dailyAll": {
+        "name": "Daily Variety",
+        "note": "Play all 4 daily challenge types (within the 14 days kept)"
+      },
+      "coopClear": {
+        "name": "Teamwork",
+        "note": "Clear a co-op Raid or Defense"
+      },
+      "coopFour": {
+        "name": "Full Flight",
+        "note": "Clear a co-op Raid or Defense with 4 players"
+      },
+      "pvpWin": {
+        "name": "Victory",
+        "note": "Win a PvP match (1st in free-for-all, or winning team)"
+      },
+      "pvpKills": {
+        "name": "Top Gun",
+        "note": "Shoot down 25 players in PvP in total"
+      }
     }
   }
 }

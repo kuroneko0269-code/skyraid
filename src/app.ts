@@ -262,7 +262,7 @@ export function startApp(renderer: WebGLRenderer): void {
   });
   linkWeather(world.weather, { game, screens, pvp, hud, hudLink, audio, save });
   // リングレース（7-1）: コース一覧・HUD・リザルト・音・ゴースト、練習場（9-5）: 課題の一覧・HUD・結果・設定の欄・記録、
-  // 日替わり（9-9）（天候の配線の後: レースの天候・練習場の昼の快晴・日替わりの条件の天候で上書きする）
+  // 日替わり（9-9）（天候の配線の後: レースの天候・練習場の昼の快晴・日替わりの条件の天候で上書きする）、勲章（9-10）
   const solo = createSoloLinks({
     game,
     screens,

@@ -165,7 +165,7 @@ describe('7-3 性能に影響しない', () => {
 
 describe('7-3 セーブ v7 → v8', () => {
   it('v7 のデータに塗装（単色だけ所持・撃墜 0・塗装なし）を足す。ほかはそのまま', () => {
-    expect(SAVE_CONFIG.version).toBe(9);
+    expect(SAVE_CONFIG.version).toBe(10);
     const v8 = createInitialSave();
     const v7: Record<string, unknown> = { ...v8, version: 7, credits: 777, pilotName: 'ACE' };
     delete v7.skins;

@@ -19,11 +19,11 @@ import { GLYPH_KINDS, glyphShapeCount } from '../src/ui/glyphs';
 
 describe('自己ベスト（セーブ v9）', () => {
   it('v8 のデータに空の記録を足す。ほかはそのまま', () => {
-    expect(SAVE_CONFIG.version).toBe(9);
+    expect(SAVE_CONFIG.version).toBe(10);
     const v8: Record<string, unknown> = { ...createInitialSave(), version: 8, credits: 777 };
     delete v8.records;
     const save = migrateSave(v8);
-    expect(save?.version).toBe(9);
+    expect(save?.version).toBe(SAVE_CONFIG.version);
     expect(save?.records).toEqual({
       defenseWaves: {},
       raidBestMs: {},

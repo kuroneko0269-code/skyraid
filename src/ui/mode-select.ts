@@ -21,6 +21,7 @@ export const GAME_MODES = [
   'raid',
   'replay',
   'ranking',
+  'badges',
   'settings',
   'info',
 ] as const;
@@ -64,6 +65,8 @@ const MANAGE_ENTRIES: readonly { mode: GameMode; glyph: GlyphKind }[] = [
   { mode: 'hangar', glyph: 'hangar' },
   { mode: 'replay', glyph: 'play' },
   { mode: 'ranking', glyph: 'trophy' },
+  // 9-10: 勲章の一覧
+  { mode: 'badges', glyph: 'medal' },
   { mode: 'settings', glyph: 'gear' },
   { mode: 'info', glyph: 'info' },
 ];

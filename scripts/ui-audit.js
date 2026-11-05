@@ -17,7 +17,7 @@
 //   hscrollEl 横にスクロールできる要素がある（8-6d。画面の外のダイアログ・お知らせも。意図した一覧は audit-inspect.js の除外リスト）
 //   hclip    縦にスクロールする入れ物で中身が横に切れている（8-6d）
 //   serif    文字の計算後のフォントがブラウザ既定（serif）（8-6d。アプリのフォントを受け継いでいない）
-// 8-6d: 画面はタイトル・名前の入力・設定 5 タブ・モード選択・情報 4 タブ・お知らせ・ポーズ・ポーズの設定 5 タブに加え、
+// 8-6d: 画面はタイトル・名前の入力・設定 5 タブ・モード選択・情報 4 タブ・勲章（9-10）・お知らせ・ポーズ・ポーズの設定 5 タブに加え、
 //      キャンペーン・ブリーフィング・レース・各ダイアログ・ハンガー・リプレイ・ロビー・設定のデータ（オンライン連携の見本）・
 //      記録カード（scripts/ui-audit-screens.js）。ページの中の点検は scripts/audit-inspect.js
 // 画面遷移のチェック: 設定画面の「戻る」で開いた元（タイトル / モード選択 / ポーズ）に戻るか
@@ -249,6 +249,17 @@ for (const size of SIZES) {
   }
   await page.click('.info-screen .menu-back');
   await flow('情報 → 戻る', await shownOnly('.mode-select-screen', '.info-screen'));
+  // 9-10: 勲章の一覧（タイトルの前のセーブの記録からさかのぼって付いたもの・進み具合）。一番下まで送って撮る
+  await page.click('.mode-tile[data-mode="badges"]');
+  await shown('.badge-screen');
+  await shot('badges', '.badge-screen');
+  await page.evaluate(() => {
+    const s = document.querySelector('.badge-screen .menu-scroll');
+    if (s) s.scrollTop = s.scrollHeight;
+  });
+  await shot('badges-end', '.badge-screen');
+  await page.click('.badge-screen .menu-back');
+  await flow('勲章 → 戻る', await shownOnly('.mode-select-screen', '.badge-screen'));
 
   // トースト（更新の知らせと同じ部品・ボタン 2 つ）
   await showSampleToasts(page);

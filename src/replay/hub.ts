@@ -8,7 +8,7 @@ import { toBase64, encodeReplay } from './codec';
 import { ReplayRecorder } from './recorder';
 import { applyCommand, applyFrame, captureFrame, simCheckHash } from './sim';
 import type { BuildingField } from '../combat/buildings';
-import type { ReplayCommand, ReplayData } from './types';
+import type { ReplayCommand, ReplayData, ReplayStart } from './types';
 
 type CommandBody = ReplayCommand extends infer C
   ? C extends unknown
@@ -22,6 +22,11 @@ export class ReplayHub {
   /** 一覧で選んだ、これから再生する記録 */
   pending: ReplayData | null = null;
   readonly recorder = new ReplayRecorder();
+  /**
+   * 9-10: 今の飛行の初期状態（記録している飛行はそのヘッダ、再生は記録のヘッダ。記録しない飛行は null）。
+   * HUD の課題名（日替わり）・勲章の判定が読む（判定の状態には入れない）
+   */
+  current: ReplayStart | null = null;
 
   constructor(private readonly play: GamePlay) {}
 

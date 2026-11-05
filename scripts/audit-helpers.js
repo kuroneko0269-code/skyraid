@@ -112,6 +112,20 @@ export async function showSampleToasts(page) {
         actions: [{ label: now, kind: 'primary' }, { label: close }],
       });
       m.showToast(install, { seconds: 0, actions: [{ label: close }] });
+      // 9-10: 勲章を取ったお知らせ（名前 3 つ + ほか 1 個。段階付き）
+      const b = await import('/src/ui/badge-link.ts');
+      m.showToast(
+        b.awardText(
+          [
+            { id: 'immelmann', tier: 1, credits: 500 },
+            { id: 'campaign', tier: 2, credits: 2000 },
+            { id: 'raceMedals', tier: 3, credits: 4000 },
+            { id: 'loop', tier: 1, credits: 300 },
+          ],
+          false,
+        ),
+        { seconds: 0 },
+      );
     },
     [
       L('新しいバージョンがあります（次回の起動で更新）'),

@@ -18,6 +18,7 @@ import {
 import { dropGhosts, normalizeRaces, type RaceRecord } from './save-races';
 import { defaultSkins, normalizeSkins, type SaveSkins } from './save-skins';
 import { defaultRecords, normalizeRecords, type SaveRecords } from './save-records';
+import { defaultBadges, normalizeBadges, type SaveBadges } from './badges';
 
 export { type SaveSettings } from './save-settings';
 
@@ -85,6 +86,8 @@ export interface SaveData {
   skins: SaveSkins;
   /** ローカルの自己ベスト（7-D。v9 から）: 防衛戦の最高波・レイドの最速 */
   records: SaveRecords;
+  /** 勲章（9-10。v10 から）: 取った段階ごとの時刻と、記録からのさかのぼりのお知らせを出した印 */
+  badges: SaveBadges;
 }
 
 export function initialUpgrades(): UpgradeLevels {
@@ -108,6 +111,7 @@ export function createInitialSave(): SaveData {
     races: {},
     skins: defaultSkins(),
     records: defaultRecords(),
+    badges: defaultBadges(),
   };
 }
 
@@ -126,6 +130,9 @@ const V1_STARTER_ID = 'starter';
  * - v6 → v7（7-B）: ゴーストを入力の記録に変えたので、古いゴースト（15Hz の位置）を捨てる（ベストタイム・ランクは残す）
  * - v7 → v8（7-3）: 塗装（skins）を初期値で足す（単色だけ所持・PvP の撃墜 0・機体の塗装は初めて使うときに作る）
  * - v8 → v9（7-D）: ローカルの自己ベスト（records）を空で足す
+ * - v9 → v10（9-10）: 勲章（badges）を空で足す（記録から取れる勲章は起動の判定でさかのぼって付く: progression/badges.ts）。
+ *   版を上げたのは、勲章を知らない古いアプリ（Service Worker のキャッシュ・別の端末）がセーブを読み直して書いたときに
+ *   勲章が消えないようにするため（新しい版のセーブは書かない: 9-6a の事前修正）
  * 難易度の一度だけの normal → easy（4-11 の事前修正）は版によらず normalizeSettings で（印 settings.difficultyEased）
  */
 export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
@@ -186,6 +193,7 @@ export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
   6: (d) => ({ ...d, version: 7, races: dropGhosts(d.races) }),
   7: (d) => ({ ...d, version: 8, skins: defaultSkins() }),
   8: (d) => ({ ...d, version: 9, records: defaultRecords() }),
+  9: (d) => ({ ...d, version: 10, badges: defaultBadges() }),
 };
 
 /**
@@ -252,6 +260,7 @@ export function normalizeSave(d: Json): SaveData | null {
   save.races = normalizeRaces(d.races);
   save.skins = normalizeSkins(d.skins);
   save.records = normalizeRecords(d.records);
+  save.badges = normalizeBadges(d.badges);
   return save;
 }
 
