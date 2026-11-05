@@ -1,0 +1,266 @@
+/*
+ * 日替わりチャレンジ（9-9）の画面: 左に今日の条件と自分の記録、右にその日のランキング（連携していなければ左だけ）。
+ * 骨組みはリングレースのコース一覧（race.css の .race-layout / .race-detail / .race-times）
+ */
+.daily-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px 16px;
+}
+
+.daily-date {
+  font: 600 15px/1.3 var(--ui-font-body);
+  color: var(--ui-accent-hud);
+  letter-spacing: 0.04em;
+}
+
+.daily-layout {
+  align-items: stretch;
+}
+
+.daily-main {
+  max-width: 480px;
+}
+
+.daily-side {
+  max-width: 400px;
+  min-width: 0;
+}
+
+.daily-side[hidden] {
+  display: none;
+}
+
+.daily-note {
+  margin: 0;
+}
+
+.daily-facts {
+  font-size: 13px;
+}
+
+.daily-facts .campaign-fact-value {
+  font-size: 14px;
+}
+
+.daily-facts .campaign-fact.is-wide {
+  grid-column: 1 / -1;
+}
+
+/* 今回の結果（終えたばかりのときだけ） */
+.daily-last {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 4px 8px;
+  border-left: 3px solid var(--ui-accent);
+  background: var(--ui-bg-active);
+}
+
+.daily-last[hidden] {
+  display: none;
+}
+
+.daily-last-label {
+  font-size: 12px;
+  color: var(--ui-text-dim);
+}
+
+.daily-last-value {
+  font:
+    800 20px/1.1 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+.daily-last-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ui-text-dim);
+}
+
+.daily-last-badge.is-best {
+  color: var(--ui-gold);
+  letter-spacing: 0.06em;
+}
+
+/* 自分の記録: 今日の最高（大きく）・補助の組・挑戦・連続 */
+.daily-best {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.daily-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 4px 6px;
+  box-shadow: inset 0 0 0 var(--ui-line-width) var(--ui-line-faint);
+}
+
+.daily-stat-label {
+  font-size: 11px;
+  color: var(--ui-text-dim);
+  white-space: nowrap;
+}
+
+.daily-stat-value {
+  font:
+    700 15px/1.2 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: nowrap;
+}
+
+.daily-stat.is-main .daily-stat-value {
+  font-size: 18px;
+  color: var(--ui-accent-hud);
+}
+
+.daily-rank-note {
+  margin: 0;
+}
+
+.daily-rank-note[hidden] {
+  display: none;
+}
+
+.daily-ranking tr.is-current td {
+  color: var(--ui-accent-hud);
+}
+
+.daily-ranking-name {
+  max-width: 9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.daily-ranking-preset {
+  font-size: 11px;
+}
+
+/* 背の低い横画面（スマホ 844×390・568×320）: 見出しを 1 行に詰め、2 列のまま収める */
+@media (max-height: 480px) {
+  .screen.campaign-screen.daily-screen {
+    gap: 6px;
+    padding-top: max(6px, var(--ui-safe-top));
+    padding-bottom: max(6px, var(--ui-safe-bottom));
+  }
+
+  .daily-screen .campaign-heading {
+    font-size: 18px;
+  }
+
+  .daily-date {
+    font-size: 13px;
+  }
+
+  .daily-layout {
+    flex-wrap: nowrap;
+    gap: var(--ui-space-2);
+  }
+
+  .daily-main,
+  .daily-side {
+    gap: 4px;
+    padding: 8px 10px;
+  }
+
+  .daily-main .race-detail-title {
+    font-size: 17px;
+  }
+
+  .daily-note {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .daily-facts {
+    gap: 1px 10px;
+    font-size: 12px;
+  }
+
+  .daily-facts .campaign-fact-value {
+    font-size: 13px;
+  }
+
+  .daily-last-value {
+    font-size: 17px;
+  }
+
+  .daily-stat {
+    padding: 2px 5px;
+  }
+
+  .daily-stat-value {
+    font-size: 13px;
+  }
+
+  .daily-stat.is-main .daily-stat-value {
+    font-size: 15px;
+  }
+
+  .daily-ranking {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  /* ランキングの欄は左の高さに合わせ、はみ出す行は欄の中でスクロール（画面の高さを増やさない） */
+  .daily-side {
+    contain: size;
+    flex: 1 1 300px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* 幅の狭い横画面（568×320）: 左を広く、自分の記録を 2 × 2 に（ランキングの欄があるとき）、ランキングの名前を短く */
+@media (max-height: 480px) and (max-width: 700px) {
+  .daily-main {
+    flex: 1 1 310px;
+  }
+
+  .daily-side {
+    flex: 0 1 215px;
+  }
+
+  /* 条件は折り返す 1 列の並び（2 列の表だと値が 3 行に折れて高くなる） */
+  .daily-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 12px;
+  }
+
+  .daily-best {
+    gap: 4px;
+  }
+
+  .daily-ranking-name {
+    max-width: 6em;
+  }
+
+  .daily-ranking-preset {
+    font-size: 10px;
+  }
+}
+
+@media (max-height: 480px) and (max-width: 700px) {
+  .daily-stat {
+    padding: 2px 4px;
+  }
+
+  .daily-stat-label {
+    font-size: 10.5px;
+  }
+
+  .daily-stat-value {
+    font-size: 12px;
+  }
+}

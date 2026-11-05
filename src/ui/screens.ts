@@ -28,14 +28,7 @@ import { MAPS } from '../data/maps';
 import { RAID_MISSION } from '../data/missions-special';
 import type { DefenseDifficulty } from '../data/defense';
 import { tutorialStrings, type TutorialStrings } from './tutorial-text';
-
-/** Esc でモード選択へ戻る一覧の画面 */
-const LIST_SCREENS: readonly ScreenState[] = [
-  'mission_select',
-  'race_select',
-  'replay_select',
-  'practice_select',
-];
+import { LIST_SCREENS, listStateOf } from './screen-lists';
 
 interface PvpHandlers {
   /** kaiju: 協力レイドの怪獣（9-6c。省略はヴォルガス） */
@@ -98,6 +91,8 @@ export class Screens {
     undefined;
   /** 練習場（9-5。ui/practice-link.ts が差し込む）: 飛んでいる（終えたばかり）か */
   inPractice: () => boolean = () => false;
+  /** 日替わり（9-9。ui/daily-link.ts）を飛んでいるか */
+  inDaily: () => boolean = () => false;
   /** ランキング（7-4。ui/online-app.ts が差し込む。オンライン連携が無ければ何もしない） */
   onRanking: () => void = () => undefined;
   /** PvP（5-1）: モード選択の「PvP」（raid: 協力レイド（6-2）の部屋）・ロビーの Esc・飛行中の ⏸（main が差し込む） */
@@ -157,6 +152,7 @@ export class Screens {
         } else if (mode === 'campaign') game.transition('mission_select');
         else if (mode === 'race') game.transition('race_select');
         else if (mode === 'practice') game.transition('practice_select');
+        else if (mode === 'daily') game.transition('daily_select');
         else if (mode === 'replay') game.transition('replay_select');
         else if (mode === 'ranking') this.onRanking();
         else if (mode === 'settings') this.settingsNav.open();
@@ -288,12 +284,9 @@ export class Screens {
     return this.nextMission?.id === RAID_MISSION.id || this.nextMission?.reward.raid !== undefined;
   }
 
-  /** リザルト・ポーズの「中断」の戻り先: レースはコース一覧、練習場は課題の一覧、チュートリアル・レイドはモード選択、ほかはミッション一覧 */
+  /** リザルト・ポーズの「中断」の戻り先（screen-lists.ts） */
   private listState(): ScreenState {
-    if (this.inRace()) return 'race_select';
-    if (this.inPractice()) return 'practice_select';
-    if (this.inDefense()) return 'mode_select';
-    return this.inTutorial || this.inRaid ? 'mode_select' : 'mission_select';
+    return listStateOf(this);
   }
 
   /** 防衛戦の協力（7-2）: マップと難易度を初期設定にして部屋を作る */
@@ -356,7 +349,7 @@ export class Screens {
     // ポーズには設定画面の 4 つ（画質・HUD・音量・操作補助）を貸す（7-D。8-1 の事前修正で HUD を画質の右へ）
     if (state === 'pause') this.settings.lend(this.pause.quick);
     this.pause.setShown(state === 'pause');
-    const own = this.inRace() || this.inDefense() || this.inPractice();
+    const own = this.inRace() || this.inDefense() || this.inPractice() || this.inDaily();
     this.result.setShown(state === 'result' && !own);
     this.hangarScreen.setShown(state === 'hangar');
   }

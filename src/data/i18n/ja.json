@@ -760,7 +760,9 @@
     "defense": "最高 {waves} 波",
     "raid": "最速 {time}",
     "practice": "最高 {scores}",
-    "raidBoth": "最速 {vorgas} / {nephirga}"
+    "raidBoth": "最速 {vorgas} / {nephirga}",
+    "daily": "連続 {days} 日・今日 {best}",
+    "dailyNew": "今日はまだ"
   },
   "campaign": {
     "heading": "キャンペーン",
@@ -884,6 +886,10 @@
       "solo": "ソロ",
       "versus": "2〜4 人",
       "party": "1〜4 人"
+    },
+    "daily": {
+      "label": "日替わり",
+      "note": "毎日かわる短い課題。全員同じ条件"
     },
     "campaign": {
       "label": "キャンペーン",
@@ -2056,6 +2062,63 @@
         "up": "的は上 {deg}° — 機首を上げ続けて",
         "down": "的は下 {deg}° — 機首を下げ続けて"
       }
+    }
+  },
+  "daily": {
+    "heading": "日替わりチャレンジ",
+    "date": "{month}月{day}日の課題",
+    "start": "挑戦する",
+    "abort": "日替わりを中断",
+    "tier": "難しさ",
+    "weather": "天候",
+    "length": "長さ",
+    "minutes": "約 {minutes} 分",
+    "laps": {
+      "other": "{count} 周"
+    },
+    "rules": "数え方",
+    "rulesValue": {
+      "score": "撃墜 ×（100 + 命中率%）",
+      "race": "合計タイム（速いほど上）"
+    },
+    "preset": "今の補助",
+    "thisRun": "今回",
+    "notFinished": "時間切れ",
+    "newBest": "今日の最高を更新",
+    "best": "今日の最高",
+    "bestPreset": "最高の補助",
+    "attempts": "挑戦",
+    "streak": "連続",
+    "streakDays": {
+      "other": "{count} 日"
+    },
+    "today": "{kind} {stars}",
+    "raceName": "{course} {laps} 周",
+    "replayTitle": "日替わり {date} {kind}",
+    "kinds": {
+      "targets": {
+        "name": "的あて",
+        "note": "島の上空の風船を 2 分で撃ち落とす。命中率も点になる"
+      },
+      "drones": {
+        "name": "動く的",
+        "note": "横切るドローンを 2 分で撃ち落とす。先回りして撃つ"
+      },
+      "gauntlet": {
+        "name": "敵機の連戦",
+        "note": "撃ち返さない敵機を 2 分半で次々に落とす"
+      },
+      "race": {
+        "name": "周回レース",
+        "note": "海岸周回を続けて何周も回る。リングを外すと +5 秒"
+      }
+    },
+    "ranking": {
+      "heading": "今日のランキング",
+      "loading": "読み込んでいます…",
+      "empty": "まだ記録がありません。最初の 1 人になろう",
+      "failed": "ランキングを読めませんでした",
+      "pending": "ランキングは準備中です（記録は端末に残り、使えるようになったら送ります）"
     }
   }
 }

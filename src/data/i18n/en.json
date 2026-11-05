@@ -763,7 +763,9 @@
     "defense": "Best: Wave {waves}",
     "raid": "Best {time}",
     "practice": "Best {scores}",
-    "raidBoth": "Best {vorgas} / {nephirga}"
+    "raidBoth": "Best {vorgas} / {nephirga}",
+    "daily": "{days}-day streak · Today {best}",
+    "dailyNew": "Not played today"
   },
   "campaign": {
     "heading": "Campaign",
@@ -888,6 +890,10 @@
       "solo": "Solo",
       "versus": "2–4 players",
       "party": "1–4 players"
+    },
+    "daily": {
+      "label": "Daily",
+      "note": "A new short challenge every day, same for everyone"
     },
     "campaign": {
       "label": "Campaign",
@@ -2074,6 +2080,65 @@
         "up": "Target {deg}° up — keep pulling up",
         "down": "Target {deg}° down — keep pushing down"
       }
+    }
+  },
+  "daily": {
+    "heading": "Daily Challenge",
+    "date": "Challenge for {month}/{day}",
+    "start": "Take It On",
+    "abort": "Quit Daily",
+    "tier": "Difficulty",
+    "weather": "Weather",
+    "length": "Length",
+    "minutes": "About {minutes} min",
+    "laps": {
+      "one": "{count} lap",
+      "other": "{count} laps"
+    },
+    "rules": "Scoring",
+    "rulesValue": {
+      "score": "Kills × (100 + hit %)",
+      "race": "Total time (faster ranks higher)"
+    },
+    "preset": "Assist now",
+    "thisRun": "This run",
+    "notFinished": "Time up",
+    "newBest": "New best for today",
+    "best": "Best",
+    "bestPreset": "Assist",
+    "attempts": "Tries",
+    "streak": "Streak",
+    "streakDays": {
+      "one": "{count} day",
+      "other": "{count} days"
+    },
+    "today": "{kind} {stars}",
+    "raceName": "{course} × {laps}",
+    "replayTitle": "Daily {date} {kind}",
+    "kinds": {
+      "targets": {
+        "name": "Target Shoot",
+        "note": "Pop balloons over the island in 2 minutes. Accuracy counts"
+      },
+      "drones": {
+        "name": "Moving Targets",
+        "note": "Down crossing drones in 2 minutes. Lead your shots"
+      },
+      "gauntlet": {
+        "name": "Bandit Gauntlet",
+        "note": "Down passive bandits one after another for 2.5 minutes"
+      },
+      "race": {
+        "name": "Lap Race",
+        "note": "Fly the Coastal Circuit for several laps. Missed rings add 5 s"
+      }
+    },
+    "ranking": {
+      "heading": "Today's ranking",
+      "loading": "Loading…",
+      "empty": "No scores yet. Be the first",
+      "failed": "Could not load the ranking",
+      "pending": "Rankings are coming soon (scores stay on this device and are sent once available)"
     }
   }
 }

@@ -9,6 +9,7 @@ import { createButton, createScreen, setScreenShown } from './screen';
 import type { TutorialStrings } from './tutorial-text';
 
 export const GAME_MODES = [
+  'daily',
   'tutorial',
   'free',
   'campaign',
@@ -41,18 +42,21 @@ interface PlayEntry {
 /**
  * 上段「遊ぶ」（7-D）。大きなカードに人数のバッジと進捗。説明の人数（1〜4 人など）はバッジに移した。
  * 題と説明は表のキー modes.<mode>.label / note。チュートリアル（4-11）の文は tutorial-text（コンストラクタで差し替える）。
- * リングレース（7-1）は今はソロだけ
+ * 9-9: 日替わりチャレンジを先頭の大きなカード（2 行ぶんの高さ。今日の課題と連続日数）にし、残り 8 枚を 2 行に並べ直した:
+ * 1 行目は「覚えて進める」（チュートリアル・キャンペーン・練習場・リングレース）、2 行目は「自由に・みんなで」
+ * （フリーフライト・レイド・防衛戦・PvP）
  */
 const PLAY_ENTRIES: readonly PlayEntry[] = [
+  { mode: 'daily', players: 'solo', glyph: 'calendar' },
   { mode: 'tutorial', players: 'solo', glyph: 'fighter' },
   { mode: 'campaign', players: 'solo', glyph: 'star' },
-  { mode: 'free', players: 'solo', glyph: 'cloudWing' },
   // 9-5: 練習場（課題 3 つ・結果の指標と助言・設定ごとの記録）
   { mode: 'practice', players: 'solo', glyph: 'target' },
   { mode: 'race', players: 'solo', glyph: 'ring' },
-  { mode: 'pvp', players: 'versus', glyph: 'crossedJets' },
+  { mode: 'free', players: 'solo', glyph: 'cloudWing' },
   { mode: 'raid', players: 'party', glyph: 'kaiju' },
   { mode: 'defense', players: 'party', glyph: 'radar' },
+  { mode: 'pvp', players: 'versus', glyph: 'crossedJets' },
 ];
 
 /** 下段「管理」（7-D）。小さなタイル 1 行。ランキング（7-4）はオンライン連携の連携中だけ（setModeVisible）。題は modes.<mode>.label */
@@ -68,13 +72,16 @@ const MANAGE_ENTRIES: readonly { mode: GameMode; glyph: GlyphKind }[] = [
 const INITIALLY_HIDDEN: readonly GameMode[] = ['ranking'];
 
 /**
- * モード選択画面（7-D で 2 段に）。上段「遊ぶ」8 枚のカード（9-5 で練習場）、下段「管理」のタイル。各カード・タイルの右下に線画のグリフ。
+ * モード選択画面（7-D で 2 段に）。上段「遊ぶ」9 枚のカード（9-5 で練習場、9-9 で日替わり）、下段「管理」のタイル。各カード・タイルの右下に線画のグリフ。
  * 初回起動（パイロット名の入力の後）に 1 度だけ「チュートリアルを始めますか？」を重ねて出す。重ねるダイアログは mode-dialogs.ts
  */
 export class ModeSelectScreen {
   readonly root: HTMLDivElement;
   private firstEnabled: HTMLButtonElement | null = null;
   private freeNote: HTMLSpanElement | null = null;
+  private dailyLine: HTMLSpanElement | null = null;
+  /** 日替わりのカードの今日の課題（9-9。出すたびに読む。daily-link.ts が差し込む） */
+  dailyToday: () => string = () => '';
   private readonly dialogs: ModeDialogs;
   private readonly buttons = new Map<GameMode, HTMLButtonElement>();
   private readonly progressLines = new Map<GameMode, HTMLSpanElement>();
@@ -116,13 +123,22 @@ export class ModeSelectScreen {
     const play = el('div', 'mode-play', root);
     for (const entry of PLAY_ENTRIES) {
       const tut = entry.mode === 'tutorial';
-      const card = this.addButton(play, 'mode-card', entry.mode, entry.glyph, select);
+      const featured = entry.mode === 'daily';
+      const card = this.addButton(
+        play,
+        featured ? 'mode-card is-featured' : 'mode-card',
+        entry.mode,
+        entry.glyph,
+        select,
+      );
       el('span', 'mode-label', card, tut ? tutorial.title : t(`modes.${entry.mode}.label`));
       const noteText = tut
         ? tutorial.note
         : t(entry.mode === 'free' ? FREE_FLIGHT_NOTE_KEYS.on : `modes.${entry.mode}.note`);
       const note = el('span', 'mode-note', card, noteText);
       if (entry.mode === 'free') this.freeNote = note;
+      // 9-9: 今日の課題（種類と難しさ。開くたびに書き換える）
+      if (featured) this.dailyLine = el('span', 'mode-daily', card);
       // 下の行: 左に進捗、右に人数のバッジ（題の行を広く使う）
       const foot = el('span', 'mode-card-foot', card);
       this.progressLines.set(entry.mode, el('span', 'mode-progress', foot));
@@ -257,6 +273,7 @@ export class ModeSelectScreen {
   }
 
   private refreshProgress(): void {
+    if (this.dailyLine) this.dailyLine.textContent = this.dailyToday();
     const p = this.progress();
     for (const [mode, line] of this.progressLines) {
       const text = p[mode] ?? '';

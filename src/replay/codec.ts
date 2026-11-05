@@ -2,6 +2,7 @@
 // 入力はチャンネル（ピッチ・ロール・…）ごとに「前のステップとの差」を並べ、差 0 の連続は 1 バイト（64 ステップまで）、
 // -8〜7 の差の連続は 2 ステップで 1 バイト（4 bit ずつ）、それ以外は 1 ステップを可変長の整数で書く。
 // キーボードの操作は差 0 がほとんどなので 1 分 1〜2KB、アナログのスティックでも小さな差が続くので 1 分 10KB 以下になる
+import { parseDailySpec } from '../missions/daily/schedule';
 import { DIFFICULTIES } from '../data/ai';
 import { REPLAY_CONFIG } from '../data/replay';
 import { FRAME_CHANNELS, type ReplayCommand, type ReplayData, type ReplayHeader } from './types';
@@ -267,6 +268,9 @@ function parseHeader(v: unknown): ReplayHeader {
     typeof h.upgrades !== 'object' ||
     typeof h.enemies !== 'object'
   )
+    throw new Error('Replay header is corrupt');
+  // 9-9: 日替わりの条件は形を確かめる（壊れていれば読まない）
+  if (h.daily !== undefined && parseDailySpec(h.daily) === null)
     throw new Error('Replay header is corrupt');
   return v as ReplayHeader;
 }

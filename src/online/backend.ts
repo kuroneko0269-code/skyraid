@@ -3,6 +3,7 @@ import type { RecordKind } from '../data/online';
 import type { JoinStatus, MemberRow } from './members';
 import type { RecordDetail, RecordInput } from './records';
 import type { RemoteSaveInfo } from './sync-rules';
+import type { DailyBackend } from './daily-scores';
 
 export interface OnlineUser {
   readonly id: string;
@@ -63,7 +64,8 @@ export function errorKind(e: unknown): OnlineErrorKind {
   return e instanceof OnlineError ? e.kind : 'unknown';
 }
 
-export interface OnlineBackend {
+/** 9-9: 日替わりチャレンジのスコアの送信とランキング（insertDailyScore・fetchDailyRanking）も持つ */
+export interface OnlineBackend extends DailyBackend {
   /** 今のログイン（端末に残ったセッション）。無ければ null */
   currentUser(): Promise<OnlineUser | null>;
   /** ログイン・ログアウト・トークンの更新 */

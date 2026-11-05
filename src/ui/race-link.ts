@@ -177,8 +177,8 @@ export function createRaceLink(p: RaceLinkParts): RaceLink {
       audio.playRace('miss');
     });
     bus.on('race:finish', ({ result: r }) => {
-      // 7-B: 再生中は記録・報酬なし（リザルトも出さない）
-      if (replay.playing) return;
+      // 7-B: 再生中は記録・報酬なし（リザルトも出さない）。9-9: 日替わりの周回（コースの選択が無い）も記録・報酬・送信なし
+      if (replay.playing || course === null) return;
       const id = hangar.selectedId;
       const machine = {
         aircraftId: id,

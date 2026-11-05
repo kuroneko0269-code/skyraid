@@ -69,6 +69,14 @@ export function rankedCourse(id: string): boolean {
   return RANKED_COURSES.includes(id);
 }
 
+/**
+ * 9-9: 日替わりチャレンジのランキング（表 skyraid.daily_scores・ビュー daily_best）。
+ * supabase/migrations/skyraid_0005_daily.sql を流すまでは false（送らない・画面のランキングの欄は「準備中」）。
+ * 流したら true にする（README の「日替わりチャレンジのランキング」）。遊んだ日の最高はセーブに残り、true にした後につながったとき
+ * 送る（今日を含めて 7 日以内の日だけ）
+ */
+export const DAILY_RANKING_ENABLED: boolean = false;
+
 /** 記録の種類 */
 export const RECORD_KINDS = ['race', 'raid', 'defense'] as const;
 export type RecordKind = (typeof RECORD_KINDS)[number];

@@ -1,5 +1,6 @@
 /*
- * モード選択（7-D で 2 段に）: 上段「遊ぶ」の大きなカード 8 枚（9-5 で練習場。横画面のスマホ・PC は 4 + 4 の 2 行、広い PC は 1 行）、
+ * モード選択（7-D で 2 段に）: 上段「遊ぶ」の大きなカード 9 枚（9-5 で練習場。9-9 で日替わりを左の大きなカード（2 行ぶん）にし、
+ * 残り 8 枚を横画面のスマホ・PC は 4 + 4 の 2 行、広い PC は 1 行）、
  * 下段「管理」の小さなタイル 1 行。各カード・タイルの右下に線画のグリフ（高さの 140%・枠で切り落とす）
  */
 .mode-select-screen {
@@ -13,16 +14,15 @@
   margin-top: var(--ui-space-1);
 }
 
-/* 上段: 12 列のグリッドで 4 枚ずつ 2 行（3 列ずつ。9-5 まで 2 行目は 3 枚で 4 列ずつ） */
+/* 上段: 左に日替わり（2 行ぶんの高さ・少し広い）、右に 4 列 × 2 行（9-9。それまでは 12 列のグリッドで 3 列ずつ） */
 .mode-play {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.3fr) repeat(4, minmax(0, 1fr));
   gap: var(--ui-space-3);
   width: var(--menu-width);
 }
 
 .mode-card {
-  grid-column: span 3;
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
@@ -32,30 +32,48 @@
   overflow: hidden;
 }
 
-/* 広い PC は 1 行に 8 枚 */
+/* 9-9: 日替わり（よく使う入口を大きく）。枠を強め、今日の課題を大きめの文字で */
+.mode-card.is-featured {
+  grid-row: span 2;
+  border-color: var(--ui-line-strong);
+}
+
+/* 2 行ぶんの高さのカードではグリフを他のカードと同じくらいの大きさに */
+.mode-card.is-featured .mode-glyph {
+  height: 75%;
+  bottom: -12%;
+}
+
+.mode-daily {
+  font: 700 16px/1.3 var(--ui-font-body);
+  letter-spacing: 0.02em;
+  color: var(--ui-accent-hud);
+}
+
+.mode-daily:empty {
+  display: none;
+}
+
+/* 広い PC は幅を広げる（9-9: 1 行に並べると英語の題が切れるので、日替わり + 4 × 2 のまま） */
 @media (min-width: 1500px) and (min-height: 600px) {
   .mode-select-screen {
     --menu-width: min(1560px, calc(100% - var(--ui-space-6)));
   }
 
-  .mode-play {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-  }
-
   .mode-card {
-    grid-column: span 1;
     min-height: 150px;
   }
 }
 
-/* 狭い縦画面は 2 列（背の低い横画面は 4 + 4 のまま） */
+/* 狭い縦画面は 2 列（日替わりは 2 列ぶんの 1 行。背の低い横画面は左 + 4 + 4 のまま） */
 @media (max-width: 600px) and (min-height: 481px) {
   .mode-play {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .mode-card {
-    grid-column: span 1;
+  .mode-card.is-featured {
+    grid-row: auto;
+    grid-column: span 2;
   }
 }
 
@@ -94,6 +112,8 @@
   font: 12px/1.35 var(--ui-font-body);
   letter-spacing: 0;
   color: var(--ui-text-dim);
+  /* 9-9: 説明は折り返す（ボタンの nowrap を受け継いで「…」で切れていた） */
+  white-space: normal;
 }
 
 .mode-progress {
@@ -248,15 +268,44 @@
   }
 }
 
-/* 背の低い横画面（スマホ 844×390・568×320 など）: カード・タイルを詰め、ダイアログの文字を小さく */
+/* 背の低い横画面（スマホ 844×390・568×320 など）: カード・タイルを詰め、ダイアログの文字を小さく。
+   9-9: 日替わりは上の横長の帯（全幅・1 行）にし、残りを 4 列 × 2 行。段の見出し（遊ぶ・管理）は隠す（高さを空ける） */
 @media (max-height: 480px) {
   .mode-select-screen {
     gap: 6px;
   }
 
   .mode-section {
+    display: none;
+  }
+
+  .mode-play {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mode-card.is-featured {
+    grid-row: auto;
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    min-height: 0;
+    padding-block: 6px;
+  }
+
+  .mode-card.is-featured .mode-note {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .mode-card.is-featured .mode-card-foot {
     margin-top: 0;
-    font-size: 11px;
+    flex: none;
+  }
+
+  .mode-card.is-featured .mode-glyph {
+    height: 260%;
+    bottom: -80%;
   }
 
   .mode-play,
@@ -302,11 +351,60 @@
   }
 }
 
-/* 幅の狭い横画面（iPhone SE 568×320 など）: カードの題を小さく */
+/* 幅の狭い横画面（iPhone SE 568×320 など）: カードの題を小さく。
+   9-9: 見出しの行も 844×390 と同じ低さに（モード選択だけ）。説明は 2 行まで折り返せるよう詰める */
 @media (max-height: 480px) and (max-width: 700px) {
+  .mode-select-screen .menu-header {
+    min-height: 36px;
+    margin-top: var(--ui-space-2);
+  }
+
+  .mode-select-screen .menu-heading {
+    font-size: 19px;
+  }
+
+  .mode-select-screen .menu-back {
+    min-height: 36px;
+    padding: 4px 12px;
+    font-size: 14px;
+  }
+
   .mode-card {
-    min-height: 76px;
-    padding: 6px 8px;
+    min-height: 0;
+    padding: 5px 8px;
+    gap: 1px;
+  }
+
+  .mode-label {
+    line-height: 1.25;
+  }
+
+  .mode-note {
+    font-size: 10.5px;
+    line-height: 1.3;
+  }
+
+  .mode-daily {
+    font-size: 14px;
+  }
+
+  /* 日替わりの帯は今日の課題を見せる（一般の説明は日替わりの画面にある。帯の中で 3 行に折り返して高くなるため） */
+  .mode-card.is-featured .mode-note {
+    display: none;
+  }
+
+  .mode-card.is-featured .mode-daily {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .mode-progress {
+    font-size: 10.5px;
+    letter-spacing: 0;
+  }
+
+  .mode-tile {
+    min-height: 38px;
   }
 
   .mode-label {

@@ -15,12 +15,13 @@ import type { KaijuHudLink } from '../render/kaiju-hud-link';
 import { createPhotoMode, type PhotoEntry } from './photo/photo-entry';
 import type { RaceLink } from './race-link';
 import type { PracticeLink } from './practice-link';
+import type { DailyLink } from './daily-link';
 import { createReplayWiring } from './replay-wiring';
 import { viewport } from '../core/viewport';
 
 export type FlightRuntimeParts = Omit<
   FlightStartParts,
-  'world' | 'replay' | 'race' | 'defense' | 'practice'
+  'world' | 'replay' | 'race' | 'defense' | 'practice' | 'daily'
 > &
   Omit<FlightLoopParts, 'startFlight' | 'replay' | 'afterStep' | 'holdSim'> &
   Omit<FlightFrameParts, 'touch'> & {
@@ -29,6 +30,7 @@ export type FlightRuntimeParts = Omit<
     readonly race: RaceLink;
     readonly defense: DefenseLink;
     readonly practice: PracticeLink;
+    readonly daily: DailyLink;
     readonly canvas: HTMLElement;
     readonly audio: GameAudio;
     readonly save: SaveStore;
@@ -142,6 +144,7 @@ export function startFlightRuntime(p: FlightRuntimeParts): {
     race.render(alpha);
     defense.render(viewport.width, viewport.height);
     practice.render();
+    p.daily.render();
     frame.render(game.state, alpha, p.keys.menuTick);
     if (game.state === 'flight') p.kaijuHud.update();
     p.tutorial.update(game.state === 'flight');

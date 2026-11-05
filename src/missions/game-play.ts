@@ -14,7 +14,7 @@ import { SeededRandom } from '../core/random';
 import { DefenseRunner } from './defense/runner';
 import { DEFENSE_CONFIG, type DefenseDifficulty, type DefenseMapDef } from '../data/defense';
 import type { MissionDef, Pose } from './types';
-import { PracticeRunner } from './practice/runner';
+import { PracticeRunner, type PracticeOptions } from './practice/runner';
 import { freeExtraOf } from './free-extra';
 import { TUTORIAL_CHAPTER_DEFS, type TutorialChapter } from '../data/tutorial';
 import { TutorialCoach } from './tutorial/coach';
@@ -203,12 +203,16 @@ export class GamePlay {
   }
 
   /** 練習場（9-5）: 練習扱いの世界で課題の開始位置から。aspect は指標（画面の外）の縦横比（記録のヘッダにも入れる） */
-  startPractice(drill: PracticeRunner['drill'], aspect: number): PracticeRunner {
+  startPractice(
+    drill: PracticeRunner['drill'],
+    aspect: number,
+    options: PracticeOptions = {},
+  ): PracticeRunner {
     this.tutorial = null;
     freeExtraOf(this)?.stop();
     this.setRace(null);
     this.setDefense(null);
-    const p = new PracticeRunner(drill, this.session, aspect);
+    const p = new PracticeRunner(drill, this.session, aspect, options);
     this.session.startMission(p.start, true);
     this.setRunner(null);
     this.place(p.start, true);

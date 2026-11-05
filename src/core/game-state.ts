@@ -10,6 +10,7 @@ import { EventBus } from './event-bus';
  * リングレース（7-1）はモード選択 → コース一覧（機体の選択も）→ 飛行 → リザルト → コース一覧。
  * リプレイ（7-B）はモード選択 → リプレイ一覧 → 飛行（再生。Esc・「一覧へ」で一覧へ戻る）。
  * 練習場（9-5）はモード選択 → 課題の一覧 → 飛行 → 結果 → 課題の一覧。ポーズの「やり直す」は restart（ポーズ → 飛行のやり直し）
+ * 日替わりチャレンジ（9-9）はモード選択 → 日替わりの画面 → 飛行 → 日替わりの画面（今回の結果をそこに出す。リザルトは挟まない）
  */
 export const SCREEN_STATES = [
   'boot',
@@ -27,6 +28,7 @@ export const SCREEN_STATES = [
   'race_select',
   'replay_select',
   'practice_select',
+  'daily_select',
 ] as const;
 export type ScreenState = (typeof SCREEN_STATES)[number];
 
@@ -46,8 +48,10 @@ export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenStat
     'race_select',
     'replay_select',
     'practice_select',
+    'daily_select',
   ],
   race_select: ['mode_select', 'flight'],
+  daily_select: ['mode_select', 'flight'],
   practice_select: ['mode_select', 'flight'],
   replay_select: ['mode_select', 'flight'],
   lobby: ['mode_select', 'flight'],
@@ -56,7 +60,8 @@ export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenStat
   hangar: ['mode_select', 'briefing'],
   // ミッションが終わるとリザルトへ。チュートリアル（4-11）は指示の「中断」でモード選択へ
   // PvP の対戦が終わるとロビー（のリザルト）へ（5-3）
-  flight: ['pause', 'photo', 'result', 'mode_select', 'lobby', 'replay_select'],
+  // 9-9: 日替わりは終わると日替わりの画面へ（リザルトは挟まない）
+  flight: ['pause', 'photo', 'result', 'mode_select', 'lobby', 'replay_select', 'daily_select'],
   // ミッション中はポーズから「ミッションを中断」でミッション一覧へ（チュートリアルはモード選択へ、レースはコース一覧へ）
   pause: [
     'flight',
@@ -66,6 +71,7 @@ export const STATE_TRANSITIONS: Readonly<Record<ScreenState, readonly ScreenStat
     'mode_select',
     'race_select',
     'practice_select',
+    'daily_select',
   ],
   // フォトモード（7-A）を出るとゲームに戻る
   photo: ['flight'],
@@ -129,7 +135,8 @@ export function usesDemoCamera(state: ScreenState): boolean {
     state === 'lobby' ||
     state === 'race_select' ||
     state === 'replay_select' ||
-    state === 'practice_select'
+    state === 'practice_select' ||
+    state === 'daily_select'
   );
 }
 

@@ -24,11 +24,14 @@ import {
 import type { RecordInput } from './records';
 import type { RemoteSaveInfo } from './sync-rules';
 import { parseRankingRows, parseRemoteSave, parseSaveInfo } from './parse';
+import { parseDailyRows, type DailyRankingRow, type DailyScoreInput } from './daily-scores';
+import { DAILY_CONFIG } from '../data/daily';
 
 /** 申請の表示名が使えなかったときの名前（service の既定と同じ） */
 const FALLBACK_NAME = 'PILOT';
 const VIEWS = { race: 'race_best', raid: 'raid_best', defense: 'defense_best' } as const;
 const RANKING_COLUMNS = 'user_id,display_name,aircraft_id,value_ms,detail,created_at,place';
+const DAILY_COLUMNS = 'user_id,display_name,value,preset,aircraft_id,created_at,place';
 
 function fail(e: ErrorLike): OnlineError {
   return new OnlineError(classifyError(e), e.message ?? 'error');
@@ -177,6 +180,33 @@ export class SupabaseBackend implements OnlineBackend {
     if (error) throw fail(error);
     const rows: unknown = data;
     return parseRankingRows(rows);
+  }
+
+  // ---- 日替わりチャレンジ（9-9。SQL 0005）
+  async insertDailyScore(r: DailyScoreInput): Promise<void> {
+    const { error } = await this.client.from('daily_scores').insert({
+      day: r.day,
+      spec: r.spec,
+      kind: r.kind,
+      value: r.value,
+      preset: r.preset,
+      aircraft_id: r.aircraftId,
+      client_version: r.clientVersion,
+    });
+    if (error) throw fail(error);
+  }
+
+  async fetchDailyRanking(day: string, spec: string): Promise<DailyRankingRow[]> {
+    const { data, error } = await this.client
+      .from('daily_best')
+      .select(DAILY_COLUMNS)
+      .eq('day', day)
+      .eq('spec', spec)
+      .order('place')
+      .limit(DAILY_CONFIG.rankingTop);
+    if (error) throw fail(error);
+    const rows: unknown = data;
+    return parseDailyRows(rows);
   }
 
   async fetchDisplayName(): Promise<string | null> {
