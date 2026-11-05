@@ -29,15 +29,20 @@ import { createCombatInput } from '../src/combat/combat-system';
 const IDLE = createCombatInput();
 
 describe('初期ミッション 5 本のデータ', () => {
-  it('M1 訓練 → M2 初陣 → M3 護衛 → M4 爆撃 → M5 遭遇 の順。基本報酬は 1000 / 1500 / 2000 / 2000 / 3000', () => {
+  it('M1 訓練 → M2 初陣 → M3 護衛 → M4 爆撃 → M5 遭遇 の順（9-7 で M6 夜間迎撃 → M7 対空陣地 → M8 決戦）。基本報酬は 1000 / 1500 / 2000 / 2000 / 3000（/ 3500 / 4000 / 5000）', () => {
     expect(MISSIONS.map((m) => m.id)).toEqual([
       'training',
       'first-sortie',
       'escort',
       'strike',
       'encounter',
+      'night-intercept',
+      'flak-line',
+      'finale',
     ]);
-    expect(MISSIONS.map((m) => m.reward.baseCredits)).toEqual([1000, 1500, 2000, 2000, 3000]);
+    expect(MISSIONS.map((m) => m.reward.baseCredits)).toEqual([
+      1000, 1500, 2000, 2000, 3000, 3500, 4000, 5000,
+    ]);
   });
 
   it('タイトルと 3〜4 行のブリーフィング文が日本語・英語の両方にある', () => {
@@ -52,8 +57,8 @@ describe('初期ミッション 5 本のデータ', () => {
     }
   });
 
-  it('開始位置・敵機の出現位置は戦域の中で、地表から 300m 以上', () => {
-    for (const m of MISSIONS) {
+  it('開始位置・敵機の出現位置は戦域の中で、地表から 300m 以上（島のミッション。港湾都市の M7・M8 は campaign-late.test.ts）', () => {
+    for (const m of MISSIONS.filter((x) => x.mapId === 'island')) {
       const points = [
         m.start,
         ...m.spawns.flatMap((s) => (s.kind === 'enemyFighter' ? s.positions : [])),

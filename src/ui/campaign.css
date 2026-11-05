@@ -19,6 +19,14 @@
   width: min(420px, 100%);
 }
 
+/* 9-7: 見出しと残高（ふだんは縦に並べる。背の低い画面は下の @media で 1 行） */
+.campaign-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ui-space-3);
+}
+
 .mission-entry {
   flex-direction: column;
   align-items: flex-start;
@@ -210,13 +218,46 @@
 }
 
 @media (max-height: 480px) {
-  .mission-list {
+  /* 9-7: 8 本を横画面のスマホ（844×390・568×320）に収める: 2 列（左に前半・右に後半）、見出しと残高を 1 行に */
+  .screen.campaign-screen.mission-select-screen {
     gap: 6px;
+    padding-top: max(8px, var(--ui-safe-top));
+    padding-bottom: max(8px, var(--ui-safe-bottom));
+  }
+
+  .campaign-top {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  .campaign-top .campaign-heading {
+    font-size: 20px;
+  }
+
+  .mission-list {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(var(--mission-rows, 4), auto);
+    gap: 6px 8px;
+    width: min(720px, 100%);
   }
 
   .mission-entry {
     min-height: 44px;
     padding: 5px 16px;
+  }
+
+  .mission-list .mission-entry {
+    padding-inline: 12px;
+  }
+
+  .mission-list .mission-entry-title {
+    overflow: hidden;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .campaign-panel {

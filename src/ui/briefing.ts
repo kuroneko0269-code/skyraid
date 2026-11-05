@@ -4,6 +4,7 @@ import { DEFAULT_RANK_MULTIPLIERS } from '../data/ranking';
 import { missionWeather, weatherLabel } from '../data/weather';
 import type { MissionDef } from '../missions/types';
 import { el } from './hud-dom';
+import { missionNeedsKaiju2, prefetchKaiju2, withCampaignMission } from './kaiju2-link';
 import { formatClock, formatCredits, missionStrings, objectiveSummary } from './mission-text';
 import { createButton, createScreen, setScreenShown } from './screen';
 
@@ -16,6 +17,8 @@ export class BriefingScreen {
   private readonly facts: HTMLDivElement;
   private readonly launch: HTMLButtonElement;
   private aircraftName = '';
+  /** 表示しているミッション（9-7: 出撃の前に遅延チャンクが要るか） */
+  private mission: MissionDef | null = null;
   private aircraftValue: HTMLSpanElement | null = null;
 
   constructor(
@@ -44,17 +47,23 @@ export class BriefingScreen {
       t('campaign.briefing.changeAircraft'),
       handlers.onHangar,
     );
+    // 9-7: ネフィルガを出すミッション（M8）は遅延チャンクを読んでから出撃する
     this.launch = createButton(
       buttons,
       'ui-button is-primary campaign-go',
       t('campaign.briefing.launch'),
-      handlers.onLaunch,
+      () => {
+        withCampaignMission(this.mission, handlers.onLaunch);
+      },
     );
     this.root = root;
   }
 
   /** 表示するミッション */
   show(m: MissionDef): void {
+    this.mission = m;
+    // 9-7: M8（ネフィルガ）はブリーフィングの間に先読みする
+    if (missionNeedsKaiju2(m)) prefetchKaiju2();
     const text = missionStrings(m.id);
     this.title.textContent = text.title;
     this.text.textContent = text.briefing.join('\n');

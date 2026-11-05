@@ -14,7 +14,7 @@ interface Entry {
 }
 
 /**
- * キャンペーンのミッション一覧（2-4。2-5 で 5 本）。並び順に表示し、前のミッションを成功するまで次は選べない。
+ * キャンペーンのミッション一覧（2-4。2-5 で 5 本、9-7 で 8 本。背の低い画面は 2 列）。並び順に表示し、前のミッションを成功するまで次は選べない。
  * クリア済みにはランクを出す。解放・ランクは CampaignProgress（3-1 からセーブに記録）。上部にクレジット残高（3-2）
  */
 export class MissionSelectScreen {
@@ -30,12 +30,16 @@ export class MissionSelectScreen {
     private readonly credits: () => number,
     handlers: { onSelect: (mission: MissionDef) => void; onBack: () => void },
   ) {
-    const root = createScreen(parent, 'campaign-screen');
-    el('h2', 'ui-heading campaign-heading', root, t('campaign.heading'));
-    const balance = el('div', 'campaign-balance', root);
+    const root = createScreen(parent, 'campaign-screen mission-select-screen');
+    // 9-7: 見出しと残高の行（背の低い画面では 1 行に並べて、8 本の一覧を画面に収める。campaign.css）
+    const top = el('div', 'campaign-top', root);
+    el('h2', 'ui-heading campaign-heading', top, t('campaign.heading'));
+    const balance = el('div', 'campaign-balance', top);
     el('span', '', balance, t('campaign.balance'));
     this.balance = el('span', 'campaign-balance-value', balance);
     const list = el('div', 'mission-list', root);
+    // 9-7: 背の低い画面の 2 列（左に前半・右に後半）の行の数
+    list.style.setProperty('--mission-rows', String(Math.ceil(missions.length / 2)));
     missions.forEach((m, i) => {
       const button = createButton(list, 'ui-button ui-item mission-entry', '', () => {
         if (this.progress.isUnlocked(m.id)) handlers.onSelect(m);

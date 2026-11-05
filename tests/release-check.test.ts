@@ -6,14 +6,15 @@ import { parseChangelog } from '../src/core/changelog';
 import { DATA_POLICY } from '../src/data/data-policy';
 
 describe('版と更新履歴', () => {
-  it('版は 1.0.10（9-6d ネフィルガの手応え）', () => {
-    expect(APP_VERSION).toBe('1.0.10');
+  it('版は 1.0.11（9-7 キャンペーン M6〜M8）', () => {
+    expect(APP_VERSION).toBe('1.0.11');
   });
 
-  it('更新履歴は新しい順に 1.0.10・1.0.9・1.0.8・1.0.7・1.0.6・1.0.5・1.0.4・1.0.3・1.0.2・1.0.1・1.0.0・0.9.0〜0.1.0、各版 3〜5 行', () => {
+  it('更新履歴は新しい順に 1.0.11・1.0.10・1.0.9・1.0.8・1.0.7・1.0.6・1.0.5・1.0.4・1.0.3・1.0.2・1.0.1・1.0.0・0.9.0〜0.1.0、各版 3〜5 行', () => {
     const entries = parseChangelog(changelogText);
     const versions = entries.map((e) => /^(\d+\.\d+\.\d+)/.exec(e.title)?.[1]);
     expect(versions).toEqual([
+      '1.0.11',
       '1.0.10',
       '1.0.9',
       '1.0.8',

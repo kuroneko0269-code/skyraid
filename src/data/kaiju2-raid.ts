@@ -69,6 +69,27 @@ export const KAIJU2_RAID_CONFIG = {
     focusSeconds: 2,
     focusKeep: 1.25,
   },
+  /**
+   * 9-7: キャンペーン版（M8「決戦」。src/data/missions-late.ts）。レイドの通常をもとに、残機なし（撃墜で失敗）・ミッションの制限時間
+   * で遊べるよう弱める: 体力・当たりのダメージ・攻撃の間隔・予兆の倍率。嵐・全体の制限時間は使わない（ミッションの timeLimitSeconds）。
+   * 出し方（登場の演出）: 開始位置の前方 spawnAhead m・高さ spawnAltitude m の高い所から降りてくる。最初の攻撃は firstAttackDelay 秒後。
+   * 値は tests/campaign-bots.ts のボットで決めた（docs/decisions.md の 9-7）
+   */
+  campaign: {
+    hp: 6000,
+    /** 段階（1〜3）ごとの当たりのダメージ・攻撃の間隔の倍率（嵐の段階で強くなる: 決戦の山場） */
+    damageScale: [0.25, 0.3, 0.5] as readonly number[],
+    intervalScale: [2, 2, 1.4] as readonly number[],
+    windupScale: 1.2,
+    spawnAhead: 3600,
+    spawnAltitude: 1500,
+    firstAttackDelay: 12,
+    /**
+     * 止まり木に選ばない範囲（港湾都市の街 x −1250〜1250・z 0〜1500 に 300m の余白）。レイドでは街のタワーの屋根に降り、追う人が
+     * タワーにぶつかって落ちていた（模擬の人のボットの撃墜の多くがこれ）。残機の無いキャンペーンでは丘・山に降りる
+     */
+    perchAvoid: { minX: -1550, maxX: 1550, minZ: -300, maxZ: 1800 },
+  },
 } as const;
 
 /** 部位の名前（壊れると動きが変わる部位）→ 撃てる部位 */

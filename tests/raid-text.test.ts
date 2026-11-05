@@ -9,10 +9,10 @@ import { useLocale } from './i18n-helpers';
 const DOUBLE = /×2|2 倍|double/i;
 
 describe('レイドの文（8-6c）', () => {
-  it('データ: ダウン中の倍率は通常 ×1・高難度 ×2、最終フェーズは 270 / 210 秒', () => {
+  it('データ: ダウン中の倍率は通常 ×1・高難度 ×2、最終フェーズは 330 / 210 秒（9-7 の事前修正で通常 270 → 330）', () => {
     expect(raidTuning(false).downDamageScale).toBe(1);
     expect(raidTuning(true).downDamageScale).toBe(2);
-    expect(KAIJU_CONFIG.phases.finalSeconds).toBe(270);
+    expect(KAIJU_CONFIG.phases.finalSeconds).toBe(330);
     expect(RAID_RULES.hard.finalSeconds).toBe(210);
   });
 
@@ -23,7 +23,7 @@ describe('レイドの文（8-6c）', () => {
       expect(RAID_BRIEFING.linesFor(true).some((l) => DOUBLE.test(l))).toBe(true);
       expect(RAID_BRIEFING.linesFor(false)).toHaveLength(RAID_BRIEFING.linesFor(true).length);
       const solo = tList('missions.raid.briefing').join('\n');
-      expect(solo).toMatch(/4\.5/);
+      expect(solo).toMatch(/5\.5/);
       expect(solo).toMatch(/3\.5/);
       expect(solo).toMatch(locale === 'ja' ? /高難度[^。]*2 倍/ : /Hard[^.]*double/);
     });

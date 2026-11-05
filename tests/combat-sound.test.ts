@@ -201,8 +201,17 @@ describe('撃墜の音', () => {
 });
 
 describe('ミッション一覧の難易度の表記', () => {
-  it('M1 入門 / M2 易（8-6c で 3 機とも easy。それまで易〜普）/ M3 普 / M4 普（対空砲）/ M5 易', () => {
-    expect(MISSIONS.map((m) => missionDifficultyText(m))).toEqual(['入門', '易', '普', '普', '易']);
+  it('M1 入門 / M2 易（8-6c で 3 機とも easy。それまで易〜普）/ M3 普 / M4 普（対空砲）/ M5 易 / 9-7: M6 易 / M7 易（対空砲 4 門とも easy）/ M8 決戦', () => {
+    expect(MISSIONS.map((m) => missionDifficultyText(m))).toEqual([
+      '入門',
+      '易',
+      '普',
+      '普',
+      '易',
+      '易',
+      '易',
+      '決戦',
+    ]);
   });
 });
 

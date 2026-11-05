@@ -9,8 +9,9 @@ import { KAIJU2_CONFIG, KAIJU2_PARTS } from '../data/kaiju2';
 import { KAIJU2_RAID_CONFIG as R, KAIJU2_TARGETS, isBreakable } from '../data/kaiju2-raid';
 import type { RaidDifficulty } from '../data/raid';
 import { Kaiju2PartTarget } from '../entities/kaiju2/kaiju2-target';
+import { clearSkyKaiju } from '../entities/kaiju2/clear-state';
 import { SkyKaiju, type Kaiju2Ground } from '../entities/kaiju2/sky-kaiju';
-import { vec3, type Vec3 } from '../flight/math';
+import { vec3 } from '../flight/math';
 
 /** 9-6c: 協力の人数の全体 HP の倍率（1 人は 1。tests/kaiju2-coop-bots.ts で決めた。docs/kaiju2.md の 9-6c） */
 export function coopHpScale(players: number): number {
@@ -23,24 +24,9 @@ export function isPerching(k: SkyKaiju): boolean {
   return k.state === 'landing' || k.state === 'perched' || k.state === 'takeoff';
 }
 
-/**
- * 9-6d: 機首（forward。単位）から怪獣（at）が evade.coneDeg 以内・evade.range m 以内か（狙われている。巡航の間に避ける）
- */
-export function aimedAt(
-  at: Readonly<Vec3>,
-  from: Readonly<Vec3>,
-  forward: Readonly<Vec3>,
-): boolean {
-  const e = KAIJU2_CONFIG.evade;
-  const dx = at.x - from.x;
-  const dy = at.y - from.y;
-  const dz = at.z - from.z;
-  const d = Math.hypot(dx, dy, dz);
-  if (d > e.range || d < 1) return false;
-  return (
-    (dx * forward.x + dy * forward.y + dz * forward.z) / d >= Math.cos((e.coneDeg * Math.PI) / 180)
-  );
-}
+import { aimedAt } from './kaiju2-aimed';
+
+export { aimedAt };
 
 export class Kaiju2Raid {
   readonly body: SkyKaiju;
@@ -76,6 +62,8 @@ export class Kaiju2Raid {
   readonly dealt: Record<string, number> = { body: 0, wingL: 0, wingR: 0, head: 0, tail: 0 };
   /** 9-6c: 協力の人数（全体 HP の倍率）と、プレイヤー ID ごとの部位別の与ダメージ（KAIJU2_TARGETS の順）・壊した部位の数 */
   players = 1;
+  /** 9-7: キャンペーン版（M8。数値は R.campaign、嵐・全体の制限時間は使わない） */
+  campaign = false;
   readonly dealtBy: number[][] = [0, 1, 2, 3].map(() => KAIJU2_TARGETS.map(() => 0));
   readonly breaksBy: number[] = [0, 0, 0, 0];
 
@@ -98,8 +86,9 @@ export class Kaiju2Raid {
     return this.dead;
   }
 
-  /** 制限時間の残り（秒）。全体と嵐の短い方 */
+  /** 制限時間の残り（秒）。全体と嵐の短い方（9-7: キャンペーン版はミッションの制限時間なので Infinity） */
   get timeLeft(): number {
+    if (this.campaign) return Infinity;
     const total = R.totalSeconds[this.difficulty] - this.elapsed;
     if (this.stormAt < 0) return Math.max(0, total);
     return Math.max(
@@ -117,17 +106,24 @@ export class Kaiju2Raid {
    * 体力と部位を満タンにする。raid なら難易度の倍率を掛ける（確かめる場は hpRatio と壊れた部位を URL から）。
    * 9-6c: players は協力の人数（全体 HP と部位 HP を R.coopHpScale 倍）
    */
-  reset(raid: boolean, difficulty: RaidDifficulty, players = 1): void {
+  reset(raid: boolean, difficulty: RaidDifficulty, players = 1, campaign = false): void {
     this.raid = raid;
     this.difficulty = difficulty;
     this.players = players;
-    const hard = raid && difficulty === 'hard';
+    this.campaign = campaign;
+    const hard = raid && difficulty === 'hard' && !campaign;
     const k = this.body;
-    k.windupScale = hard ? R.hard.windupScale : 1;
+    // 9-7: 前の飛行の値を残さない（続けて飛んでもページを開き直したときと同じ動き。リプレイ）
+    clearSkyKaiju(k);
+    this.velocity.x = this.velocity.y = this.velocity.z = 0;
+    const C = R.campaign;
+    k.windupScale = campaign ? C.windupScale : hard ? R.hard.windupScale : 1;
     k.intervalScale = hard ? R.hard.intervalScale : 1;
     k.damageScale = hard ? R.hard.damageScale : 1;
+    if (campaign) this.campaignScales(1);
+    k.perchAvoid = campaign ? { ...C.perchAvoid } : null;
     k.visible = true;
-    this.maxHp = R.hp * (hard ? R.hard.hpScale : 1) * coopHpScale(players);
+    this.maxHp = campaign ? C.hp : R.hp * (hard ? R.hard.hpScale : 1) * coopHpScale(players);
     this.hp = this.maxHp;
     for (const t of this.targets) t.reset(this.maxHp * R.targets[t.id].hpShare);
     for (const p of KAIJU2_PARTS) k.broken[p] = false;
@@ -146,6 +142,12 @@ export class Kaiju2Raid {
     for (const key of Object.keys(this.dealt)) this.dealt[key] = 0;
     for (const row of this.dealtBy) row.fill(0);
     this.breaksBy.fill(0);
+  }
+
+  /** 9-7: キャンペーン版の段階（1〜3）の当たりのダメージ・攻撃の間隔の倍率 */
+  private campaignScales(phase: number): void {
+    this.body.damageScale = R.campaign.damageScale[phase - 1] ?? 1;
+    this.body.intervalScale = R.campaign.intervalScale[phase - 1] ?? 1;
   }
 
   /** 体力の割合と壊れた部位を決める（確かめる場の URL）。部位 HP も合わせる */
@@ -194,6 +196,8 @@ export class Kaiju2Raid {
       this.shout = R.phaseShoutSeconds;
       k.attackCooldown = Math.max(k.attackCooldown, R.phaseShoutSeconds);
       if (k.phase === 3 && this.stormAt < 0) this.stormAt = this.elapsed;
+      // 9-7: キャンペーン版は段階ごとに強くなる
+      if (this.campaign) this.campaignScales(k.phase);
     }
     if (this.hp <= 0 && !this.dead) {
       this.dead = true;
@@ -235,8 +239,8 @@ export class Kaiju2Raid {
         k.aimFrom.z = target.position.z;
       }
       this.ai.step(dt, target, flares);
-      if (this.raid) {
-        this.elapsed += dt;
+      if (this.raid) this.elapsed += dt;
+      if (this.raid && !this.campaign) {
         const storm =
           this.stormAt >= 0 && this.elapsed - this.stormAt >= R.finalSeconds[this.difficulty];
         const total = this.elapsed >= R.totalSeconds[this.difficulty];

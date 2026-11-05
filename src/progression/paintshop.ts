@@ -25,11 +25,16 @@ function rankAtLeast(rank: Rank | null, target: Rank): boolean {
   return rank !== null && RANKS.indexOf(rank) <= RANKS.indexOf(target);
 }
 
+/**
+ * 「全ミッション S」の対象（9-7: M1〜M5 のまま。M6〜M8 を足しても、もう解放した人の条件が戻らないように）
+ */
+const SKIN_MISSION_IDS: readonly string[] = MISSIONS.slice(0, 5).map((m) => m.id);
+
 /** 解放条件を満たしているか（null は最初から） */
 export function isSkinUnlocked(
   unlock: SkinUnlock | null,
   save: Readonly<SaveData>,
-  missionIds: readonly string[] = MISSIONS.map((m) => m.id),
+  missionIds: readonly string[] = SKIN_MISSION_IDS,
   courseIds: readonly string[] = COURSES.map((c) => c.id),
 ): boolean {
   if (unlock === null) return true;

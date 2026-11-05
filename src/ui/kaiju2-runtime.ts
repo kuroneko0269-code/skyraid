@@ -25,6 +25,7 @@ import type { Kaiju2Raid } from '../missions/kaiju2-raid';
 import { Kaiju2Object } from '../render/kaiju2-model/kaiju2-object';
 import { k2list } from '../data/kaiju2-text';
 import { Kaiju2Briefing } from './kaiju2-briefing';
+import { Kaiju2Finale } from './kaiju2-finale';
 import { Kaiju2Hud, type Kaiju2CoopFrame } from './kaiju2-hud';
 
 /** 9-6c: 協力のレイドの表示元（ホストは本体、クライアントは state の写し）と、HUD の協力の印 */
@@ -58,6 +59,8 @@ export interface Kaiju2RuntimeParts {
   readonly listener: Readonly<{ x: number; y: number; z: number }>;
   /** ?dev=kaiju2: フリーフライトに出す・値の表示 */
   readonly devFree: boolean;
+  /** 9-7: 天候を移す（M8 の決戦の演出。3 秒で補間） */
+  readonly setWeather: (id: string) => void;
 }
 
 /** 怪獣を出している画面（ポーズ・フォトモード・結果の画面の後ろも見える） */
@@ -84,10 +87,15 @@ export function startKaiju2(p: Kaiju2RuntimeParts): Kaiju2Runtime {
   const hud = new Kaiju2Hud(document.body);
   const briefing = new Kaiju2Briefing(document.body);
   const kit = new SfxKit(p.audio.engine, p.listener);
-  const sounds = new Kaiju2SoundWatch(
-    new Kaiju2Sounds(kit),
-    new KaijuSounds(kit, new CombatSounds(kit)),
-  );
+  const k2sounds = new Kaiju2Sounds(kit);
+  const sounds = new Kaiju2SoundWatch(k2sounds, new KaijuSounds(kit, new CombatSounds(kit)));
+  // 9-7: M8（キャンペーン版）の登場・段階の変わり目・撃破の演出
+  const finale = new Kaiju2Finale(document.body, {
+    weather: p.setWeather,
+    roar: () => {
+      k2sounds.scream('shout', 1);
+    },
+  });
   const panel = document.createElement('div');
   panel.className = 'kaiju2-dev';
   panel.hidden = true;
@@ -116,13 +124,19 @@ export function startKaiju2(p: Kaiju2RuntimeParts): Kaiju2Runtime {
       const sel = p.play.session.combat.targeting.selected;
       const locked = sel instanceof Kaiju2PartTarget ? sel : null;
       hud.update(raid, p.hudVisible(), locked, coop ? coop.frame() : null);
-      if (!coop && raid.elapsed < lastElapsed) briefing.show(raid.difficulty);
+      // 9-7: キャンペーン版はブリーフィングの画面で読んだので出さない（登場の演出を出す）
+      if (!coop && !raid.campaign && raid.elapsed < lastElapsed) briefing.show(raid.difficulty);
       lastElapsed = coop ? Infinity : raid.elapsed;
     } else {
       hud.hide();
       if (!dev.raiding) lastElapsed = Infinity;
     }
     briefing.update(dt, dev.raiding && state === 'flight');
+    finale.update(
+      !coop && dev.raiding && raid.campaign && HUD_SHOWN.includes(state) ? raid : null,
+      state === 'flight',
+      dt,
+    );
     kit.muted = state === 'photo';
     sounds.update(active && state === 'flight' ? raid : null, p.listener);
     panel.hidden = !(p.devFree && !coop && active && state === 'flight');

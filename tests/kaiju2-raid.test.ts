@@ -59,8 +59,8 @@ describe('ネフィルガのソロのレイド（9-6b）', () => {
     expect(def.reward.raid).toEqual({ difficulty: 'hard', kaiju: 'nephirga' });
     expect(raidReward({ coop: false, cleared: true, seconds: 200, difficulty: 'hard' })).toBe(5400);
     expect(def.failConditions).toEqual(['stormTimeUp', 'totalTimeUp', 'outOfBounds', 'livesOut']);
-    // 9-6d: 残機（通常 3・高難度 2）
-    expect(def.lives).toBe(2);
+    // 9-6d: 残機（通常 3・高難度 2）。9-7 の事前修正で高難度も 3
+    expect(def.lives).toBe(3);
     expect(nephirgaRaidMission('normal').lives).toBe(3);
   });
 

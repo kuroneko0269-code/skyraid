@@ -145,6 +145,11 @@ export class SkyKaiju {
   windupScale = 1;
   intervalScale = 1;
   damageScale = 1;
+  /**
+   * 9-7: 止まり木に選ばない水平の範囲（キャンペーン版 = 港湾都市の街の上。タワーの屋根に降りると、追う人がタワーにぶつかる）。
+   * null は制限なし（レイド・確かめる場）
+   */
+  perchAvoid: { minX: number; maxX: number; minZ: number; maxZ: number } | null = null;
   /** 9-6b: 見えている（レイドの撃破の後は落ちて消える。確かめる場は常に true） */
   visible = true;
   readonly orbs: Kaiju2Orb[] = Array.from({ length: MAX_ORBS }, newOrb);

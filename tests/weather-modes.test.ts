@@ -20,10 +20,19 @@ import { nightHudOpacity } from '../src/ui/weather-link';
 import { createLobby, pump } from './net-helpers';
 
 describe('天候: モードごとの割当', () => {
-  it('キャンペーン: M1 昼・M2 早朝・M3 曇り・M4 夕方・M5 夜・雨', () => {
+  it('キャンペーン: M1 昼・M2 早朝・M3 曇り・M4 夕方・M5 夜・雨・9-7: M6 夜・M7 早朝の霧・M8 曇り', () => {
     const ids = MISSIONS.map((m) => missionWeather(m.id));
-    expect(MISSIONS).toHaveLength(5);
-    expect(ids).toEqual(['day-clear', 'dawn-clear', 'day-overcast', 'evening-clear', 'night-rain']);
+    expect(MISSIONS).toHaveLength(8);
+    expect(ids).toEqual([
+      'day-clear',
+      'dawn-clear',
+      'day-overcast',
+      'evening-clear',
+      'night-rain',
+      'night-clear',
+      'dawn-fog',
+      'day-overcast',
+    ]);
     expect(findWeather(ids[2] ?? '').sky).toBe('overcast');
     expect(findWeather(ids[4] ?? '')).toMatchObject({ time: 'night', sky: 'rain' });
   });

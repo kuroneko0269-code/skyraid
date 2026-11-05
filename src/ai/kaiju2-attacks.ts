@@ -131,6 +131,9 @@ export function choosePerch(k: SkyKaiju, rnd: () => number, out: Vec3): boolean 
       const x = cx + Math.cos(a) * r;
       const z = cz + Math.sin(a) * r;
       if (Math.hypot(x - k.center.x, z - k.center.z) > C.arena.soft) continue;
+      // 9-7: キャンペーン版は街の上を避ける（乱数の使い方は変えない）
+      const a2 = k.perchAvoid;
+      if (a2 && x >= a2.minX && x <= a2.maxX && z >= a2.minZ && z <= a2.maxZ) continue;
       const g = k.ground(x, z);
       if (g < p.minGround || g <= best) continue;
       best = g;

@@ -24,12 +24,22 @@
   "broken.both": "Both wings broken: it falls to the ground to rest",
   "phase2": "PHASE 2: it now dives",
   "phase3": "STORM: five orbs per volley. Time limit {time}",
+  "phaseCampaign": "PHASE {phase}",
+  "stormCampaign": "STORM",
+  "finale.entrance": "NEPHIRGA INBOUND",
+  "finale.entranceSub": "The storm wyvern descends on the city — this is it",
+  "finale.phase2": "PHASE 2",
+  "finale.phase2Sub": "It now dives. If it gets above you, turn at a right angle",
+  "finale.phase3": "STORM",
+  "finale.phase3Sub": "5 orbs at a time now. Almost there",
+  "finale.defeat": "NEPHIRGA DOWN",
+  "finale.defeatSub": "The storm is passing",
   "briefingTitle": "Briefing: Nephirga",
   "briefing": [
     "Nephirga, a giant storm-wrapped pterosaur, circles above the harbor city. Turn inside its circle to catch it.",
     "Tells: hovering with a glowing throat → lightning orbs (break hard sideways or flare); wings raised → gust ahead; sharp climb → dive (turn at a right angle); tail curled → sweep behind.",
     "Attack while it rests on a perch, while it pulls up after a dive, and right after you break a part (it flinches). The body is tough, so aim for the wings, head and tail (a broken wing makes it slower and lower; the head stops the orbs and the tail stops the sweep). Keep it in your sights and it slips sideways.",
-    "Below 40% health the storm begins (4.5 min, Hard 4 min). If it is not down within the overall limit (12 min, Hard 10 min), the storm hits the city. You have 3 lives (Hard: 2)."
+    "Below 40% health the storm begins (4.5 min, Hard 4 min). If it is not down within the overall limit (12 min, Hard 10 min), the storm hits the city. You have 3 lives on both difficulties."
   ],
   "briefingTap": "Tap to close"
 }

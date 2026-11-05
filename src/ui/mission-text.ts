@@ -98,6 +98,8 @@ export function objectiveSummary(def: ObjectiveDef): string {
  * 例「入門」「易〜普」。敵機も対空砲もいなければ空文字
  */
 export function missionDifficultyText(def: MissionDef): string {
+  // 9-7: 空の怪獣との決戦（M8）は敵機・対空砲が無いので「決戦」
+  if (def.skyKaiju) return t('difficulty.short.boss');
   const order: readonly Difficulty[] = DIFFICULTIES;
   let lo = order.length;
   let hi = -1;
