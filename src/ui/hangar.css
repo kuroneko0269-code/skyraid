@@ -229,7 +229,7 @@
 }
 
 /* 3 列が狭いとき（縦画面・小さい横画面）は上下に分ける: 一覧（横並び）→ 機体 → 詳細。全体をスクロール */
-@media (max-width: 640px) {
+@container app (max-width: 640px) {
   .hangar-screen {
     justify-content: flex-start;
     overflow-y: auto;
@@ -238,7 +238,7 @@
 
   .hangar-layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(140px, 28vh) auto;
+    grid-template-rows: auto minmax(140px, 28cqh) auto;
     height: auto;
   }
 
@@ -258,7 +258,7 @@
 }
 
 /* 横画面のスマホ（高さが低い）: 文字とボタンを詰める */
-@media (max-height: 460px) {
+@container app (max-height: 460px) {
   .hangar-panel {
     gap: 5px;
     padding: 8px 10px;

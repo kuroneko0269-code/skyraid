@@ -295,7 +295,7 @@
 }
 
 .race-preview-bar {
-  width: min(360px, 70vw);
+  width: min(360px, 70cqw);
   height: 4px;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.25);
@@ -309,7 +309,7 @@
   transform-origin: left center;
 }
 
-@media (max-width: 600px), (max-height: 480px) {
+@container app (max-width: 600px) or (max-height: 480px) {
   .race-time {
     font-size: 22px;
   }
@@ -468,7 +468,7 @@
 }
 
 /* 背の低い横画面（スマホ）: タイムと RING・ゴースト差を 1 行に並べ、帯を低くする（7-C） */
-@media (max-height: 480px) {
+@container app (max-height: 480px) {
   .race-top {
     flex-flow: row wrap;
     justify-content: center;

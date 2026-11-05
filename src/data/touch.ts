@@ -70,4 +70,9 @@ export const TAP_CONFIG = {
   maxMs: 1000,
   marginPx: 8,
   scrollPx: 4,
+  /**
+   * 9-9b: 画面の切り替えの前に押し始めたタップのクリックを、切り替えから何 ms の間は捨てるか（次の画面へ押し抜けない。
+   * src/ui/screen-switch.ts）
+   */
+  switchGuardMs: 1000,
 } as const;

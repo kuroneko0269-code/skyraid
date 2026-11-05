@@ -110,7 +110,7 @@
 }
 
 .ranking-scroll {
-  max-height: 46vh;
+  max-height: 46cqh;
   overflow-y: auto;
   overscroll-behavior: contain;
 }

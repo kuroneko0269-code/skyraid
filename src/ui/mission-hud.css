@@ -32,7 +32,7 @@
   background: rgba(0, 20, 30, 0.35);
   border-right: var(--hud-line, 2px) solid var(--hud-color);
   /* 右の帯（7-C）: ALT の箱へ伸びない幅 */
-  max-width: 26vw;
+  max-width: 26cqw;
   box-sizing: border-box;
 }
 
@@ -254,7 +254,7 @@
   }
 }
 
-@media (max-width: 760px), (max-height: 480px) {
+@container app (max-width: 760px) or (max-height: 480px) {
   .mission-panel {
     top: calc(74px + env(safe-area-inset-top, 0px));
     font-size: 12px;

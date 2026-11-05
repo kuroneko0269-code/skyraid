@@ -8,11 +8,17 @@
 // - members: メンバー管理の行の高さが自分の行（ボタンなし）とほかの人の行でそろう（8-6d: 1 人 1 行の表）
 // - nozzle: 戦闘機 4 機種の排気と噴流（画質 3 × アフターバーナーの有無、横と斜め後ろ）を PNG に。噴流の後ろの黒い画素と
 //   HalfFloat の描画先の NaN を数える（8-6b。scripts/ui-audit-device-nozzle.js）
+// - passthrough: 画面の切り替え直後に同じタップが次の画面へ届かない（9-9b。scripts/ui-audit-device-switch.js）
+// - rotate: 縦 → 横に回した後（と iOS の古い値を模した回転の後）も各画面が最初と同じ配置（9-9b。ui-audit-device-rotate.js）
+// - weather: 天候が快晴と違うモードで、始まったときから目的の天候（9-9b。ui-audit-device-weather.js）
 // 使い方: `node scripts/ui-audit-device.js <出力先> [--only viewport,debug]`。結果は <出力先>/device.json と PNG
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createServer } from 'vite';
 import { auditNozzles } from './ui-audit-device-nozzle.js';
+import { auditPassThrough } from './ui-audit-device-switch.js';
+import { auditRotate } from './ui-audit-device-rotate.js';
+import { auditWeather } from './ui-audit-device-weather.js';
 import { auditViewport, auditViewportDebug } from './ui-audit-device-viewport.js';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
@@ -237,6 +243,9 @@ try {
     debug: () => auditViewportDebug(env),
     members: () => auditMembers(browser, base),
     nozzle: () => auditNozzles(browser, base, out),
+    passthrough: () => auditPassThrough(env),
+    rotate: () => auditRotate(env),
+    weather: () => auditWeather(env),
   };
   const result = {};
   for (const [name, run] of Object.entries(groups))

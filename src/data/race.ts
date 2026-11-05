@@ -63,14 +63,21 @@ export const RACE_GUIDE = {
   missAngleDeg: 100,
   clearAngleDeg: 70,
   missDistance: 60,
-  /** 道筋の点線: 点の間隔（m）・点の大きさ（m。遠いほど小さく）・不透明度・色。前のリングから次の 3 個まで */
+  /**
+   * 道筋の点線: 点の間隔（m）・点の大きさ（m。遠いほど小さく）・不透明度・色。
+   * 9-9b: 飛行中は自機 → 次のリング → その次のリングの 2 区間だけ（9-8 は前のリング → 次 → その先 2 個の 3 区間）にし、
+   * 細く・薄く（大きさ 7 → 4・不透明度 0.8 → 0.45）。自機から dotNear m の内の点は描かない（近すぎて大きく見える）。
+   * 下見の間は道筋の全部に 9-8 の大きさ・不透明度で（点の数が maxDots を超えるコースは間隔を広げる）
+   */
   dotSpacing: 28,
-  dotSize: 7,
-  dotOpacity: 0.8,
+  dotSize: 4,
+  dotOpacity: 0.45,
+  dotNear: 40,
+  previewDotSize: 7,
+  previewDotOpacity: 0.8,
   dotColor: 0xffffff,
-  dotLegs: 3,
-  /** 点線の点の最大数（3 区間 × 3km ÷ 28m × 1.3 より多く） */
-  maxDots: 480,
+  /** 点線の点の最大数（下見で道筋の全部（最長の海岸周回 約 21km ÷ 28m）を並べられる数） */
+  maxDots: 900,
   /** 道筋の点線の初期値（設定 → 表示で OFF にできる） */
   guideLineDefault: true,
   /**

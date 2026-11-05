@@ -25,10 +25,12 @@
 // 8-3: `--browser chromium|firefox|webkit|all`（既定 chromium）で Playwright のエンジンを選ぶ。all は 3 つを <出力先>/<エンジン>/ に。
 //      取得していないエンジンは飛ばして「取得できない」と出す（`npx playwright install firefox webkit` で取得）
 // 8-4: `--lang en` で英語の画面を点検する（ブラウザの言語を en-US に。既定は ja-JP。scripts/audit-lang.js）
+// 9-9b: `--size phone-se|phone|pc` で 1 サイズだけ。撮るたびに経過秒を出す。メニューの間は描画を 1 秒に 1 回に落とす
+//      （audit-helpers.js の throttleMenuFrames。PC の撮影が遅く 30 分の上限に達していた）
 import { CONTEXT_LOCALE, L } from './audit-lang.js';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { pickBrowsers } from './audit-browsers.js';
-import { showSampleToasts } from './audit-helpers.js';
+import { showSampleToasts, throttleMenuFrames } from './audit-helpers.js';
 import { inspect } from './audit-inspect.js';
 import { auditMoreScreens, setScreensOut } from './ui-audit-screens.js';
 
@@ -37,16 +39,22 @@ const valueOf = (name) => {
   const i = argv.indexOf(name);
   return i >= 0 ? argv[i + 1] : undefined;
 };
-const VALUED = ['--browser', '--lang'];
+const VALUED = ['--browser', '--lang', '--size'];
 const positional = argv.filter((a, i) => !a.startsWith('--') && !VALUED.includes(argv[i - 1]));
 const out = positional[0] ?? 'ui-audit';
 const base = positional[1] ?? 'http://localhost:5173/';
 const engines = pickBrowsers(valueOf('--browser') ?? 'chromium');
-const SIZES = [
+const ALL_SIZES = [
   { name: 'phone-se', width: 568, height: 320, touch: true },
   { name: 'phone', width: 844, height: 390, touch: true },
   { name: 'pc', width: 1920, height: 1080, touch: false },
 ];
+// 9-9b: `--size pc` などで 1 サイズだけ（遅い・止まる所を調べる用）
+const SIZES = valueOf('--size') ? ALL_SIZES.filter((s) => s.name === valueOf('--size')) : ALL_SIZES;
+const started = Date.now();
+/** 経過秒つきの進みの表示（9-9b: どこで遅い・止まるかを出す） */
+const progress = (size, name) =>
+  console.log(`[${((Date.now() - started) / 1000).toFixed(0)}s] ${size} ${name}`);
 mkdirSync(out, { recursive: true });
 setScreensOut(out);
 if (argv.includes('--release')) {
@@ -111,6 +119,8 @@ for (const size of SIZES) {
     deviceScaleFactor: 1,
     locale: CONTEXT_LOCALE,
   });
+  // 9-9b: メニューの間は描画を 1 秒に 1 回に（PC の撮影が 1 枚 15 秒・ときに 90 秒超で、30 分の上限に達していた）
+  await throttleMenuFrames(context);
   const page = await context.newPage();
   // PC の大きさは SwiftShader の描画が重いので、待ちを長めに
   page.setDefaultTimeout(90000);
@@ -122,6 +132,7 @@ for (const size of SIZES) {
   /** 設定・情報の各タブで最初に測ったタブの位置（切り替えで動かないこと） */
   const tabsTopOf = {};
   const shot = async (name, selector) => {
+    progress(size.name, name);
     await page.waitForTimeout(700);
     const r = await page.evaluate(inspect, selector);
     const band = await measureBand(page, selector);
@@ -264,7 +275,10 @@ for (const size of SIZES) {
   // トースト（更新の知らせと同じ部品・ボタン 2 つ）
   await showSampleToasts(page);
   await shot('toast', '.toast-stack');
-  await page.evaluate(() => document.querySelector('.toast-stack')?.replaceChildren());
+  // 9-9b: お知らせの入れ物が 2 つ（開発サーバーで書き換えた後はモジュールが 2 つになる）でも全部消す
+  await page.evaluate(() => {
+    for (const s of document.querySelectorAll('.toast-stack')) s.replaceChildren();
+  });
 
   // フリーフライト → ポーズ → すべての設定 → 戻る
   await page.click('.mode-card[data-mode="free"]');

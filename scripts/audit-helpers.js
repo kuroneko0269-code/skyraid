@@ -1,4 +1,4 @@
-/* global document, localStorage, window */
+/* global document, localStorage, window, performance, setTimeout, clearTimeout */
 // 公開前の点検の共通部品（8-1）: ページの見張り（console のエラー・HTTP のエラー・CSP 違反・通信先）と画面の操作
 import { CONTEXT_LOCALE, L } from './audit-lang.js';
 
@@ -134,4 +134,47 @@ export async function showSampleToasts(page) {
       L('共有ボタン →「ホーム画面に追加」で全画面で遊べます'),
     ],
   );
+}
+
+/**
+ * 9-9b: メニューの間は描画のフレームを 1 秒に 1 回まで落とす（点検用。アプリは変えない）。
+ * 原因: PC の大きさ（1920×1080）では SwiftShader がメニューの裏の 3D を描き続け（毎秒 2〜7 回）、page.screenshot が
+ * 描画の合間を待って 1 枚 15 秒前後・ときに 90 秒を超えた（9-10 で 30 分の上限に達して止まった）。飛行中（data-screen が
+ * flight）はそのまま。画面の切り替えのフェードは CSS なので影響しない
+ */
+export async function throttleMenuFrames(context, menuIntervalMs = 1000) {
+  await context.addInitScript((interval) => {
+    const raf = window.requestAnimationFrame.bind(window);
+    const caf = window.cancelAnimationFrame.bind(window);
+    const pending = new Map();
+    let nextId = 1;
+    let last = 0;
+    window.requestAnimationFrame = (cb) => {
+      const id = nextId++;
+      const run = () => {
+        const inMenu = document.documentElement.dataset.screen !== 'flight';
+        const wait = inMenu ? last + interval - performance.now() : 0;
+        if (wait > 0) {
+          pending.set(id, { timer: setTimeout(run, wait) });
+          return;
+        }
+        pending.set(id, {
+          raf: raf((t) => {
+            pending.delete(id);
+            last = performance.now();
+            cb(t);
+          }),
+        });
+      };
+      run();
+      return id;
+    };
+    window.cancelAnimationFrame = (id) => {
+      const p = pending.get(id);
+      if (!p) return;
+      if (p.timer !== undefined) clearTimeout(p.timer);
+      if (p.raf !== undefined) caf(p.raf);
+      pending.delete(id);
+    };
+  }, menuIntervalMs);
 }

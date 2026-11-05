@@ -108,7 +108,7 @@
 }
 
 /* 背の低い横画面: 施設のアイコンを詰めて左上の帯を低くする（SPD/ALT・ゲージより上に収める。7-C） */
-@media (max-height: 480px) {
+@container app (max-height: 480px) {
   .defense-icons {
     gap: 2px;
     font-size: 10px;
@@ -243,7 +243,7 @@
   }
 }
 
-@media (max-width: 640px), (max-height: 480px) {
+@container app (max-width: 640px) or (max-height: 480px) {
   .defense-wave {
     font-size: 15px;
   }

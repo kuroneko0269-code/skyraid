@@ -4,7 +4,7 @@
   top: calc(12px + env(safe-area-inset-top, 0px));
   left: 50%;
   z-index: 22;
-  width: min(560px, 52vw);
+  width: min(560px, 52cqw);
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -66,7 +66,7 @@
 }
 
 /* 横向きのスマホ（高さが低い）: HUD の速度・高度の箱にかからないよう詰める */
-@media (max-height: 420px) {
+@container app (max-height: 420px) {
   .tutorial-hud {
     top: calc(6px + env(safe-area-inset-top, 0px));
     gap: 2px;
@@ -208,7 +208,7 @@
   font-size: 10px;
 }
 
-@media (max-height: 420px) {
+@container app (max-height: 420px) {
   .tutorial-hud-figure {
     width: 84px;
   }
@@ -224,14 +224,14 @@
  * 左の ◀ と右の ⏸ のボタンの間の帯（箱より上）に収める: 1 行目に小さな図・章と段階・中断、2 行目から指示（欄の幅いっぱい）。
  * 注意書き（練習なので撃墜されない）は隠し、ヒント（黄色）が出ている間は指示の代わりにヒントを出す
  */
-@media (max-height: 360px) {
+@container app (max-height: 360px) {
   .tutorial-hud {
     box-sizing: border-box;
     top: calc(3px + env(safe-area-inset-top, 0px));
     left: calc(76px + env(safe-area-inset-left, 0px));
     width: min(
       400px,
-      calc(100vw - 208px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))
+      calc(100cqw - 208px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))
     );
     transform: none;
     display: grid;

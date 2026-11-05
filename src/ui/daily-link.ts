@@ -165,7 +165,7 @@ export function createDailyLink(p: DailyLinkParts): DailyLink {
     },
     afterStart(replaying, spec) {
       // 条件の天候（7-5 の天候の配線・レースの天候の後に呼ばれて上書きする）。時間は止める
-      p.weather.set(spec.weatherId);
+      p.weather.set(spec.weatherId, true);
       p.weather.setTimeFlow(false);
       if (replaying) return;
       recorded = false;

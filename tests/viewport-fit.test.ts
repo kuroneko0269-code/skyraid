@@ -95,4 +95,23 @@ describe('pickRootSize（8-6d）', () => {
     const s = { ...IPHONE, screen: { width: 0, height: 0 }, inner: { width: 1920, height: 1080 } };
     expect(pickRootSize(s)).toMatchObject({ width: 1920, height: 1080 });
   });
+
+  // 9-9b: 縦 → 横に戻した直後、初期包含ブロック（client）だけ縦の高さが残る。8-6d は screen の短辺 402 に切り詰め、
+  // 描かれる高さ 340（ホーム画面から起動）より大きくなって下が切れていた
+  it('screen を超える値は向きを変える前の古い値として使わない（縦 → 横に戻した直後。9-9b）', () => {
+    const s = { ...IOS_STANDALONE_SHORT, client: { width: 402, height: 874 } };
+    expect(pickRootSize(s)).toMatchObject({ width: 874, height: 340 });
+    const safari = { ...IPHONE, client: { width: 390, height: 844 } };
+    expect(pickRootSize(safari)).toMatchObject({ width: 844, height: 390 });
+  });
+
+  it('どの値も screen を超えるときは screen の値（9-9b）', () => {
+    const s = {
+      ...IPHONE,
+      inner: { width: 900, height: 900 },
+      visual: null,
+      client: { width: 900, height: 900 },
+    };
+    expect(pickRootSize(s)).toMatchObject({ width: 844, height: 390 });
+  });
 });

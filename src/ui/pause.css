@@ -38,14 +38,14 @@
   min-width: max-content;
 }
 
-@media (max-width: 600px) {
+@container app (max-width: 600px) {
   .pause-body {
     grid-template-columns: 1fr;
   }
 }
 
 /* 背の低い横画面（スマホ）: ボタンを詰めて 1 画面に収める */
-@media (max-height: 480px) and (min-width: 600px) {
+@container app (max-height: 480px) and (min-width: 600px) {
   .pause-panel {
     gap: 6px;
     padding: var(--ui-space-2) var(--ui-space-3);

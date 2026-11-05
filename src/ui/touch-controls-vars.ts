@@ -16,7 +16,7 @@ export function applyCssVariables(root: HTMLElement): void {
     '--tc-gap': `${c.buttons.gap}px`,
     '--tc-slider-gap': `${c.buttons.sliderGap}px`,
     '--tc-throttle-width': `calc(${c.throttle.width}px * var(--tc-scale, 1))`,
-    '--tc-throttle-height': `min(${c.throttle.heightRatio * 100}vh, ${c.throttle.maxHeight}px)`,
+    '--tc-throttle-height': `min(${c.throttle.heightRatio * 100}cqh, ${c.throttle.maxHeight}px)`,
     '--tc-yaw-size': `calc(${c.yaw.size}px * var(--tc-scale, 1))`,
     '--tc-yaw-top': `${c.yaw.top}px`,
   };

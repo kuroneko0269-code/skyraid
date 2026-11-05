@@ -37,7 +37,7 @@ export function nightHudOpacity(night: number, enabled: boolean): number {
 /**
  * 天候を画面の流れにつなぐ。飛行の始め（ポーズからの再開以外）は、PvP・協力（ロビーから）はホスト設定、
  * ミッションは固定、フリーフライトはモード選択の天候にし、時間が流れるのはフリーフライトだけ。
- * 今の空から 3 秒で移る
+ * 9-9b: 飛行の始めは補間せずにその天候（メニュー・ブリーフィング・ロビーの下見は今の空から 3 秒で移る）
  */
 export function linkWeather(weather: WeatherView, p: WeatherLinkParts): void {
   const { screens } = p;
@@ -52,8 +52,9 @@ export function linkWeather(weather: WeatherView, p: WeatherLinkParts): void {
       const def = screens.nextMission;
       const mode = screens.modeSelect;
       const id = weatherForFlight(net, def?.id ?? null, p.pvp.weatherId, mode.freeWeatherId);
-      // ?skipTitle で起動からすぐ飛ぶとき（開発・確認用）は補間しない
-      weather.set(id, from === 'boot');
+      // 9-9b: 飛行の始めは補間せず、始めからその天候（7-5 は今の空（メニューの昼・快晴）から 3 秒で移っていた）。
+      // ミッションの途中の変化（M8 の段階の天候）は今までどおり補間する
+      weather.set(id, true);
       weather.setTimeFlow(!net && !def && mode.freeTimeFlow);
     } else if (to === 'title' || to === 'mode_select' || to === 'mission_select') {
       // メニューの背景は昼・快晴。ブリーフィングはそのミッションの天候を下見する

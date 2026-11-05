@@ -13,6 +13,8 @@ export class CoursePreview {
   private readonly points: Vec3[];
   private readonly along: number[];
   private readonly length: number;
+  /** 9-9b: リング i の道筋の上の距離 */
+  private readonly ringAlong: number[];
   private elapsed = 0;
 
   constructor(course: CourseDef, rings: readonly RaceRing[]) {
@@ -29,6 +31,7 @@ export class CoursePreview {
       );
     }
     this.length = pathLength(this.points);
+    this.ringAlong = rings.map((_, i) => this.along[index[i] ?? goal] ?? this.length);
     const c = RACE_GUIDE.preview;
     this.duration = Math.min(c.maxSeconds, Math.max(c.minSeconds, this.length / c.speed));
   }
@@ -54,6 +57,21 @@ export class CoursePreview {
     this.pointAt(s - c.behind, eye);
     eye.y += c.rise;
     this.pointAt(s + c.lookAhead, look);
+  }
+
+  /**
+   * 9-9b: カメラの前にある最初のリング（下見で発光させる。カメラが道筋の上の今の位置を過ぎたリングは後ろ）。
+   * 全部過ぎていればゴール
+   */
+  get focusRing(): number {
+    const s = this.distanceAt(this.elapsed / this.duration);
+    const i = this.ringAlong.findIndex((a) => a >= s);
+    return i < 0 ? this.ringAlong.length - 1 : i;
+  }
+
+  /** 9-9b: 下見の道筋（開始位置 → ゴール。点線を全部に並べる） */
+  get path(): readonly Readonly<Vec3>[] {
+    return this.points;
   }
 
   /** 0〜1 の時間 → 道筋の上の距離（始めと終わりはゆっくり） */

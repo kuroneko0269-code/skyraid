@@ -56,14 +56,14 @@
   font-size: 15px;
 }
 
-@media (max-width: 480px) {
+@container app (max-width: 480px) {
   .settings-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 /* 背の低い横画面（スマホ）: 見出しと余白を詰める */
-@media (max-height: 480px) and (min-width: 640px) {
+@container app (max-height: 480px) and (min-width: 640px) {
   .settings-body {
     padding: var(--ui-space-2) var(--ui-space-3);
   }

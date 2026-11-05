@@ -22,7 +22,7 @@ import type { MissionLink } from './mission-link';
 import type { RenderPipeline } from './pipeline';
 import type { PlayerView } from './player-view';
 import type { QualityLink } from './quality-link';
-import type { RingView } from './ring-view';
+import type { RingTrack, RingView } from './ring-view';
 import type { World } from './scene';
 import { viewport } from '../core/viewport';
 
@@ -74,6 +74,8 @@ export class FlightFrame {
   raceGuide: {
     previewCamera(frameSeconds: number): boolean;
     update(width: number, height: number, hudShown: boolean): void;
+    /** 9-9b: 下見の間のリングの描き方（下見していなければ null） */
+    previewTrack(): RingTrack | null;
   } | null = null;
   /** 演出・カメラの時間の倍率（7-B: リプレイの速さ。飛行中だけ） */
   timeScale = 1;
@@ -105,7 +107,11 @@ export class FlightFrame {
     }
     p.views.update(alpha, fxSeconds, p.camera.position);
     // 7-1: レース中はレースのリング（ゴール後・中断後は描かない）
-    const race = p.play.race && p.play.race.phase !== 'finished' ? p.play.race.track : null;
+    // 9-9b: 下見の間はカメラの前のリングを発光させ、最後まで描く
+    const race =
+      p.play.race && p.play.race.phase !== 'finished'
+        ? (this.raceGuide?.previewTrack() ?? p.play.race.track)
+        : null;
     p.ringView.update(p.play.runner?.running ? p.play.runner.activeRings : race);
     const v = p.session.player;
     p.damageOverlay.update(

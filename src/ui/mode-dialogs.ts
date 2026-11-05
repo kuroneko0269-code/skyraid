@@ -10,6 +10,7 @@ import { DEFAULT_WEATHER_ID, WEATHER_PRESETS, weatherLabel } from '../data/weath
 import { raidVariants } from '../missions/raid-variants';
 import { el } from './hud-dom';
 import { createButton } from './screen';
+import { noteScreenSwitch } from './screen-switch';
 import { Segmented } from './segmented';
 import type { TutorialStrings } from './tutorial-text';
 
@@ -258,6 +259,8 @@ export class ModeDialogs {
 
   private open(wrap: HTMLDivElement, focus: HTMLButtonElement): void {
     this.close();
+    // 9-9b: カードを押して出たダイアログのボタンへ、同じタップが押し抜けない
+    noteScreenSwitch();
     wrap.hidden = false;
     wrap.scrollTop = 0;
     // キーボードで Enter を押せば決まるように（タッチではフォーカスの枠を出さない。tap-focus.ts）

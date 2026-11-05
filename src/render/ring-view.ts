@@ -25,7 +25,15 @@ export interface RingTrack {
   readonly rings: readonly (Ring & { readonly radius?: number; readonly kind?: RingKind })[];
   readonly current: number;
   readonly next: Ring | null;
+  /**
+   * 9-9b: レースの下見（カメラがコースをたどる）。次のリングの先を visibleAhead 個ではなく最後まで、控えめな色にせずに描く
+   * （9-8 は下見の間も次のリング = 1 番だったので、4 番より先が描かれなかった）
+   */
+  readonly preview?: boolean;
 }
+
+/** 下見で描くリングの最大数（コースのリングの数より多く） */
+const MAX_RINGS = 64;
 
 const Z_AXIS = new Vector3(0, 0, 1);
 const pos = new Vector3();
@@ -55,12 +63,12 @@ export class RingView {
       transparent: true,
       opacity: 0.75,
     });
-    this.others = new InstancedMesh(geometry, material, c.visibleAhead);
+    this.others = new InstancedMesh(geometry, material, MAX_RINGS);
     this.others.instanceMatrix.setUsage(DynamicDrawUsage);
     this.others.frustumCulled = false;
     this.others.count = 0;
     this.others.visible = false;
-    for (let i = 0; i < c.visibleAhead; i++) this.others.setColorAt(i, color.set(c.otherColor));
+    for (let i = 0; i < MAX_RINGS; i++) this.others.setColorAt(i, color.set(c.otherColor));
     scene.add(this.next, this.others);
   }
 
@@ -76,13 +84,14 @@ export class RingView {
     let n = 0;
     if (track) {
       const from = track.current + 1;
-      const to = Math.min(track.rings.length, from + RING_CONFIG.visibleAhead);
+      const ahead = track.preview ? MAX_RINGS : RING_CONFIG.visibleAhead;
+      const to = Math.min(track.rings.length, from + ahead);
       for (let i = from; i < to; i++) {
         const r = track.rings[i];
         if (!r) continue;
         color.set(r.kind ? RACE_CONFIG.colors[r.kind] : RING_CONFIG.otherColor);
         // 9-8: レースは次の次（n = 0）まで種類の色のまま、それより先は控えめな色に寄せる
-        if (r.kind && n > 0) color.lerp(dim, RACE_GUIDE.dimMix);
+        if (r.kind && n > 0 && !track.preview) color.lerp(dim, RACE_GUIDE.dimMix);
         this.others.setColorAt(n, color);
         this.others.setMatrixAt(n++, ringMatrix(r, matrix));
       }

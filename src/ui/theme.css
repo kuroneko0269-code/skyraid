@@ -69,10 +69,10 @@
    * SPD/ALT の箱は画面の中央 − ラダーの半分の高さにあり、帯はそれより上に収める）と「左上の帯」（左上のボタンの右から
    * 上中央の帯の左まで・ゲージより上）に分ける。SPD/ALT の箱の位置はモードによらず変えない
    */
-  --ui-hud-band-width: 50vw;
+  --ui-hud-band-width: 50cqw;
   --ui-hud-band-top: calc(8px + var(--ui-safe-top));
   --ui-hud-side-left: calc(80px + var(--ui-safe-left));
-  --ui-hud-side-width: min(200px, calc(25vw - 88px - var(--ui-safe-left)));
+  --ui-hud-side-width: min(200px, calc(25cqw - 88px - var(--ui-safe-left)));
 
   /* safe-area（ホーム画面から standalone で起動したときのノッチ・ホームバー） */
   --ui-safe-top: env(safe-area-inset-top, 0px);

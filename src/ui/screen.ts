@@ -2,6 +2,7 @@ import { t } from '../core/i18n';
 import './theme.css';
 import './screen.css';
 import { SCREEN_CONFIG } from '../data/screens';
+import { noteScreenSwitch } from './screen-switch';
 
 /** フェード時間を CSS 変数 --screen-fade にする（画面・暗転幕・HUD の transition が使う） */
 export function applyScreenFade(root: HTMLElement): void {
@@ -22,6 +23,8 @@ export function createScreen(parent: HTMLElement, className: string): HTMLDivEle
  * フォーカスが残っていると Space（機銃）でボタンが押されるので外す
  */
 export function setScreenShown(screen: HTMLElement, shown: boolean): void {
+  // 9-9b: 隠れていた画面が出たら、その前に押し始めたタップのクリックを届けない（screen-switch.ts）
+  if (shown && !screen.classList.contains('is-shown')) noteScreenSwitch();
   screen.classList.toggle('is-shown', shown);
   if (
     !shown &&
