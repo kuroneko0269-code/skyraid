@@ -5,6 +5,13 @@ import sqlRaw from '../supabase/migrations/skyraid_0001_init.sql?raw';
 import { ONLINE_CONFIG, RECORD_KINDS } from '../src/data/online';
 import { raceFloorMs, validKeys } from '../src/online/records';
 
+/** 0001 のレースのコース（9-8 の 2 本は 0004 で足した。0004 は race-courses-sql.test.ts） */
+const INIT_COURSES = ['coast', 'canyon', 'harbor-speed', 'acro'];
+const initKeys = (kind: (typeof RECORD_KINDS)[number]): string[] =>
+  validKeys(kind).filter((k) =>
+    kind === 'race' ? INIT_COURSES.includes(k) : kind !== 'raid' || !k.includes(':'),
+  );
+
 /** コメントを除いた SQL（文字列の中の -- は使っていない） */
 const sql = sqlRaw.replace(/--[^\n]*/g, '');
 const statements = sql
@@ -145,7 +152,7 @@ describe('RLS と権限（規約 3 章）', () => {
 
 describe('クライアントと同じ数値', () => {
   it('レースの下限（理論最短 × 0.5）', () => {
-    for (const key of validKeys('race'))
+    for (const key of initKeys('race'))
       expect(sql).toContain(`when '${key}' then ${String(raceFloorMs(key))}`);
   });
 
@@ -154,8 +161,7 @@ describe('クライアントと同じ数値', () => {
     // レイドの key は 0003（ネフィルガ）で作り直した。0001 はヴォルガスの難易度だけ（0003 は kaiju2-records.test.ts）
     for (const kind of RECORD_KINDS)
       expect(sql).toContain(
-        `kind = '${kind}' and key in (${validKeys(kind)
-          .filter((k) => kind !== 'raid' || !k.includes(':'))
+        `kind = '${kind}' and key in (${initKeys(kind)
           .map((k) => `'${k}'`)
           .join(', ')})`,
       );

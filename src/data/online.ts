@@ -53,9 +53,17 @@ export function rankedRaidKaiju(id: RaidKaijuId): boolean {
 /**
  * 9-8: オンラインのランキングに載せるリングレースのコース。9-8 の新しいコース（night-harbor・peak-spiral）の記録のキーは
  * supabase/migrations/skyraid_0004_race_courses.sql を流してからサーバーが受け付ける（README の「新しいコースのランキング」）。
- * 流すまでは送らない・ランキングのコースの選択に出さない（ローカルの自己ベスト・ゴーストには残る）。流したら 2 つを足す
+ * 流すまでは送らない・ランキングのコースの選択に出さない（ローカルの自己ベスト・ゴーストには残る）。
+ * 9-9 の事前修正: 0004 を流したので 2 つを足した（送る・ランキングのコースの選択に出す）
  */
-export const RANKED_COURSES: readonly string[] = ['coast', 'canyon', 'harbor-speed', 'acro'];
+export const RANKED_COURSES: readonly string[] = [
+  'coast',
+  'canyon',
+  'harbor-speed',
+  'acro',
+  'night-harbor',
+  'peak-spiral',
+];
 
 export function rankedCourse(id: string): boolean {
   return RANKED_COURSES.includes(id);

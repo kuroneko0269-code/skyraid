@@ -269,13 +269,13 @@ URL に `?net=local` を付けると、PeerJS の代わりに**同じブラウ�
 2. **確かめる**: `select version from skyraid.schema_migrations order by version;` に `skyraid_0003_raid_kaiju` がある。`select pg_get_constraintdef(oid) from pg_constraint where conname = 'records_key';` に `nephirga:normal` が入っている
 3. **ゲームで有効にする**: `src/data/online.ts` の `RANKED_RAID_KAIJU` に `'nephirga'` を足して公開する（9-5d の事前修正で足した）。ランキングの「レイド」に怪獣（ヴォルガス / ネフィルガ）の選択が出て、ネフィルガのソロのクリアが送られるようになる
 
-### 新しいコースのランキング（9-8。0004 は未実行）
+### 新しいコースのランキング（9-8。0004 は流し済み・9-9 で有効にした）
 
 リングレースの新しいコース「夜景クルーズ」（`night-harbor`）・「峰のらせん」（`peak-spiral`）をランキングに載せるには、記録の key とレースの下限の check にこの 2 本を足す SQL が要ります。**流すまでは、ゲームは新しいコースの記録を送らず、ランキングのコースの選択にも出しません**（ローカルの自己ベスト・ゴーストには残ります。流す前の完走はランキングに載りません）。
 
 1. **SQL を流す**: SQL エディタに `supabase/migrations/skyraid_0004_race_courses.sql` の全文を貼り付けて実行。もう一度そのまま実行してもエラーにならないことも確かめる（冪等）。変えるのは `skyraid.records` の `records_key`（レースの key に 2 本）と `records_race_floor`（新しいコースの下限 10556 / 10834 ミリ秒）の 2 つの check だけ（今の記録はそのまま通る）
 2. **確かめる**: `select version from skyraid.schema_migrations order by version;` に `skyraid_0004_race_courses` がある。`select conname, pg_get_constraintdef(oid) from pg_constraint where conname in ('records_key', 'records_race_floor');` に `night-harbor`・`peak-spiral` が入っている
-3. **ゲームで有効にする**: `src/data/online.ts` の `RANKED_COURSES` に `'night-harbor'`・`'peak-spiral'` を足して公開する（`tests/race-courses-sql.test.ts` の「0004 を流すまでは」の期待値も直す）。ランキングの「リングレース」のコースに 2 本が出て、完走が送られるようになる
+3. **ゲームで有効にする**: `src/data/online.ts` の `RANKED_COURSES` に `'night-harbor'`・`'peak-spiral'` を足して公開する（9-9 の事前修正で足した）。ランキングの「リングレース」のコースに 2 本が出て、完走が送られるようになる
 
 ### 確かめること（連携中になった後）
 

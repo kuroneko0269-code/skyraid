@@ -67,6 +67,8 @@ describe('マイグレーション 0003（ネフィルガのランキング）',
     for (const kind of ['race', 'defense'] as const)
       expect(sql).toContain(
         `kind = '${kind}' and key in (${validKeys(kind)
+          // 9-8 の 2 本は 0004 で足した（race-courses-sql.test.ts）
+          .filter((k) => k !== 'night-harbor' && k !== 'peak-spiral')
           .map((k) => `'${k}'`)
           .join(', ')})`,
       );
