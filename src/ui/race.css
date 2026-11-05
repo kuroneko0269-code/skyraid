@@ -133,6 +133,182 @@
   }
 }
 
+/* ---- 9-8 道案内: 次（大きく）とその次（小さく・薄く）のリングの番号の札、上の帯の印と通り損ねの行 ---- */
+.race-guide-badge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  translate: -50% -100%;
+  will-change: transform;
+  white-space: nowrap;
+  font:
+    800 16px/1 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+.race-guide-no {
+  min-width: 26px;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  text-align: center;
+  border-radius: 6px;
+  color: #10161c;
+  background: var(--race-kind-color, #ffd23a);
+  text-shadow: none;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+.race-guide-cue {
+  padding: 3px 6px;
+  border-radius: 6px;
+  color: var(--race-kind-color, #ffd23a);
+  background: rgba(0, 16, 24, 0.7);
+  font-size: 14px;
+}
+
+.race-guide-badge.is-after {
+  translate: -50% 0;
+  opacity: 0.72;
+  font-size: 12px;
+}
+
+.race-guide-badge.is-after .race-guide-no {
+  min-width: 20px;
+  padding: 2px 4px;
+  background: transparent;
+  color: var(--race-kind-color, #ffd23a);
+  border: 2px solid var(--race-kind-color, #ffd23a);
+  box-shadow: none;
+}
+
+.race-guide-badge.is-after .race-guide-cue {
+  font-size: 12px;
+}
+
+.race-guide-row {
+  margin-top: 2px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font:
+    700 15px/1.2 system-ui,
+    sans-serif;
+  text-align: center;
+  white-space: normal;
+}
+
+.race-guide-row.is-cue {
+  color: #fff3b0;
+  background: rgba(60, 40, 0, 0.45);
+}
+
+.race-guide-row.is-missed {
+  color: #fff;
+  background: rgba(200, 40, 30, 0.7);
+  animation: race-guide-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes race-guide-pulse {
+  to {
+    background: rgba(200, 40, 30, 0.4);
+  }
+}
+
+/* ---- 9-8 コースの下見: 下の帯（コース名・一言・進み・飛ばし方）。押すと飛ばす ---- */
+.race-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: auto;
+  cursor: pointer;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.race-preview[hidden] {
+  display: none;
+}
+
+:root[data-race-preview] .hud,
+:root[data-race-preview] .touch-controls,
+:root[data-race-preview] .touch-hint,
+:root[data-race-preview] .mission-hud,
+:root[data-race-preview] .race-hud {
+  visibility: hidden;
+}
+
+.race-preview-top,
+.race-preview-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 16px 10px;
+  background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0));
+}
+
+.race-preview-bottom {
+  padding: 28px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.7));
+}
+
+.race-preview-label {
+  font:
+    700 13px/1.2 system-ui,
+    sans-serif;
+  letter-spacing: 0.1em;
+  color: #9ff2ff;
+}
+
+.race-preview-title {
+  font:
+    800 24px/1.2 system-ui,
+    sans-serif;
+  text-align: center;
+}
+
+.race-preview-note {
+  max-width: 640px;
+  font:
+    500 14px/1.35 system-ui,
+    sans-serif;
+  text-align: center;
+}
+
+.race-preview-skip {
+  font:
+    700 16px/1.2 system-ui,
+    sans-serif;
+  padding: 8px 18px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.race-preview-bar {
+  width: min(360px, 70vw);
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+
+.race-preview-bar > div {
+  height: 100%;
+  width: 100%;
+  background: #9ff2ff;
+  transform-origin: left center;
+}
+
 @media (max-width: 600px), (max-height: 480px) {
   .race-time {
     font-size: 22px;
@@ -140,6 +316,28 @@
 
   .race-big-main {
     font-size: 44px;
+  }
+
+  .race-guide-row {
+    font-size: 13px;
+  }
+
+  .race-preview-title {
+    font-size: 19px;
+  }
+
+  .race-preview-note {
+    font-size: 12px;
+  }
+
+  .race-preview-bottom {
+    gap: 2px;
+    padding: 16px 12px calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .race-preview-skip {
+    padding: 5px 14px;
+    font-size: 14px;
   }
 }
 

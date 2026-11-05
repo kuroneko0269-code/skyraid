@@ -10,6 +10,8 @@ const p = new Vector3();
 const arrow: EdgeArrow = { x: 0, y: 0, deg: 0 };
 
 export class MissionLink {
+  /** 9-8: 次のリングを通り損ねている（リングレースの道案内。印を赤く） */
+  raceAlert: () => boolean = () => false;
   private readonly waypoint = createWaypointFrame();
 
   constructor(
@@ -35,6 +37,9 @@ export class MissionLink {
     const escort = runner?.running && !ring ? this.escortPosition() : null;
     const mark = ring?.position ?? escort;
     w.shown = mark !== null;
+    // 9-8: レースは画面端の矢印にも距離を出す
+    w.arrowDistance = race !== null;
+    w.alert = race !== null && this.raceAlert();
     if (mark) {
       p.set(mark.x, mark.y, mark.z);
       w.distance = p.distanceTo(this.aircraft.position);

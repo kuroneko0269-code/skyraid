@@ -14,6 +14,7 @@ import { AIRCRAFT_MODELS } from '../data/aircraft';
 import { COURSES } from '../data/courses';
 import { DEFENSE_MAPS } from '../data/defense';
 import {
+  rankedCourse,
   RANKED_RAID_KAIJU,
   RECORD_KIND_LABELS,
   RECORD_KINDS,
@@ -88,7 +89,7 @@ export class RankingScreen {
     new Segmented(
       this.raceRows,
       t('ranking.course'),
-      COURSES.map((c) => ({ value: c.id, label: c.name })),
+      COURSES.filter((c) => rankedCourse(c.id)).map((c) => ({ value: c.id, label: c.name })),
       this.course,
       (v) => {
         this.course = v;

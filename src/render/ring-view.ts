@@ -1,6 +1,7 @@
 // リング（2-4）の描画: 次に通るリングは発光する Mesh、その先の数個は半透明の InstancedMesh（draw call 2）。
 // 通過済みのリングと、リングの目標・レースが進行中でないときは描かない。
-// 7-1 のリングレースは種類（通常 / ブースト / 細い / チェックポイント）で色を変え、見た目の半径はリングごと
+// 7-1 のリングレースは種類（通常 / ブースト / 細い / チェックポイント）で色を変え、見た目の半径はリングごと。
+// 9-8: レースの次の次のリングは種類の色のまま、それより先は控えめな色（番号は HUD の ui/race-guide-hud.ts）
 import {
   Color,
   DynamicDrawUsage,
@@ -13,7 +14,7 @@ import {
   Vector3,
   type Scene,
 } from 'three';
-import { RACE_CONFIG } from '../data/race';
+import { RACE_CONFIG, RACE_GUIDE } from '../data/race';
 import { RING_CONFIG } from '../data/rings';
 import type { Ring } from '../missions/objectives/ring';
 import type { RingKind } from '../missions/race/types';
@@ -33,6 +34,7 @@ const quat = new Quaternion();
 const scale = new Vector3();
 const matrix = new Matrix4();
 const color = new Color();
+const dim = new Color(RACE_GUIDE.dimColor);
 
 export class RingView {
   private readonly next: Mesh;
@@ -78,10 +80,10 @@ export class RingView {
       for (let i = from; i < to; i++) {
         const r = track.rings[i];
         if (!r) continue;
-        this.others.setColorAt(
-          n,
-          color.set(r.kind ? RACE_CONFIG.colors[r.kind] : RING_CONFIG.otherColor),
-        );
+        color.set(r.kind ? RACE_CONFIG.colors[r.kind] : RING_CONFIG.otherColor);
+        // 9-8: レースは次の次（n = 0）まで種類の色のまま、それより先は控えめな色に寄せる
+        if (r.kind && n > 0) color.lerp(dim, RACE_GUIDE.dimMix);
+        this.others.setColorAt(n, color);
         this.others.setMatrixAt(n++, ringMatrix(r, matrix));
       }
     }

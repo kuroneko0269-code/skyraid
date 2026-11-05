@@ -15,6 +15,7 @@ import type { Hangar } from '../progression/hangar';
 import type { RaceRecord } from '../progression/save-races';
 import { el } from './hud-dom';
 import { formatCredits } from './mission-text';
+import { createToggleButton } from './mobile';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 const KIND_TEXT: Readonly<Record<RingKind, string>> = {
@@ -54,6 +55,9 @@ export class RaceSelectScreen {
   private readonly times: HTMLTableElement;
   private readonly aircraft: HTMLDivElement;
   private readonly start: HTMLButtonElement;
+  /** 9-8: スタート前にコースを下見するか（コースを選ぶたびに「まだ見ていなければ ON」に戻す） */
+  private readonly previewToggle: { button: HTMLButtonElement; sync: (on: boolean) => void };
+  preview = true;
   /** 選んでいるコース */
   selected: CourseDef;
 
@@ -62,7 +66,7 @@ export class RaceSelectScreen {
     courses: readonly CourseDef[],
     private readonly record: (courseId: string) => Readonly<RaceRecord>,
     private readonly hangar: Hangar,
-    handlers: { onStart: (course: CourseDef) => void; onBack: () => void },
+    handlers: { onStart: (course: CourseDef, preview: boolean) => void; onBack: () => void },
   ) {
     const first = courses[0];
     if (!first) throw new Error('no courses');
@@ -114,12 +118,18 @@ export class RaceSelectScreen {
       t('campaign.backToModes'),
       handlers.onBack,
     );
+    // 9-8: コースの下見（初めてのコースは ON。見たコースは OFF から。押すと切り替える）
+    this.previewToggle = createToggleButton(buttons, t('race.select.preview'), true, () => {
+      this.preview = !this.preview;
+      return this.preview;
+    });
+    this.previewToggle.button.className = 'ui-button is-ghost race-preview-toggle';
     this.start = createButton(
       buttons,
       'ui-button is-primary campaign-go',
       t('race.select.start'),
       () => {
-        handlers.onStart(this.selected);
+        handlers.onStart(this.selected, this.preview);
       },
     );
     this.root = root;
@@ -128,7 +138,14 @@ export class RaceSelectScreen {
 
   select(course: CourseDef): void {
     this.selected = course;
+    this.resetPreview();
     this.refresh();
+  }
+
+  /** 9-8: 下見の初期値（まだ見ていないコースは ON） */
+  private resetPreview(): void {
+    this.preview = this.record(this.selected.id).previewed !== true;
+    this.previewToggle.sync(this.preview);
   }
 
   /** 一覧のベスト・ランク、詳細、機体の選択をセーブに合わせる */
@@ -199,6 +216,7 @@ export class RaceSelectScreen {
   setShown(shown: boolean): void {
     setScreenShown(this.root, shown);
     if (!shown) return;
+    this.resetPreview();
     this.refresh();
     this.start.focus({ preventScroll: true });
   }

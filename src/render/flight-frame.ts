@@ -70,6 +70,11 @@ export class FlightFrame {
   photo: PhotoFrameHook | null = null;
   /** リプレイのカメラ（7-B。main.ts が入れる） */
   cameraOverride: CameraOverride | null = null;
+  /** 9-8: リングレースの道案内（下見のカメラ・番号の札。flight-runtime.ts が入れる） */
+  raceGuide: {
+    previewCamera(frameSeconds: number): boolean;
+    update(width: number, height: number, hudShown: boolean): void;
+  } | null = null;
   /** 演出・カメラの時間の倍率（7-B: リプレイの速さ。飛行中だけ） */
   timeScale = 1;
   /** 島の周りを回る時間。海の波もこれで動かし、ポーズ中は止める */
@@ -124,7 +129,10 @@ export class FlightFrame {
     );
     if (state === 'flight' && p.hud.visible)
       p.hudLink.update(alpha, viewport.width, viewport.height);
-    if (state === 'flight') p.missionLink.update(viewport.width, viewport.height);
+    if (state === 'flight') {
+      this.raceGuide?.update(viewport.width, viewport.height, p.hud.visible);
+      p.missionLink.update(viewport.width, viewport.height);
+    }
     p.frameFx.update(state, this.worldTime);
     p.pipeline.render();
     if (
@@ -159,6 +167,7 @@ export class FlightFrame {
     const { session, camera } = p;
     const aircraft = session.aircraft;
     this.updateAircraft(alpha, frameSeconds);
+    if (this.raceGuide?.previewCamera(frameSeconds)) return;
     if (this.cameraOverride?.update(frameSeconds)) return;
     // カメラが地面にめり込まないよう、前フレームのカメラ位置の地表の高さを渡す
     const groundUnderCamera = p.groundHeight(camera.position.x, camera.position.z);

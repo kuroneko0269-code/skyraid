@@ -596,6 +596,14 @@
       "name": "Sunset Aerobatics",
       "note": "A vertical course of loops and rolls"
     },
+    "nightHarbor": {
+      "name": "Night Harbor Cruise",
+      "note": "An easy lap of the harbor at night with wide rings"
+    },
+    "peakSpiral": {
+      "name": "Peak Spiral",
+      "note": "Climb around the peak at dawn, then dive down the slope"
+    },
     "level": {
       "beginner": "Beginner",
       "intermediate": "Intermediate",
@@ -850,7 +858,25 @@
       "bestRank": "Best rank",
       "ghost": "Ghost",
       "ghostValue": "Yes ({time})",
-      "noRecords": "No records yet"
+      "noRecords": "No records yet",
+      "preview": "Preview"
+    },
+    "guide": {
+      "cue": {
+        "up": "UP",
+        "down": "DOWN",
+        "loop": "LOOP",
+        "pull": "PULL UP"
+      },
+      "next": "Next: {cue}",
+      "after": "Then: {cue}",
+      "missed": "Missed ring {number}",
+      "missedRequired": "Turn back and fly through (can't skip)",
+      "missedSkip": "Turn back, or go on (+{seconds} s)"
+    },
+    "preview": {
+      "label": "COURSE PREVIEW",
+      "skip": "Tap to skip"
     }
   },
   "modes": {
@@ -1160,7 +1186,8 @@
       "controls": "Controls",
       "game": "Game",
       "data": "Data"
-    }
+    },
+    "raceGuideLine": "Race guide line"
   },
   "mobile": {
     "exitFullscreen": "Exit Full",

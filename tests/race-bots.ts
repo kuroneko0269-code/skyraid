@@ -10,7 +10,7 @@ import { rotateVec3, type Vec3 } from '../src/flight/math';
 import { ActiveMap } from '../src/missions/active-map';
 import { FlightSession } from '../src/missions/flight-session';
 import { GamePlay } from '../src/missions/game-play';
-import type { RaceRing } from '../src/missions/race/course';
+import { coursePath, PATH_SAMPLE } from '../src/missions/race/path';
 import type { RaceReference, RaceResult, RaceRunner } from '../src/missions/race/runner';
 import type { CourseDef } from '../src/missions/race/types';
 import { resolveLoadout } from '../src/progression/loadout';
@@ -46,55 +46,9 @@ export function startRaceSim(
 }
 
 const nose = { x: 0, y: 0, z: 0 };
-const SAMPLE = 10;
-
-/**
- * コースの道筋: 開始位置 → 各リングの中心を、リングの向きを接線にした 3 次エルミート曲線でつなぎ、SAMPLE m ごとの点にする
- */
-export function coursePath(
-  course: CourseDef,
-  rings: readonly RaceRing[],
-  ringIndex: number[] = [],
-): Vec3[] {
-  const s = course.start;
-  const h = (s.headingDeg * Math.PI) / 180;
-  const nodes = [
-    { p: { x: s.x, y: s.y, z: s.z }, n: { x: Math.sin(h), y: 0, z: -Math.cos(h) } },
-    ...rings.map((r) => ({ p: r.position, n: r.normal })),
-  ];
-  const out: Vec3[] = [];
-  for (let i = 0; i + 1 < nodes.length; i++) {
-    const a = nodes[i];
-    const b = nodes[i + 1];
-    if (!a || !b) continue;
-    const len = Math.hypot(b.p.x - a.p.x, b.p.y - a.p.y, b.p.z - a.p.z);
-    const n = Math.max(1, Math.ceil(len / SAMPLE));
-    if (i > 0) ringIndex[i - 1] = out.length;
-    for (let k = 0; k < n; k++) {
-      const t = k / n;
-      const h00 = 2 * t ** 3 - 3 * t ** 2 + 1;
-      const h10 = t ** 3 - 2 * t ** 2 + t;
-      const h01 = -2 * t ** 3 + 3 * t ** 2;
-      const h11 = t ** 3 - t ** 2;
-      const at = (k2: 'x' | 'y' | 'z'): number =>
-        h00 * a.p[k2] + h10 * a.n[k2] * len + h01 * b.p[k2] + h11 * b.n[k2] * len;
-      out.push({ x: at('x'), y: at('y'), z: at('z') });
-    }
-  }
-  const last = nodes[nodes.length - 1];
-  if (last) {
-    ringIndex[nodes.length - 2] = out.length;
-    out.push({ ...last.p });
-    // ゴールの先へまっすぐ伸ばす（先読みの点が尽きないように）
-    for (let k = 1; k <= 60; k++)
-      out.push({
-        x: last.p.x + last.n.x * k * SAMPLE,
-        y: last.p.y + last.n.y * k * SAMPLE,
-        z: last.p.z + last.n.z * k * SAMPLE,
-      });
-  }
-  return out;
-}
+const SAMPLE = PATH_SAMPLE;
+/** 9-8: 道筋は src/missions/race/path.ts へ移した（道案内の点線・下見と同じ線） */
+export { coursePath };
 
 /**
  * 道筋を追うボット（先読み追従）: 道筋の上で自機に最も近い点（前に進むだけ）から、速度 × 0.7 秒先の点へ機首を向ける。

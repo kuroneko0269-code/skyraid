@@ -26,7 +26,7 @@ export class ChaseCamera {
   };
 
   constructor(
-    private readonly camera: PerspectiveCamera,
+    readonly camera: PerspectiveCamera,
     config: CameraConfig = CAMERA_CONFIG,
   ) {
     this.rig = new CameraRig(config);

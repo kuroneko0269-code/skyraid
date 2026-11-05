@@ -9,6 +9,7 @@ import { createRandom } from '../src/core/random';
 import { STARTER_AIRCRAFT } from '../src/data/aircraft';
 import { SPEED_MATCH_CONFIG } from '../src/data/assist';
 import { createControls } from '../src/entities/aircraft';
+import { GroundTarget } from '../src/entities/ground-target';
 import type { Vec3 } from '../src/flight/math';
 import { FlightSession } from '../src/missions/flight-session';
 import { OvertakeCounter } from '../src/missions/practice/overtake';
@@ -58,6 +59,27 @@ describe('速度合わせ（9-5b）', () => {
     m.apply(c2, s);
     expect(m.engaged).toBe(false);
     expect(c2.throttleTarget).toBe(1);
+  });
+
+  it('9-8 の事前修正: 地上目標（施設・対空砲。surface）への急降下では下げない。空の的は今までどおり', () => {
+    const m = new SpeedMatch();
+    const { s } = subject(330, 1500, 0);
+    const ground = new GroundTarget();
+    ground.position.z = -1500;
+    ground.deployed = true;
+    expect(ground.surface).toBe(true);
+    const sel = s.combat.targeting as { selected: CombatTarget | null };
+    sel.selected = ground;
+    const c = createControls();
+    m.apply(c, s);
+    expect(m.engaged).toBe(false);
+    expect(c.throttleTarget ?? null).toBeNull();
+    // 同じ位置・速さの空の的（止まった的）なら下げる
+    const air = subject(330, 1500, 0);
+    const c2 = createControls();
+    m.apply(c2, air.s);
+    expect(m.engaged).toBe(true);
+    expect(c2.throttleTarget).toBeLessThan(1);
   });
 
   it('詰まる速さが望む速さ以下・遠い・前に無い（横 50°）なら効かない。上げることはしない', () => {

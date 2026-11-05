@@ -37,6 +37,8 @@ export class GroundTarget implements CombatTarget {
   /** 足元（地表の最も低い所） */
   readonly base: Vec3 = vec3();
   readonly velocity: Readonly<Vec3> = ZERO;
+  /** 地上に据えた対象（9-8: 速度合わせを効かせない） */
+  readonly surface = true;
   type: GroundTargetType = 'radar';
   spec: GroundTargetSpec = GROUND_TARGET_SPECS.radar;
   difficulty: Difficulty = 'normal';

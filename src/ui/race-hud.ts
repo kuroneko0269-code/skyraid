@@ -10,6 +10,8 @@ import { el } from './hud-dom';
 
 export class RaceHud {
   readonly root: HTMLDivElement;
+  /** 上中央の帯（9-8: 道案内の印・通り損ねの行を足す） */
+  readonly band: HTMLDivElement;
   private readonly time: HTMLDivElement;
   private readonly rings: HTMLSpanElement;
   private readonly ghost: HTMLSpanElement;
@@ -27,6 +29,7 @@ export class RaceHud {
     root.hidden = true;
     this.root = root;
     const top = el('div', 'race-top', root);
+    this.band = top;
     this.time = el('div', 'race-time', top);
     const sub = el('div', 'race-sub', top);
     this.rings = el('span', 'race-rings', sub);

@@ -67,6 +67,8 @@ export interface FlightLoopParts {
   readonly replay: FlightLoopReplay;
   /** 本番の固定ステップ 1 回ごと（レースのゴースト。7-B） */
   readonly afterStep: () => void;
+  /** 9-8: 固定ステップを止める（リングレースの下見の間。入力は捨てる） */
+  readonly holdSim: () => boolean;
 }
 
 /**
@@ -127,6 +129,11 @@ function createFlightUpdate(p: FlightLoopParts): {
       return;
     }
     p.gamepad.poll();
+    // 9-8: リングレースの下見の間は判定を進めない（記録・ゴーストも始めない）
+    if (p.holdSim()) {
+      input.endStep();
+      return;
+    }
     // PvP の飛行中はゲームを止めず、Esc で PvP のメニュー
     if (input.wasPressed('pause') && !pvp.togglePause()) {
       input.endStep();

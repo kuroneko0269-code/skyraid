@@ -593,6 +593,14 @@
       "name": "夕空アクロバット",
       "note": "宙返りと反転を要求する縦のコース"
     },
+    "nightHarbor": {
+      "name": "夜景クルーズ",
+      "note": "夜の港の岸沿いを広いリングでゆったり 1 周"
+    },
+    "peakSpiral": {
+      "name": "峰のらせん",
+      "note": "夜明けの峰の周りを登り、斜面を下る"
+    },
     "level": {
       "beginner": "入門",
       "intermediate": "中級",
@@ -846,7 +854,25 @@
       "bestRank": "最高ランク",
       "ghost": "ゴースト",
       "ghostValue": "あり（{time}）",
-      "noRecords": "まだ記録がありません"
+      "noRecords": "まだ記録がありません",
+      "preview": "コースの下見"
+    },
+    "guide": {
+      "cue": {
+        "up": "上へ",
+        "down": "下へ",
+        "loop": "宙返り",
+        "pull": "引き起こし"
+      },
+      "next": "次: {cue}",
+      "after": "その次: {cue}",
+      "missed": "リング {number} を通り損ねました",
+      "missedRequired": "戻って通ってください（飛ばせません）",
+      "missedSkip": "戻るか、先へ（+{seconds} 秒）"
+    },
+    "preview": {
+      "label": "コースの下見",
+      "skip": "タップで飛ばす"
     }
   },
   "modes": {
@@ -1155,7 +1181,8 @@
       "controls": "操作",
       "game": "ゲーム",
       "data": "データ"
-    }
+    },
+    "raceGuideLine": "レースの道筋の点線"
   },
   "mobile": {
     "exitFullscreen": "全画面解除",

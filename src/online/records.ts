@@ -5,7 +5,13 @@
 import { AIRCRAFT_MODELS } from '../data/aircraft';
 import { COURSES } from '../data/courses';
 import { DEFENSE_DIFFICULTIES, DEFENSE_MAPS } from '../data/defense';
-import { ONLINE_CONFIG, RANKED_RAID_KAIJU, RECORD_KINDS, type RecordKind } from '../data/online';
+import {
+  ONLINE_CONFIG,
+  RANKED_RAID_KAIJU,
+  RECORD_KINDS,
+  rankedCourse,
+  type RecordKind,
+} from '../data/online';
 import { raidRecordKey } from '../data/raid-kaiju';
 import { RACE_CONFIG } from '../data/race';
 import { RAID_DIFFICULTIES } from '../data/raid';
@@ -35,7 +41,8 @@ export function defenseKey(mapId: string, difficulty: string): string {
 
 /** 種類ごとに受け付ける key（SQL の check と同じ） */
 export function validKeys(kind: RecordKind): readonly string[] {
-  if (kind === 'race') return COURSES.map((c) => c.id);
+  // 9-8: サーバーの準備ができたコースだけ（RANKED_COURSES）
+  if (kind === 'race') return COURSES.filter((c) => rankedCourse(c.id)).map((c) => c.id);
   // 9-6c: 怪獣ごとのキー（ヴォルガスは難易度だけ。ほかはサーバーの準備ができた怪獣だけ: RANKED_RAID_KAIJU）
   if (kind === 'raid')
     return RANKED_RAID_KAIJU.flatMap((k) => RAID_DIFFICULTIES.map((d) => raidRecordKey(k, d)));

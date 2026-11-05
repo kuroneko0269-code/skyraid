@@ -173,12 +173,90 @@ export const ACRO_COURSE: CourseDef = {
   goldTimeSeconds: 27,
 };
 
+/**
+ * 9-8 夜景クルーズ: 港湾都市の夜、湾から東の岸沿いを北へ、山すその手前で街の北を西へ横切り、西の岸沿いを湾へ戻る入門コース。
+ * リングは広い（半径 60m）・曲がりはゆるい・高さは 160〜230m（建物より十分上）
+ */
+export const NIGHT_HARBOR_COURSE: CourseDef = {
+  id: 'night-harbor',
+  get name() {
+    return t('courses.nightHarbor.name');
+  },
+  get note() {
+    return t('courses.nightHarbor.note');
+  },
+  get level() {
+    return t('courses.level.beginner');
+  },
+  mapId: 'harbor',
+  weatherId: 'night-clear',
+  start: { x: 0, y: 200, z: 4300, headingDeg: 0 },
+  rings: [
+    { x: 0, y: 185, z: 3400, headingDeg: 20, pitchDeg: 0, kind: 'normal', radius: 60 },
+    { x: 900, y: 175, z: 2800, headingDeg: 50, pitchDeg: 0, kind: 'normal', radius: 60 },
+    { x: 1800, y: 170, z: 2000, headingDeg: 15, pitchDeg: 0, kind: 'thin', radius: 60 },
+    { x: 2000, y: 180, z: 900, headingDeg: 0, pitchDeg: 0, kind: 'normal', radius: 60 },
+    { x: 2000, y: 190, z: -300, headingDeg: -10, pitchDeg: 1, kind: 'boost', radius: 60 },
+    { x: 1500, y: 215, z: -1400, headingDeg: -45, pitchDeg: 1, kind: 'checkpoint', radius: 60 },
+    { x: 500, y: 230, z: -1900, headingDeg: -80, pitchDeg: 0, kind: 'normal', radius: 60 },
+    { x: -700, y: 230, z: -1900, headingDeg: -105, pitchDeg: 0, kind: 'normal', radius: 60 },
+    { x: -1700, y: 215, z: -1300, headingDeg: -145, pitchDeg: -1, kind: 'normal', radius: 60 },
+    { x: -2000, y: 200, z: -200, headingDeg: 178, pitchDeg: -1, kind: 'checkpoint', radius: 60 },
+    { x: -2000, y: 185, z: 1000, headingDeg: 175, pitchDeg: 0, kind: 'boost', radius: 60 },
+    { x: -1700, y: 175, z: 2100, headingDeg: 150, pitchDeg: 0, kind: 'thin', radius: 60 },
+    { x: -800, y: 170, z: 2900, headingDeg: 115, pitchDeg: 0, kind: 'normal', radius: 60 },
+    { x: 200, y: 165, z: 3250, headingDeg: 95, pitchDeg: 0, kind: 'checkpoint', radius: 60 },
+  ],
+  timeLimitSeconds: 110,
+  goldTimeSeconds: 36.5,
+};
+
+/**
+ * 9-8 峰のらせん: 島の夜明け、南の海から南の浜を越え、中央の峰の周りを反時計回りに登るらせん（高度 380〜700m）、
+ * 峰の肩を越えて南東の斜面を下り、南の海の上を低く西へ抜ける中級コース
+ */
+export const SPIRAL_COURSE: CourseDef = {
+  id: 'peak-spiral',
+  get name() {
+    return t('courses.peakSpiral.name');
+  },
+  get note() {
+    return t('courses.peakSpiral.note');
+  },
+  get level() {
+    return t('courses.level.intermediate');
+  },
+  mapId: 'island',
+  weatherId: 'dawn-clear',
+  start: { x: 0, y: 220, z: 4300, headingDeg: 0 },
+  rings: [
+    { x: 0, y: 230, z: 3300, headingDeg: 10, pitchDeg: 3, kind: 'boost' },
+    { x: 350, y: 300, z: 2400, headingDeg: 25, pitchDeg: 6, kind: 'normal' },
+    { x: 1000, y: 400, z: 1650, headingDeg: 30, pitchDeg: 6, kind: 'thin' },
+    { x: 1700, y: 460, z: 700, headingDeg: -5, pitchDeg: 4, kind: 'normal' },
+    { x: 1500, y: 520, z: -800, headingDeg: -40, pitchDeg: 4, kind: 'checkpoint' },
+    { x: 400, y: 590, z: -1650, headingDeg: -80, pitchDeg: 3, kind: 'normal' },
+    { x: -1000, y: 650, z: -1350, headingDeg: -130, pitchDeg: 2, kind: 'thin' },
+    { x: -1700, y: 700, z: -100, headingDeg: 175, pitchDeg: 0, kind: 'checkpoint' },
+    { x: -500, y: 760, z: 550, headingDeg: 115, pitchDeg: -4, kind: 'normal' },
+    { x: 750, y: 580, z: 1250, headingDeg: 135, pitchDeg: -12, kind: 'normal' },
+    { x: 1500, y: 320, z: 2150, headingDeg: 160, pitchDeg: -12, kind: 'checkpoint' },
+    { x: 1200, y: 120, z: 3200, headingDeg: -150, pitchDeg: -4, kind: 'normal' },
+    { x: 100, y: 90, z: 3700, headingDeg: -100, pitchDeg: 0, kind: 'thin' },
+    { x: -1200, y: 100, z: 3500, headingDeg: -70, pitchDeg: 0, kind: 'checkpoint' },
+  ],
+  timeLimitSeconds: 120,
+  goldTimeSeconds: 40,
+};
+
 /** コース一覧の並び順 */
 export const COURSES: readonly CourseDef[] = [
   COAST_COURSE,
   CANYON_COURSE,
   HARBOR_COURSE,
   ACRO_COURSE,
+  NIGHT_HARBOR_COURSE,
+  SPIRAL_COURSE,
 ];
 
 export function findCourse(id: string): CourseDef | null {
