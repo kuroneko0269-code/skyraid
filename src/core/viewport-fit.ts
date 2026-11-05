@@ -42,7 +42,10 @@ const ok = (v: number): boolean => Number.isFinite(v) && v >= 1;
 /**
  * ルート要素の大きさを選ぶ（DOM 非依存。テストする）。
  * - 基本は inner・visualViewport（拡大していないとき）・client の大きい方（どれかが古い小さい値のまま残っても広がる）
- * - タッチが主の端末では screen の長辺・短辺（向きに合わせる）を超えない（向きを変える前の値で画面からはみ出さない）
+ * - タッチが主の端末では screen の長辺・短辺（向きに合わせる）を超えない（向きを変える前の値で画面からはみ出さない）。
+ *   9-9b: 超えた値は向きを変える前の古い値として使わない（8-6d は screen の値に切り詰めていたので、縦 → 横に戻した後に
+ *   古い縦の高さが残ると、描かれる高さ（ホーム画面から起動で 340）より大きい screen の短辺（402）になり、下が切れて
+ *   スクロールが要った）。どの値も超えるときだけ screen の値
  * - 8-6e: iOS のホーム画面から起動したときに screen を下限にするのはやめた（実機の値: inner・visual・client が 874×340、
  *   screen 402×874 のとき、body を 402 にしても iOS は 340 より下を描かず、下端の UI が黒い帯に隠れた）。描かれる大きさに合わせる
  */
@@ -59,8 +62,17 @@ export function pickRootSize(s: ViewportSample): RootSize {
     cap: number,
   ): { value: number; source: string } => {
     let best = { value: 0, source: 'none' };
-    for (const [name, v] of values) if (ok(v) && v > best.value) best = { value: v, source: name };
-    if (best.value > cap) best = { value: cap, source: `${best.source}>screen` };
+    let over = '';
+    for (const [name, v] of values) {
+      if (!ok(v)) continue;
+      // 9-9b: screen を超える値は向きを変える前の古い値（使わない）
+      if (v > cap + 1) {
+        over ||= name;
+        continue;
+      }
+      if (v > best.value) best = { value: Math.min(v, cap), source: name };
+    }
+    if (best.value === 0 && over) best = { value: cap, source: `${over}>screen` };
     return best;
   };
   const visual = s.visual && Math.abs(s.visual.scale - 1) < 0.01 ? s.visual : null;

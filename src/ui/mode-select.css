@@ -55,7 +55,7 @@
 }
 
 /* 広い PC は幅を広げる（9-9: 1 行に並べると英語の題が切れるので、日替わり + 4 × 2 のまま） */
-@media (min-width: 1500px) and (min-height: 600px) {
+@container app (min-width: 1500px) and (min-height: 600px) {
   .mode-select-screen {
     --menu-width: min(1560px, calc(100% - var(--ui-space-6)));
   }
@@ -66,7 +66,7 @@
 }
 
 /* 狭い縦画面は 2 列（日替わりは 2 列ぶんの 1 行。背の低い横画面は左 + 4 + 4 のまま） */
-@media (max-width: 600px) and (min-height: 481px) {
+@container app (max-width: 600px) and (min-height: 481px) {
   .mode-play {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -262,7 +262,7 @@
   font-size: 14px;
 }
 
-@media (max-width: 600px) {
+@container app (max-width: 600px) {
   .mode-seg-weather .ui-seg-items {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -270,7 +270,7 @@
 
 /* 背の低い横画面（スマホ 844×390・568×320 など）: カード・タイルを詰め、ダイアログの文字を小さく。
    9-9: 日替わりは上の横長の帯（全幅・1 行）にし、残りを 4 列 × 2 行。段の見出し（遊ぶ・管理）は隠す（高さを空ける） */
-@media (max-height: 480px) {
+@container app (max-height: 480px) {
   .mode-select-screen {
     gap: 6px;
   }
@@ -340,7 +340,7 @@
 }
 
 /* ダイアログ（7-C のまま。背の低い横画面で文字を小さく） */
-@media (max-height: 480px) and (min-width: 640px) {
+@container app (max-height: 480px) and (min-width: 640px) {
   .mode-prompt-box {
     gap: 8px;
     padding: var(--ui-space-3) var(--ui-space-4);
@@ -354,7 +354,7 @@
 
 /* 幅の狭い横画面（iPhone SE 568×320 など）: カードの題を小さく。
    9-9: 見出しの行も 844×390 と同じ低さに（モード選択だけ）。説明は 2 行まで折り返せるよう詰める */
-@media (max-height: 480px) and (max-width: 700px) {
+@container app (max-height: 480px) and (max-width: 700px) {
   .mode-select-screen .menu-header {
     min-height: 36px;
     /* 9-10 の事前修正: 日替わりの帯を 36px にした分を詰める（英語でスクロールしない） */

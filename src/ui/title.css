@@ -1,6 +1,6 @@
 /* タイトル画面（4-10 でデザインシステムに載せ替え）。背景はゲームのシーンが見えるよう、上下だけ少し暗くする */
 .title-screen {
-  gap: clamp(24px, 9vh, 72px);
+  gap: clamp(24px, 9cqh, 72px);
   cursor: pointer;
   background: linear-gradient(
     to bottom,
@@ -15,7 +15,7 @@
 /* ---- HUD の枠（safe-area の内側） ---- */
 .title-frame {
   --inset: var(--ui-space-4);
-  --arm: clamp(20px, 5vmin, 40px);
+  --arm: clamp(20px, 5cqmin, 40px);
   position: absolute;
   top: calc(var(--inset) + var(--ui-safe-top));
   right: calc(var(--inset) + var(--ui-safe-right));
@@ -97,7 +97,7 @@
 }
 
 .title-logo-main {
-  font: italic 600 clamp(60px, 15vw, 140px) / 1 var(--ui-font-display);
+  font: italic 600 clamp(60px, 15cqw, 140px) / 1 var(--ui-font-display);
   letter-spacing: 0.02em;
   padding: 0 0.12em;
   color: #fff;
@@ -111,15 +111,15 @@
    横画面のスマホ（高さ 480px 以下）でも幅の 40〜50% になる */
 .title-logo-image {
   display: block;
-  width: min(46vw, 760px);
+  width: min(46cqw, 760px);
   height: auto;
-  max-height: 24vh;
+  max-height: 24cqh;
   object-fit: contain;
   pointer-events: none;
 }
 
 .title-prompt {
-  font: 600 clamp(15px, 2.6vw, 20px) / 1 var(--ui-font-display);
+  font: 600 clamp(15px, 2.6cqw, 20px) / 1 var(--ui-font-display);
   letter-spacing: 0.24em;
   color: var(--ui-accent-hud);
   text-shadow: var(--ui-shadow-text);

@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: min(460px, 86vw);
+  max-width: min(460px, 86cqw);
   padding: 5px 12px;
   border-radius: 6px;
   background: rgba(0, 10, 18, 0.62);
@@ -34,7 +34,7 @@
 }
 
 .hud.hud-compact .hud-tip {
-  max-width: min(400px, 80vw);
+  max-width: min(400px, 80cqw);
   padding: 4px 10px;
   font-size: 14px;
 }

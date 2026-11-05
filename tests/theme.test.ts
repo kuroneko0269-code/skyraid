@@ -180,7 +180,7 @@ describe('タッチ端末とボタンの折り返し（7-C）', () => {
   });
 
   it('HUD の上部パネルは上中央の帯（幅 50% 以内）に収める', () => {
-    expect(theme).toMatch(/--ui-hud-band-width:\s*50vw/);
+    expect(theme).toMatch(/--ui-hud-band-width:\s*50cqw/);
     let found = 0;
     for (const [file, css] of Object.entries(CSS_FILES)) {
       for (const r of rules(css)) {

@@ -204,7 +204,7 @@ export function createPracticeLink(p: PracticeLinkParts): PracticeLink {
     aspect: () => viewport.width / Math.max(1, viewport.height),
     afterStart(replaying) {
       // 比べやすいよう天候は昼・快晴で固定（7-5 の天候の配線の後に呼ばれて上書きする）
-      p.weather.set(DEFAULT_WEATHER_ID);
+      p.weather.set(DEFAULT_WEATHER_ID, true);
       p.weather.setTimeFlow(false);
       if (replaying) return;
       startKey = settingsKey();

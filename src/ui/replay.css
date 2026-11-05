@@ -2,7 +2,7 @@
 
 /* ---- 一覧（リングレースのコース一覧と同じ並び） ---- */
 .replay-list {
-  max-height: min(56vh, 520px);
+  max-height: min(56cqh, 520px);
   overflow-y: auto;
   /* 8-6d: 縦だけスクロールする（overflow-y: auto だけだと横も auto になり、中身が数 px 広いと横にずれる） */
   overflow-x: hidden;
@@ -47,7 +47,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--ui-space-1);
-  width: min(500px, calc(100vw - 24px));
+  width: min(500px, calc(100cqw - 24px));
   padding: var(--ui-space-2) var(--ui-space-3);
   font-size: 13px;
   box-sizing: border-box;

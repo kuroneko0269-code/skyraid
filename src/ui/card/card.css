@@ -42,7 +42,7 @@
 .card-preview {
   display: block;
   width: 100%;
-  max-height: 52vh;
+  max-height: 52cqh;
   aspect-ratio: 1200 / 630;
   object-fit: contain;
   background: rgba(0, 0, 0, 0.4);
@@ -107,19 +107,19 @@
 }
 
 /* 横に広い画面: プレビュー（左）と操作（右） */
-@media (min-width: 640px) and (min-aspect-ratio: 4 / 3) {
+@container app (min-width: 640px) and (min-aspect-ratio: 4 / 3) {
   .card-dialog {
     grid-template-columns: minmax(0, 1.55fr) minmax(220px, 1fr);
     align-items: center;
   }
 
   .card-preview {
-    max-height: calc(100vh - 80px);
+    max-height: calc(100cqh - 80px);
   }
 }
 
 /* 背の低い横画面（スマホ）: 文面は 2 行、余白を詰める */
-@media (max-height: 480px) {
+@container app (max-height: 480px) {
   .card-dialog {
     padding: var(--ui-space-3);
     gap: var(--ui-space-2);

@@ -260,7 +260,7 @@
   content: '▲ ';
 }
 
-@media (max-height: 480px) {
+@container app (max-height: 480px) {
   .pvp-count {
     font-size: 64px;
   }
@@ -303,7 +303,7 @@
   top: calc(16% + env(safe-area-inset-top, 0px));
   transform: translateX(-50%);
   z-index: 30;
-  width: min(520px, calc(100vw - 32px));
+  width: min(520px, calc(100cqw - 32px));
   pointer-events: auto;
 }
 

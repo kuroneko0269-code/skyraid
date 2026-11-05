@@ -4,6 +4,7 @@ import { t } from '../core/i18n';
 import { isTouchMode } from '../core/touch-settings';
 import { installTapFocus } from './tap-focus';
 import { installTapRescue } from './tap-rescue';
+import { installSwitchGuard } from './screen-switch';
 
 /** タッチ操作の表示設定（自動 / 表示 / 非表示） */
 export function createTouchModeSelect(
@@ -135,6 +136,8 @@ export function installTouchGuards(target: Document): void {
   installTapFocus(target);
   // メニューのタップの取りこぼし対策（8-6）
   installTapRescue(target);
+  // 画面の切り替え直後の押し抜け（9-9b）
+  installSwitchGuard(target);
   const prevent = (e: Event): void => {
     e.preventDefault();
   };

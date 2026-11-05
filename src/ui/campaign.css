@@ -217,7 +217,7 @@
   color: var(--ui-accent);
 }
 
-@media (max-height: 480px) {
+@container app (max-height: 480px) {
   /* 9-7: 8 本を横画面のスマホ（844×390・568×320）に収める: 2 列（左に前半・右に後半）、見出しと残高を 1 行に */
   .screen.campaign-screen.mission-select-screen {
     gap: 6px;

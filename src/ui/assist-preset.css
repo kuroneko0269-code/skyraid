@@ -53,7 +53,7 @@
   display: none;
 }
 
-@media (max-width: 600px), (max-height: 480px) {
+@container app (max-width: 600px) or (max-height: 480px) {
   .assist-preset-card {
     min-height: 0;
     padding: 6px 8px;

@@ -147,20 +147,22 @@ export class Hud {
     parent.appendChild(root);
 
     const l = HUD_CONFIG;
-    const query =
-      typeof window.matchMedia === 'function'
-        ? window.matchMedia(
-            `(max-width: ${l.compactMaxWidth}px), (max-height: ${l.compactMaxHeight}px)`,
-          )
-        : null;
+    // 9-9b: 画面の大きさは測った body の大きさ（viewport-fit.ts の --app-width / --app-height）で見る。CSS の @container app と
+    // 同じ基準（iOS で向きを変えた後に初期包含ブロック（@media の基準）が古い値のまま残っても、配置がずれない）
     const refreshCompact = (): void => {
-      this.compact = query?.matches ?? false;
+      const w = document.body.clientWidth;
+      const h = document.body.clientHeight;
+      const compact = w > 0 && h > 0 && (w <= l.compactMaxWidth || h <= l.compactMaxHeight);
+      if (compact === this.compact) return;
+      this.compact = compact;
       root.classList.toggle('hud-compact', this.compact);
       // 1 度あたりの px が変わるので、ラダーを書き直す
       this.last.pitch = NaN;
     };
     refreshCompact();
-    query?.addEventListener('change', refreshCompact);
+    if (typeof ResizeObserver === 'function')
+      new ResizeObserver(refreshCompact).observe(document.body);
+    else window.addEventListener('resize', refreshCompact);
   }
 
   get visible(): boolean {

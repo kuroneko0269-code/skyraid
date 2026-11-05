@@ -39,8 +39,8 @@
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   z-index: 30;
-  width: min(640px, calc(100vw - 32px));
-  max-height: 46vh;
+  width: min(640px, calc(100cqw - 32px));
+  max-height: 46cqh;
   overflow-y: auto;
   box-sizing: border-box;
   padding: 10px 14px;
@@ -76,7 +76,7 @@
   top: 34%;
   z-index: 17;
   transform: translate(-50%, -50%);
-  max-width: calc(100vw - 32px);
+  max-width: calc(100cqw - 32px);
   text-align: center;
   white-space: nowrap;
   color: #f1ecff;
@@ -94,14 +94,14 @@
 
 .kaiju2-finale-main {
   font:
-    800 clamp(26px, 6.2vw, 46px) / 1.1 system-ui,
+    800 clamp(26px, 6.2cqw, 46px) / 1.1 system-ui,
     sans-serif;
   letter-spacing: 0.14em;
 }
 
 .kaiju2-finale-sub {
   margin-top: 6px;
-  font-size: clamp(13px, 2.6vw, 18px);
+  font-size: clamp(13px, 2.6cqw, 18px);
   white-space: normal;
 }
 

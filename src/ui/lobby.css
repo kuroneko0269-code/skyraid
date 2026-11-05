@@ -100,7 +100,7 @@
   white-space: nowrap;
 }
 
-@media (max-height: 480px) {
+@container app (max-height: 480px) {
   .lobby-code {
     font-size: 28px;
   }
@@ -217,7 +217,7 @@
   grid-column: 1 / -1;
 }
 
-@media (min-width: 640px) {
+@container app (min-width: 640px) {
   .lobby-room {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -513,7 +513,7 @@
 }
 
 /* 横画面のスマホ: 退出・ハンガー・準備 / 開始は枠の下端に貼り付け、スクロールしても押せるように */
-@media (max-height: 480px) {
+@container app (max-height: 480px) {
   .lobby-buttons {
     position: sticky;
     /* 枠の余白（campaign.css の横画面: 10px 16px）の分だけはみ出して端まで塗る */

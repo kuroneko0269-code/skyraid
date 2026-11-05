@@ -1,6 +1,7 @@
 // リングレース（7-1）と画面・音・天候・ゴースト・セーブの配線: モード選択の「リングレース」→ コース一覧（機体の選択）→
 // レース（カウントダウン・HUD・音・ゴースト）→ ゴールで記録・報酬 → リザルト（もう一度 / コース一覧へ）。
 // 7-B: ゴーストはベストの走行の入力の記録を別の世界で再生する（GhostSim）。リプレイの再生中は記録・報酬・リザルト・ゴーストなし
+import type { RingTrack } from '../render/ring-view';
 import { t } from '../core/i18n';
 import type { GameAudio } from '../audio/game-audio';
 import { isResume, usesDemoCamera, type GameState } from '../core/game-state';
@@ -78,6 +79,8 @@ export interface RaceGuideHooks {
   missed(): boolean;
   /** 固定ステップを止める（下見の間と、飛ばした直後の 1 回。true の間は入力も捨てる） */
   holdSim(): boolean;
+  /** 9-9b: 下見の間のリングの描き方（下見していなければ null） */
+  previewTrack(): RingTrack | null;
 }
 
 /** コース一覧・HUD・リザルトを作り、画面の遷移・レースのイベントにつなぐ */
@@ -143,7 +146,7 @@ export function createRaceLink(p: RaceLinkParts): RaceLink {
     if (usesDemoCamera(to) || to === 'hangar') course = null;
     if (to === 'flight' && !isResume(from, restart) && course) {
       // レースの天候は固定（7-5 の天候の配線の後に呼ばれて上書きする）
-      p.weather.set(course.weatherId);
+      p.weather.set(course.weatherId, true);
       p.weather.setTimeFlow(false);
     }
   });
@@ -257,6 +260,7 @@ export function createRaceLink(p: RaceLinkParts): RaceLink {
         guide.update(width, height, hudShown, save.settings.raceGuideLine);
       },
       missed: () => guide.missed,
+      previewTrack: () => guide.previewTrack(),
       holdSim() {
         if (guide.previewing) return true;
         if (!releaseStep) return false;

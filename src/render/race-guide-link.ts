@@ -7,7 +7,9 @@ import { missedRing, ringCues, type RingCue } from '../missions/race/guide';
 import { CoursePreview } from '../missions/race/preview';
 import type { RaceRunner } from '../missions/race/runner';
 import { createRaceGuideFrame, type RaceGuideHud } from '../ui/race-guide-hud';
+import type { RaceRing } from '../missions/race/course';
 import type { RaceGuideView } from './race-guide-view';
+import type { RingTrack } from './ring-view';
 
 const p = new Vector3();
 const eye: Vec3 = { x: 0, y: 0, z: 0 };
@@ -33,6 +35,13 @@ export class RaceGuideLink {
   private cues: (RingCue | null)[] = [];
   private missedFor = -1;
   private preview: CoursePreview | null = null;
+  /** 9-9b: 下見の間のリングの描き方（カメラの前のリングを発光・最後まで描く。使い回す） */
+  private readonly previewRings: {
+    rings: readonly RaceRing[];
+    current: number;
+    next: RaceRing | null;
+    readonly preview: true;
+  } = { rings: [], current: 0, next: null, preview: true };
 
   constructor(private readonly p: RaceGuideParts) {}
 
@@ -84,6 +93,18 @@ export class RaceGuideLink {
     return true;
   }
 
+  /** 9-9b: 下見の間のリングの描き方（下見していなければ null。render/ring-view.ts） */
+  previewTrack(): RingTrack | null {
+    const pv = this.preview;
+    const race = this.race;
+    if (!pv || !race) return null;
+    const t = this.previewRings;
+    t.rings = race.rings;
+    t.current = pv.focusRing;
+    t.next = race.rings[t.current] ?? null;
+    return t;
+  }
+
   /** 下見を見終えた（最後のフレームまで進んだ） */
   get previewDone(): boolean {
     return this.preview?.done ?? false;
@@ -95,7 +116,9 @@ export class RaceGuideLink {
     const live = race !== null && race.phase !== 'finished';
     const view = this.p.view;
     view.enabled = guideLine;
-    view.update(live ? race : null);
+    const pl = this.p.player();
+    // 9-9b: 飛行中は自機 → 次 → その次、下見の間は道筋の全部
+    view.update(live ? race : null, pl.position, this.preview?.path ?? null);
     if (!live || !hudShown) {
       this.missed = false;
       this.p.hud.hide();
@@ -126,7 +149,6 @@ export class RaceGuideLink {
       this.missed = false;
     }
     if (race.phase === 'racing' && ring) {
-      const pl = this.p.player();
       this.missed = missedRing(ring, pl.position, pl.velocity, this.missed);
     } else this.missed = false;
     f.missed = this.missed && ring ? { number: ring.index + 1, required: ring.required } : null;

@@ -30,3 +30,36 @@ export function isTap(g: TapGesture, c: typeof TAP_CONFIG = TAP_CONFIG): boolean
     g.end.y <= r.bottom + m
   );
 }
+
+/**
+ * 9-9b: クリックの押し始めの時刻。直前（touchWindowMs 以内）にタッチがあれば、そのクリックはタッチから作られたもの
+ * （iOS の互換のクリック。その前に互換の mousedown も来るので、マウスの押し始めは使わない）としてタッチの押し始めを、
+ * なければマウスの押し始めを使う
+ */
+export function pressTimeOf(
+  touchAt: number,
+  mouseAt: number,
+  now: number,
+  touchWindowMs: number = TAP_CONFIG.maxMs * 2,
+): number {
+  return now - touchAt <= touchWindowMs ? touchAt : mouseAt;
+}
+
+/** 9-9b: クリックが来たときの押し始めと画面の切り替えの時刻（ms。performance.now()） */
+export interface ClickTiming {
+  /** 最後に押し始めた時刻（touchstart・pointerdown） */
+  readonly pressAt: number;
+  /** 最後に画面が切り替わった（新しい画面が出た）時刻 */
+  readonly switchAt: number;
+  readonly now: number;
+  /** 指・マウスのクリックか（キーボードの Enter / Space のクリックは detail が 0 で、捨てない） */
+  readonly fromPointer: boolean;
+}
+
+/**
+ * 画面の切り替えの前に押し始めたタップのクリックか（9-9b）。そのクリックは切り替わる前の画面のためのものなので、
+ * 切り替わった後の画面には届けない（iOS はタップの後に互換のクリックを作り、その時点の画面で当たる要素を決める）
+ */
+export function isStaleClick(c: ClickTiming, guardMs: number = TAP_CONFIG.switchGuardMs): boolean {
+  return c.fromPointer && c.pressAt < c.switchAt && c.now - c.switchAt <= guardMs;
+}

@@ -58,7 +58,7 @@
   left: calc(var(--ui-space-3) + var(--ui-safe-left));
   right: calc(var(--photo-shutter) + var(--ui-space-5) + var(--ui-safe-right));
   bottom: calc(var(--photo-bar-h) + var(--ui-space-2) + var(--ui-safe-bottom));
-  max-height: 46vh;
+  max-height: 46cqh;
   overflow-y: auto;
   /* 8-6d: 縦だけスクロールする（overflow-y: auto だけだと横も auto になり、中身が数 px 広いと横にずれる） */
   overflow-x: hidden;
@@ -207,7 +207,7 @@
 }
 
 /* スマホ横画面（高さが低い）: パネルは 1 行ずつ横に流す */
-@media (max-height: 520px) {
+@container app (max-height: 520px) {
   .photo-ui {
     --photo-bar-h: 52px;
     --photo-shutter: 60px;
@@ -224,7 +224,7 @@
   }
 
   .photo-sheet {
-    max-height: 52vh;
+    max-height: 52cqh;
   }
 }
 
