@@ -1,0 +1,44 @@
+/* 飛行中の一言（9-5d）: 照準の円のすぐ外（位置は hud-tip.ts が機首に合わせて translate で動かす） */
+.hud .hud-tip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(460px, 86vw);
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: rgba(0, 10, 18, 0.62);
+  color: #ffd75a;
+  font:
+    700 16px/1.3 system-ui,
+    sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  white-space: normal;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.hud .hud-tip[hidden],
+.hud .hud-tip-arrow[hidden] {
+  display: none;
+}
+
+.hud-tip-arrow {
+  flex: none;
+  display: inline-block;
+  font-size: 18px;
+  line-height: 1;
+  color: #ffd75a;
+}
+
+.hud.hud-compact .hud-tip {
+  max-width: min(400px, 80vw);
+  padding: 4px 10px;
+  font-size: 14px;
+}
+
+.hud.hud-compact .hud-tip-arrow {
+  font-size: 16px;
+}

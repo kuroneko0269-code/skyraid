@@ -106,7 +106,15 @@ describe('文（設定に合わせた直し方）', () => {
     );
     expect(goodText('accuracy', full(GOOD))).toContain('21.0%');
     expect(tipText('overtake', { touch: true, speedMatch: true })).toContain('機首');
-    expect(tipText('lost', { touch: false, speedMatch: false })).toContain('矢印');
+    // 9-5d: 見失いは的の向きと角度（向きが無ければ出さない）
+    expect(
+      tipText(
+        'lost',
+        { touch: false, speedMatch: false },
+        { side: 'left', angleDeg: 132.4, arrowDeg: -100 },
+      ),
+    ).toBe('的は左 132° — 左へ曲がり続けて');
+    expect(tipText('lost', { touch: false, speedMatch: false })).toBe('');
   });
 
   it('英語もある', () => {

@@ -167,6 +167,11 @@ for (const size of SIZES) {
   await page.fill('.pilot-name-input', 'ACE');
   await page.keyboard.press('Enter');
   await shown('.mode-select-screen');
+  // 9-5d: タッチの端末は先に「補助の組を選んでください」（Esc で今のまま → チュートリアルの案内）
+  if (await page.locator('.assist-preset-prompt:not([hidden])').count()) {
+    await shot('assist-preset-prompt', '.assist-preset-prompt');
+    await page.keyboard.press('Escape');
+  }
   await page.keyboard.press('Escape');
   await page.evaluate(() => {
     const s = JSON.parse(localStorage.getItem('skyraid.save'));

@@ -14,6 +14,7 @@ export const SETTINGS_SLOTS = [
   'hud',
   'display',
   'volume',
+  'assistPreset',
   'assist',
   'controls',
   'game',
@@ -29,7 +30,11 @@ const TABS: readonly { id: string; labelKey: string; slots: readonly SettingsSlo
     slots: ['language', 'quality', 'hud', 'display'],
   },
   { id: 'sound', labelKey: 'settings.tab.sound', slots: ['volume'] },
-  { id: 'controls', labelKey: 'settings.tab.controls', slots: ['assist', 'controls'] },
+  {
+    id: 'controls',
+    labelKey: 'settings.tab.controls',
+    slots: ['assistPreset', 'assist', 'controls'],
+  },
   { id: 'game', labelKey: 'settings.tab.game', slots: ['game'] },
   { id: 'data', labelKey: 'settings.tab.data', slots: ['data'] },
 ];

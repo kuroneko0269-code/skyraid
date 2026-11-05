@@ -1,5 +1,6 @@
-// 練習場（9-5）の課題の一覧: 左に課題 3 つ（最高スコア）、右に選んだ課題の説明・時間・機体・今の設定と、設定ごとの記録（上位 5）、
-// その下に設定の欄（方式・狙いの補助・自動射撃・カーブ）と「スタート」。見た目はリングレースのコース一覧（race.css）と同じ部品
+// 練習場（9-5）の課題の一覧: 左に課題 3 つ（最高スコア）、右に選んだ課題の「概要・記録・設定」のタブ（9-5d。それまでは
+// 説明・設定ごとの記録（上位 5）・設定の欄を縦に積んでいて、スマホの横画面で縦にスクロールしていた）と「スタート」。
+// 見た目はリングレースのコース一覧（race.css）と同じ部品
 import { formatDate } from '../core/format';
 import { t } from '../core/i18n';
 import './campaign.css';
@@ -17,6 +18,9 @@ import { el } from './hud-dom';
 import { formatRatio, practiceSettingsLabel } from './practice-text';
 import { createButton, createScreen, setScreenShown } from './screen';
 
+const TABS = ['overview', 'records', 'settings'] as const;
+type Tab = (typeof TABS)[number];
+
 interface Entry {
   readonly drill: PracticeDrill;
   readonly button: HTMLButtonElement;
@@ -33,6 +37,8 @@ export class PracticeSelectScreen {
   private readonly facts: HTMLDivElement;
   private readonly table: HTMLTableElement;
   private readonly start: HTMLButtonElement;
+  private readonly tabButtons = new Map<Tab, HTMLButtonElement>();
+  private readonly panes = new Map<Tab, HTMLDivElement>();
   selected: PracticeDrill = 'static';
 
   constructor(
@@ -48,6 +54,7 @@ export class PracticeSelectScreen {
     const root = createScreen(parent, 'campaign-screen race-screen practice-screen');
     el('h2', 'ui-heading campaign-heading', root, t('practice.select.heading'));
     el('p', 'campaign-text practice-lead', root, t('practice.select.lead'));
+    root.classList.add('practice-select');
     const layout = el('div', 'race-layout', root);
     const list = el('div', 'race-course-list', layout);
     for (const drill of PRACTICE_DRILLS) {
@@ -66,18 +73,36 @@ export class PracticeSelectScreen {
       const best = el('span', 'race-course-best', button);
       this.entries.push({ drill, button, best });
     }
-    const detail = el('div', 'race-detail', layout);
-    this.title = el('h3', 'ui-title race-detail-title', detail);
-    this.note = el('p', 'campaign-text', detail);
-    this.facts = el('div', 'race-facts', detail);
+    const detail = el('div', 'race-detail practice-detail', layout);
+    const tabs = el('div', 'practice-tabs', detail);
+    tabs.setAttribute('role', 'tablist');
+    for (const tab of TABS) {
+      const b = createButton(tabs, 'practice-tab', t(`practice.select.tab.${tab}`), () => {
+        this.showTab(tab);
+      });
+      b.dataset.tab = tab;
+      b.setAttribute('role', 'tab');
+      this.tabButtons.set(tab, b);
+      const pane = el('div', `practice-pane practice-pane-${tab}`, detail);
+      pane.setAttribute('role', 'tabpanel');
+      this.panes.set(tab, pane);
+    }
+    const overview = this.pane('overview');
+    this.title = el('h3', 'ui-title race-detail-title', overview);
+    this.note = el('p', 'campaign-text', overview);
+    // 背の低い画面は上の説明を隠し、ここに出す（CSS）
+    el('p', 'campaign-text practice-lead-inline', overview, t('practice.select.lead'));
+    this.facts = el('div', 'race-facts', overview);
+    const records = this.pane('records');
     el(
       'div',
       'campaign-label',
-      detail,
+      records,
       t('practice.select.records', { count: PRACTICE_CONFIG.listRows }),
     );
-    this.table = el('table', 'race-times practice-records', detail);
-    this.settingsSlot = el('div', 'practice-settings-slot', detail);
+    this.table = el('table', 'race-times practice-records', records);
+    this.settingsSlot = el('div', 'practice-settings-slot', this.pane('settings'));
+    this.showTab('overview');
     const buttons = el('div', 'campaign-buttons', root);
     createButton(
       buttons,
@@ -94,6 +119,21 @@ export class PracticeSelectScreen {
       },
     );
     this.root = root;
+  }
+
+  private pane(tab: Tab): HTMLDivElement {
+    const p = this.panes.get(tab);
+    if (!p) throw new Error(`no pane: ${tab}`);
+    return p;
+  }
+
+  /** タブを切り替える（課題を選び直しても今のタブのまま） */
+  showTab(tab: Tab): void {
+    for (const [k, b] of this.tabButtons) {
+      b.setAttribute('aria-selected', String(k === tab));
+      b.classList.toggle('is-selected', k === tab);
+    }
+    for (const [k, p] of this.panes) p.hidden = k !== tab;
   }
 
   select(drill: PracticeDrill): void {
@@ -127,7 +167,7 @@ export class PracticeSelectScreen {
       t('practice.select.duration', { seconds: PRACTICE_CONFIG.durations[d] }),
     );
     fact(t('campaign.briefing.aircraft'), this.source.aircraftName());
-    fact(t('practice.select.settings'), practiceSettingsLabel(this.source.settingsKey()));
+    fact(t('practice.select.settings'), practiceSettingsLabel(this.source.settingsKey(), true));
     fact(t('practice.select.rules'), t('practice.select.rulesValue'));
     this.renderRecords(records, d);
   }
@@ -151,7 +191,9 @@ export class PracticeSelectScreen {
         t('practice.select.row', { kills: String(e.kills), accuracy: formatRatio(e.accuracy) }),
       );
       const name = findAircraftModel(e.aircraftId)?.name ?? e.aircraftId;
-      el('td', 'practice-records-settings', tr, `${practiceSettingsLabel(e.settings)} / ${name}`);
+      const label = `${practiceSettingsLabel(e.settings, true)} / ${name}`;
+      el('td', 'practice-records-settings', tr, label).title =
+        `${practiceSettingsLabel(e.settings)} / ${name}`;
       el('td', '', tr, formatDate(e.date));
     });
   }

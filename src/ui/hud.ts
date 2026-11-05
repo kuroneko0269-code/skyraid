@@ -183,6 +183,12 @@ export class Hud {
     this.setVisible(!this.shown);
   }
 
+  /** 9-5d: 機首の印のずれ（画面の中央から px）と狭い画面か。照準の近くに出す一言（hud-tip.ts）が使う */
+  get nose(): { readonly x: number; readonly y: number; readonly compact: boolean } {
+    const { noseX, noseY } = this.last;
+    return { x: noseX || 0, y: noseY || 0, compact: this.compact };
+  }
+
   /** 画面上端にお知らせを seconds 秒間出す（HUD を隠していると見えない） */
   showNotice(text: string, seconds: number): void {
     this.notice.textContent = text;

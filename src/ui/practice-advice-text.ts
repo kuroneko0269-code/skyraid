@@ -2,7 +2,7 @@
 // 飛行中の一言の文も。DOM・CSS 非依存（解析のツール scripts/replay-analysis/advice.ts からも読む）
 import { t } from '../core/i18n';
 import type { PracticeGood, PracticeIssue } from '../data/practice-advice';
-import type { FlightTip } from '../missions/practice/tips';
+import type { FlightTip, TipDirection } from '../missions/practice/tips';
 import type { PracticeResult } from '../missions/practice/score';
 import { parsePracticeSettings } from '../progression/practice-records';
 import { formatDecimal } from '../core/format';
@@ -59,8 +59,16 @@ export function goodText(k: PracticeGood, r: Readonly<PracticeResult>): string {
   });
 }
 
-/** 飛行中の一言の文 */
-export function tipText(tip: FlightTip, c: Pick<AdviceContext, 'touch' | 'speedMatch'>): string {
+/** 飛行中の一言の文（9-5d: 見失いは的の向きと角度。向きが無ければ空 = 出さない） */
+export function tipText(
+  tip: FlightTip,
+  c: Pick<AdviceContext, 'touch' | 'speedMatch'>,
+  dir: Readonly<TipDirection> | null = null,
+): string {
+  if (tip === 'lost')
+    return dir
+      ? t(`practice.tips.lost.${dir.side}`, { deg: String(Math.round(dir.angleDeg)) })
+      : '';
   const v = tip === 'overtake' ? (c.touch && c.speedMatch ? 'on' : 'off') : 'all';
   return t(`practice.tips.${tip}.${v}`);
 }

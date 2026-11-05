@@ -22,6 +22,10 @@ import type { WeatherView } from '../render/weather/weather-view';
 import type { ReplayHub } from '../replay/hub';
 import { PracticeHud } from './practice-hud';
 import { adviceContext, tipText } from './practice-advice-text';
+import { HudTip } from './hud-tip';
+import type { Hud } from './hud';
+import { PRACTICE_TIPS_CONFIG } from '../data/practice-advice';
+import { tipAllowed, tipDirection, type TipDirection } from '../missions/practice/tips';
 import { PracticeResultScreen, type PracticeRecordState } from './practice-result';
 import { PracticeSelectScreen } from './practice-select';
 import { PracticeSettingsPanel } from './practice-settings';
@@ -37,8 +41,10 @@ export interface PracticeLinkParts {
   readonly weather: WeatherView;
   readonly tilt: TiltSource;
   /** 操作の設定を効かせ直し、設定画面の表示を合わせ直す（ui/controls-link.ts） */
-  readonly controls: { apply(): void; sync(): void };
+  readonly controls: { apply(): void; sync(): void; onPresetPick(fn: () => void): void };
   readonly replay: ReplayHub;
+  /** 9-5d: 飛行中の一言を照準の近くに出す */
+  readonly hud: Hud;
 }
 
 export interface PracticeLink {
@@ -98,13 +104,45 @@ export function createPracticeLink(p: PracticeLinkParts): PracticeLink {
     onRetry: () => game.transition('flight'),
     onList: () => game.transition('practice_select'),
   });
-  // 9-5c: 飛行中の一言（設定で OFF にできる）。文は始めたときの設定（速度合わせの有無）に合わせる
+  // 9-5c: 飛行中の一言（設定で OFF にできる）。9-5d: 照準の近くに出し、自動の補助に任せている一言（自動射撃 ON の射程外・
+  // 速度合わせ ON の追い越し）は出さない（今の設定で決める）。見失いは的の向きの矢印と曲がる向き
+  const tipView = new HudTip(p.hud);
+  const dir: TipDirection = { side: 'right', angleDeg: 0, arrowDeg: 0 };
   const hud = new PracticeHud(document.body, {
     enabled: () => save.settings.controls.practiceTips && !replay.playing,
-    text: (tip) => tipText(tip, adviceContext(startKey)),
+    allow: (tip) => tipAllowed(tip, adviceContext(settingsKey())),
+    show: (tip) => {
+      const s = play.session;
+      const target = s.combat.targeting.selected;
+      const d =
+        tip === 'lost' && target
+          ? tipDirection(
+              dir,
+              s.aircraft.state.orientation,
+              s.aircraft.state.position,
+              target.position,
+            )
+          : null;
+      const text = tipText(tip, adviceContext(settingsKey()), d);
+      if (text) tipView.show(text, PRACTICE_TIPS_CONFIG.showSeconds, d ? d.arrowDeg : null);
+    },
+    hide: () => {
+      tipView.hide();
+    },
   });
   for (const slot of [select.settingsSlot, screens.pause.extra, result.settingsSlot])
     panels.push(new PracticeSettingsPanel(slot, save, p.tilt, changed));
+  // 9-5d: 設定画面で補助の組を選んだとき（ポーズから開いた設定など）
+  const presetPicked = (): void => {
+    for (const panel of panels) panel.sync();
+    if (game.state === 'practice_select') select.refresh();
+  };
+  p.controls.onPresetPick(presetPicked);
+  // チュートリアルの補助の章・初回のダイアログで選んだとき（設定画面の表示も合わせ直す）
+  screens.tutorial.onPresetPick = () => {
+    p.controls.sync();
+    presetPicked();
+  };
   screens.inPractice = () => selection !== null;
   screens.pause.onRestart = () => {
     game.restart();
@@ -166,6 +204,7 @@ export function createPracticeLink(p: PracticeLinkParts): PracticeLink {
       const runner = play.practice;
       if (!runner || game.state !== 'flight') return;
       hud.update();
+      tipView.update();
       if (runner.readyForResult && pending && !replay.playing) {
         const r = pending;
         pending = null;

@@ -387,6 +387,7 @@
         "goal": "Settings that make hitting easier, and a place to practice",
         "page": [
           "In Settings → Controls you can tune how easy hitting is (touch controls).",
+          "The assist preset below sets all three at once: Easy (fires and matches speed for you), Normal (you choose when to fire and how fast to fly), Hard (light assist, everything is up to you).",
           "• Aim assist (weak, normal, strong): how strongly the nose is pulled onto the target near the aim circle.",
           "• Auto-fire: fires only while the circle glows white. It never fires out of range.",
           "• Speed match: lowers the throttle as you close on the chosen target so you don't overshoot (THR shows orange AUTO).",
@@ -1076,7 +1077,29 @@
       "strong": "High"
     },
     "autoFire": "Auto-fire (touch)",
-    "speedMatch": "Speed matching (touch)"
+    "speedMatch": "Speed matching (touch)",
+    "preset": {
+      "title": "Assist preset (touch)",
+      "easy": "Easy",
+      "normal": "Normal",
+      "hard": "Hard",
+      "custom": "Custom",
+      "on": "ON",
+      "off": "OFF",
+      "summary": "Aim assist {aim} · Auto-fire {fire} · Speed matching {speed}",
+      "status": "Now: {name} ({summary})",
+      "note": "Keyboard, gamepad and PvP room rules are not affected",
+      "desc": {
+        "easy": "Fires on its own when you are on target and matches speed as you close in. For getting used to flying first",
+        "normal": "The assist nudges your nose. You decide when to fire and how fast to fly",
+        "hard": "Light assist. Aiming, firing and speed are all up to you"
+      },
+      "prompt": {
+        "title": "Choose an assist preset",
+        "body": "Sets aim assist, auto-fire and speed matching together. You can change it any time in Settings → Controls",
+        "keep": "Keep my current settings ({name})"
+      }
+    }
   },
   "settings": {
     "enemies": "Enemies",
@@ -1892,7 +1915,12 @@
       "rules": "Rules",
       "rulesValue": "Guns only · can't be shot down",
       "noRecords": "No records yet",
-      "row": "{kills} kills · {accuracy} hit"
+      "row": "{kills} kills · {accuracy} hit",
+      "tab": {
+        "overview": "Overview",
+        "records": "Records",
+        "settings": "Settings"
+      }
     },
     "result": {
       "toList": "Practice Range",
@@ -1977,7 +2005,10 @@
         "all": "Too far — get within 1.5 km first"
       },
       "lost": {
-        "all": "Target lost — turn toward the edge arrow"
+        "right": "Target {deg}° right — keep turning right",
+        "left": "Target {deg}° left — keep turning left",
+        "up": "Target {deg}° up — keep pulling up",
+        "down": "Target {deg}° down — keep pushing down"
       }
     }
   }

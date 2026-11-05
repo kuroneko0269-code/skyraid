@@ -1,4 +1,4 @@
-// 練習場（9-5）の設定の欄: 操縦（タッチ）の方式・狙いの補助・自動射撃・速度合わせ（9-5b）・感度のカーブを、課題の一覧・ポーズ・結果の画面からその場で変える。
+// 練習場（9-5）の設定の欄: 補助の組（9-5d）・操縦（タッチ）の方式・狙いの補助・自動射撃・速度合わせ（9-5b）・感度のカーブを、課題の一覧・ポーズ・結果の画面からその場で変える。
 // 値は設定画面の「操作」と同じ（セーブの settings.controls）。変えるとすぐ効かせ、設定画面とほかの欄の表示を合わせ直す（onChange）。
 // 傾きは設定画面と同じ選択肢（使えない端末には出さない・iOS は許可のボタン）
 import { t } from '../core/i18n';
@@ -11,6 +11,13 @@ import { el } from './hud-dom';
 import { createToggleButton } from './mobile';
 import { createSteerModeChoice } from './tilt-settings';
 import type { TiltSource } from './tilt-source';
+import { applyAssistPreset } from '../core/assist-preset';
+import { AssistPresetChoice } from './assist-preset';
+
+/** 9-5d: 欄の見出しの「（タッチ）」を外す（上の「補助の組（タッチ）」で分かる。狭い画面のタブに収める） */
+function short(label: string): string {
+  return label.replace(/\s*[（(](タッチ|touch)[）)]\s*$/i, '');
+}
 
 export class PracticeSettingsPanel {
   readonly root: HTMLDivElement;
@@ -25,35 +32,60 @@ export class PracticeSettingsPanel {
   ) {
     const root = el('div', 'practice-settings', parent);
     el('div', 'practice-settings-heading', root, t('practice.settings.heading'));
-    const grid = el('div', 'control-settings-toggles practice-settings-grid', root);
     const c = save.settings.controls;
     const commit = (fn: (x: ControlSettings) => void): void => {
       save.updateControls(fn);
       onChange();
     };
-    const steer = createSteerModeChoice(grid, c, tilt, (v) => {
-      commit((x) => (x.steerMode = v));
+    // 9-5d: 補助の組（3 つの値をまとめて。個別に変えると「カスタム」）
+    const preset = new AssistPresetChoice(
+      root,
+      () => this.save.settings.controls,
+      (p) => {
+        commit((x) => {
+          applyAssistPreset(x, p);
+        });
+      },
+      { className: 'practice-preset', short: true },
+    );
+    this.syncers.push(() => {
+      preset.sync();
     });
+    const grid = el('div', 'control-settings-toggles practice-settings-grid', root);
+    const steer = createSteerModeChoice(
+      grid,
+      c,
+      tilt,
+      (v) => {
+        commit((x) => (x.steerMode = v));
+      },
+      short(STEER_LABELS.mode),
+    );
     this.syncers.push(() => {
       steer.sync(this.save.settings.controls.steerMode);
     });
     const assist = choice(
       grid,
-      AIM_ASSIST_LEVEL_LABELS.title,
+      short(AIM_ASSIST_LEVEL_LABELS.title),
       AIM_ASSIST_LEVELS.map((v) => [v, AIM_ASSIST_LEVEL_LABELS.levels[v]] as const),
       c.aimAssist,
       (v) => {
         commit((x) => (x.aimAssist = v));
       },
     );
-    const autoFire = createToggleButton(grid, AIM_ASSIST_LEVEL_LABELS.autoFire, c.autoFire, () => {
-      commit((x) => (x.autoFire = !x.autoFire));
-      return this.save.settings.controls.autoFire;
-    });
+    const autoFire = createToggleButton(
+      grid,
+      short(AIM_ASSIST_LEVEL_LABELS.autoFire),
+      c.autoFire,
+      () => {
+        commit((x) => (x.autoFire = !x.autoFire));
+        return this.save.settings.controls.autoFire;
+      },
+    );
     // 9-5b: 速度合わせ
     const speedMatch = createToggleButton(
       grid,
-      AIM_ASSIST_LEVEL_LABELS.speedMatch,
+      short(AIM_ASSIST_LEVEL_LABELS.speedMatch),
       c.speedMatch,
       () => {
         commit((x) => (x.speedMatch = !x.speedMatch));
@@ -62,7 +94,7 @@ export class PracticeSettingsPanel {
     );
     const curve = choice(
       grid,
-      STEER_LABELS.curve,
+      short(STEER_LABELS.curve),
       STICK_CURVES.map((v) => [v, curveLabel(v)] as const),
       c.stickCurve,
       (v) => {

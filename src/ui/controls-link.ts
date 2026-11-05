@@ -10,10 +10,12 @@ import type { SaveStore } from '../progression/save-store';
 import type { FxEvents } from '../render/fx/fx-events';
 import { createControlSettings } from './control-settings';
 import type { TouchLink } from './touch-link';
+import type { SettingsScreen } from './settings-screen';
 import { effectiveSteerMode, levelTilt, linkTiltStartup } from './tilt-settings';
 
 export function createControlsLink(
-  panel: HTMLElement,
+  /** 設定画面（「操作」の枠と、9-5d の補助の組の枠 assistPreset） */
+  settings: Pick<SettingsScreen, 'slot'>,
   save: SaveStore,
   input: Input,
   touchLink: TouchLink,
@@ -26,7 +28,7 @@ export function createControlsLink(
     fxEvents: FxEvents;
     urlOverrides: Readonly<Partial<FlightControlOptions>>;
   },
-): { apply: () => void; sync: () => void } {
+): { apply: () => void; sync: () => void; onPresetPick: (fn: () => void) => void } {
   const vibrator = new Vibrator(typeof navigator === 'undefined' ? undefined : navigator);
   // 振動: 被弾・自機のミサイル発射・撃墜
   fxEvents.add({
@@ -66,7 +68,20 @@ export function createControlsLink(
     options.autoLevel = urlOverrides.autoLevel ?? c.autoLevel;
     vibrator.enabled = c.vibration;
   };
-  const ui = createControlSettings(panel, save, vibrator.supported, tilt, apply);
+  const presetListeners: (() => void)[] = [];
+  const ui = createControlSettings(
+    settings.slot('controls'),
+    save,
+    vibrator.supported,
+    tilt,
+    apply,
+    {
+      slot: settings.slot('assistPreset'),
+      onPick: () => {
+        for (const fn of presetListeners) fn();
+      },
+    },
+  );
   // 9-4: 傾きを保存していれば使い始める（iOS は次のタップで許可を求める）。使えなければ「方向へ倒す」に戻す
   linkTiltStartup(
     save,
@@ -85,5 +100,9 @@ export function createControlsLink(
       apply(save.settings.controls);
     },
     sync: ui.sync,
+    // 9-5d: 設定の「操作」で補助の組を選んだ後（練習場の設定の欄の表示を合わせ直す）
+    onPresetPick: (fn) => {
+      presetListeners.push(fn);
+    },
   };
 }

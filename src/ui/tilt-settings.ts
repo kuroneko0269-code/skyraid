@@ -65,10 +65,12 @@ export function createSteerModeChoice(
   c: Readonly<ControlSettings>,
   tilt: TiltSource,
   commit: (mode: SteerMode) => void,
+  /** 見出し（9-5d: 練習場の欄は短く） */
+  label: string = STEER_LABELS.mode,
 ): { sync: (mode: SteerMode) => void } {
   const modes = STEER_MODES.filter((m) => m !== 'tilt' || TiltSource.usable());
   const row = el('label', 'ui-toggle settings-item control-size', parent);
-  row.textContent = `${STEER_LABELS.mode} `;
+  row.textContent = `${label} `;
   const select = el('select', '', row);
   for (const m of modes) {
     const option = el('option', '', select, STEER_LABELS.modes[m]);

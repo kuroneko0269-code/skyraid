@@ -66,6 +66,17 @@ export async function auditTutorialScreens(page, shot, toModeSelect, dialog) {
   await page.click('.mode-card[data-mode="tutorial"]');
   await page.locator('.tutorial-chapter[data-chapter="assist"]').click();
   await shot('dialog-tutorial-assist', '.tutorial-page');
+  // 9-5d: 今の利用者への一度だけの「補助の組を選んでください」（タッチの端末だけ・「今の設定のまま」付き）
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('skyraid.save'));
+    s.flags.assistPreset = false;
+    localStorage.setItem('skyraid.save', JSON.stringify(s));
+  });
+  await toModeSelect();
+  if (await page.locator('.assist-preset-prompt:not([hidden])').count()) {
+    await shot('dialog-assist-preset', '.assist-preset-prompt');
+    await page.keyboard.press('Escape');
+  }
   await page.evaluate(() => {
     const s = JSON.parse(localStorage.getItem('skyraid.save'));
     s.flags.tutorialNotice = false;
