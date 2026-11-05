@@ -30,7 +30,7 @@ export interface BadgeDef {
 
 /**
  * 勲章の一覧（並びは一覧の画面の順）。id はセーブの badges.earned のキーなので変えない（足すのは可・消すと読み捨てる）。
- * 報酬は 1 回だけ（同じ勲章は 2 回取れない）なので稼ぎ場にならない。合計 50,900 CR（キャンペーン全 S の報酬の合計と同じくらい）
+ * 報酬は 1 回だけ（同じ勲章は 2 回取れない）なので稼ぎ場にならない。合計 46,500 CR（キャンペーン 8 本を全部 S にした報酬の合計 44,000 CR と同じくらい）
  */
 export const BADGES: readonly BadgeDef[] = [
   // 操縦（記録する飛行ならどのモードでも）
@@ -72,8 +72,6 @@ export const BADGES: readonly BadgeDef[] = [
   { id: 'pvpWin', group: 'pvp', rewards: [1000] },
   { id: 'pvpKills', group: 'pvp', rewards: [1500] },
 ];
-
-export type BadgeId = string;
 
 export function findBadge(id: string): BadgeDef | undefined {
   return BADGES.find((b) => b.id === id);

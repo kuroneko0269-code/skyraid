@@ -129,8 +129,8 @@ describe('情報画面（版・更新履歴・ライセンス）', () => {
 });
 
 describe('背景グリフ', () => {
-  it('14 種類（9-5 で練習場の的・9-9 で日めくり）それぞれに線がある', () => {
-    expect(GLYPH_KINDS).toHaveLength(14);
+  it('15 種類（9-5 で練習場の的・9-9 で日めくり・9-10 で勲章）それぞれに線がある', () => {
+    expect(GLYPH_KINDS).toHaveLength(15);
     for (const k of GLYPH_KINDS) expect(glyphShapeCount(k), k).toBeGreaterThan(0);
   });
 });

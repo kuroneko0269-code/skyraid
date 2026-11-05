@@ -94,7 +94,7 @@ export interface BadgeProgress {
   readonly goal: number;
 }
 
-/** 記録から決まる勲章の今の段階と、次の段階への進み具合 */
+/** 記録から決まる勲章（初撃墜・キャンペーン・訓練課程・レイド 3 つ・レース・防衛戦 2 つ・練習熱心・日替わり 2 つ・撃墜王）の今の段階と、次の段階への進み具合 */
 export interface RecordBadge {
   readonly tier: number;
   readonly progress: BadgeProgress | null;
@@ -128,25 +128,8 @@ function countTiers(current: number, goals: readonly number[]): RecordBadge {
 
 const yes = (ok: boolean): RecordBadge => ({ tier: ok ? 1 : 0, progress: null });
 
-/** 記録から取れる勲章の id */
-export const RECORD_BADGES = [
-  'firstKill',
-  'campaign',
-  'tutorial',
-  'vorgas',
-  'nephirga',
-  'raidHard',
-  'raceMedals',
-  'defenseAll',
-  'defenseHard',
-  'practiceAll',
-  'dailyStreak',
-  'dailyAll',
-  'pvpKills',
-] as const;
-
 /**
- * 今のセーブの記録から決まる勲章（RECORD_BADGES）の段階と進み具合。
+ * 今のセーブの記録から決まる勲章の段階と進み具合。
  * 日替わりの連続は最後に遊んだ日までの連続（途切れていても次に遊ぶまで残る数。取った段階は消えない）
  */
 export function recordBadges(data: Readonly<SaveData>): Record<string, RecordBadge> {
