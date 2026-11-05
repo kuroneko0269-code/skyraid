@@ -42,3 +42,20 @@ export function applyAimAssist(
   controls.yaw = clamp(controls.yaw + yaw, -1, 1);
   return true;
 }
+
+const scaled: { -readonly [K in keyof AimAssistSpec]: number } = { ...AIM_ASSIST_CONFIG };
+
+/**
+ * 9-6d: 的の assistScale（省略は 1）で補正の強さ（maxCorrection）を弱めた補助の数値（使い回しの入れ物を返す）。
+ * 1 なら spec をそのまま返す（ほかの的・モードは今までと同じ）
+ */
+export function assistSpecFor(
+  spec: AimAssistSpec,
+  target: { readonly assistScale?: number } | null,
+): AimAssistSpec {
+  const k = target?.assistScale ?? 1;
+  if (k === 1) return spec;
+  Object.assign(scaled, spec);
+  scaled.maxCorrection = spec.maxCorrection * k;
+  return scaled;
+}

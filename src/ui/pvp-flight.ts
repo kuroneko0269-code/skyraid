@@ -28,7 +28,7 @@ import type { ResultView } from './pvp-result';
 import type { BuildingField } from '../combat/buildings';
 import { RAID_RULES } from '../data/raid';
 import type { RaidBriefing } from './raid-briefing';
-import { RaidFlight, type Kaiju2Source, type KaijuSource } from './raid-flight';
+import { RaidFlight, coopLivesLeft, type Kaiju2Source, type KaijuSource } from './raid-flight';
 import { DefenseFlight } from './defense-flight';
 import { isCoopMode } from '../net/lobby-rules';
 import type { DefenseHud } from './defense-hud';
@@ -239,15 +239,16 @@ export class PvpFlight {
       this.lastRemaining = remaining;
     }
     const m = this.mirror;
+    const lives = this.raid
+      ? coopLivesLeft(this.score?.players, this.net.localId, this.room.settings.hard)
+      : null;
     const downed =
       !d.session.player.active && m.downedBy !== undefined
         ? {
             killer: m.downedBy === null ? null : this.nameOf(m.downedBy),
             color: m.downedBy === null ? '' : playerColorCss(m.downedBy),
-            remaining:
-              m.downedAt +
-              (this.raid || this.defense ? RAID_RULES.respawnSeconds : PVP_CONFIG.respawnSeconds) -
-              m.time,
+            // 9-6d: 残機を使い切ったら復帰しない（観戦）
+            remaining: lives === 0 ? -1 : m.downedAt + this.respawnSeconds - m.time,
           }
         : null;
     const room = this.room;
@@ -259,7 +260,12 @@ export class PvpFlight {
       invulnerable: m.ownInvulnerable,
       boosted: m.ownBoosted && d.session.player.active,
       reconnect: room instanceof ClientRoom && room.reconnecting ? room.reconnectRemaining : null,
+      lives,
     });
+  }
+
+  private get respawnSeconds(): number {
+    return this.raid || this.defense ? RAID_RULES.respawnSeconds : PVP_CONFIG.respawnSeconds;
   }
 
   private readonly nameOf = (id: number): string => this.players.get(id)?.name ?? `P${id + 1}`;
@@ -301,7 +307,9 @@ export class PvpFlight {
           ? 'raidStormFail'
           : this.raid.failReason === 'total'
             ? 'raidTotalFail'
-            : 'raidFail'
+            : this.raid.failReason === 'lives'
+              ? 'raidLivesFail'
+              : 'raidFail'
       : this.defense
         ? this.defense.cleared
           ? 'defenseClear'

@@ -45,6 +45,9 @@ export const FAIL_REASON_TEXT: Record<FailCondition, string> = {
   get totalTimeUp() {
     return t('objectives.fail.totalTimeUp');
   },
+  get livesOut() {
+    return t('objectives.fail.livesOut');
+  },
 };
 
 export function objectiveLabel(def: ObjectiveDef): string {

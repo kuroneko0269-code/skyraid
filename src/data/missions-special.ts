@@ -254,7 +254,8 @@ export function raidMission(difficulty: RaidDifficulty = 'normal'): MissionDef {
       },
     ],
     success: 'allRequiredObjectives',
-    failConditions: ['kaijuReachedCity', 'outOfBounds'],
+    failConditions: ['kaijuReachedCity', 'outOfBounds', 'livesOut'],
+    lives: RAID_RULES.lives[difficulty],
     reward: { baseCredits: RAID_RULES.reward.soloBase, raid: { difficulty } },
   };
 }

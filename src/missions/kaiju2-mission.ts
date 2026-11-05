@@ -39,7 +39,8 @@ export function nephirgaRaidMission(difficulty: RaidDifficulty = 'normal'): Miss
       },
     ],
     success: 'allRequiredObjectives',
-    failConditions: ['stormTimeUp', 'totalTimeUp', 'outOfBounds'],
+    failConditions: ['stormTimeUp', 'totalTimeUp', 'outOfBounds', 'livesOut'],
+    lives: RAID_RULES.lives[difficulty],
     reward: { baseCredits: RAID_RULES.reward.soloBase, raid: { difficulty, kaiju: NEPHIRGA_ID } },
   };
 }

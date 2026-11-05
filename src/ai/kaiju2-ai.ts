@@ -4,49 +4,28 @@
 import type { Flare } from '../combat/flare';
 import type { Pool } from '../combat/pool';
 import { KAIJU2_CONFIG as C, type Kaiju2Attack } from '../data/kaiju2';
-import { vec3, type Vec3 } from '../flight/math';
+import { vec3 } from '../flight/math';
 import type { SkyKaiju } from '../entities/kaiju2/sky-kaiju';
 import {
   attackCandidates,
   attackUsable,
-  choosePerch,
   geometryTo,
   gustHits,
-  launchOrbs,
   pickAttack,
-  stepOrbs,
   tailTip,
 } from './kaiju2-attacks';
+import { launchOrbs, stepOrbs } from './kaiju2-orbs';
 import { stepDive } from './kaiju2-dive';
-import { stepLanding, stepPerched, stepTakeoff } from './kaiju2-perch';
+import { stepLanding, stepPerchPending, stepPerched, stepTakeoff } from './kaiju2-perch';
+import type { Kaiju2Hooks, Kaiju2Target } from './kaiju2-types';
+import { attackTimes } from './kaiju2-types';
+export type { Kaiju2Hooks, Kaiju2Target } from './kaiju2-types';
 import { updateKaiju2Pose } from '../entities/kaiju2/kaiju2-pose';
+import { evadeSteer, stepKaiju2Timers } from './kaiju2-evade';
 
 const A = C.attacks;
-
-/** 怪獣が見る世界（プレイヤー 1 機・フレア・当たったときの知らせ先） */
-export interface Kaiju2Target {
-  readonly position: Readonly<Vec3>;
-  /** 速度（m/s。急降下の予測） */
-  readonly velocity: Readonly<Vec3>;
-  readonly active: boolean;
-}
-
-export interface Kaiju2Hooks {
-  /** プレイヤーに当たった（数値は仮。stun は操作できない秒数） */
-  hit(attack: Kaiju2Attack, damage: number, stun: number): void;
-}
-
 const want = vec3();
 const tip = vec3();
-
-/** 攻撃の秒数（予兆 / 攻撃 / 硬直）。windupScale は難易度の予兆の倍率（9-6b。高難度で短い） */
-export function attackTimes(
-  a: Kaiju2Attack,
-  windupScale = 1,
-): { windup: number; active: number; recover: number } {
-  const s = A[a];
-  return { windup: s.windup * windupScale, active: s.active, recover: s.recover };
-}
 
 export class Kaiju2Ai {
   constructor(
@@ -74,6 +53,15 @@ export class Kaiju2Ai {
     k.history.length = 0;
     k.attackHit = false;
     k.diveWait = A.dive.dueSeconds;
+    k.perchPending = false;
+    k.chainLeft = 0;
+    k.chained = false;
+    k.pushLeft = 0;
+    k.aimed = false;
+    k.aimTime = 0;
+    k.evadeLeft = 0;
+    k.evadeCooldown = 0;
+    k.flinch = 0;
     for (const o of k.orbs) o.active = false;
     for (const key of Object.keys(k.hits) as Kaiju2Attack[]) k.hits[key] = 0;
     k.setState('cruise', null);
@@ -87,6 +75,7 @@ export class Kaiju2Ai {
     k.beginStep();
     // 9-6c: 急降下の出番の時計（段階 2 から）
     if (k.phase >= A.dive.fromPhase && k.attack !== 'dive') k.diveWait += dt;
+    stepKaiju2Timers(this.body, dt);
     switch (k.state) {
       case 'cruise':
         this.cruise(dt, target);
@@ -106,9 +95,28 @@ export class Kaiju2Ai {
         stepTakeoff(k, dt);
         break;
     }
-    const orbHits = stepOrbs(k, target.active ? target.position : null, flares, dt);
+    const orbHits = stepOrbs(
+      k,
+      target.active ? target.position : null,
+      flares,
+      dt,
+      target.active ? target.velocity : null,
+    );
     for (let i = 0; i < orbHits; i++) this.hit('orbs', A.orbs.damage, 0);
     updateKaiju2Pose(k, dt);
+  }
+
+  /**
+   * 9-6d: 部位を壊されて怯む（攻めどき）: 予兆なら取り消し、flinch 秒は攻撃しない。止まり木の間・急降下の攻撃中は時計だけ
+   */
+  flinchNow(): void {
+    const k = this.body;
+    k.flinch = C.flinch.seconds;
+    k.evadeLeft = 0;
+    k.chainLeft = 0;
+    k.chained = false;
+    if (k.state === 'windup') this.endAttack();
+    k.attackCooldown = Math.max(k.attackCooldown, C.flinch.seconds);
   }
 
   private hit(a: Kaiju2Attack, damage: number, stun: number): void {
@@ -132,15 +140,10 @@ export class Kaiju2Ai {
     const k = this.body;
     this.fly(dt, target);
     k.stamina -= dt * (k.wingsBroken > 0 ? C.perch.wingBrokenDrain : 1);
-    if (k.stamina <= 0) {
-      if (choosePerch(k, k.random.next, k.perch)) {
-        k.setState('landing', null);
-        return;
-      }
-      k.stamina = C.perch.stamina * 0.5;
-    }
+    // 9-6d: 止まり木を選び、近くなったら降りる（遠い間は巡航のまま寄せる）
+    if (stepPerchPending(k)) return;
     k.attackCooldown -= dt;
-    if (k.attackCooldown > 0 || !target.active) return;
+    if (k.attackCooldown > 0 || !target.active || k.flinch > 0) return;
     const due = k.diveWait >= A.dive.dueSeconds;
     const cands = attackCandidates(
       geometryTo(k, target.position),
@@ -151,11 +154,14 @@ export class Kaiju2Ai {
     );
     const a = pickAttack(cands, k.random.next, due);
     if (a === null) {
-      k.attackCooldown = 1;
+      k.attackCooldown = 0.5;
       return;
     }
     k.history.push(a);
     if (k.history.length > 4) k.history.shift();
+    // 9-6d: 重ねる続きでなければ、この攻撃の後に続ける回数を段階から決める
+    if (!k.chained) k.chainLeft = C.chain[k.phase - 1] ?? 0;
+    k.chained = false;
     if (a === 'dive') k.diveWait = 0;
     k.attackHit = false;
     k.setState('windup', a);
@@ -165,12 +171,13 @@ export class Kaiju2Ai {
   private fly(dt: number, target: Kaiju2Target, speedScale = 1): void {
     const k = this.body;
     const c = C.cruise;
-    if (target.active) {
-      // 周回の中心をプレイヤーへ寄せる（周回が戦域の soft の内側に収まる範囲で）
-      const ax = target.position.x - k.anchor.x;
-      const az = target.position.z - k.anchor.z;
+    if (target.active || k.perchPending) {
+      // 周回の中心をプレイヤーへ寄せる（周回が戦域の soft の内側に収まる範囲で）。9-6d: 止まり木を選んだ後はそちらへ
+      const to = k.perchPending ? k.perch : target.position;
+      const ax = to.x - k.anchor.x;
+      const az = to.z - k.anchor.z;
       const al = Math.hypot(ax, az);
-      const step = Math.min(al, c.anchorDrift * dt);
+      const step = Math.min(al, (k.perchPending ? C.perch.pendingDrift : c.anchorDrift) * dt);
       if (al > 1) {
         k.anchor.x += (ax / al) * step;
         k.anchor.z += (az / al) * step;
@@ -186,15 +193,22 @@ export class Kaiju2Ai {
     const dx = k.position.x - k.anchor.x;
     const dz = k.position.z - k.anchor.z;
     const ang = Math.atan2(dz, dx) + k.orbitSign * 0.6;
-    const tx = k.anchor.x + Math.cos(ang) * c.orbitRadius;
-    const tz = k.anchor.z + Math.sin(ang) * c.orbitRadius;
+    // 9-6d: 止まり木へ寄せている間は小さく回る（止まり木の近くに入る）
+    const radius = k.perchPending ? C.perch.approachRadius : c.orbitRadius;
+    const tx = k.anchor.x + Math.cos(ang) * radius;
+    const tz = k.anchor.z + Math.sin(ang) * radius;
     const floor = Math.max(k.floorAt(tx, tz), k.floorAt(k.position.x, k.position.z));
     const ty = Math.min(k.ceiling, floor + c.altitude + Math.sin(ang * 1) * c.altitudeWave);
     want.x = tx - k.position.x;
     want.y = (ty - k.position.y) * 0.8;
     want.z = tz - k.position.z;
-    k.steer(want, k.turnRate * dt);
-    k.approachSpeed(k.cruiseSpeed * speedScale, c.accel, dt);
+    let turn = k.turnRate;
+    let speed = k.cruiseSpeed * speedScale;
+    const scale = evadeSteer(k, want);
+    turn *= scale.turn;
+    speed *= scale.speed;
+    k.steer(want, turn * dt);
+    k.approachSpeed(speed, c.accel * (k.evadeLeft > 0 ? 2 : 1), dt);
     k.integrate(dt);
   }
 
@@ -224,7 +238,7 @@ export class Kaiju2Ai {
         if (k.state === 'attack' && !k.attackHit) {
           k.attackHit = true;
           k.orbVolleyHits = 0;
-          launchOrbs(k, target.position, k.random.next);
+          launchOrbs(k, target.position, target.velocity, k.random.next);
         }
         if (k.state === 'recover') this.fly(dt, target);
         else this.face(dt, target, 45);
@@ -235,6 +249,11 @@ export class Kaiju2Ai {
         if (k.state === 'attack' && !k.attackHit && target.active && gustHits(k, target.position)) {
           k.attackHit = true;
           this.hit('gust', A.gust.damage, A.gust.stun);
+          // 9-6d: 押し流す（怪獣の水平の向きへ）
+          const h = Math.hypot(k.forward.x, k.forward.z) || 1;
+          k.pushX = k.forward.x / h;
+          k.pushZ = k.forward.z / h;
+          k.pushLeft = A.gust.pushSeconds;
         }
         break;
       case 'tail':
@@ -278,6 +297,15 @@ export class Kaiju2Ai {
   private endAttack(): void {
     const k = this.body;
     k.setState('cruise', null);
+    if (k.chainLeft > 0 && k.flinch <= 0) {
+      // 9-6d: 攻撃を重ねる（短い間で次の攻撃。予兆はある）
+      k.chainLeft--;
+      k.chained = true;
+      k.attackCooldown = C.chainGap;
+      return;
+    }
+    k.chainLeft = 0;
+    k.chained = false;
     k.attackCooldown = (C.attackInterval[k.phase - 1] ?? 7) * k.intervalScale;
   }
 }

@@ -19,6 +19,8 @@ export interface OverlayState {
   boosted: boolean;
   /** つなぎ直しの残り秒数（null はつながっている） */
   reconnect: number | null;
+  /** 9-6d: 協力レイドの残機（今の機体を含む。null は出さない）。撃墜中の remaining が負なら観戦（復帰しない） */
+  lives?: number | null;
 }
 
 export class PvpOverlay {
@@ -31,6 +33,7 @@ export class PvpOverlay {
   private readonly downedKiller: HTMLSpanElement;
   private readonly downedVerb: HTMLSpanElement;
   private readonly downedCount: HTMLDivElement;
+  private readonly downedLabel: HTMLDivElement;
   private readonly status: HTMLDivElement;
   private readonly reconnect: HTMLDivElement;
   private readonly last = new Map<string, string>();
@@ -48,7 +51,7 @@ export class PvpOverlay {
     this.downedKiller = el('span', 'pvp-downed-killer', this.downedBy);
     this.downedVerb = el('span', '', this.downedBy);
     this.downedCount = el('div', 'pvp-downed-count', this.downed);
-    el('div', 'pvp-downed-label', this.downed, t('pvp.downed.respawnIn'));
+    this.downedLabel = el('div', 'pvp-downed-label', this.downed, t('pvp.downed.respawnIn'));
     this.status = el('div', 'pvp-status', this.root);
     this.reconnect = el('div', 'ui-dialog pvp-reconnect', this.root);
     this.reconnect.setAttribute('role', 'status');
@@ -78,12 +81,25 @@ export class PvpOverlay {
         d.killer === null ? ['', t('pvp.downed.crashed')] : t('pvp.downed.by').split('{killer}');
       this.text(this.downedPre, 'pre', pre);
       this.text(this.downedVerb, 'verb', post);
-      this.text(this.downedCount, 'downCount', String(Math.max(0, Math.ceil(d.remaining - 1e-6))));
+      // 9-6d: 残機なし: 数の代わりに「観戦中」
+      const out = d.remaining < 0;
+      this.text(
+        this.downedCount,
+        'downCount',
+        out ? '—' : String(Math.max(0, Math.ceil(d.remaining - 1e-6))),
+      );
+      this.text(
+        this.downedLabel,
+        'downLabel',
+        out ? t('pvp.downed.spectating') : t('pvp.downed.respawnIn'),
+      );
     }
     const parts: string[] = [];
     if (s.invulnerable > 0 && !d)
       parts.push(t('pvp.status.invulnerable', { seconds: s.invulnerable.toFixed(1) }));
     if (s.boosted && !d) parts.push(t('pvp.status.boosted'));
+    if (s.lives !== undefined && s.lives !== null && !d)
+      parts.push(t('hud.lives', { lives: s.lives }));
     this.text(this.status, 'status', parts.join(t('pvp.status.sep')));
     this.status.classList.toggle('is-invulnerable', s.invulnerable > 0);
     const r = s.reconnect;
@@ -101,7 +117,8 @@ export class PvpOverlay {
       e !== this.downedPre &&
       e !== this.downedKiller &&
       e !== this.downedVerb &&
-      e !== this.downedCount
+      e !== this.downedCount &&
+      e !== this.downedLabel
     )
       e.hidden = value === '';
   }

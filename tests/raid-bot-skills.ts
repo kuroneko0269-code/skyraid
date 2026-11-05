@@ -18,6 +18,8 @@ export interface RaidBotOptions {
   readonly skill?: RaidBotSkill;
   /** 高難度（8-6 の計測用） */
   readonly hard?: boolean;
+  /** 9-6d: 残機（1 人ずつ。撃墜がこの数になった機は戻らない。全員が使い切ったら失敗）。省略は無制限（9-6d の前） */
+  readonly lives?: number;
 }
 
 export interface RaidBotResult {
@@ -28,6 +30,8 @@ export interface RaidBotResult {
   readonly breaks: number;
   readonly partsBroken: number;
   readonly playerDowns: number;
+  /** 9-6d: 全員が残機を使い切って失敗した */
+  readonly livesOut: boolean;
   /** 最終フェーズに入った時刻（入らなければ null） */
   readonly finalAt: number | null;
   readonly attacks: Readonly<Record<string, number>>;

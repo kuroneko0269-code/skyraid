@@ -67,6 +67,13 @@ export class MissionRunner {
     return limit === undefined ? null : Math.max(0, limit - this.elapsed);
   }
 
+  /** 9-6d: 残機の残り（今の機体を含む。定義に lives がなければ null） */
+  get livesLeft(): number | null {
+    const lives = this.def.lives;
+    if (lives === undefined) return null;
+    return Math.max(0, lives - Math.max(0, this.world.playerDowns - this.initialDowns));
+  }
+
   /** 結果の表示（リザルト画面）へ進んでよいか（終わってから大きな文字を出し終えた） */
   get readyForResult(): boolean {
     return (
@@ -226,6 +233,7 @@ export class MissionRunner {
       if (c === 'stormTimeUp' && w.kaijuStormTimeUp === true) return c;
       if (c === 'totalTimeUp' && w.kaijuTotalTimeUp === true) return c;
       if (c === 'outOfBounds' && this.boundary.expired) return c;
+      if (c === 'livesOut' && this.livesLeft === 0) return c;
       if (c === 'timeUp' && this.timeLeft !== null && this.timeLeft <= 1e-9) return c;
     }
     return null;

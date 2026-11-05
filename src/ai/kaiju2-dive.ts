@@ -10,6 +10,18 @@ const A = C.attacks;
 const DEG = Math.PI / 180;
 const want = vec3();
 
+/** 9-6d: 狙う点: 届くまでの秒数 × leadScale（leadMin〜leadMax 秒）先の自機の位置 */
+function predict(k: SkyKaiju, target: Kaiju2Target): void {
+  const d = A.dive;
+  const p = target.position;
+  const v = target.velocity;
+  const dist = Math.hypot(p.x - k.position.x, p.y - k.position.y, p.z - k.position.z);
+  const lead = Math.max(d.leadMin, Math.min(d.leadMax, (dist / d.speed) * d.leadScale));
+  k.diveTarget.x = p.x + v.x * lead;
+  k.diveTarget.y = p.y + v.y * lead;
+  k.diveTarget.z = p.z + v.z * lead;
+}
+
 /** 急降下: 上昇（予兆）→ 狙った点へ降下（攻撃）→ 引き起こし（硬直 = 攻める隙） */
 export function stepDive(
   k: SkyKaiju,
@@ -34,16 +46,14 @@ export function stepDive(
     k.approachSpeed(d.climbSpeed, 40, dt);
     k.integrate(dt);
     if (k.stateTime >= d.windup * k.windupScale) {
-      const p = target.position;
-      const v = target.velocity;
-      k.diveTarget.x = p.x + v.x * d.lead;
-      k.diveTarget.y = p.y + v.y * d.lead;
-      k.diveTarget.z = p.z + v.z * d.lead;
+      predict(k, target);
       k.setState('attack');
     }
     return;
   }
   if (k.state === 'attack') {
+    // 9-6d: 降下の始めは自機の進路へ狙いを直す（その後は決めた点へ。直角に曲がれば外れる）
+    if (k.stateTime < d.retargetSeconds) predict(k, target);
     const dir = k.directionTo(k.diveTarget);
     // 狙った点を追う（ゆっくり）。予兆の終わりの向きが大きく違っても、始めの 0.6 秒は速く向ける
     const turn = (k.stateTime < d.aimSeconds ? d.aimDegPerSec : d.turnDegPerSec) * DEG * dt;

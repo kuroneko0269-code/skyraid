@@ -13,6 +13,7 @@ import type { PvpMirror } from '../net/pvp-mirror';
 import { RAID_OUTCOME } from '../net/raid-host';
 import { KAIJU2_OUTCOME } from '../net/kaiju2-host';
 import { Kaiju2Mirror } from '../net/kaiju2-mirror';
+import { RAID_RULES } from '../data/raid';
 import { KAIJU2_TARGETS } from '../data/kaiju2-raid';
 import { k2list, k2t } from '../data/kaiju2-text';
 import { NEPHIRGA_ID, raidKaijuOf, type RaidKaijuId } from '../data/raid-kaiju';
@@ -218,8 +219,9 @@ export class RaidFlight {
     return this.outcome === RAID_OUTCOME.clear;
   }
 
-  /** 9-6c: 失敗の理由（ネフィルガの嵐 / 全体の時間切れ。ヴォルガス・成功は null） */
-  get failReason(): 'storm' | 'total' | null {
+  /** 9-6c: 失敗の理由（ネフィルガの嵐 / 全体の時間切れ・9-6d: 全員の残機切れ。それ以外・成功は null） */
+  get failReason(): 'storm' | 'total' | 'lives' | null {
+    if (this.outcome === RAID_OUTCOME.livesOut) return 'lives';
     if (this.outcome === KAIJU2_OUTCOME.stormFail) return 'storm';
     if (this.outcome === KAIJU2_OUTCOME.totalFail) return 'total';
     return null;
@@ -242,4 +244,14 @@ export class RaidFlight {
     this.deps.kaijuSource(null);
     this.deps.briefing.hide();
   }
+}
+
+/** 9-6d: 協力レイドの自分の残機（今の機体を含む。成績の撃墜数から） */
+export function coopLivesLeft(
+  players: readonly { readonly id: number; readonly deaths: number }[] | undefined,
+  localId: number,
+  hard: boolean,
+): number {
+  const me = players?.find((p) => p.id === localId);
+  return Math.max(0, RAID_RULES.lives[hard ? 'hard' : 'normal'] - (me?.deaths ?? 0));
 }

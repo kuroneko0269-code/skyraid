@@ -37,6 +37,7 @@
 
 .mission-panel[hidden],
 .mission-timer[hidden],
+.mission-lives[hidden],
 .mission-banner[hidden],
 .boundary-warning[hidden],
 .mission-waypoint[hidden],
@@ -54,6 +55,20 @@
 }
 
 .mission-timer.is-low {
+  color: var(--hud-red);
+}
+
+/* 9-6d: レイドの残機 */
+.mission-lives {
+  font:
+    700 13px/1.2 ui-monospace,
+    'SFMono-Regular',
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+.mission-lives.is-low {
   color: var(--hud-red);
 }
 

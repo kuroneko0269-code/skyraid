@@ -5,7 +5,7 @@
 // 固定ステップごと、操縦の入力を読んだ後・ゲームを進める前に呼ぶ（apply → 武器の入力を読んだ後に applyFire）
 import { autoFireReady } from '../combat/auto-fire';
 import type { CombatInput } from '../combat/combat-input';
-import { applyAimAssist } from '../combat/aim-assist';
+import { applyAimAssist, assistSpecFor } from '../combat/aim-assist';
 import { SpeedMatch } from '../combat/speed-match';
 import {
   AIM_ASSIST_CONFIG,
@@ -117,7 +117,7 @@ export class AssistControl {
       state.orientation,
       aim,
       s.aircraft.flight.options.invertPitch,
-      this.spec,
+      assistSpecFor(this.spec, target),
     );
   }
 

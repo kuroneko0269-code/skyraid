@@ -18,6 +18,11 @@ export const RAID_DIFFICULTY_LABELS: Readonly<Record<RaidDifficulty, string>> = 
 export const RAID_RULES = {
   /** 協力の撃墜から復帰までの秒数（PvP は PVP_CONFIG.respawnSeconds の 3 秒）。復帰の位置は街の北の開始位置（ID ごとの横一列） */
   respawnSeconds: 5,
+  /**
+   * 9-6d: 残機（ヴォルガス・ネフィルガのレイド。ソロ・協力の 1 人ずつ）。撃墜（墜落も）がこの数になると、ソロは失敗・協力はその人が
+   * 観戦になり、全員が使い切ったら失敗。M5 の遭遇・ほかのモードには無い
+   */
+  lives: { normal: 3, hard: 2 },
   /** 高難度: 全体 HP（部位 HP も）の倍率・予兆の短縮（秒。最短 minWindup）・最終フェーズの秒数・報酬の倍率 */
   hard: { hpScale: 1.4, windupCut: 0.5, minWindup: 0.3, finalSeconds: 210, rewardScale: 1.8 },
   /**

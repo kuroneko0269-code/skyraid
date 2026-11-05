@@ -21,8 +21,8 @@ export interface Kaiju2TargetSpec {
 }
 
 export const KAIJU2_RAID_CONFIG = {
-  /** 全体 HP（ソロ・通常）。高難度は hard.hpScale 倍 */
-  hp: 4200,
+  /** 全体 HP（ソロ・通常）。高難度は hard.hpScale 倍。9-6d: 4200 → 4600（攻撃を強めた分、戦いが短すぎない長さに） */
+  hp: 4600,
   targets: {
     body: { radius: 30, open: [0, 0, -5], folded: [0, 0, -5], hpShare: 0, damageScale: 0.6 },
     wingL: { radius: 32, open: [-62, 8, -12], folded: [-34, 10, 2], hpShare: 0.13, damageScale: 1 },
@@ -30,6 +30,11 @@ export const KAIJU2_RAID_CONFIG = {
     head: { radius: 20, open: [0, 11, -64], folded: [0, 11, -64], hpShare: 0.1, damageScale: 1 },
     tail: { radius: 22, open: [0, -2, 62], folded: [0, -2, 62], hpShare: 0.1, damageScale: 1 },
   } satisfies Record<Kaiju2Target, Kaiju2TargetSpec>,
+  /**
+   * 9-6d: タッチの狙いの補助の効き（部位すべて。判定の拡大と補正の強さに掛ける。ほかの的・モードは 1 のまま）。
+   * 大きな部位（30m 前後）に判定の拡大 ×1.3 と補正が効きすぎていた（docs/kaiju2.md の 9-6d）
+   */
+  assistScale: 0.6,
   /** 止まり木の間（羽を休めている・降りる途中・飛び立つ途中）に受けるダメージの倍率（攻める隙） */
   perchedDamageScale: 1.25,
   /** 被弾で白く光る秒数 */
@@ -37,8 +42,11 @@ export const KAIJU2_RAID_CONFIG = {
   /** 制限時間: 段階 3（嵐。体力 40% 以下）に入ってから・全体（嵐が街に着く）。秒 */
   finalSeconds: { normal: 270, hard: 240 } satisfies Record<RaidDifficulty, number>,
   totalSeconds: { normal: 720, hard: 600 } satisfies Record<RaidDifficulty, number>,
-  /** 高難度: 体力の倍率・予兆の秒数の倍率・攻撃の間隔の倍率・当たりのダメージの倍率（ヴォルガスの高難度にならう） */
-  hard: { hpScale: 1.55, windupScale: 0.8, intervalScale: 0.85, damageScale: 1.15 },
+  /**
+   * 高難度: 体力の倍率・予兆の秒数の倍率・攻撃の間隔の倍率・当たりのダメージの倍率。9-6d: 1.55 / 0.8 / 0.85 / 1.15 →
+   * 1.3 / 1 / 1 / 1（残機 2 と強めた攻撃が重なって熟練でも 4 / 20 失敗したので、上乗せは体力だけにした。docs/kaiju2.md の 9-6d）
+   */
+  hard: { hpScale: 1.3, windupScale: 1, intervalScale: 1, damageScale: 1 },
   /** 段階が変わったときに吠えて上がる秒数（攻撃しない） */
   phaseShoutSeconds: 2.2,
   /** 出し方: 開始位置の前方（湾の上）の距離と高さ、最初の攻撃までの秒数（ブリーフィングを読む間） */

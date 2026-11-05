@@ -34,6 +34,8 @@ export interface Kaiju2CoopOptions {
   readonly maxSeconds?: number;
   /** 毎秒呼ぶ（テストの確かめ） */
   readonly onSecond?: (m: Match) => void;
+  /** 9-6d: false なら残機を外す（9-6c と同じ時間・撃墜の比べ） */
+  readonly lives?: boolean;
 }
 
 export interface Kaiju2CoopResult {
@@ -195,6 +197,7 @@ export async function runKaiju2Coop(o: Kaiju2CoopOptions): Promise<Kaiju2CoopRes
     harbor,
     9600 + o.seed,
   );
+  if (o.lives === false) m.host.arena.lives = null;
   const role = KAIJU2_ROLES[o.role];
   const pilots = Array.from(
     { length: o.players },
