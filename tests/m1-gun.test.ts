@@ -55,7 +55,8 @@ describe('M1 訓練: ミサイルを外し切っても機銃で倒せる（8-6b�
   it('M1 の敵機は HP ×0.6（120 → 72）、ミサイルは撃ち尽くして 8 秒で補充。8-6d: 補充はキャンペーン M1〜M5 共通（レイドには無い）', () => {
     const spawn = TRAINING_MISSION.spawns[0];
     expect(spawn?.kind === 'enemyFighter' && spawn.hpScale).toBe(0.6);
-    expect(MISSIONS.map((m) => m.missileResupplySeconds)).toEqual([8, 8, 8, 8, 8]);
+    // 9-7: M6〜M8 も
+    expect(MISSIONS.map((m) => m.missileResupplySeconds)).toEqual([8, 8, 8, 8, 8, 8, 8, 8]);
     expect(raidMission('normal').missileResupplySeconds).toBeUndefined();
     expect(raidMission('hard').missileResupplySeconds).toBeUndefined();
   });

@@ -329,7 +329,7 @@ export function startApp(renderer: WebGLRenderer): void {
 
   // 9-6c: ネフィルガ（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=kaiju2 は起動時に読む）
   const kaiju2 = { search, play, scene, activeMap, game, quality, pvp, hud, audio, camera };
-  linkKaiju2({ ...kaiju2, ...runtime });
+  linkKaiju2({ ...kaiju2, ...runtime, weather: world.weather });
 
   // 8-3: WebGL のコンテキストを失ったら、ソロの飛行中はポーズ（リプレイの再生・PvP・協力は止めない）
   linkContextLoss(renderer.domElement, {

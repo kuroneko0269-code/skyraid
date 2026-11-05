@@ -72,6 +72,8 @@
 | 港湾都市 | Harbor City |
 | 海岸周回 / 渓谷スラローム / 港湾ハイスピード / 夕空アクロバット | Coastal Circuit / Canyon Slalom / Harbor Sprint / Sunset Aerobatics |
 | 訓練 / 初陣 / 護衛 / 爆撃 / 遭遇 | Training / First Sortie / Escort / Strike / Encounter |
+| 夜間迎撃 / 対空陣地 / 決戦（9-7） | Night Intercept / Flak Line / Showdown |
+| 第 N 波 / 対空砲破壊 / 決戦（一覧の難易度） | Wave N / AA guns destroyed / Boss |
 | 波（防衛戦） | Wave |
 | 司令部 | HQ |
 | 戦域 | Combat area |

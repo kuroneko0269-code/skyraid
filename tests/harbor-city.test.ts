@@ -37,9 +37,13 @@ function partRect(
 }
 
 describe('マップの定義', () => {
-  it('島と港湾都市。キャンペーン M1〜M5 は島、レイドは港湾都市に固定', () => {
+  it('島と港湾都市。キャンペーン M1〜M6 は島・9-7 の M7・M8 は港湾都市、レイドは港湾都市に固定', () => {
     expect(Object.keys(MAPS).sort()).toEqual(['harbor', 'island']);
-    for (const m of MISSIONS) expect([m.id, m.mapId]).toEqual([m.id, 'island']);
+    expect(MISSIONS.map((m) => m.mapId)).toEqual([
+      ...Array<string>(6).fill('island'),
+      'harbor',
+      'harbor',
+    ]);
     expect(RAID_MISSION.mapId).toBe('harbor');
     expect(RAID_CONFIG.mapId).toBe('harbor');
   });

@@ -31,6 +31,8 @@ export interface Kaiju2LinkParts {
   readonly hud: { readonly visible: boolean };
   readonly audio: GameAudio;
   readonly camera: { readonly position: Readonly<{ x: number; y: number; z: number }> };
+  /** 9-7: 天候（M8 の決戦の演出で移す） */
+  readonly weather: { set(id: string): void };
 }
 
 let parts: Kaiju2LinkParts | null = null;
@@ -70,6 +72,9 @@ function startRuntime(m: typeof import('./kaiju2-runtime'), p: Kaiju2LinkParts):
     audio: p.audio,
     listener: p.camera.position,
     devFree: parseDevFlags(p.search).has('kaiju2'),
+    setWeather: (id) => {
+      p.weather.set(id);
+    },
   });
 }
 
@@ -121,4 +126,23 @@ export function withSoloRaid(
 /** ネフィルガの怪獣の id か（読む必要があるか） */
 export function needsKaiju2(kaiju: string | undefined): boolean {
   return kaiju === NEPHIRGA_VARIANT.id;
+}
+
+/** 9-7: キャンペーンのミッションがネフィルガ（M8 の決戦）を出すか（出撃・再生の前に読む） */
+export function missionNeedsKaiju2(def: Pick<MissionDef, 'skyKaiju'> | null | undefined): boolean {
+  return needsKaiju2(def?.skyKaiju);
+}
+
+/**
+ * 9-7: キャンペーンのミッションを始める（ブリーフィングの「出撃」から）。ネフィルガを出すミッションは遅延チャンクを読んでから
+ * （読めない・読む間にブリーフィングを離れたら渡さない）。ほかのミッションはすぐ
+ */
+export function withCampaignMission(def: MissionDef | null, go: () => void): void {
+  if (!missionNeedsKaiju2(def)) {
+    go();
+    return;
+  }
+  void loadKaiju2().then((rt) => {
+    if (rt && parts?.game.state === 'briefing') go();
+  });
 }

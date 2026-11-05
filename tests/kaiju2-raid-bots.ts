@@ -13,22 +13,22 @@ import { autoFireReady } from '../src/combat/auto-fire';
 import { createCombatInput } from '../src/combat/combat-input';
 import type { CombatTarget } from '../src/combat/target';
 import { createRandom } from '../src/core/random';
-import { AIM_ASSIST_CONFIG, AIM_ASSIST_LEVEL_SPECS } from '../src/data/assist';
+import type { AssistPreset } from '../src/data/assist';
+import { MISSIONS } from '../src/data/missions';
+import { assistFor, campaignStart } from './campaign-start';
 import { RAID_CONFIG } from '../src/data/kaiju';
-import { KAIJU2_CONFIG } from '../src/data/kaiju2';
 import { KAIJU2_RAID_CONFIG } from '../src/data/kaiju2-raid';
 import type { RaidDifficulty } from '../src/data/raid';
 import type { AircraftControls } from '../src/entities/aircraft';
 import type { Vec3 } from '../src/flight/math';
 import { attachKaiju2Dev, type Kaiju2Dev } from '../src/missions/kaiju2-dev';
 import { NEPHIRGA_VARIANT } from '../src/missions/kaiju2-mission';
-import { isPerching } from '../src/missions/kaiju2-raid';
 import { registerRaidVariant } from '../src/missions/raid-variants';
 import { ReplayRecorder } from '../src/replay/recorder';
 import { applyFrame, captureFrame, simHash, startFromHeader, stepWorld } from '../src/replay/sim';
 import type { ReplayData, ReplayStart } from '../src/replay/types';
 import { PilotBot } from './ai-sim';
-import { FOCUS, KAIJU2_ROLES, type Kaiju2Role } from './kaiju2-bot-roles';
+import { FOCUS, KAIJU2_ROLES, threatOf, type Kaiju2Role } from './kaiju2-bot-roles';
 import { BoundsGuard, ISLAND_CENTER_SKY, WaypointBot } from './mission-bots';
 import { createWorld, type TestWorld } from './replay-helpers';
 import { DirectStick } from '../scripts/replay-analysis/direct';
@@ -36,6 +36,7 @@ import { DEFAULT_HANDS, Hands } from '../scripts/replay-analysis/hands';
 
 const DT = 1 / 60;
 export type { Kaiju2Role } from './kaiju2-bot-roles';
+export { campaignStart } from './campaign-start';
 
 export interface Kaiju2BotOptions {
   readonly role: Kaiju2Role;
@@ -47,6 +48,13 @@ export interface Kaiju2BotOptions {
   readonly record?: boolean;
   /** 毎ステップの後に呼ぶ（テストの確かめ） */
   readonly onStep?: (dev: Kaiju2Dev) => void;
+  /** 9-7: キャンペーンのミッション（M8 の決戦 'finale'）を飛ぶ。省略はレイド */
+  readonly missionId?: string;
+  /**
+   * 9-7: 補助の組（狙いの補助・自動射撃・速度合わせ。src/data/assist.ts）。省略は役の値（模擬の人はタッチの初期値・ほかは補助なし）。
+   * 組を渡すと、模擬の人と初心者役はスロットルを最大のまま（9-5d と同じ）、速度合わせは組の値
+   */
+  readonly preset?: AssistPreset;
 }
 
 export interface Kaiju2BotResult {
@@ -112,7 +120,12 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
   const role = KAIJU2_ROLES[o.role];
   const difficulty = o.difficulty ?? 'normal';
   const { w, dev } = world ?? createKaiju2World();
-  const start = nephirgaStart(o.seed, difficulty, role.weapons);
+  const start = o.missionId
+    ? campaignStart(o.missionId, o.seed, role.weapons)
+    : nephirgaStart(o.seed, difficulty, role.weapons);
+  const limit = o.missionId
+    ? (MISSIONS.find((m) => m.id === o.missionId)?.timeLimitSeconds ?? 600) + 10
+    : KAIJU2_RAID_CONFIG.totalSeconds[difficulty] + 10;
   startFromHeader(w, start);
   const play = w.play;
   const rec = o.record ? new ReplayRecorder() : null;
@@ -148,7 +161,8 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
     ? new Hands({ ...DEFAULT_HANDS, curve: 1.5 }, createRandom(7000 + o.seed))
     : null;
   const direct = hands ? new DirectStick(hands, w.map.ground, 'horizon') : null;
-  const assist = role.touch ? AIM_ASSIST_LEVEL_SPECS.normal : AIM_ASSIST_CONFIG;
+  // 9-7: 補助の組（渡さなければ役の値: 模擬の人はタッチの初期値・ほかは補助なし）
+  const { assist, autoFire, throttleMax, speedMatch } = assistFor(o.role, role.touch, o.preset);
   const out: AircraftControls = { ...pilot.controls };
   const input = createCombatInput();
   const dodgePoint: Vec3 = { x: 0, y: 0, z: 0 };
@@ -169,7 +183,7 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
   let lastDowns = s.playerDowns;
   const stateSeconds: Record<string, number> = {};
   const attackKinds: Record<string, number> = {};
-  const max = o.maxSeconds ?? KAIJU2_RAID_CONFIG.totalSeconds[difficulty] + 10;
+  const max = o.maxSeconds ?? limit;
   let steps = 0;
   let lastSel = s.combat.targeting.selected;
   while (runner.running && steps < max * 60) {
@@ -213,11 +227,17 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
     if (direct) direct.apply(s, goal, intent, out);
     else if (hands) hands.apply(intent, out);
     else Object.assign(out, intent);
+    if (throttleMax) {
+      out.throttleTarget = steps === 1 ? 1 : null;
+      out.throttle = 0;
+      out.afterburner = false;
+    }
+    if (speedMatch) speedMatch.apply(out, s);
     const flare = input.flare;
     Object.assign(input, fight ? pilot.input : createCombatInput());
     if (flare) input.flare = true;
     s.combat.gun.hitRadiusScale = assist.gunHitRadiusScale;
-    if (role.touch && fight) {
+    if (autoFire && fight) {
       const c = s.combat;
       const st = s.aircraft.state;
       if (
@@ -303,29 +323,4 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
     damageRatio: s.player.damageTaken / s.player.maxHp,
     hpLostAtClear: runner.status === 'success' ? 1 - s.player.hp / s.player.maxHp : null,
   };
-}
-
-/** 予兆・攻撃が自分に向いているか（避ける判断）。止まり木の間は無し */
-function threatOf(dev: Kaiju2Dev, me: Readonly<Vec3>): boolean {
-  const k = dev.body;
-  if (isPerching(k) || k.attack === null) return false;
-  const d = Math.hypot(me.x - k.position.x, me.y - k.position.y, me.z - k.position.z);
-  const A = KAIJU2_CONFIG.attacks;
-  switch (k.attack) {
-    case 'orbs':
-      return (
-        k.state === 'windup' ||
-        k.orbs.some(
-          (o) =>
-            o.active &&
-            Math.hypot(o.position.x - me.x, o.position.y - me.y, o.position.z - me.z) < 900,
-        )
-      );
-    case 'gust':
-      return k.state === 'windup' && d < A.gust.pickRange + 200;
-    case 'dive':
-      return k.state === 'attack' && d < 1200;
-    case 'tail':
-      return k.state === 'windup' && d < A.tail.pickRange + 150;
-  }
 }

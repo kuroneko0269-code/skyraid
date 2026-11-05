@@ -132,7 +132,14 @@ export class Kaiju2Hud {
     }
     const time = formatClock(raid.timeLeft);
     const storm = raid.stormAt >= 0;
-    const phase = storm ? k2t('storm', { time }) : k2t('phase', { phase: raid.body.phase, time });
+    // 9-7: キャンペーン版の残り時間はミッションの HUD（右上）に出るので、段階だけ
+    const phase = raid.campaign
+      ? storm
+        ? k2t('stormCampaign')
+        : k2t('phaseCampaign', { phase: raid.body.phase })
+      : storm
+        ? k2t('storm', { time })
+        : k2t('phase', { phase: raid.body.phase, time });
     if (phase !== this.last.phase) {
       this.last.phase = phase;
       this.phase.textContent = phase;
@@ -203,7 +210,8 @@ export class Kaiju2Hud {
       showToast(k2t(`broken.${raid.lastBroken}`), { seconds: TOAST_SECONDS });
       this.seenBroken = raid.brokenCount;
     }
-    if (k.phase > this.seenPhase && raid.raid) {
+    // 9-7: キャンペーン版の段階の変化は画面の中央の大きな文字（kaiju2-finale.ts）
+    if (k.phase > this.seenPhase && raid.raid && !raid.campaign) {
       const time = formatClock(KAIJU2_RAID_CONFIG.finalSeconds[raid.difficulty]);
       showToast(k2t(k.phase >= 3 ? 'phase3' : 'phase2', { time }), { seconds: TOAST_SECONDS });
     }

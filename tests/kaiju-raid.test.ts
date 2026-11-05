@@ -72,6 +72,14 @@ describe('ボット（8-6b: 通常は慣れた人で 2.5〜3.5 分・平均的�
     for (const r of rs) if (r.killed) expect(r.seconds).toBeLessThanOrEqual(12 * 60);
   }, 120000);
 
+  it('9-7 の事前修正: 通常・平均的な 1 人は 20 シード（0〜19・残機 3）で失敗 5 回以下（8-6b の目安。最終フェーズ 4.5 → 5.5 分）', () => {
+    const rs = Array.from({ length: 20 }, (_, seed) =>
+      runRaidBots({ players: 1, seed, maxSeconds: 1200, lives: 3 }),
+    );
+    expect(rs.filter((r) => !r.killed).length).toBeLessThanOrEqual(5);
+    for (const r of rs) if (r.killed) expect(r.seconds).toBeLessThanOrEqual(12 * 60);
+  }, 120000);
+
   it('高難度・熟練 1 人: すべて倒せる。中央値は 4〜6 分（8-6 の数値のまま）', () => {
     const rs = times(1, [1, 2, 3, 4, 5, 6, 7, 8], { skill: 'skilled', hard: true });
     for (const r of rs) expect(r.killed).toBe(true);

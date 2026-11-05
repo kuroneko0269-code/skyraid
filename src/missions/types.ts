@@ -298,4 +298,10 @@ export interface MissionDef {
    * 省略は補充なし（レイド）
    */
   readonly missileResupplySeconds?: number;
+  /**
+   * 9-7: 空の怪獣のキャンペーン版を出す（M8 のネフィルガ。src/data/raid-kaiju.ts の id）。判定は遅延チャンク
+   * （missions/kaiju2-dev.ts）が引き受け、数値は KAIJU2_RAID_CONFIG.campaign。残機・時間はミッションの決まり（撃墜・制限時間）。
+   * 省略は出さない
+   */
+  readonly skyKaiju?: string;
 }

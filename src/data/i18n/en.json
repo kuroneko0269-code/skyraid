@@ -47,13 +47,40 @@
         "Downing the fighters is optional, but watch your six."
       ]
     },
+    "night-intercept": {
+      "title": "Night Intercept",
+      "briefing": [
+        "On a moonlit night, enemy fighters are heading for the island, using the giant creature's appearance as cover.",
+        "They come in 3 waves. Wipe out one wave and the next appears. The last wave includes one veteran pilot.",
+        "At night enemy markers only show up close. Turn toward the dots on the radar to find them.",
+        "If you are shot down, the mission fails. Missiles are resupplied a while after you run out."
+      ]
+    },
+    "flak-line": {
+      "title": "Flak Line",
+      "briefing": [
+        "At a foggy dawn, strike the enemy base on the hills north of the harbor city. Its radar has been signaling a giant shadow in the storm.",
+        "Destroy the 4 facilities: the radar, 2 fuel tanks and the hangar. The hangar is tough; use bombs or rockets.",
+        "4 AA guns defend the base. When the AAA warning appears, turn out of their line of fire. The guns are optional, but taking them out first makes it easier.",
+        "Don't fly into the city's towers."
+      ]
+    },
+    "finale": {
+      "title": "Showdown",
+      "briefing": [
+        "With the base gone, the storm wyvern Nephirga descends on the harbor city. This is the final battle.",
+        "Read the tells. Orbs: turn hard or flare. Raised wings: get out of its front. Dive: turn at a right angle.",
+        "It is open while resting on a perch and right after you break a part. The body is tough; aim for the wings, head and tail.",
+        "If you are shot down, the mission fails. Bring it down within 10 minutes."
+      ]
+    },
     "raid": {
       "title": "Raid: Vorgas",
       "briefing": [
         "The giant monster Vorgas is coming ashore from the bay, heading for the harbor city's towers.",
         "Glowing shoulder crystals mean a heat beam; a raised tail means a sweep. Read the tells and dodge.",
         "Break a leg to knock it down: it stops and can't attack for a while (on Hard, all parts also take double damage).",
-        "Below 40% health it enters the final phase. Defeat it within 4.5 minutes (3.5 on Hard) or it reaches the city. You have 3 lives (Hard: 2)."
+        "Below 40% health it enters the final phase. Defeat it within 5.5 minutes (3.5 on Hard) or it reaches the city. You have 3 lives on both difficulties."
       ]
     }
   },
@@ -539,7 +566,8 @@
       "rookie": "Rookie",
       "easy": "Easy",
       "normal": "Norm",
-      "hard": "Hard"
+      "hard": "Hard",
+      "boss": "Boss"
     },
     "range": "{from}–{to}"
   },
@@ -652,7 +680,9 @@
       "reverse": "Reverse and level",
       "select": "Switch target",
       "behind": "Bring it in front"
-    }
+    },
+    "wave": "Wave {n}",
+    "aaaGuns": "AA guns destroyed"
   },
   "quality": {
     "low": "Low",
@@ -696,7 +726,7 @@
         "Break the crystal to stop the Heat Beam, the tail for Sweep, the head for Roar",
         "Break a leg to down it for 15 s (it stops and can't attack; ×2 damage to all parts)",
         "Break: 2 players hit the same part within 3 s (×3 to that part)",
-        "2 lives each (out of lives = spectate; the raid fails when everyone is out)"
+        "3 lives each (out of lives = spectate; the raid fails when everyone is out)"
       ],
       "skip": "Skip",
       "waitingSkip": "Waiting for everyone to skip"
@@ -941,7 +971,7 @@
       "compass": "Compass"
     },
     "unlock": {
-      "allMissionsS": "Unlock: S rank on all missions",
+      "allMissionsS": "Unlock: S rank on M1–M5",
       "pvpKills": {
         "one": "Unlock: {count} PvP kill ({have}/{count})",
         "other": "Unlock: {count} PvP kills ({have}/{count})"

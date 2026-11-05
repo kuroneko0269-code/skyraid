@@ -3,7 +3,7 @@
 // .skyreplay の書き出し・読み込み。再生中の操作は ui/replay-playback.ts。
 // 8-2: 一覧・再生の操作・書き出し / 読み込みは別のチャンク（replay-ui.ts）にし、一覧を開くときに読む（loadUi）。
 // 読めなければ（オフライン・古いチャンク）お知らせを出してモード選択へ戻る
-import { loadKaiju2, needsKaiju2 } from './kaiju2-link';
+import { loadKaiju2, missionNeedsKaiju2, needsKaiju2 } from './kaiju2-link';
 import { APP_VERSION } from 'virtual:app-info';
 import { replayControlsOf } from '../core/control-settings';
 import type { GameState } from '../core/game-state';
@@ -16,7 +16,7 @@ import type { SaveStore } from '../progression/save-store';
 import { decodeHeader, decodeReplay, encodeReplay } from '../replay/codec';
 import type { ReplayHub } from '../replay/hub';
 import { replayOutcome, replayTitle } from '../replay/outcome';
-import { simHash, type SimWorld } from '../replay/sim';
+import { missionFor, simHash, type SimWorld } from '../replay/sim';
 import { ReplayStore, type ReplayEntry } from '../replay/store';
 import type { ReplayData, ReplayStart } from '../replay/types';
 import type { FlightReplayHooks } from './flight-start';
@@ -170,7 +170,10 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
       return;
     }
     // 9-6c: ネフィルガのレイドは遅延チャンクを読んでから（読めなければ再生しない）
-    if (needsKaiju2(data.header.raidKaiju) && !(await loadKaiju2())) return;
+    // 9-7: キャンペーンの M8（ネフィルガの決戦）も
+    const kaiju2 =
+      needsKaiju2(data.header.raidKaiju) || missionNeedsKaiju2(missionFor(data.header));
+    if (kaiju2 && !(await loadKaiju2())) return;
     hub.pending = data;
     game.transition('flight');
   };

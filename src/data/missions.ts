@@ -1,9 +1,10 @@
-// ミッションの定義（2-4、2-5 で 5 本。データだけ、ロジックなし）。型は src/missions/types.ts、進め方は src/missions/runner.ts。
+// ミッションの定義（2-4、2-5 で 5 本、9-7 で 8 本。データだけ、ロジックなし）。型は src/missions/types.ts、進め方は src/missions/runner.ts。
 // ミッションを増やすときは MISSIONS に足すだけ。タイトル・ブリーフィング文は src/data/i18n/*.json の missions[id]。
 // 距離は m、時間は秒。島の中心が原点、海岸線は半径 約 2.6〜3.2km、北は -Z。向き（headingDeg）は -Z から右回り（東 = 90）
 import type { MissionDef } from '../missions/types';
 import { CAMPAIGN_MISSILE_RESUPPLY_SECONDS } from './campaign-rules';
 import { ENCOUNTER_MISSION, ESCORT_MISSION, STRIKE_MISSION } from './missions-special';
+import { FINALE_MISSION, FLAK_LINE_MISSION, NIGHT_INTERCEPT_MISSION } from './missions-late';
 import { DEFAULT_RANK_MULTIPLIERS } from './ranking';
 
 /** ミッションの流れの時間 */
@@ -167,11 +168,16 @@ export {
   STRIKE_MISSION,
 } from './missions-special';
 
-/** キャンペーンのミッション一覧（並び順のとおりに表示し、前を成功すると次が解放される） */
+export { FINALE_MISSION, FLAK_LINE_MISSION, NIGHT_INTERCEPT_MISSION } from './missions-late';
+
+/** キャンペーンのミッション一覧（並び順のとおりに表示し、前を成功すると次が解放される）。9-7 で M6〜M8 */
 export const MISSIONS: readonly MissionDef[] = [
   TRAINING_MISSION,
   FIRST_SORTIE_MISSION,
   ESCORT_MISSION,
   STRIKE_MISSION,
   ENCOUNTER_MISSION,
+  NIGHT_INTERCEPT_MISSION,
+  FLAK_LINE_MISSION,
+  FINALE_MISSION,
 ];

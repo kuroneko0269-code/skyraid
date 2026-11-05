@@ -145,6 +145,16 @@ export class Kaiju2Dev implements FreeExtra {
 
   /** 9-6b: ネフィルガのレイドなら引き受ける（体力・難易度・出す位置）。ランナーが読む世界を返す */
   startMission(def: MissionDef): MissionWorld | null {
+    // 9-7: キャンペーン版（M8）。高い所から降りてくる（登場の演出）・数値は KAIJU2_RAID_CONFIG.campaign
+    if (def.skyKaiju === NEPHIRGA_ID) {
+      const c = KAIJU2_RAID_CONFIG.campaign;
+      this.mode = 'raid';
+      this.lateStart = false;
+      this.raid.reset(true, 'normal', 1, true);
+      this.spawnAhead(c.spawnAhead, c.spawnAltitude);
+      this.body.attackCooldown = c.firstAttackDelay;
+      return raidWorld(this.play, this.raid);
+    }
     const r = def.reward.raid;
     if (r?.kaiju !== NEPHIRGA_ID) return null;
     this.mode = 'raid';

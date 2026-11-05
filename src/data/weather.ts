@@ -212,7 +212,8 @@ export function weatherLabel(id: string): string {
 }
 
 /**
- * キャンペーンのミッションごとの天候（固定）。M1 昼・M2 早朝・M3 曇り・M4 夕方・M5 夜・雨。
+ * キャンペーンのミッションごとの天候（固定）。M1 昼・M2 早朝・M3 曇り・M4 夕方・M5 夜・雨・9-7: M6 夜・快晴・M7 早朝・霧・
+ * M8 曇り（始め。嵐の段階で雨、撃破で夕方・快晴へ移るのは src/ui/kaiju2-finale.ts）。
  * ソロのレイドは夕方・快晴。ここにないミッション（チュートリアル）は昼・快晴
  */
 export const MISSION_WEATHER: Readonly<Record<string, string>> = {
@@ -221,8 +222,14 @@ export const MISSION_WEATHER: Readonly<Record<string, string>> = {
   escort: 'day-overcast',
   strike: 'evening-clear',
   encounter: 'night-rain',
+  'night-intercept': 'night-clear',
+  'flak-line': 'dawn-fog',
+  finale: 'day-overcast',
   raid: 'evening-clear',
 };
+
+/** 9-7: M8（決戦）の天候の移り変わり: 嵐の段階（体力 40% 以下）で雨、撃破で夕方・快晴（晴れ間） */
+export const FINALE_WEATHER = { storm: 'day-rain', cleared: 'evening-clear' } as const;
 
 export function missionWeather(missionId: string): string {
   return MISSION_WEATHER[missionId] ?? DEFAULT_WEATHER_ID;

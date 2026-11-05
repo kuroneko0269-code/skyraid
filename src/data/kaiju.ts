@@ -100,13 +100,17 @@ export const KAIJU_CONFIG = {
   down: { seconds: 15, damageScale: 2, bodyDrop: 38 },
   /** ブレイク: 同じ部位に 3 秒以内に minAttackers 人以上がダメージ → 5 秒間その部位のダメージ ×3 */
   break: { windowSeconds: 3, minAttackers: 2, seconds: 5, damageScale: 3, cooldownSeconds: 8 },
-  /** フェーズ（全体 HP の割合）。2: 歩行が速くなり攻撃間隔 −20%。3: 熱線 2 連射・制限時間 */
+  /**
+   * フェーズ（全体 HP の割合）。2: 歩行が速くなり攻撃間隔 −20%。3: 熱線 2 連射・制限時間（通常。高難度は RAID_RULES.hard）。
+   * 9-7 の事前修正: finalSeconds 270 → 330（平均的なボットの失敗はすべて最終フェーズの時間切れで、8-6b から 20 回中 5〜6 回と
+   * 目安の境目だった。docs/decisions.md の 9-7）
+   */
   phases: {
     phase2Ratio: 0.7,
     phase3Ratio: 0.4,
     phase2WalkScale: 1.3,
     phase2IntervalScale: 0.8,
-    finalSeconds: 270,
+    finalSeconds: 330,
   },
   /** 歩行: 1 歩 2.5 秒・歩幅 15m（6 m/s）。止まる距離（島の中心からの水平距離） */
   walk: { stepSeconds: 2.5, strideLength: 15, turnDegPerSecond: 12, stopRadius: 450 },

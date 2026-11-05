@@ -32,13 +32,13 @@ function makeRaid(): Kaiju2Raid {
 }
 
 describe('レイドの残機（9-6d）', () => {
-  it('ヴォルガス・ネフィルガとも通常 3 機・高難度 2 機。使い切ったら livesOut で失敗', () => {
+  it('ヴォルガス・ネフィルガとも通常 3 機・高難度 3 機（9-7 の事前修正で 2 → 3）。使い切ったら livesOut で失敗', () => {
     for (const make of [raidMission, nephirgaRaidMission]) {
       expect(make('normal').lives).toBe(RAID_RULES.lives.normal);
       expect(make('hard').lives).toBe(RAID_RULES.lives.hard);
       expect(make('normal').failConditions).toContain('livesOut');
     }
-    expect(RAID_RULES.lives).toEqual({ normal: 3, hard: 2 });
+    expect(RAID_RULES.lives).toEqual({ normal: 3, hard: 3 });
     const w = new FakeWorld();
     const def = { ...nephirgaRaidMission('normal'), failConditions: ['livesOut' as const] };
     const r = new MissionRunner(def, w);
