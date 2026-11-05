@@ -289,7 +289,8 @@
     flex-direction: row;
     align-items: center;
     gap: 12px;
-    min-height: 0;
+    /* 9-10 の事前修正: タップしやすい高さ（ui-audit の small。英語で 31px だった） */
+    min-height: 36px;
     padding-block: 6px;
   }
 
@@ -356,7 +357,8 @@
 @media (max-height: 480px) and (max-width: 700px) {
   .mode-select-screen .menu-header {
     min-height: 36px;
-    margin-top: var(--ui-space-2);
+    /* 9-10 の事前修正: 日替わりの帯を 36px にした分を詰める（英語でスクロールしない） */
+    margin-top: var(--ui-space-1);
   }
 
   .mode-select-screen .menu-heading {
@@ -404,7 +406,7 @@
   }
 
   .mode-tile {
-    min-height: 38px;
+    min-height: 36px;
   }
 
   .mode-label {

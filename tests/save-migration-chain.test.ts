@@ -89,7 +89,8 @@ describe('セーブの移行の通し（v1〜v10）', () => {
       }
       if (v >= 9) expect(save.records.defenseWaves['island:normal']).toBe(7);
       // 9-10: v10 で足した勲章。それより前の版は空（記録からの判定は起動のときに SaveStore の外で）
-      if (v >= 10) expect(save.badges).toEqual({ earned: { loop: [1700000000000] }, backfilled: true });
+      if (v >= 10)
+        expect(save.badges).toEqual({ earned: { loop: [1700000000000] }, backfilled: true });
       else expect(save.badges).toEqual({ earned: {}, backfilled: false });
     });
   }
