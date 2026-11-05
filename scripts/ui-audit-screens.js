@@ -297,6 +297,12 @@ export async function auditMoreScreens(page, base, size, shot, shown) {
   await openFailedResultSample(page);
   await shot('result-practice-hint', '.result-screen.is-shown:not(.practice-result-screen)');
 
+  // 日替わりチャレンジ（9-9）: 日替わりの画面（連携していなければランキングの欄なし）
+  await toModeSelect();
+  await page.click('.mode-card[data-mode="daily"]');
+  await shown('.daily-screen');
+  await shot('daily', '.daily-screen.is-shown');
+
   // 記録カードの画面
   await toModeSelect();
   await openCardSample(page);

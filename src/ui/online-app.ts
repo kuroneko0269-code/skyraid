@@ -9,6 +9,9 @@ import type { OnlineEnv } from '../online/env';
 import { MemberAdmin } from '../online/member-admin';
 import { errorMessage, SYNC_TEXT } from '../online/messages';
 import { recordOutbox } from '../online/outbox';
+import { DailySender } from '../online/daily-scores';
+import { dailyChannel } from '../online/daily-channel';
+import { DAILY_RANKING_ENABLED, ONLINE_CLIENT_VERSION } from '../data/online';
 import { OnlineService } from '../online/service';
 import { SupabaseBackend } from '../online/supabase-backend';
 import type { SaveAccess, SyncHooks } from '../online/sync';
@@ -75,6 +78,29 @@ export function startOnline(env: OnlineEnv, p: OnlineLinkParts): void {
   });
   recordOutbox.connect((r) => {
     service.submitRecord(r);
+  });
+  // 9-9: 日替わりチャレンジ。セーブにあるまだ送っていない最高を、連携中になったとき・状態が変わったとき・挑戦の後に送る
+  // （SQL 0005 を流すまでは DAILY_RANKING_ENABLED で止める）
+  const daily = new DailySender(
+    backend,
+    dailyChannel.source,
+    () => service.activeUserId,
+    () => DAILY_RANKING_ENABLED,
+    ONLINE_CLIENT_VERSION,
+  );
+  dailyChannel.connect({
+    get active() {
+      return daily.active;
+    },
+    flush: () => daily.flush(),
+    ranking: (day, spec) => daily.ranking(day, spec),
+    get selfId() {
+      return service.status.userId;
+    },
+  });
+  service.onStatus(() => {
+    dailyChannel.changed();
+    void daily.flush();
   });
 
   // 設定の「オンライン連携」と「メンバー管理」（owner だけ。7-4b）（セーブデータの欄の上）

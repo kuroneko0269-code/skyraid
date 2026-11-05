@@ -2,7 +2,7 @@
 
 - 対象: 共有の Supabase プロジェクト（無料枠）に入居する SkyRaid: Titan Skies のクラウドセーブとメンバー内ランキング
 - 従う規約: `docs/supabase-conventions.md`（Supabase 共有プロジェクトの規約 **v1.0**）
-- マイグレーション: `supabase/migrations/skyraid_0001_init.sql`（7-4）→ `skyraid_0002_members.sql`（7-4b: メンバー承認・セーブのバックアップの削除）。番号の順に流す（0001 を流し直したら 0002 も流し直す: 0001 は saves の権限を付け直すため）
+- マイグレーション: `supabase/migrations/skyraid_0001_init.sql`（7-4）→ `skyraid_0002_members.sql`（7-4b: メンバー承認・セーブのバックアップの削除）→ `skyraid_0003_raid_kaiju.sql`（9-6c）→ `skyraid_0004_race_courses.sql`（9-8）→ `skyraid_0005_daily.sql`（9-9: 日替わりチャレンジのスコア。**未実行**）。番号の順に流す（0001 を流し直したら 0002 も流し直す: 0001 は saves の権限を付け直すため）
 - クライアント: `src/online/`（Three.js・DOM 非依存のロジック）と `src/ui/online-*.ts`・`member-settings.ts`・`ranking-screen.ts`・`sync-dialog.ts`（画面）。数値は `src/data/online.ts`
 - **規約からの逸脱があります（8 章）。プロジェクトの持ち主が承認済み**
 
@@ -85,6 +85,28 @@
 - delete: 誰にも与えない。却下・取り消しの後に申請し直すことはできない（もう一度承認するときは持ち主が規約 3.3 の SQL で付与する）
 - クライアントはログイン直後（と起動時）に承認待ちなら `insert ... on conflict do nothing` で申請し、自分の行の状態を読む（却下なら「承認されませんでした」と出す）
 - 7-4d: 申請はセッション（JWT）があるときだけ送る。失敗は console に出し、承認待ちの案内の代わりに「申請の送信に失敗しました（理由）」を出して、次のトークンの更新・「承認を再確認」・起動で送り直す。表示名が check（23514）に通らなければ `PILOT` で送り直す（サーバーの照合順序で `[[:cntrl:]]` がクライアントより広い場合に備える）。SQL の挙動は `supabase/tests/run.sh`（手元の Postgres 16 で Supabase のロールを模す）で確かめる
+
+### `skyraid.daily_scores`（日替わりチャレンジのスコア。9-9・0005）
+
+| 列 | 型 | 説明 |
+| --- | --- | --- |
+| `id` | bigint identity PK | |
+| `user_id` | uuid | 既定値 `auth.uid()`（ポリシーで本人に限る） |
+| `day` | date | 日本時間の日付。トリガで「日本時間の今日 − 6 日〜 + 1 日」だけ受け付ける（端末の時計のずれと、オフラインで遊んだ日の後送り） |
+| `spec` | text | 条件の見出し「版:種類:難しさ:機体:天候」（`src/missions/daily/schedule.ts` の `dailySpecKey`）。check で形と、2 つ目が `kind` と同じこと |
+| `kind` | text | `targets` / `drones` / `gauntlet` / `race` |
+| `value` | int | 的の課題はスコア 0〜50000（撃墜 ×（100 + 命中率%））、レースはタイム（ミリ秒）27854（海岸周回の下限 × 2 周）〜3,600,000 |
+| `preset` | text | 補助の組 `easy` / `normal` / `hard` / `custom` |
+| `aircraft_id` | text | `^[a-z0-9-]{1,32}$` |
+| `client_version` | text | 1〜32 文字 |
+| `created_at` | timestamptz | トリガでサーバーの時刻 |
+
+- select: メンバー全員。insert: 本人（`has_app_access()` も）。update / delete: 不可。anon: なし
+- クライアントは日ごとの最高だけを送る（セーブの `records.daily` の「送った値」と違う日だけ。7 日以内）。サーバーが条件を日付から計算し直して確かめることはしない（値の範囲と形だけ。メンバー内のランキングなので、7-4 のレースと同じ程度の確かめ）
+- トリガ: `daily_scores_before_insert`（日付の範囲・1 分 20 行のレート制限・作成時刻）、`daily_scores_after_insert`（ユーザー × 日 × 条件ごとに最良 1 件。直近 1 分の行は残す。8 日より前の自分の行を消す）。どちらも security definer で、`daily_scores_postgres_select` / `_delete` のポリシーで force の RLS の下でも数え・消せる（records と同じ）
+- ビュー `skyraid.daily_best`（security invoker）: 日 × 条件ごとに、ユーザーごとの最良 1 件（的の課題は大きい順、レースは小さい順）、上位 50。列 `day, spec, kind, user_id, display_name, value, preset, aircraft_id, created_at, place`
+- 使用量: 1 ユーザー最大 8 行（日ごとに 1 行 × 8 日）+ 直近 1 分の 20 行、1 行 約 0.3KB。ランキングは 1 回 最大 50 行（約 6KB）で 5 分キャッシュ。3 章の上限は変えない
+- 手元の確かめ: `supabase/tests/daily-scores.sql`（`run.sh` から。メンバー以外・他人の行・値と日付の外れ・update の拒否、間引き、順位、anon）
 
 ### トリガ
 

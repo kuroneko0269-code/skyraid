@@ -23,6 +23,9 @@ import type { QualityLink } from '../render/quality-link';
 import { loadoutFor, missionFor, startFromHeader, type SimWorld } from '../replay/sim';
 import type { ReplayData, ReplayStart } from '../replay/types';
 import type { PvpEntry } from './pvp-entry';
+import { initialUpgrades } from '../progression/save';
+import { dailyCourse, dailyPractice } from '../missions/daily/setup';
+import type { DailySpec } from '../missions/daily/schedule';
 import type { Screens } from './screens';
 
 /** 記録・再生（ui/replay-link.ts）とのつなぎ */
@@ -61,6 +64,14 @@ export interface FlightStartParts {
     readonly selection: { readonly mapId: string; readonly difficulty: DefenseDifficulty } | null;
     afterStart(): void;
   };
+  /**
+   * 日替わりチャレンジ（9-9。ui/daily-link.ts）: 今日の条件（null は日替わりでない）・始めた後の処理（天候・ポーズの「中断」）。
+   * 練習場・レースより先に見る
+   */
+  readonly daily: {
+    readonly selection: DailySpec | null;
+    afterStart(replaying: boolean, spec: DailySpec): void;
+  };
   /** 練習場（9-5。ui/practice-link.ts）: 選んだ課題（null は練習場でない）・指標の縦横比・始めた後の処理 */
   readonly practice: {
     readonly selection: { readonly drill: PracticeDrill } | null;
@@ -83,6 +94,9 @@ export function liveStart(p: FlightStartParts, def: MissionDef | null): ReplaySt
     seed: freshSeed(),
   };
   const freeWeather = screens.modeSelect.freeWeatherId;
+  // 9-9: 日替わりは条件の機体（強化なし = 全員同じ）・天候で、練習場の課題か周回のコース
+  const daily = p.daily.selection;
+  if (daily) return dailyStart(base, daily, p.practice.aspect(), screens);
   const course = p.race.course;
   if (course)
     return {
@@ -131,6 +145,34 @@ export function liveStart(p: FlightStartParts, def: MissionDef | null): ReplaySt
   return { ...base, mode: 'free', mapId: screens.modeSelect.freeMapId, weatherId };
 }
 
+function dailyStart(
+  base: Pick<ReplayStart, 'enemies' | 'seed'>,
+  spec: DailySpec,
+  aspect: number,
+  screens: Screens,
+): ReplayStart | null {
+  const common = {
+    ...base,
+    aircraftId: spec.aircraftId,
+    upgrades: initialUpgrades(),
+    paint: paintToHex(screens.paintshop.paint(spec.aircraftId)),
+    weatherId: spec.weatherId,
+    daily: spec,
+  };
+  const practice = dailyPractice(spec);
+  if (practice)
+    return {
+      ...common,
+      mode: 'practice',
+      mapId: ISLAND_MAP.id,
+      practiceDrill: practice.drill,
+      practiceAspect: aspect,
+    };
+  const course = dailyCourse(spec);
+  if (!course) return null;
+  return { ...common, mode: 'race', mapId: course.mapId, courseId: course.id, raceReference: null };
+}
+
 /**
  * 飛行を始める関数を作る（モード選択・ブリーフィング・リザルトの「もう一度」・PvP のロビー・リプレイの一覧から入るたびに呼ぶ）。
  * フリーフライトは起動位置から、ミッション（チュートリアルも）は定義の開始位置から、リングレース（7-1）はコースのスタート地点から。
@@ -149,7 +191,9 @@ export function createFlightStarter(
       p.playerView.setModel(model, loadoutFor(start).missiles, paintFromHex(start.paint));
       if (start.mode === 'race') p.race.afterStart(pending !== null);
       if (start.mode === 'defense' && !pending) p.defense.afterStart();
-      if (start.mode === 'practice') p.practice.afterStart(pending !== null);
+      // 9-9: 日替わりの練習場の課題は練習場の後処理（昼・快晴の固定・設定の記録）を通さない
+      if (start.mode === 'practice' && !start.daily) p.practice.afterStart(pending !== null);
+      if (start.daily) p.daily.afterStart(pending !== null, start.daily);
       if (pending) p.replay.replayStarted();
       else p.replay.liveStarted(start);
     } else {

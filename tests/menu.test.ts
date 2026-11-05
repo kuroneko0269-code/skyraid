@@ -24,7 +24,13 @@ describe('自己ベスト（セーブ v9）', () => {
     delete v8.records;
     const save = migrateSave(v8);
     expect(save?.version).toBe(9);
-    expect(save?.records).toEqual({ defenseWaves: {}, raidBestMs: {}, practice: {}, tutorial: [] });
+    expect(save?.records).toEqual({
+      defenseWaves: {},
+      raidBestMs: {},
+      practice: {},
+      tutorial: [],
+      daily: { days: {}, streak: { last: null, count: 0 } },
+    });
     expect(save?.credits).toBe(777);
   });
 
@@ -53,6 +59,7 @@ describe('自己ベスト（セーブ v9）', () => {
       raidBestMs: { normal: 5000 },
       practice: {},
       tutorial: [],
+      daily: { days: {}, streak: { last: null, count: 0 } },
     });
   });
 });
@@ -122,8 +129,8 @@ describe('情報画面（版・更新履歴・ライセンス）', () => {
 });
 
 describe('背景グリフ', () => {
-  it('13 種類（9-5 で練習場の的）それぞれに線がある', () => {
-    expect(GLYPH_KINDS).toHaveLength(13);
+  it('14 種類（9-5 で練習場の的・9-9 で日めくり）それぞれに線がある', () => {
+    expect(GLYPH_KINDS).toHaveLength(14);
     for (const k of GLYPH_KINDS) expect(glyphShapeCount(k), k).toBeGreaterThan(0);
   });
 });

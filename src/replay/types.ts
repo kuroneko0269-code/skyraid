@@ -5,6 +5,7 @@ import type { DefenseDifficulty } from '../data/defense';
 import type { PracticeDrill } from '../data/practice';
 import type { RaidDifficulty } from '../data/raid';
 import type { UpgradeLevels } from '../progression/save';
+import type { DailySpec } from '../missions/daily/schedule';
 
 /** 記録するモード（シングルプレイだけ。チュートリアル・PvP・協力は記録しない。9-5 で練習場） */
 export const REPLAY_MODES = ['free', 'mission', 'raid', 'race', 'defense', 'practice'] as const;
@@ -50,6 +51,11 @@ export interface ReplayStart {
   /** 練習場の課題と、狙いの指標（画面の外）に使った画面の縦横比（practice のとき。9-5） */
   readonly practiceDrill?: PracticeDrill;
   readonly practiceAspect?: number;
+  /**
+   * 9-9: 日替わりチャレンジの条件（mode は practice か race）。再生はこの条件から課題（長さ・的の数・速さ・敵の飛び方）か
+   * 周回のコースを組み立て直す（日付から計算し直さない: 選び方の版が変わっても同じ課題で再生する）
+   */
+  readonly daily?: DailySpec;
   readonly aircraftId: string;
   readonly upgrades: Readonly<UpgradeLevels>;
   /** フリーフライトの敵の設定（ほかのモードでも次のフリーフライト用に残す） */

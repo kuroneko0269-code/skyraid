@@ -117,7 +117,7 @@ describe('GameState の遷移', () => {
     ]);
   });
 
-  it('固定更新を進めるのは飛行中だけ。デモカメラはメニュー（boot / title / pilot_name / mode_select / mission_select / briefing / lobby / race_select / replay_select / practice_select）', () => {
+  it('固定更新を進めるのは飛行中だけ。デモカメラはメニュー（boot / title / pilot_name / mode_select / mission_select / briefing / lobby / race_select / replay_select / practice_select / daily_select）', () => {
     expect(SCREEN_STATES.filter(isSimulating)).toEqual(['flight']);
     expect(SCREEN_STATES.filter(usesDemoCamera)).toEqual([
       'boot',
@@ -130,6 +130,7 @@ describe('GameState の遷移', () => {
       'race_select',
       'replay_select',
       'practice_select',
+      'daily_select',
     ]);
   });
   it('PvP（5-1）: モード選択 ⇄ ロビー → 飛行 → モード選択（退出・ホストの切断）。PvP の飛行にポーズの状態はない', () => {

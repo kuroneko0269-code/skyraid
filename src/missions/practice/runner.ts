@@ -5,6 +5,7 @@
 import { createCombatInput, type CombatInput } from '../../combat/combat-input';
 import { EventBus } from '../../core/event-bus';
 import type { AircraftControls } from '../../entities/aircraft';
+import type { Difficulty } from '../../data/ai';
 import { PRACTICE_CONFIG, type PracticeDrill } from '../../data/practice';
 import { headingDegOf } from '../../entities/enemy-aircraft';
 import type { FlightSession } from '../flight-session';
@@ -14,6 +15,17 @@ import { AimStats } from './aim-stats';
 import { buildPracticeResult, practiceScore, type PracticeResult } from './score';
 
 export type PracticePhase = 'countdown' | 'running' | 'finished';
+
+/**
+ * 9-9: 日替わりチャレンジの差し替え（省略は練習場のまま）。duration: 1 回の長さ（秒）/ targetCount: 止まった的の数 /
+ * droneSpeedScale: 動く的の速さの倍率 / banditDifficulty: 模擬の敵の飛び方
+ */
+export interface PracticeOptions {
+  readonly duration?: number;
+  readonly targetCount?: number;
+  readonly droneSpeedScale?: number;
+  readonly banditDifficulty?: Difficulty;
+}
 
 export interface PracticeEvents extends Record<string, unknown> {
   /** 数えの 1 秒ごと（3, 2, 1） */
@@ -56,8 +68,9 @@ export class PracticeRunner {
     readonly drill: PracticeDrill,
     private readonly session: FlightSession,
     aspect: number,
+    readonly options: PracticeOptions = {},
   ) {
-    this.duration = PRACTICE_CONFIG.durations[drill];
+    this.duration = options.duration ?? PRACTICE_CONFIG.durations[drill];
     this.start = PRACTICE_CONFIG.starts[drill];
     const r = PRACTICE_CONFIG.aspectRange;
     this.aim = new AimStats(
@@ -93,13 +106,18 @@ export class PracticeRunner {
     if (this.started) return;
     this.started = true;
     const s = this.session;
-    if (this.drill === 'static') s.combat.targets.configure(s.combat.targets.balloons.length, true);
+    if (this.drill === 'static') {
+      const all = s.combat.targets.balloons.length;
+      const n = this.options.targetCount;
+      s.combat.targets.configure(n === undefined ? all : Math.max(1, Math.min(all, n)), true);
+    }
     if (this.drill === 'moving') {
       const paths = PRACTICE_CONFIG.dronePaths;
+      const scale = this.options.droneSpeedScale ?? 1;
       configureDrones(s.combat.drones, paths.length, true);
       s.combat.drones.forEach((d, i) => {
         const path = paths[i];
-        if (path) d.setPath(path);
+        if (path) d.setPath(scale === 1 ? path : { ...path, speed: path.speed * scale });
       });
     }
     if (this.drill === 'bandit') this.spawnBandit();
@@ -221,6 +239,7 @@ export class PracticeRunner {
       z: p.z - Math.cos(h) * b.ahead + Math.sin(h) * side,
       headingDeg: heading + turn,
     };
-    this.bandit = this.session.squadron.deploy(at, b.patrol, b.difficulty, false, b.hpScale, true);
+    const difficulty = this.options.banditDifficulty ?? b.difficulty;
+    this.bandit = this.session.squadron.deploy(at, b.patrol, difficulty, false, b.hpScale, true);
   }
 }

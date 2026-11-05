@@ -16,6 +16,7 @@ export const GLYPH_KINDS = [
   'trophy',
   'gear',
   'info',
+  'calendar',
 ] as const;
 export type GlyphKind = (typeof GLYPH_KINDS)[number];
 
@@ -135,6 +136,13 @@ const GLYPHS: Readonly<Record<GlyphKind, readonly Shape[]>> = {
   ],
   // 歯車
   gear: [{ p: gearPath() }, { c: [32, 32, 8] }],
+  // 日めくり（9-9。日替わりチャレンジ。枠・綴じ具・日付の線と星）
+  calendar: [
+    { p: 'M10 15 L54 15 L54 56 L10 56 Z' },
+    { p: 'M10 25 L54 25' },
+    { p: 'M21 9 L21 19 M43 9 L43 19' },
+    { p: radial(32, 41, [10, 4.2], 5, -Math.PI / 2) },
+  ],
   // i
   info: [
     { c: [32, 32, 24] },

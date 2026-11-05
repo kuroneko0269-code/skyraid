@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 手元の Postgres 16 で Supabase のロールを模し、マイグレーションを 2 回ずつ流して join_requests のテストを流す（7-4d）。
+# 手元の Postgres 16 で Supabase のロールを模し、マイグレーションを 2 回ずつ流して join_requests（7-4d）と日替わりのスコア（9-9）のテストを流す。
 # 使い方: PGHOST=<ソケットのディレクトリ> PGPORT=<ポート> supabase/tests/run.sh <空のデータベース名>
 # 前提: スーパーユーザー supabase_admin と、BYPASSRLS の無いログインロール postgres（データベースの所有者）があること
 #   create role supabase_admin superuser login;
@@ -18,3 +18,4 @@ for _ in 1 2; do
 done
 psql_as supabase_admin -tA -c "select version from skyraid.schema_migrations order by version"
 psql_as supabase_admin -o /dev/null -f "$here/join-requests.sql"
+psql_as supabase_admin -o /dev/null -f "$here/daily-scores.sql"

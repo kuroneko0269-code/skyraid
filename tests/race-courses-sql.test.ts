@@ -19,17 +19,17 @@ const finished = (courseId: string, time: number) => ({
 });
 
 describe('新しいコースのランキング（9-8）', () => {
-  it('0004 を流すまでは、今の 4 本だけを送る・受け付ける（新しいコースはローカルだけ）', () => {
-    expect(RANKED_COURSES).toEqual(['coast', 'canyon', 'harbor-speed', 'acro']);
-    expect(validKeys('race')).toEqual(['coast', 'canyon', 'harbor-speed', 'acro']);
+  it('0004 を流したので、6 本すべてを送る・受け付ける（9-9 の事前修正）', () => {
+    const all = ['coast', 'canyon', 'harbor-speed', 'acro', 'night-harbor', 'peak-spiral'];
+    expect(RANKED_COURSES).toEqual(all);
+    expect(validKeys('race')).toEqual(all);
     for (const id of ['night-harbor', 'peak-spiral']) {
       expect(COURSES.some((c) => c.id === id)).toBe(true);
-      expect(rankedCourse(id)).toBe(false);
-      expect(raceRecord(finished(id, 60), 'kestrel')).toBeNull();
+      expect(rankedCourse(id)).toBe(true);
+      const rec = raceRecord(finished(id, 60), 'kestrel');
+      expect(rec).not.toBeNull();
+      if (rec) expect(checkRecord(rec)).toBeNull();
     }
-    const rec = raceRecord(finished('coast', 60), 'kestrel');
-    expect(rec).not.toBeNull();
-    if (rec) expect(checkRecord(rec)).toBeNull();
   });
 });
 

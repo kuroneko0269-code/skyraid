@@ -21,6 +21,7 @@ import type { MissionDef } from '../missions/types';
 import { resolveLoadout, type Loadout } from '../progression/loadout';
 import { freeExtraOf } from '../missions/free-extra';
 import { findRaidVariant } from '../missions/raid-variants';
+import { dailyCourse, dailyPractice } from '../missions/daily/setup';
 import { hashState, hashStateRounded, type StateSnapshot, type WalkSkip } from './state-walk';
 import type { ReplayCommand, ReplayFrame, ReplayStart } from './types';
 
@@ -98,7 +99,8 @@ export function startFromHeader(w: SimWorld, s: ReplayStart): void {
   play.reseed(s.seed);
   switch (s.mode) {
     case 'race': {
-      const course = findCourse(s.courseId ?? '');
+      // 9-9: 日替わりは周回のコースを条件から組み立てる
+      const course = s.daily ? dailyCourse(s.daily) : findCourse(s.courseId ?? '');
       if (!course) throw new Error(`Course not found: ${s.courseId ?? ''}`);
       const ref = s.raceReference;
       play.startRace(course, ref ? { ringTimes: ref } : null);
@@ -110,7 +112,15 @@ export function startFromHeader(w: SimWorld, s: ReplayStart): void {
     case 'practice': {
       const drill = s.practiceDrill;
       if (!isPracticeDrill(drill)) throw new Error(`Practice drill not found: ${String(drill)}`);
-      play.startPractice(drill, s.practiceAspect ?? PRACTICE_CONFIG.aspectRange.fallback);
+      // 9-9: 日替わりは条件から長さ・的の数・速さ・敵の飛び方を差し替える
+      const daily = s.daily ? dailyPractice(s.daily) : null;
+      if (s.daily && daily?.drill !== drill)
+        throw new Error(`Daily challenge does not match: ${s.daily.kind}`);
+      play.startPractice(
+        drill,
+        s.practiceAspect ?? PRACTICE_CONFIG.aspectRange.fallback,
+        daily?.options,
+      );
       break;
     }
     case 'mission':

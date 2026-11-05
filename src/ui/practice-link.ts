@@ -169,7 +169,8 @@ export function createPracticeLink(p: PracticeLinkParts): PracticeLink {
   /** 時間切れ: この設定・機体の最高なら記録する（途中で設定を変えたら記録しない） */
   const bind = (runner: PracticeRunner): void => {
     runner.bus.on('practice:end', ({ result: r }) => {
-      if (replay.playing) return;
+      // 9-9: 日替わりチャレンジ（練習場の選択が無い）は記録しない（daily-link.ts が日替わりの記録にする）
+      if (replay.playing || selection === null) return;
       const key = settingsKey();
       let record: PracticeRecordState = { kind: 'changed' };
       if (key === startKey) {

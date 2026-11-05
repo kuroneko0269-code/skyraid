@@ -1,4 +1,5 @@
 // 7-4 のテストの道具: Supabase の代わりのモック（OnlineBackend）・手で進める時計・メモリの localStorage
+import type { DailyRankingRow, DailyScoreInput } from '../src/online/daily-scores';
 import { vi } from 'vitest';
 import {
   OnlineError,
@@ -145,6 +146,17 @@ export class MockBackend implements OnlineBackend {
     };
     return Promise.resolve(this.server);
   }
+  /** 9-9: 日替わりのスコア（送られた順）・次の送信を失敗させる種類・ランキングの行 */
+  dailyScores: DailyScoreInput[] = [];
+  dailyFailures: OnlineErrorKind[] = [];
+  dailyRows: DailyRankingRow[] = [];
+  insertDailyScore(r: DailyScoreInput): Promise<void> {
+    const f = this.dailyFailures.shift();
+    if (f) return Promise.reject(new OnlineError(f, 'x'));
+    this.dailyScores.push(r);
+    return Promise.resolve();
+  }
+  fetchDailyRanking = vi.fn((): Promise<DailyRankingRow[]> => Promise.resolve(this.dailyRows));
   insertRecord(r: RecordInput): Promise<void> {
     const f = this.recordFailures.shift();
     if (f) return Promise.reject(new OnlineError(f, 'x'));

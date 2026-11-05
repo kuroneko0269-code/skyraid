@@ -8,6 +8,8 @@ import type { DefenseRunner } from '../missions/defense/runner';
 import type { GamePlay } from '../missions/game-play';
 import { missionStrings } from '../ui/mission-text';
 import { findRaidVariant } from '../missions/raid-variants';
+import { dailyKindLabel } from '../data/daily';
+import type { DailySpec } from '../missions/daily/schedule';
 import {
   isOtherGameVersion,
   replayGameVersion,
@@ -19,6 +21,8 @@ import {
 
 /** 一覧の題（ミッション名・コース名・マップ名） */
 export function replayTitle(s: ReplayStart): string {
+  // 9-9: 日替わりチャレンジは「日替わり 11/5 的あて」
+  if (s.daily) return dailyReplayTitle(s.daily);
   switch (s.mode) {
     case 'mission':
       return missionStrings(s.missionId ?? '').title;
@@ -39,6 +43,15 @@ export function replayTitle(s: ReplayStart): string {
     default:
       return findMap(s.mapId).name;
   }
+}
+
+/** 日替わりの題（日付は月/日。言語によらず数字だけ） */
+function dailyReplayTitle(d: DailySpec): string {
+  const [, m, day] = d.day.split('-');
+  return t('daily.replayTitle', {
+    date: `${String(Number(m))}/${String(Number(day))}`,
+    kind: dailyKindLabel(d.kind).name,
+  });
 }
 
 /** 秒 → 「1:23.456」 */

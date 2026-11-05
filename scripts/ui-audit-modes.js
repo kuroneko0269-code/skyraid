@@ -62,6 +62,15 @@ const MODES = [
     },
   },
   {
+    // 9-9: 日替わりチャレンジ（日替わりの画面 → 挑戦する）
+    name: 'daily',
+    kind: 'flight',
+    go: async (p) => {
+      await p.click('.mode-card[data-mode="daily"]');
+      await p.locator('.daily-screen .campaign-go').click();
+    },
+  },
+  {
     name: 'raid-solo',
     kind: 'flight',
     go: async (p) => {
