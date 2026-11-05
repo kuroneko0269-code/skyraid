@@ -5,6 +5,7 @@ import { DIFFICULTIES, FREE_FLIGHT_ENEMIES, type Difficulty } from '../data/ai';
 import { ASSIST_SETTINGS, type AssistKind } from '../data/assist';
 import { AUDIO_CONFIG } from '../data/audio';
 import { QUALITY_LEVELS, type QualityLevel } from '../data/quality';
+import { RACE_GUIDE } from '../data/race';
 import { TOUCH_MODES, type TouchMode } from '../data/touch';
 import { isLocale, type Locale } from '../core/locale';
 
@@ -27,6 +28,8 @@ export interface SaveSettings {
   hud: boolean;
   /** 夜は HUD の明るさを少し落とす（7-5。設定で無効にできる。版は上げず、ない項目は既定値） */
   nightHudDim: boolean;
+  /** 9-8: リングレースの道筋の点線（版は上げず、ない項目は既定値の ON） */
+  raceGuideLine: boolean;
   /** フォトモード（7-A）の保存画像の透かし「SkyRaid」（版は上げず、ない項目は既定値の ON） */
   photoWatermark: boolean;
   /** 表示言語（8-4。null はブラウザの言語に従う。版は上げず、ない項目は既定値の null） */
@@ -72,6 +75,7 @@ export function defaultSettings(): SaveSettings {
     difficultyEased: true,
     hud: true,
     nightHudDim: true,
+    raceGuideLine: RACE_GUIDE.guideLineDefault,
     photoWatermark: true,
     language: null,
     volume: defaultVolume(),
@@ -96,6 +100,7 @@ export function normalizeSettings(s: Json): SaveSettings {
   set.difficultyEased = true;
   if (typeof s.hud === 'boolean') set.hud = s.hud;
   if (typeof s.nightHudDim === 'boolean') set.nightHudDim = s.nightHudDim;
+  if (typeof s.raceGuideLine === 'boolean') set.raceGuideLine = s.raceGuideLine;
   if (typeof s.photoWatermark === 'boolean') set.photoWatermark = s.photoWatermark;
   if (isLocale(s.language)) set.language = s.language;
   if (isObject(s.volume)) {

@@ -32,13 +32,15 @@ function groundTop(map: ActiveMap): (x: number, z: number) => number {
 }
 
 describe('コースの定義', () => {
-  it('初期コース 4 本（リングの数・マップ・天候）', () => {
+  it('コース 6 本（リングの数・マップ・天候。9-8 で 2 本足した）', () => {
     const summary = COURSES.map((c) => [c.id, c.mapId, c.weatherId, c.rings.length]);
     expect(summary).toEqual([
       ['coast', 'island', 'day-clear', 12],
       ['canyon', 'island', 'day-clear', 24],
       ['harbor-speed', 'harbor', 'day-clear', 20],
       ['acro', 'island', 'evening-clear', 16],
+      ['night-harbor', 'harbor', 'night-clear', 14],
+      ['peak-spiral', 'island', 'dawn-clear', 14],
     ]);
     for (const c of COURSES) {
       expect(MAPS[c.mapId], c.id).toBeDefined();
@@ -60,8 +62,9 @@ describe('コースの定義', () => {
         expect(r.required, `${c.id} ${r.index}`).toBe(
           r.kind === 'checkpoint' || r === rings.at(-1),
         );
-        // 細いリングは半径半分（40 → 20m、通過 23m）
-        expect(r.radius).toBe(r.kind === 'thin' ? 20 : 40);
+        // 細いリングは半径半分（40 → 20m、通過 23m。9-8 の夜景クルーズは広いリング 60 → 30m）
+        const base = c.rings[r.index]?.radius ?? 40;
+        expect(r.radius).toBe(r.kind === 'thin' ? base / 2 : base);
         expect(r.passRadius).toBeCloseTo(r.radius * RACE_CONFIG.passRadiusScale);
       }
     }

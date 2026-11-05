@@ -14,7 +14,8 @@ import {
   type Vec3,
 } from '../src/flight/math';
 import { getGroundHeight } from '../src/render/terrain-height';
-import { runDirectRace, stickToward } from './direct-steer-bots';
+import { runDirectRace } from './direct-race-bots';
+import { stickToward } from './direct-steer-bots';
 
 const DT = 1 / 60;
 const DEG = Math.PI / 180;
@@ -222,11 +223,12 @@ describe('低空の安全（地面・海面に近いと引き起こしを補助�
     expect(t.crashes).toBe(0);
   });
 
-  it('リングレースの 4 コース: 自分では地面を避けないボットでも墜落せず完走する（9-3: アクロバットは宙返りで）', () => {
-    for (const course of COURSES) {
-      const r = runDirectRace(course);
-      expect(r.crashes, course.id).toBe(0);
-      expect(r.result?.outcome, course.id).toBe('finished');
-    }
-  });
+  it('リングレースの全コース × 4 機種: 自分では地面を避けないボットでも墜落せず完走する（9-3: アクロバットは宙返りで。9-8: 6 本 × 4 機種）', () => {
+    for (const course of COURSES)
+      for (const id of ['kestrel', 'swift', 'bastion', 'vector']) {
+        const r = runDirectRace(course, id);
+        expect(r.crashes, `${course.id} ${id}`).toBe(0);
+        expect(r.result?.outcome, `${course.id} ${id}`).toBe('finished');
+      }
+  }, 120_000);
 });

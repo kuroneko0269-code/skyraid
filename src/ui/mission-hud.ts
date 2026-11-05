@@ -17,11 +17,27 @@ export interface WaypointFrame {
   y: number;
   deg: number;
   distance: number;
+  /** 9-8: 画面端の矢印にも距離を出す（リングレース） */
+  arrowDistance: boolean;
+  /** 9-8: 次のリングを通り損ねた（印を赤く） */
+  alert: boolean;
 }
 
 export function createWaypointFrame(): WaypointFrame {
-  return { shown: false, onScreen: false, x: 0, y: 0, deg: 0, distance: 0 };
+  return {
+    shown: false,
+    onScreen: false,
+    x: 0,
+    y: 0,
+    deg: 0,
+    distance: 0,
+    arrowDistance: false,
+    alert: false,
+  };
 }
+
+/** 9-8: 矢印の距離の文字を矢印から画面の内側へずらす（px） */
+const ARROW_TEXT_INSET = 34;
 
 export class MissionHud {
   readonly root: HTMLDivElement;
@@ -39,6 +55,7 @@ export class MissionHud {
   private readonly waypoint: HTMLDivElement;
   private readonly waypointText: HTMLSpanElement;
   private readonly arrow: HTMLDivElement;
+  private readonly arrowText: HTMLDivElement;
   private unsubscribe: (() => void)[] = [];
   private hudShown = true;
   private last = {
@@ -51,6 +68,8 @@ export class MissionHud {
     wpY: NaN,
     wpDeg: NaN,
     wpText: '',
+    arrowText: '',
+    alert: false,
   };
 
   constructor(parent: HTMLElement) {
@@ -65,6 +84,7 @@ export class MissionHud {
     el('div', 'mission-waypoint-mark', this.waypoint);
     this.waypointText = el('span', 'mission-waypoint-text', this.waypoint);
     this.arrow = el('div', 'mission-waypoint-arrow', root);
+    this.arrowText = el('div', 'mission-waypoint-arrow-text', root);
     this.banner = el('div', 'mission-banner', root);
     this.bannerMain = el('div', 'mission-banner-main', this.banner);
     this.bannerSub = el('div', 'mission-banner-sub', this.banner);
@@ -72,7 +92,7 @@ export class MissionHud {
     el('div', 'boundary-warning-main', this.boundary, 'RETURN TO BATTLEFIELD');
     this.boundaryCount = el('div', 'boundary-warning-count', this.boundary);
     this.panel.hidden = this.banner.hidden = this.boundary.hidden = true;
-    this.waypoint.hidden = this.arrow.hidden = true;
+    this.waypoint.hidden = this.arrow.hidden = this.arrowText.hidden = true;
   }
 
   /** ランナーの進み具合を表示する（null ならフリーフライト。目標の表示を消す） */
@@ -121,7 +141,7 @@ export class MissionHud {
   setHudVisible(visible: boolean): void {
     this.hudShown = visible;
     this.panel.hidden = !visible || this.rows.length === 0;
-    if (!visible) this.waypoint.hidden = this.arrow.hidden = true;
+    if (!visible) this.waypoint.hidden = this.arrow.hidden = this.arrowText.hidden = true;
     this.last.wpMode = '';
   }
 
@@ -166,6 +186,14 @@ export class MissionHud {
       this.arrow.hidden = mode !== 'arrow';
       last.wpX = last.wpY = last.wpDeg = NaN;
     }
+    // 9-8: 矢印の距離（リングレース）
+    this.arrowText.hidden = mode !== 'arrow' || !w.arrowDistance;
+    if (w.alert !== last.alert) {
+      last.alert = w.alert;
+      this.waypoint.classList.toggle('is-alert', w.alert);
+      this.arrow.classList.toggle('is-alert', w.alert);
+      this.arrowText.classList.toggle('is-alert', w.alert);
+    }
     if (mode === 'none') return;
     if (
       changed(last.wpX, w.x, 0.5) ||
@@ -177,10 +205,18 @@ export class MissionHud {
       last.wpDeg = w.deg;
       const t = `translate(${w.x.toFixed(1)}px, ${w.y.toFixed(1)}px)`;
       if (mode === 'mark') this.waypoint.style.transform = t;
-      else this.arrow.style.transform = `${t} rotate(${w.deg.toFixed(1)}deg)`;
+      else {
+        this.arrow.style.transform = `${t} rotate(${w.deg.toFixed(1)}deg)`;
+        const r = (w.deg * Math.PI) / 180;
+        const tx = w.x - Math.cos(r) * ARROW_TEXT_INSET;
+        const ty = w.y - Math.sin(r) * ARROW_TEXT_INSET;
+        this.arrowText.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px)`;
+      }
     }
     const text = formatDistance(w.distance);
     if (mode === 'mark' && text !== last.wpText) this.waypointText.textContent = last.wpText = text;
+    if (mode === 'arrow' && w.arrowDistance && text !== last.arrowText)
+      this.arrowText.textContent = last.arrowText = text;
   }
 
   private showBanner(main: string, sub: string, kind: 'is-good' | 'is-bad'): void {

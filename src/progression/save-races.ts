@@ -31,6 +31,8 @@ export interface RaceRecord {
   /** 速い順、最大 RACE_CONFIG.bestTimes 件 */
   times: RaceTimeEntry[];
   ghost: RaceGhost | null;
+  /** 9-8: コースの下見を一度見た（スタート前の下見を初期値で飛ばす）。ない項目は見ていない（版は上げない） */
+  previewed?: boolean;
 }
 
 export function emptyRaceRecord(): RaceRecord {
@@ -80,6 +82,7 @@ export function normalizeRaces(v: unknown): Record<string, RaceRecord> {
       clears: isNum(r.clears) && r.clears >= 0 ? Math.round(r.clears) : 0,
       times,
       ghost: normalizeGhost(r.ghost),
+      ...(r.previewed === true ? { previewed: true } : {}),
     };
   }
   return out;

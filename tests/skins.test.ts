@@ -99,12 +99,13 @@ describe('7-3 価格と解放条件', () => {
     expect(isSkinUnlocked(ocean, save)).toBe(false);
     save.skins.pvpKills = 10;
     expect(isSkinUnlocked(ocean, save)).toBe(true);
-    expect(COURSES).toHaveLength(4);
-    for (const [i, c] of COURSES.entries())
+    // 9-8: 対象は初めの 4 本のまま（新しいコースは条件に入らない）
+    const first4 = COURSES.slice(0, 4);
+    expect(first4.map((c) => c.id)).toEqual(['coast', 'canyon', 'harbor-speed', 'acro']);
+    for (const [i, c] of first4.entries())
       save.races[c.id] = { bestRank: i === 0 ? 'B' : 'A', clears: 1, times: [], ghost: null };
     expect(isSkinUnlocked(stripe, save)).toBe(false);
-    for (const c of COURSES)
-      save.races[c.id] = { bestRank: 'S', clears: 1, times: [], ghost: null };
+    for (const c of first4) save.races[c.id] = { bestRank: 'S', clears: 1, times: [], ghost: null };
     expect(isSkinUnlocked(stripe, save)).toBe(true);
   });
 

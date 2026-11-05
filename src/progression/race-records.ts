@@ -109,3 +109,13 @@ export function recordRace(
   });
   return { credits, newBest, place, previousRank, record };
 }
+
+/** 9-8: コースの下見を見た（次からスタート前の下見を初期値で飛ばす） */
+export function markPreviewed(save: SaveStore, courseId: string): void {
+  if (raceRecord(save, courseId).previewed === true) return;
+  save.transact((data) => {
+    const rec = (data.races[courseId] ??= emptyRaceRecord());
+    rec.previewed = true;
+    return true;
+  });
+}

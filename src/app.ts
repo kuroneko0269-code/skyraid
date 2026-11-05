@@ -270,6 +270,7 @@ export function startApp(renderer: WebGLRenderer): void {
     save,
     audio,
     scene,
+    chaseCamera,
     hud,
     activeMap,
     input,

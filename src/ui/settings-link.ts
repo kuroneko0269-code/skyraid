@@ -60,6 +60,17 @@ export function createDisplaySettings(p: PauseSettingsParts): {
       return on;
     },
   );
+  // 9-8: リングレースの道筋の点線（ui/race-link.ts が毎フレーム読む）
+  createToggleButton(
+    p.settings.slot('display'),
+    t('settings.raceGuideLine'),
+    p.save.settings.raceGuideLine,
+    () => {
+      const on = !p.save.settings.raceGuideLine;
+      p.save.setSetting('raceGuideLine', on);
+      return on;
+    },
+  );
   createFullscreenButton(p.settings.slot('display'));
   return { touch, hudToggle };
 }

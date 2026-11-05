@@ -12,12 +12,22 @@ import type { ActiveMap } from '../missions/active-map';
 import type { ReplayHub } from '../replay/hub';
 import type { RaceResult, RaceRunner } from '../missions/race/runner';
 import type { CourseDef } from '../missions/race/types';
-import { raceRecord, recordRace, type RaceRecordOutcome } from '../progression/race-records';
+import {
+  markPreviewed,
+  raceRecord,
+  recordRace,
+  type RaceRecordOutcome,
+} from '../progression/race-records';
 import { raceRecord as onlineRaceRecord, recordOutbox } from '../online/outbox';
 import type { SaveStore } from '../progression/save-store';
 import type { GhostView } from '../render/ghost-view';
 import type { WeatherView } from '../render/weather/weather-view';
+import type { PerspectiveCamera, Scene } from 'three';
+import { RaceGuideLink } from '../render/race-guide-link';
+import { RaceGuideView } from '../render/race-guide-view';
+import { RaceGuideHud } from './race-guide-hud';
 import { RaceHud } from './race-hud';
+import { RacePreviewScreen } from './race-preview';
 import { cardPaint } from './card/card-entry';
 import { RaceResultScreen } from './race-result';
 import { RaceSelectScreen } from './race-select';
@@ -36,6 +46,9 @@ export interface RaceLinkParts {
   /** ゴーストの世界の地表・建物（7-B） */
   readonly activeMap: ActiveMap;
   readonly replay: ReplayHub;
+  /** 9-8 道案内: 点線を置くシーン・番号の札を投影するカメラ（追従カメラが動かすカメラ）・下見の後に追従カメラを寄せる */
+  readonly scene: Scene;
+  readonly chaseCamera: { readonly camera: PerspectiveCamera; snap(): void };
 }
 
 export interface RaceLink {
@@ -51,6 +64,20 @@ export interface RaceLink {
   render(alpha: number): void;
   /** リザルトの追加の欄（7-B: リプレイを保存） */
   readonly resultExtras: HTMLElement;
+  /** 9-8 道案内と下見（flight-frame・flight-loop が呼ぶ） */
+  readonly guide: RaceGuideHooks;
+}
+
+/** 9-8: 描画（番号の札・下見のカメラ）と固定ステップ（下見の間は止める）から呼ぶ */
+export interface RaceGuideHooks {
+  /** 下見のカメラを置く（置いたら true。追従カメラの代わり） */
+  previewCamera(frameSeconds: number): boolean;
+  /** カメラを置いた後の描画フレームごと（hudShown は H キー / 設定の HUD） */
+  update(width: number, height: number, hudShown: boolean): void;
+  /** 次のリングを通り損ねている（ミッションの HUD の印を赤く） */
+  missed(): boolean;
+  /** 固定ステップを止める（下見の間と、飛ばした直後の 1 回。true の間は入力も捨てる） */
+  holdSim(): boolean;
 }
 
 /** コース一覧・HUD・リザルトを作り、画面の遷移・レースのイベントにつなぐ */
@@ -59,6 +86,8 @@ export function createRaceLink(p: RaceLinkParts): RaceLink {
   const hangar = screens.hangar;
   const ghostSim = new GhostSim(p.activeMap.ground, () => p.activeMap.buildings);
   let course: CourseDef | null = null;
+  /** 9-8: 次の飛行でスタート前に下見するか（コース一覧の切り替え。「もう一度」は見たコースなら飛ばす） */
+  let previewNext = false;
   let pending: { result: RaceResult; out: RaceRecordOutcome } | null = null;
   const select = new RaceSelectScreen(
     document.body,
@@ -66,19 +95,46 @@ export function createRaceLink(p: RaceLinkParts): RaceLink {
     (id) => raceRecord(save, id),
     hangar,
     {
-      onStart: (c) => {
+      onStart: (c, preview) => {
         course = c;
+        previewNext = preview;
         game.transition('flight');
       },
       onBack: () => game.transition('mode_select'),
     },
   );
   const result = new RaceResultScreen(document.body, {
-    onRetry: () => game.transition('flight'),
+    onRetry: () => {
+      previewNext = course !== null && raceRecord(save, course.id).previewed !== true;
+      game.transition('flight');
+    },
     onList: () => game.transition('race_select'),
   });
   const hud = new RaceHud(document.body);
   screens.inRace = () => course !== null;
+  // 9-8 道案内（番号の札・印・通り損ね・点線）と下見
+  const guide = new RaceGuideLink({
+    camera: p.chaseCamera.camera,
+    hud: new RaceGuideHud(hud.root, hud.band),
+    view: new RaceGuideView(p.scene),
+    player: () => ({
+      position: play.session.aircraft.state.position,
+      velocity: play.session.player.velocity,
+    }),
+    groundHeight: p.activeMap.ground,
+  });
+  const previewScreen = new RacePreviewScreen(document.body);
+  /** 下見を終えた直後の固定ステップを 1 回止める（飛ばしたキーで動かない・ポーズしない） */
+  let releaseStep = false;
+  const endPreview = (): void => {
+    if (!guide.previewing) return;
+    guide.endPreview();
+    previewScreen.hide();
+    releaseStep = true;
+    p.chaseCamera.snap();
+    const c = play.race?.course;
+    if (c && !replay.playing) markPreviewed(save, c.id);
+  };
 
   game.onChange(({ from, to, restart }) => {
     select.setShown(to === 'race_select');
@@ -94,6 +150,8 @@ export function createRaceLink(p: RaceLinkParts): RaceLink {
 
   play.onRaceChange((race) => {
     hud.attach(race);
+    guide.attach(race);
+    previewScreen.hide();
     p.hud.setNoWeapons(race !== null);
     if (race) bindRace(race);
     else {
@@ -178,6 +236,33 @@ export function createRaceLink(p: RaceLinkParts): RaceLink {
       ghostSim.start(data);
       p.ghost.setGhost(data ? ghostSim : null, ghost ? findAircraftModel(ghost.aircraftId) : null);
       if (!replaying) screens.pause.setInMission(true, t('race.abort'));
+      // 9-8: スタート前の下見（固定ステップを止めてカメラだけ動かす。記録・ゴーストは下見の後から）
+      if (!replaying && previewNext) {
+        guide.startPreview();
+        previewScreen.show(c, endPreview);
+      }
+      previewNext = false;
+    },
+    guide: {
+      previewCamera(frameSeconds) {
+        if (!guide.previewing) return false;
+        if (game.state === 'flight') {
+          guide.updatePreviewCamera(frameSeconds);
+          previewScreen.setProgress(guide.previewProgress ?? 1);
+          if (guide.previewDone) endPreview();
+        } else guide.updatePreviewCamera(0);
+        return true;
+      },
+      update(width, height, hudShown) {
+        guide.update(width, height, hudShown, save.settings.raceGuideLine);
+      },
+      missed: () => guide.missed,
+      holdSim() {
+        if (guide.previewing) return true;
+        if (!releaseStep) return false;
+        releaseStep = false;
+        return true;
+      },
     },
     afterStep() {
       if (play.race && ghostSim.active) ghostSim.step();

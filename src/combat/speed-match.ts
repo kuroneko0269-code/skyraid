@@ -1,4 +1,4 @@
-// 速度合わせ（9-5b、Three.js 非依存）: 選んだ対象に前方から近づいているとき、詰まる速さが大きすぎないようスロットルを下げる。
+// 速度合わせ（9-5b、Three.js 非依存）: 選んだ空の対象（9-8: 地上目標は除く）に前方から近づいているとき、詰まる速さが大きすぎないようスロットルを下げる。
 // 数値は src/data/assist.ts の SPEED_MATCH_CONFIG。固定ステップごと、操縦の入力を組み立てた後・記録の前に呼ぶ（出したスロットルは
 // throttleTarget として記録に残るので、再生は記録の値で同じになる）。スロットルを上げることはしない
 import { SPEED_MATCH_CONFIG } from '../data/assist';
@@ -44,7 +44,8 @@ export class SpeedMatch {
   /** controls（組み立てた後の操縦）の throttleTarget を書き換える */
   apply(controls: AircraftControls, s: SpeedMatchSubject): void {
     const target = s.combat.targeting.selected;
-    const live = target !== null && target.active && s.player.active;
+    // 9-8 の事前修正: 地上目標（施設・対空砲）への急降下では下げない（空の的 = 敵機・ドローン・的・怪獣だけ）
+    const live = target !== null && target.active && target.surface !== true && s.player.active;
     if (!live || target !== this.suspended) this.suspended = null;
     const manualInput =
       (controls.throttleTarget !== null && controls.throttleTarget !== undefined) ||

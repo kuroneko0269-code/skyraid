@@ -1,6 +1,6 @@
 // 記録の差し出し口（7-4、DOM・Supabase 非依存）: ゲームの各モード（レース・レイド・防衛戦）は記録をここへ出すだけ。
 // オンライン連携を読み込んだとき（環境変数があるときだけ）に送り先がつながる。つながっていなければ何もしない
-import { ONLINE_CLIENT_VERSION } from '../data/online';
+import { ONLINE_CLIENT_VERSION, rankedCourse } from '../data/online';
 import type { RecordInput } from './records';
 
 export class RecordOutbox {
@@ -23,6 +23,8 @@ export function raceRecord(
   aircraftId: string,
 ): RecordInput | null {
   if (r.outcome !== 'finished') return null;
+  // 9-8: サーバーの準備ができていないコース（SQL 0004 の前の新しいコース）は送らない
+  if (!rankedCourse(r.courseId)) return null;
   return {
     kind: 'race',
     key: r.courseId,

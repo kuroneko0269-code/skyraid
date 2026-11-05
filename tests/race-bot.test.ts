@@ -1,11 +1,11 @@
-// リングレース（7-1）のシミュレーション: 道筋を追うボット（Kestrel・未強化）で 4 コースを完走し、
+// リングレース（7-1）のシミュレーション: 道筋を追うボット（Kestrel・未強化）で全コース（9-8 から 6 本）を完走し、
 // ゴールドタイムの 1.1〜1.4 倍で走れる（ゴールドタイムはボットのタイム ÷ 1.2 を 0.5 秒に丸めて決めた）。
 // ボットの各リングのタイムをベストとして、2 回目は差・スプリットが出る（ゴーストの再生は tests/race-ghost.test.ts）
 import { describe, expect, it } from 'vitest';
 import { COURSES } from '../src/data/courses';
 import { runRaceBot } from './race-bots';
 
-describe('ボットで 4 コースを完走する', () => {
+describe('ボットで 6 コースを完走する（9-8 で 2 本足した）', () => {
   for (const course of COURSES) {
     it(`${course.name}: 未通過・墜落なしで完走し、ゴールドタイムの 1.1〜1.4 倍`, () => {
       const { result, crashes, sim } = runRaceBot(course);

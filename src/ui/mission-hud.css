@@ -5,7 +5,8 @@
   --hud-good: rgba(255, 215, 90, 0.95);
   position: fixed;
   inset: 0;
-  z-index: 16;
+  /* 9-8: リングレースの上の帯（.race-hud、16）より上に（画面上端の矢印と距離が帯の下に隠れない） */
+  z-index: 17;
   pointer-events: none;
   color: var(--hud-color);
   font:
@@ -41,7 +42,8 @@
 .mission-banner[hidden],
 .boundary-warning[hidden],
 .mission-waypoint[hidden],
-.mission-waypoint-arrow[hidden] {
+.mission-waypoint-arrow[hidden],
+.mission-waypoint-arrow-text[hidden] {
   display: none;
 }
 
@@ -209,6 +211,47 @@
   border-top: 9px solid transparent;
   border-bottom: 9px solid transparent;
   border-left: 18px solid var(--hud-good);
+}
+
+/* 9-8: リングレースは画面端の矢印にも距離（矢印から画面の内側へ）。通り損ねたら印を赤く */
+.mission-waypoint-arrow-text {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+  color: var(--hud-good);
+  font:
+    700 13px/1 ui-monospace,
+    'SFMono-Regular',
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: nowrap;
+  translate: -50% -50%;
+  padding: 2px 4px;
+  border: 1px solid currentcolor;
+  background: rgba(0, 20, 30, 0.45);
+  border-radius: 4px;
+}
+
+.mission-waypoint.is-alert .mission-waypoint-mark {
+  border-color: var(--hud-warn, #ff5a46);
+}
+
+.mission-waypoint.is-alert .mission-waypoint-text,
+.mission-waypoint-arrow-text.is-alert {
+  color: var(--hud-warn, #ff5a46);
+}
+
+.mission-waypoint-arrow.is-alert::before {
+  border-left-color: var(--hud-warn, #ff5a46);
+  animation: mission-waypoint-blink 0.8s steps(2, jump-none) infinite;
+}
+
+@keyframes mission-waypoint-blink {
+  50% {
+    opacity: 0.35;
+  }
 }
 
 @media (max-width: 760px), (max-height: 480px) {

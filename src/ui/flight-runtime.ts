@@ -22,7 +22,7 @@ export type FlightRuntimeParts = Omit<
   FlightStartParts,
   'world' | 'replay' | 'race' | 'defense' | 'practice'
 > &
-  Omit<FlightLoopParts, 'startFlight' | 'replay' | 'afterStep'> &
+  Omit<FlightLoopParts, 'startFlight' | 'replay' | 'afterStep' | 'holdSim'> &
   Omit<FlightFrameParts, 'touch'> & {
     /** 描画のタッチ操作（スロットルの表示）。FlightLoopParts の touch は TouchLink */
     readonly touchControls: FlightFrameParts['touch'];
@@ -77,9 +77,13 @@ export function startFlightRuntime(p: FlightRuntimeParts): {
     afterStep: () => {
       race.afterStep();
     },
+    holdSim: () => race.guide.holdSim(),
   });
   p.aircraftMesh.visible = false;
   const frame = new FlightFrame({ ...p, touch: p.touchControls });
+  // 9-8: リングレースの道案内（下見のカメラ・番号の札）と、通り損ねたら次のリングの印を赤く
+  frame.raceGuide = race.guide;
+  p.missionLink.raceAlert = () => race.guide.missed();
   // フォトモード（7-A）: ポーズメニュー・P キー。フリーフライト・キャンペーン・ソロのレイド（7-B: リプレイも）だけ（時間は止める）
   const photo = createPhotoMode(
     {

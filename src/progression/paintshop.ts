@@ -30,12 +30,15 @@ function rankAtLeast(rank: Rank | null, target: Rank): boolean {
  */
 const SKIN_MISSION_IDS: readonly string[] = MISSIONS.slice(0, 5).map((m) => m.id);
 
+/** 「レース 4 コース全部 A 以上」の対象（9-8: 初めの 4 本のまま。新しいコースを足しても、もう解放した人の条件が戻らないように） */
+const SKIN_COURSE_IDS: readonly string[] = COURSES.slice(0, 4).map((c) => c.id);
+
 /** 解放条件を満たしているか（null は最初から） */
 export function isSkinUnlocked(
   unlock: SkinUnlock | null,
   save: Readonly<SaveData>,
   missionIds: readonly string[] = SKIN_MISSION_IDS,
-  courseIds: readonly string[] = COURSES.map((c) => c.id),
+  courseIds: readonly string[] = SKIN_COURSE_IDS,
 ): boolean {
   if (unlock === null) return true;
   switch (unlock.kind) {

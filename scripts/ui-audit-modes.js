@@ -47,6 +47,8 @@ const MODES = [
       await p.click('.mode-card[data-mode="race"]');
       await p.locator('.race-course').first().click();
       await p.locator(`.ui-button.is-primary:text-is("${L('スタート')}"):visible`).click();
+      // 9-8: 初めてのコースはスタート前の下見（押すと飛ばす）
+      await p.locator('.race-preview:not([hidden])').click();
     },
   },
   {

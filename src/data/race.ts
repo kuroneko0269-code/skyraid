@@ -44,6 +44,52 @@ export const RACE_CONFIG = {
 } as const;
 
 /**
+ * 9-8 の道案内（全コース共通。判定・タイムには使わない）: 次とその次のリングの番号と色・それより先のリングを控えめに・
+ * 画面外の矢印と距離・普通に飛ぶと通れないリングの印・道筋の点線・通り損ねの表示・スタート前のコースの下見
+ */
+export const RACE_GUIDE = {
+  /** 3 個目より先のリングの色: 種類の色を dimColor へ dimMix だけ寄せる（次・その次は種類の色のまま） */
+  dimColor: 0x2a3640,
+  dimMix: 0.6,
+  /** 印: 法線の上向きの角度がこれ以上なら「上へ」、−これ以下なら「下へ」（度） */
+  steepPitchDeg: 60,
+  /**
+   * 印: 前の（急でない）リングから方位が reverseDeg 以上変わり、高さが reverseRise m 以上上なら「宙返り」、
+   * 下なら「引き起こし」（上下に回って向きを変えるリング）
+   */
+  reverseDeg: 120,
+  reverseRise: 300,
+  /** 通り損ね: 次のリングが進む向きから missAngleDeg より後ろ（missDistance m より遠く）で出し、clearAngleDeg 内に戻ったら消す */
+  missAngleDeg: 100,
+  clearAngleDeg: 70,
+  missDistance: 60,
+  /** 道筋の点線: 点の間隔（m）・点の大きさ（m。遠いほど小さく）・不透明度・色。前のリングから次の 3 個まで */
+  dotSpacing: 28,
+  dotSize: 7,
+  dotOpacity: 0.8,
+  dotColor: 0xffffff,
+  dotLegs: 3,
+  /** 点線の点の最大数（3 区間 × 3km ÷ 28m × 1.3 より多く） */
+  maxDots: 480,
+  /** 道筋の点線の初期値（設定 → 表示で OFF にできる） */
+  guideLineDefault: true,
+  /**
+   * コースの下見: スタート前にカメラが道筋をたどる。秒数は道筋の長さ ÷ previewSpeed を min〜max に収める。
+   * カメラは道筋の behind m 後ろ・rise m 上から、lookAhead m 先を見る。最後の fadeSeconds は開始位置へ寄せる
+   */
+  preview: {
+    minSeconds: 10,
+    maxSeconds: 20,
+    speed: 900,
+    behind: 160,
+    rise: 70,
+    lookAhead: 380,
+    /** 始めと終わりのゆっくりの割合（0〜0.5） */
+    ease: 0.12,
+  },
+} as const;
+
+/**
  * リングレース（7-1）の音（定位なし）。リング通過は上がる 2 音のチャイムで、種類で音程を変える
  * （通常 A5→E6・ブースト 1 音低く長め＋ノコギリ波・細い 高く短い・チェックポイント 3 音）。未通過は下がる 2 音、ゴールは長い和音。
  * カウントダウンの 3・2・1 と GO は PvP（UI_SOUND の countdown / go）と同じ

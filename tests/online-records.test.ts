@@ -1,7 +1,7 @@
 // 7-4: 記録の送信。不正値の事前チェック（SQL の check と同じ規則）・記録の形・キューの再送（最大 20）・送る条件
 import { describe, expect, it } from 'vitest';
 import { COURSES } from '../src/data/courses';
-import { ONLINE_CLIENT_VERSION } from '../src/data/online';
+import { ONLINE_CLIENT_VERSION, rankedCourse } from '../src/data/online';
 import { loadMeta } from '../src/online/meta';
 import { defenseRecord, raceRecord, raidRecord } from '../src/online/outbox';
 import { RecordQueue } from '../src/online/queue';
@@ -38,6 +38,11 @@ describe('不正値の事前チェック', () => {
       const min = raceTheoreticalMinMs(c.id) ?? 0;
       expect(floor).toBe(Math.floor(min * 0.5));
       expect(min, c.id).toBeLessThan(c.goldTimeSeconds * 1000);
+      // 9-8: ランキングの準備ができていないコース（SQL 0004 の前）は key で拒否
+      if (!rankedCourse(c.id)) {
+        expect(checkRecord(race(floor, c.id)), c.id).toBe('key');
+        continue;
+      }
       expect(checkRecord(race(floor, c.id))).toBeNull();
       expect(checkRecord(race(floor - 1, c.id))).toBe('raceTooFast');
     }

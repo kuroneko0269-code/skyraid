@@ -12,7 +12,7 @@ import { canLoop, safeLoopRadius } from '../src/flight/loop-steer';
 import { rotateVec3, type Vec3 } from '../src/flight/math';
 import { initialUpgrades } from '../src/progression/save';
 import { resolveLoadout } from '../src/progression/loadout';
-import { runDirectRace } from './direct-steer-bots';
+import { runDirectRace } from './direct-race-bots';
 
 const DT = 1 / 60;
 const DEG = Math.PI / 180;
