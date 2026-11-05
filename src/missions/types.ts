@@ -241,7 +241,8 @@ export type SuccessCondition = 'allRequiredObjectives';
  * 失敗条件。playerDown: 自機撃墜（地面・海面への墜落も） / escortLost: 護衛対象の喪失 /
  * timeUp: 制限時間超過（timeLimitSeconds があるとき） / outOfBounds: 戦域離脱（境界の外で猶予を過ぎる） /
  * kaijuReachedCity: 怪獣の最終フェーズの制限時間が切れ、島の中心（街）に到達した（6-2） /
- * stormTimeUp・totalTimeUp: ネフィルガの嵐（段階 3）の制限時間・全体の制限時間が切れた（9-6c）
+ * stormTimeUp・totalTimeUp: ネフィルガの嵐（段階 3）の制限時間・全体の制限時間が切れた（9-6c） /
+ * livesOut: 残機（定義の lives）を使い切った（9-6d。レイド）
  */
 export type FailCondition =
   | 'playerDown'
@@ -250,7 +251,8 @@ export type FailCondition =
   | 'outOfBounds'
   | 'kaijuReachedCity'
   | 'stormTimeUp'
-  | 'totalTimeUp';
+  | 'totalTimeUp'
+  | 'livesOut';
 
 export interface RewardDef {
   /** クレジットの基本額 */
@@ -277,6 +279,8 @@ export interface MissionDef {
   readonly start: Pose;
   /** 制限時間（秒）。省略で無制限 */
   readonly timeLimitSeconds?: number;
+  /** 9-6d: 残機（撃墜されてもこの数までは復帰して続ける。失敗条件の livesOut と使う。省略は無制限） */
+  readonly lives?: number;
   /** 評価の基準時間（秒）。これ以内のクリアで時間の減点 0（src/data/ranking.ts） */
   readonly parTimeSeconds: number;
   readonly spawns: readonly SpawnDef[];

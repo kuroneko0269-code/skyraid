@@ -15,6 +15,7 @@
   "opening": "OPENING  {seconds}",
   "opening.perch": "Resting on a perch — attack now",
   "opening.recover": "Pulling up after a dive — attack now",
+  "opening.flinch": "Flinching from a broken part — attack now",
   "opening.hover": "Nearly still while charging — attack now",
   "broken.wingL": "Left wing broken: slower and lower, no gust or dive",
   "broken.wingR": "Right wing broken: slower and lower, no gust or dive",
@@ -27,8 +28,8 @@
   "briefing": [
     "Nephirga, a giant storm-wrapped pterosaur, circles above the harbor city. Turn inside its circle to catch it.",
     "Tells: hovering with a glowing throat → lightning orbs (break hard sideways or flare); wings raised → gust ahead; sharp climb → dive (turn at a right angle); tail curled → sweep behind.",
-    "Attack while it rests on a perch, while it pulls up after a dive, and during tells. Breaking a wing makes it slower and lower; the head stops the orbs and the tail stops the sweep.",
-    "Below 40% health the storm begins (4.5 min, Hard 4 min). If it is not down within the overall limit (12 min, Hard 10 min), the storm hits the city."
+    "Attack while it rests on a perch, while it pulls up after a dive, and right after you break a part (it flinches). The body is tough, so aim for the wings, head and tail (a broken wing makes it slower and lower; the head stops the orbs and the tail stops the sweep). Keep it in your sights and it slips sideways.",
+    "Below 40% health the storm begins (4.5 min, Hard 4 min). If it is not down within the overall limit (12 min, Hard 10 min), the storm hits the city. You have 3 lives (Hard: 2)."
   ],
   "briefingTap": "Tap to close"
 }

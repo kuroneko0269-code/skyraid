@@ -25,6 +25,8 @@ export class Kaiju2PartTarget implements CombatTarget {
   readonly hitRadius: number;
   readonly visualRadius: number;
   readonly team = TEAM_ENEMY;
+  /** 9-6d: タッチの狙いの補助を弱める（大きな的に効きすぎる） */
+  readonly assistScale = KAIJU2_RAID_CONFIG.assistScale;
   /** 範囲ダメージは体の部位のうち最も近い 1 つだけ（combat/target.ts の nearestPerGroup） */
   readonly blastGroup: object;
   /** 部位 HP（戻らない。胴は Infinity = 壊れない） */

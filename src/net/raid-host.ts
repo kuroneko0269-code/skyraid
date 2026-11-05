@@ -21,7 +21,7 @@ import {
 } from './protocol';
 
 /** レイドの結果（over の event の b） */
-export const RAID_OUTCOME = { none: 0, clear: 1, fail: 2 } as const;
+export const RAID_OUTCOME = { none: 0, clear: 1, fail: 2, livesOut: 5 } as const;
 
 export interface RaidHostOptions {
   readonly groundHeight?: GroundHeightFn;

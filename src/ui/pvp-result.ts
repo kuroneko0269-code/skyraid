@@ -35,6 +35,7 @@ export interface ResultView {
     | 'raidFail'
     | 'raidStormFail'
     | 'raidTotalFail'
+    | 'raidLivesFail'
     | 'defenseClear'
     | 'defenseFail';
   localId: number;
@@ -71,6 +72,10 @@ const REASON_TEXT: Readonly<Record<ResultView['reason'], string>> = {
   get raidTotalFail() {
     return t('pvp.reason.raidTotalFail');
   },
+  // 9-6d: 全員が残機を使い切った
+  get raidLivesFail() {
+    return t('pvp.reason.raidLivesFail');
+  },
   get defenseClear() {
     return t('pvp.reason.defenseClear');
   },
@@ -82,7 +87,12 @@ const REASON_TEXT: Readonly<Record<ResultView['reason'], string>> = {
 function title(r: Readonly<ResultView>): string {
   if (r.reason === 'raidClear')
     return r.raid?.kaiju === NEPHIRGA_ID ? t('pvp.title.raid2Clear') : t('pvp.title.raidClear');
-  if (r.reason === 'raidFail' || r.reason === 'raidStormFail' || r.reason === 'raidTotalFail')
+  if (
+    r.reason === 'raidFail' ||
+    r.reason === 'raidStormFail' ||
+    r.reason === 'raidTotalFail' ||
+    r.reason === 'raidLivesFail'
+  )
     return t('pvp.title.raidFail');
   if (r.reason === 'defenseClear') return t('defense.outcome.cleared');
   if (r.reason === 'defenseFail') return t('defense.outcome.fallen');

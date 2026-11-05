@@ -2,6 +2,7 @@
 // 成績（部位別の与ダメージ）、壊れた建物の配り方。Three.js 非依存
 import type { BuildingField } from '../combat/buildings';
 import type { PvpArena } from '../combat/pvp-arena';
+import { allOutOfLives } from '../combat/arena-raid';
 import type { PvpFighter } from '../combat/pvp-fighter';
 import { RAID_CONFIG } from '../data/kaiju';
 import { NET_CONFIG } from '../data/net';
@@ -10,7 +11,7 @@ import { RAID_RULES } from '../data/raid';
 import type { GroundHeightFn } from '../entities/aircraft';
 import { PreStart } from './briefing';
 import { spawnPosition } from './net-game';
-import { RaidHost } from './raid-host';
+import { RAID_OUTCOME, RaidHost } from './raid-host';
 import { Kaiju2Host } from './kaiju2-host';
 import { findMap } from '../data/maps';
 import { raidKaijuOf, NEPHIRGA_ID } from '../data/raid-kaiju';
@@ -39,7 +40,7 @@ export function createRaidHost(
   deps: { readonly groundHeight?: GroundHeightFn; readonly buildings?: BuildingField | null },
   emit: (e: EventMsg) => void,
 ): RaidHost {
-  useRaidRespawn(arena);
+  useRaidRespawn(arena, room.settings.hard);
   return new RaidHost(arena, room.players.length, {
     groundHeight: deps.groundHeight,
     hard: room.settings.hard,
@@ -89,7 +90,7 @@ export function createKaiju2Host(
   const s = room.settings;
   if (s.mode !== 'raid' || raidKaijuOf(s.raidKaiju) !== NEPHIRGA_ID) return null;
   const seed = Math.floor(rng() * 0xffffffff);
-  useRaidRespawn(arena);
+  useRaidRespawn(arena, s.hard);
   const ground = deps.kaijuGround ?? deps.groundHeight;
   return new Kaiju2Host(arena, room.players.length, {
     ground: ground ? (x, z) => ground(x, z) : undefined,
@@ -128,9 +129,10 @@ export function scoreEntry(f: PvpFighter, raid: RaidScoreSource | null): ScoreEn
   };
 }
 
-/** arena をレイドの復帰（5 秒・開始位置）にする */
-export function useRaidRespawn(arena: PvpArena): void {
+/** arena をレイドの復帰（5 秒・開始位置）にする。9-6d: 残機（通常 3・高難度 2）を使い切った人は復帰しない */
+export function useRaidRespawn(arena: PvpArena, hard: boolean): void {
   arena.respawnSeconds = RAID_RULES.respawnSeconds;
+  arena.lives = RAID_RULES.lives[hard ? 'hard' : 'normal'];
   arena.respawnPoint = (id) => ({
     ...spawnPosition(id, { x: 0, y: 0, z: 0 }, true),
     headingDeg: RAID_CONFIG.start.headingDeg,
@@ -172,4 +174,16 @@ export function allRuins(field: BuildingField | null): RuinMsg | null {
     if (s !== 'intact') ids.push(i);
   });
   return ids.length > 0 ? { type: 'ruin', ids } : null;
+}
+
+/** レイド・防衛戦の終わり（none は続く）。9-6d: レイドで全員が残機を使い切ったら livesOut */
+export function coopOutcome(
+  raid: { readonly outcome: number } | null,
+  defense: { readonly outcome: number } | null,
+  arena: PvpArena,
+): number {
+  const outcome = raid?.outcome ?? defense?.outcome ?? RAID_OUTCOME.none;
+  if (raid && outcome === RAID_OUTCOME.none && allOutOfLives(arena.all, arena.lives))
+    return RAID_OUTCOME.livesOut;
+  return outcome;
 }

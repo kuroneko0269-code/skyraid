@@ -8,7 +8,8 @@ import { KAIJU2_RAID_CONFIG } from '../data/kaiju2-raid';
 import type { MapDef } from '../data/maps';
 import type { Kaiju2Ai, Kaiju2Target } from '../ai/kaiju2-ai';
 import type { SkyKaiju } from '../entities/kaiju2/sky-kaiju';
-import { vec3, type Vec3 } from '../flight/math';
+import { LOCAL_FORWARD } from '../flight/flight-model';
+import { rotateVec3, vec3, type Vec3 } from '../flight/math';
 import { attachFreeExtra, type FreeExtra } from './free-extra';
 import type { GamePlay } from './game-play';
 import { NEPHIRGA_ID } from './kaiju2-mission';
@@ -55,6 +56,7 @@ export class Kaiju2Dev implements FreeExtra {
   lateStart = false;
   /** 自機の速度（前のステップの位置との差から） */
   private readonly velocity = vec3();
+  private readonly nose = vec3();
   /** 走査の根（怪獣の本体・体力・部位。AI の hooks は関数なので値は入らない） */
   get stateRoot(): object {
     return this.raid;
@@ -80,11 +82,16 @@ export class Kaiju2Dev implements FreeExtra {
     });
     const a = session.aircraft;
     const velocity = this.velocity;
+    const nose = this.nose;
     this.target = {
       position: a.state.position,
       velocity,
       get active() {
         return session.player.active;
+      },
+      // 9-6d: 機首の向き（狙われたら避ける）
+      get forward() {
+        return rotateVec3(nose, a.state.orientation, LOCAL_FORWARD);
       },
     };
   }
@@ -193,6 +200,14 @@ export class Kaiju2Dev implements FreeExtra {
       this.velocity.z = (a.state.position.z - a.prevPosition.z) / dt;
     }
     this.raid.step(dt, this.target, this.play.session.combat.flares.flares);
+    // 9-6d: 突風の押し流し（水平。弱まりながら）
+    const k = this.body;
+    if (k.pushLeft > 0 && this.play.session.player.active) {
+      const g = KAIJU2_CONFIG.attacks.gust;
+      const v = g.push * (k.pushLeft / g.pushSeconds) * dt;
+      a.state.position.x += k.pushX * v;
+      a.state.position.z += k.pushZ * v;
+    }
   }
 }
 

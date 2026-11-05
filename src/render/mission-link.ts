@@ -23,6 +23,7 @@ export class MissionLink {
   update(width: number, height: number): void {
     const runner = this.play.runner;
     this.hud.setTimeLeft(runner ? runner.timeLeft : null);
+    this.hud.setLives(runner?.running ? runner.livesLeft : null);
     const b = this.play.boundary;
     this.hud.setBoundary(b.outside, b.failOnExpire ? b.secondsLeft : null);
 

@@ -47,6 +47,8 @@ export interface Kaiju2StateMsg {
   /** 嵐（段階 3）に入った時刻（秒。null は入っていない） */
   stormAt: number | null;
   shout: number;
+  /** 9-6d: 部位を壊されて怯んでいる残り秒数（見た目） */
+  flinch: number;
   orbs: Kaiju2OrbMsg[];
 }
 
@@ -59,10 +61,11 @@ const NO_STORM = 0xffff;
 const POS_XZ = 0.25;
 const POS_Y = 0.1;
 const ORB_POS = 0.5;
-const ORB_VEL = 1.25;
+/** 9-6d: 雷球を 210 m/s にしたので 1.25（±158）→ 1.75（±222） */
+const ORB_VEL = 1.75;
 
 /** 雷球なしのバイト数（有無の 1 バイトを含む）と、雷球 1 つのバイト数 */
-export const KAIJU2_STATE_BASE_BYTES = 30;
+export const KAIJU2_STATE_BASE_BYTES = 31;
 export const KAIJU2_ORB_BYTES = 10;
 
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
@@ -97,6 +100,7 @@ export function writeKaiju2(w: ByteWriter, k: Readonly<Kaiju2StateMsg> | null): 
   w.u16(u16(k.elapsed * 10));
   w.u16(k.stormAt === null ? NO_STORM : Math.min(NO_STORM - 1, u16(k.stormAt * 10)));
   w.u8(u8(k.shout, 20));
+  w.u8(u8(k.flinch, 20));
   w.u8(k.orbs.length);
   for (const o of k.orbs) {
     w.u8(o.index);
@@ -128,6 +132,7 @@ export function readKaiju2(r: ByteReader): Kaiju2StateMsg | null {
   const elapsed = r.u16() / 10;
   const storm = r.u16();
   const shout = r.u8() / 20;
+  const flinch = r.u8() / 20;
   const n = Math.min(8, r.u8());
   const orbs: Kaiju2OrbMsg[] = [];
   for (let i = 0; i < n; i++) {
@@ -159,6 +164,7 @@ export function readKaiju2(r: ByteReader): Kaiju2StateMsg | null {
     elapsed,
     stormAt: storm === NO_STORM ? null : storm / 10,
     shout,
+    flinch,
     orbs,
   };
 }

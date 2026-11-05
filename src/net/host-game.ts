@@ -22,6 +22,7 @@ import type { HostGameDeps, HostRemote } from './host-game-deps';
 export type { HostGameDeps } from './host-game-deps';
 import {
   allSkipped,
+  coopOutcome,
   createKaiju2Host,
   createRaidHost,
   nephirgaScore,
@@ -258,8 +259,7 @@ export class HostGame extends NetGameEvents implements NetGame {
     this.missileVersion++;
     if (this.tick % this.stateEvery === 0) this.broadcastState();
     // レイドは怪獣を倒すか街に到達されたら終わり（撃墜数・制限時間は使わない）
-    const outcome =
-      this.raid?.outcome ?? this.raid2?.outcome ?? this.defense?.outcome ?? RAID_OUTCOME.none;
+    const outcome = coopOutcome(this.raid ?? this.raid2, this.defense, arena);
     const ended =
       this.raid || this.raid2 || this.defense
         ? outcome !== RAID_OUTCOME.none && outcome !== DEFENSE_OUTCOME.none

@@ -27,6 +27,18 @@ export interface GunTarget {
   readonly hitRadius: number;
   /** 当たり判定を行うか（撃墜済み・再出現待ちは false） */
   readonly active: boolean;
+  /**
+   * 9-6d: タッチの狙いの補助の効き（判定の拡大と補正の強さに掛ける。省略は 1 = 今まで）。大きな的（ネフィルガの部位）だけ弱める
+   */
+  readonly assistScale?: number;
+}
+
+/** 9-6d: 判定の拡大（hitRadiusScale）を的の assistScale で弱めた半径 */
+export function assistedHitRadius(
+  t: Readonly<Pick<GunTarget, 'hitRadius' | 'assistScale'>>,
+  hitRadiusScale: number,
+): number {
+  return t.hitRadius * (1 + (hitRadiusScale - 1) * (t.assistScale ?? 1));
 }
 
 /** 撃つ機体の状態。速度は機首方向（横滑りなし） */
@@ -174,7 +186,7 @@ export class Gun<T extends GunTarget> {
         c.x,
         c.y,
         c.z,
-        t.hitRadius * this.hitRadiusScale,
+        assistedHitRadius(t, this.hitRadiusScale),
       );
       if (s >= 0 && s < best) {
         best = s;

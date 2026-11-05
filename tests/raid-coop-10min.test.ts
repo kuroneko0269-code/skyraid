@@ -79,6 +79,8 @@ describe('4 人協力を 10 分通す', () => {
     // 8-6 / 8-6b / 8-6c: レイドの怪獣が受けるダメージと人数の倍率を変えたので、引き金を引く量を 8 → 20 にして
     // 5〜10 分の撃破を保つ（このテストは通信とリザルトの一致を見る）
     const state = { breakOff: [0, 0, 0, 0], fireTicks: 20 };
+    // 9-6d: このボットは攻撃を避けないので残機は外す（通信とリザルトの一致を見る。残機は raid-lives.test.ts）
+    m.host.arena.lives = null;
     const seconds = 600;
     let elapsed = 0;
     while (elapsed < seconds && !m.host.finished) {

@@ -58,7 +58,10 @@ describe('ネフィルガのソロのレイド（9-6b）', () => {
     const def = nephirgaRaidMission('hard');
     expect(def.reward.raid).toEqual({ difficulty: 'hard', kaiju: 'nephirga' });
     expect(raidReward({ coop: false, cleared: true, seconds: 200, difficulty: 'hard' })).toBe(5400);
-    expect(def.failConditions).toEqual(['stormTimeUp', 'totalTimeUp', 'outOfBounds']);
+    expect(def.failConditions).toEqual(['stormTimeUp', 'totalTimeUp', 'outOfBounds', 'livesOut']);
+    // 9-6d: 残機（通常 3・高難度 2）
+    expect(def.lives).toBe(2);
+    expect(nephirgaRaidMission('normal').lives).toBe(3);
   });
 
   it('一撃で落ちない: 1 回の攻撃のダメージは高難度でも Swift の HP 140 より少ない・突風の操作不能は 0.6 秒', () => {
@@ -201,7 +204,8 @@ describe('ネフィルガのソロのレイド（9-6b）', () => {
         },
       });
       expect(checked).toBeGreaterThan(60 * 60);
-      expect(r.status).toBe('success');
+      // 9-6d: 残機を使い切って終わることもある（このテストは最後まで NaN・戦域・地形を見る）
+      expect(r.status).not.toBe('running');
     }
   }, 120_000);
 

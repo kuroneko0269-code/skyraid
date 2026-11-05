@@ -36,12 +36,14 @@ export function warningText(raid: Kaiju2Raid): string {
   return `⚠ ${k2t(`attack.${k.attack}`)}  ${Math.max(0, windup - k.stateTime).toFixed(1)}`;
 }
 
-/** 攻めどきの文（止まり木・引き起こし）。無ければ '' */
+/** 攻めどきの文（止まり木・引き起こし・9-6d: 怯み）。無ければ '' */
 export function openingText(raid: Kaiju2Raid): string {
   const k = raid.body;
   if (raid.dead) return '';
   if (isPerching(k)) return k2t('opening.perch');
   if (k.attack === 'dive' && k.state === 'recover') return k2t('opening.recover');
+  // 9-6d: 部位を壊されて怯んでいる
+  if (k.flinch > 0) return k2t('opening.flinch');
   return '';
 }
 

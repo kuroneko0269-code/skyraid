@@ -10,7 +10,7 @@ import { KAIJU2_RAID_CONFIG as R, KAIJU2_TARGETS, isBreakable } from '../data/ka
 import type { RaidDifficulty } from '../data/raid';
 import { Kaiju2PartTarget } from '../entities/kaiju2/kaiju2-target';
 import { SkyKaiju, type Kaiju2Ground } from '../entities/kaiju2/sky-kaiju';
-import { vec3 } from '../flight/math';
+import { vec3, type Vec3 } from '../flight/math';
 
 /** 9-6c: 協力の人数の全体 HP の倍率（1 人は 1。tests/kaiju2-coop-bots.ts で決めた。docs/kaiju2.md の 9-6c） */
 export function coopHpScale(players: number): number {
@@ -21,6 +21,25 @@ export function coopHpScale(players: number): number {
 /** 止まり木の間（降りる・休む・飛び立つ）は攻撃しない（攻める隙） */
 export function isPerching(k: SkyKaiju): boolean {
   return k.state === 'landing' || k.state === 'perched' || k.state === 'takeoff';
+}
+
+/**
+ * 9-6d: 機首（forward。単位）から怪獣（at）が evade.coneDeg 以内・evade.range m 以内か（狙われている。巡航の間に避ける）
+ */
+export function aimedAt(
+  at: Readonly<Vec3>,
+  from: Readonly<Vec3>,
+  forward: Readonly<Vec3>,
+): boolean {
+  const e = KAIJU2_CONFIG.evade;
+  const dx = at.x - from.x;
+  const dy = at.y - from.y;
+  const dz = at.z - from.z;
+  const d = Math.hypot(dx, dy, dz);
+  if (d > e.range || d < 1) return false;
+  return (
+    (dx * forward.x + dy * forward.y + dz * forward.z) / d >= Math.cos((e.coneDeg * Math.PI) / 180)
+  );
 }
 
 export class Kaiju2Raid {
@@ -150,8 +169,9 @@ export class Kaiju2Raid {
   damageTarget(target: Kaiju2PartTarget, amount: number, attacker = 0): boolean {
     if (this.mirror || !this.targetable || amount <= 0) return false;
     const k = this.body;
-    const dmg =
-      amount * R.targets[target.id].damageScale * (isPerching(k) ? R.perchedDamageScale : 1);
+    // 9-6d: 部位を壊されて怯んでいる間も止まり木と同じ倍率（攻めどき）
+    const opening = isPerching(k) || k.flinch > 0;
+    const dmg = amount * R.targets[target.id].damageScale * (opening ? R.perchedDamageScale : 1);
     this.flash = R.flashSeconds;
     // 確かめる場（raid でない）は 1 まで減らして倒さない
     const floor = this.raid ? 0 : 1;
@@ -190,6 +210,8 @@ export class Kaiju2Raid {
     this.brokenCount++;
     this.lastBroken = id;
     this.ai.cancelBlocked();
+    // 9-6d: 怯む（止まり木の間・倒した後は無し）
+    if (!isPerching(k) && !this.dead) this.ai.flinchNow();
     // 両方の翼を壊すと地上へ落ちて羽を休める（「落とす」手応え）
     if (k.broken.wingL && k.broken.wingR && (id === 'wingL' || id === 'wingR')) {
       this.lastBroken = 'both';
@@ -205,6 +227,13 @@ export class Kaiju2Raid {
     this.shout = Math.max(0, this.shout - dt);
     if (this.dead) this.fall(dt);
     else {
+      // 9-6d: ソロは自機の機首から狙われているかを決める（協力はホストが body.aimed を決めて forward を渡さない）
+      if (target.forward) {
+        k.aimed = target.active && aimedAt(k.position, target.position, target.forward);
+        k.aimFrom.x = target.position.x;
+        k.aimFrom.y = target.position.y;
+        k.aimFrom.z = target.position.z;
+      }
       this.ai.step(dt, target, flares);
       if (this.raid) {
         this.elapsed += dt;

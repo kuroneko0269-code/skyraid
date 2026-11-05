@@ -12,7 +12,7 @@ import type { RaidDifficulty } from '../data/raid';
 import { LOCAL_FORWARD } from '../flight/flight-model';
 import { quatIdentity, rotateVec3, vec3, type Vec3 } from '../flight/math';
 import { headingQuat } from '../entities/enemy-aircraft';
-import { Kaiju2Raid } from '../missions/kaiju2-raid';
+import { Kaiju2Raid, aimedAt } from '../missions/kaiju2-raid';
 import type { Kaiju2OrbMsg, Kaiju2StateMsg } from './codec-kaiju2';
 import { NO_TARGET } from './net-controls';
 import { NO_ATTACK } from './protocol';
@@ -41,6 +41,7 @@ export class Kaiju2Host {
   private readonly focus = { position: vec3(), velocity: vec3(), active: false };
   private readonly msg: Kaiju2StateMsg;
   private readonly orbPool: Kaiju2OrbMsg[];
+  private readonly nose = vec3();
 
   constructor(
     private readonly arena: PvpArena,
@@ -97,6 +98,7 @@ export class Kaiju2Host {
       elapsed: 0,
       stormAt: null,
       shout: 0,
+      flinch: 0,
       orbs: [],
     };
   }
@@ -115,7 +117,30 @@ export class Kaiju2Host {
       t.velocity.y = f.velocity.y;
       t.velocity.z = f.velocity.z;
     }
+    // 9-6d: 狙われているか（いずれかの人の機首。いちばん近い人の射線から避ける）
+    const k = this.raid.body;
+    k.aimed = false;
+    let aimD = Infinity;
+    for (const g of this.arena.all) {
+      if (!g.active) continue;
+      const fwd = rotateVec3(this.nose, g.aircraft.state.orientation, LOCAL_FORWARD);
+      const d = distance(g.position, k.position);
+      if (d < aimD && aimedAt(k.position, g.position, fwd)) {
+        aimD = d;
+        k.aimed = true;
+        k.aimFrom.x = g.position.x;
+        k.aimFrom.y = g.position.y;
+        k.aimFrom.z = g.position.z;
+      }
+    }
     this.raid.step(dt, t, this.arena.flares.flares);
+    // 9-6d: 突風の押し流し（当てた人を流す。クライアントは自機の位置合わせでそろう）
+    if (k.pushLeft > 0 && f?.active) {
+      const g = KAIJU2_CONFIG.attacks.gust;
+      const v = g.push * (k.pushLeft / g.pushSeconds) * dt;
+      f.aircraft.state.position.x += k.pushX * v;
+      f.aircraft.state.position.z += k.pushZ * v;
+    }
   }
 
   /** 狙う人を選び直す（巡航の間だけ。攻撃の途中は変えない。狙っていた人が落ちた・抜けたらすぐ） */
@@ -202,6 +227,7 @@ export class Kaiju2Host {
     m.elapsed = r.elapsed;
     m.stormAt = r.stormAt >= 0 ? r.stormAt : null;
     m.shout = r.shout;
+    m.flinch = k.flinch;
     m.orbs.length = 0;
     k.orbs.forEach((o, i) => {
       const slot = this.orbPool[i];

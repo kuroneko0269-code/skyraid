@@ -56,6 +56,8 @@ export class PvpArena {
 
   /** 撃墜から復帰までの秒数（6-6: レイドは 5 秒） */
   respawnSeconds: number = PVP_CONFIG.respawnSeconds;
+  /** 9-6d: 残機（レイド。撃墜がこの数になった人は復帰しない = 観戦。null は無制限） */
+  lives: number | null = null;
   /** 復帰の位置（6-6: レイドは ID ごとの開始位置。null は PvP の輪の中で他機から最も遠い所） */
   respawnPoint: ((id: number) => Readonly<Vec3 & { headingDeg: number }>) | null = null;
 
@@ -235,10 +237,10 @@ export class PvpArena {
       if (f.invulnerableTimer > 0) f.invulnerableTimer = Math.max(0, f.invulnerableTimer - dt);
       if (f.resync) {
         f.resync = false;
-        this.respawn(f);
+        if (!R.outOfLives(f, this.lives)) this.respawn(f);
         continue;
       }
-      if (f.alive || f.away) continue;
+      if (f.alive || f.away || R.outOfLives(f, this.lives)) continue;
       f.respawnTimer -= dt;
       if (f.respawnTimer <= 1e-9) this.respawn(f);
     }

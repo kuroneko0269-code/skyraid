@@ -39,6 +39,8 @@ class Bot implements KaijuTarget {
   hp: number;
   active = true;
   respawn = 0;
+  out = false;
+  downs = 0;
   flareAge = Infinity;
   flares: number;
   missiles: number;
@@ -107,6 +109,7 @@ export function runRaidBots(o: RaidBotOptions): RaidBotResult {
       if (b.hp <= 0) {
         b.active = false;
         b.respawn = 3;
+        b.out = ++b.downs >= (o.lives ?? Infinity);
         playerDowns++;
       }
     },
@@ -147,7 +150,8 @@ export function runRaidBots(o: RaidBotOptions): RaidBotResult {
     if (e.kind === 'windup') attacks[e.attack] = (attacks[e.attack] ?? 0) + 1;
   });
   const max = o.maxSeconds ?? 900;
-  while (t < max && !kaiju.isDestroyed && !kaiju.cityReached) {
+  // 9-6d: 残機（o.lives）を全員が使い切ったら終わり
+  while (t < max && !kaiju.isDestroyed && !kaiju.cityReached && !bots.every((b) => b.out)) {
     for (const b of bots) stepBot(b, kaiju, ai, rng, skill, gunDamage, floor);
     ai.step(bots, DT);
     t += DT;
@@ -160,6 +164,7 @@ export function runRaidBots(o: RaidBotOptions): RaidBotResult {
     breaks,
     partsBroken,
     playerDowns,
+    livesOut: bots.every((b) => b.out),
     finalAt,
     attacks,
   };
@@ -198,7 +203,7 @@ function stepBot(
   b.heat.step(DT);
   if (!b.active) {
     b.respawn -= DT;
-    if (b.respawn <= 0) b.spawn(b.id);
+    if (b.respawn <= 0 && !b.out) b.spawn(b.id);
     return;
   }
   const p = b.position;

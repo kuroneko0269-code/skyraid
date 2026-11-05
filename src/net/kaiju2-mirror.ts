@@ -95,6 +95,7 @@ export class Kaiju2Mirror {
     r.timeUp = m.timeUp === 1 ? 'storm' : m.timeUp === 2 ? 'total' : null;
     r.stormReached = r.timeUp !== null;
     r.shout = m.shout;
+    k.flinch = m.flinch;
     this.targetId = m.targetId >= 4 ? null : m.targetId;
     // 雷球: 届いたものだけ出す（位置と速度を写す）
     const seen = new Set<number>();
@@ -130,6 +131,7 @@ export class Kaiju2Mirror {
     this.sinceReceive += dt;
     r.flash = Math.max(0, r.flash - dt);
     r.shout = Math.max(0, r.shout - dt);
+    k.flinch = Math.max(0, k.flinch - dt);
     if (!r.dead && r.timeUp === null) r.elapsed += dt;
     k.stateTime += dt;
     k.time += dt;

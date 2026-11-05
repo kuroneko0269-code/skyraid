@@ -24,6 +24,7 @@ export class DamageOverlay {
 
   /**
    * flashTimer: 被弾の赤の残り時間（秒）。respawnTimer: 撃墜中ならリスポーンまでの残り（秒）、生きていれば 0。
+   * 9-6d: 負（−1）は復帰しない（レイドの残機なし。協力は観戦）
    * shown が false（飛行中でない）なら全部隠す
    */
   update(flashTimer: number, down: boolean, respawnTimer: number, shown: boolean): void {
@@ -40,7 +41,10 @@ export class DamageOverlay {
       this.shade.hidden = this.message.hidden = !isDown;
     }
     if (!isDown) return;
-    const seconds = t('hud.respawnIn', { seconds: Math.max(1, Math.ceil(respawnTimer)) });
+    const seconds =
+      respawnTimer < 0
+        ? t('hud.outOfLives')
+        : t('hud.respawnIn', { seconds: Math.max(1, Math.ceil(respawnTimer)) });
     if (seconds !== last.seconds) this.countdown.textContent = last.seconds = seconds;
   }
 }

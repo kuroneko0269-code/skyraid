@@ -106,7 +106,8 @@ export class FlightFrame {
     p.damageOverlay.update(
       v.flashTimer,
       v.isDestroyed,
-      v.respawnTimer,
+      // 9-6d: レイドの残機を使い切った（復帰しない）
+      p.play.runner?.livesLeft === 0 ? -1 : v.respawnTimer,
       isSimulating(state) || state === 'pause',
     );
     // 天候（7-5）: 補間・時間の進行（ポーズ中は止まる世界の時間）

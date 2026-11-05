@@ -27,6 +27,7 @@ export class MissionHud {
   readonly root: HTMLDivElement;
   private readonly panel: HTMLDivElement;
   private readonly timer: HTMLDivElement;
+  private readonly lives: HTMLDivElement;
   private readonly list: HTMLDivElement;
   private rows: HTMLDivElement[] = [];
   private readonly banner: HTMLDivElement;
@@ -42,6 +43,7 @@ export class MissionHud {
   private hudShown = true;
   private last = {
     time: '',
+    lives: '',
     outside: false,
     count: '',
     wpMode: '',
@@ -56,6 +58,8 @@ export class MissionHud {
     this.root = root;
     this.panel = el('div', 'mission-panel', root);
     this.timer = el('div', 'mission-timer', this.panel);
+    this.lives = el('div', 'mission-lives', this.panel);
+    this.lives.hidden = true;
     this.list = el('div', 'mission-objectives', this.panel);
     this.waypoint = el('div', 'mission-waypoint', root);
     el('div', 'mission-waypoint-mark', this.waypoint);
@@ -129,6 +133,16 @@ export class MissionHud {
     this.timer.textContent = text;
     this.timer.hidden = text === '';
     this.timer.classList.toggle('is-low', seconds !== null && seconds <= 30);
+  }
+
+  /** 9-6d: 残機（レイド。今の機体を含む。null は出さない）。残り 1 は赤 */
+  setLives(left: number | null): void {
+    const text = left === null ? '' : t('hud.lives', { lives: Math.max(0, left) });
+    if (text === this.last.lives) return;
+    this.last.lives = text;
+    this.lives.textContent = text;
+    this.lives.hidden = text === '';
+    this.lives.classList.toggle('is-low', left !== null && left <= 1);
   }
 
   /** 戦域の境界の警告。secondsLeft が null なら数えない（フリーフライト） */

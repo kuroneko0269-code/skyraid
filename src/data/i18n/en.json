@@ -53,7 +53,7 @@
         "The giant monster Vorgas is coming ashore from the bay, heading for the harbor city's towers.",
         "Glowing shoulder crystals mean a heat beam; a raised tail means a sweep. Read the tells and dodge.",
         "Break a leg to knock it down: it stops and can't attack for a while (on Hard, all parts also take double damage).",
-        "Below 40% health it enters the final phase. Defeat it within 4.5 minutes (3.5 on Hard) or it reaches the city."
+        "Below 40% health it enters the final phase. Defeat it within 4.5 minutes (3.5 on Hard) or it reaches the city. You have 3 lives (Hard: 2)."
       ]
     }
   },
@@ -633,7 +633,8 @@
       "kaijuReachedCity": "The kaiju reached the city",
       "outOfBounds": "Left the combat area",
       "stormTimeUp": "The storm ran out of time and struck the city",
-      "totalTimeUp": "Time up — the storm struck the city"
+      "totalTimeUp": "Time up — the storm struck the city",
+      "livesOut": "Out of lives"
     },
     "progressSeconds": "{label} {current} / {target} s",
     "summarySeconds": "{label} {seconds} s",
@@ -688,12 +689,14 @@
       "lines": [
         "Break the crystal to stop the Heat Beam, the tail for Sweep, the head for Roar",
         "Break a leg to down it for 15 s (it stops and can't attack)",
-        "Break: 2 players hit the same part within 3 s (×3 to that part)"
+        "Break: 2 players hit the same part within 3 s (×3 to that part)",
+        "3 lives each (out of lives = spectate; the raid fails when everyone is out)"
       ],
       "linesHard": [
         "Break the crystal to stop the Heat Beam, the tail for Sweep, the head for Roar",
         "Break a leg to down it for 15 s (it stops and can't attack; ×2 damage to all parts)",
-        "Break: 2 players hit the same part within 3 s (×3 to that part)"
+        "Break: 2 players hit the same part within 3 s (×3 to that part)",
+        "2 lives each (out of lives = spectate; the raid fails when everyone is out)"
       ],
       "skip": "Skip",
       "waitingSkip": "Waiting for everyone to skip"
@@ -758,8 +761,10 @@
   "hud": {
     "missileResupply": "Missiles resupplied",
     "timeLeft": "{time} left",
+    "lives": "Lives {lives}",
     "shotDown": "SHOT DOWN",
-    "respawnIn": "Respawn in {seconds} s"
+    "respawnIn": "Respawn in {seconds} s",
+    "outOfLives": "No lives left"
   },
   "title": {
     "prompt": "Tap / Enter to start",
@@ -1790,6 +1795,7 @@
     "downed": {
       "title": "Shot Down",
       "respawnIn": "Respawn in",
+      "spectating": "No lives left — spectating",
       "by": "Shot down by {killer}",
       "crashed": "Crashed"
     },
@@ -1806,7 +1812,8 @@
       "defenseClear": "Held the base through all 10 waves (everyone gets the same reward)",
       "defenseFail": "HQ destroyed (waves cleared × 300 CR)",
       "raidStormFail": "The storm ran out of time and struck the city (300 CR each)",
-      "raidTotalFail": "Time up — the storm struck the city (300 CR each)"
+      "raidTotalFail": "Time up — the storm struck the city (300 CR each)",
+      "raidLivesFail": "Everyone ran out of lives (300 CR each)"
     },
     "title": {
       "raidClear": "Vorgas Defeated",

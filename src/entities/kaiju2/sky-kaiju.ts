@@ -9,6 +9,7 @@ import {
   type Kaiju2State,
 } from '../../data/kaiju2';
 import { clamp, vec3, type Vec3 } from '../../flight/math';
+import { avoidTerrain, rotateToward } from './kaiju2-steer';
 
 /** 地面の高さ（海の下は負でもよい。海面 0 との高い方を床にする） */
 export type Kaiju2Ground = (x: number, z: number) => number;
@@ -61,7 +62,6 @@ function newOrb(): Kaiju2Orb {
 }
 
 const scratch = vec3();
-const axis = vec3();
 
 export class SkyKaiju {
   readonly position = vec3();
@@ -97,6 +97,42 @@ export class SkyKaiju {
   orbitSign = 1;
   /** 止まり木の場所（地面の上の体の中心） */
   readonly perch = vec3();
+  /**
+   * 9-6d: 降り方の途中の値（ai/kaiju2-perch.ts）: 段（0 近づく・1 旋回しながら降りる・2 寄せる）・段の経過・旋回の角度と向き・
+   * 旋回の始めの半径・高さ・速さと秒数・寄せる始めの位置
+   */
+  /** 9-6d: 攻撃を重ねる残りの回数（attacks の後に chainGap で続ける） */
+  chainLeft = 0;
+  /** 9-6d: 次に選ぶ攻撃は重ねる続き（chainLeft を数え直さない） */
+  chained = false;
+  /** 9-6d: 突風の押し流し（水平の向きと残り秒数。当てた相手をホスト・ソロの世界が流す） */
+  pushX = 0;
+  pushZ = 0;
+  pushLeft = 0;
+  /**
+   * 9-6d: 狙われている（呼び出し側が毎ステップ決める: ソロは自機・協力はいずれかの人の機首）・狙っている人の位置・
+   * 続けて狙われている秒数・避けている残り / 次に避けられるまで・避ける横の向き（±1）と上下（±1）
+   */
+  aimed = false;
+  readonly aimFrom = vec3();
+  aimTime = 0;
+  evadeLeft = 0;
+  evadeCooldown = 0;
+  evadeSide = 1;
+  evadeUp = 1;
+  /** 9-6d: 部位を壊されて怯んでいる残り秒数 */
+  flinch = 0;
+  /** 9-6d: 止まり木を選んだが遠い（巡航のまま寄せている） */
+  perchPending = false;
+  landStage = 0;
+  landTime = 0;
+  landAngle = 0;
+  landSign = 1;
+  landR0 = 0;
+  landH0 = 0;
+  landV0 = 0;
+  landSeconds = 0;
+  readonly landFrom = vec3();
   /** 急降下の狙う点 */
   readonly diveTarget = vec3();
   /** この攻撃で当てたか（1 回の攻撃で 1 回だけ当てる） */
@@ -196,76 +232,8 @@ export class SkyKaiju {
    * avoid が true なら先に地形・戦域を避ける向きに直す
    */
   steer(want: Vec3, maxRad: number, avoid = true): void {
-    if (avoid) this.avoid(want);
-    const len = Math.hypot(want.x, want.y, want.z);
-    if (len < 1e-6) return;
-    const wx = want.x / len;
-    const wy = want.y / len;
-    const wz = want.z / len;
-    const f = this.forward;
-    const dot = clamp(f.x * wx + f.y * wy + f.z * wz, -1, 1);
-    const angle = Math.acos(dot);
-    if (angle <= maxRad) {
-      f.x = wx;
-      f.y = wy;
-      f.z = wz;
-      return;
-    }
-    // 回転軸（f × w）。真後ろなら上を軸にする
-    axis.x = f.y * wz - f.z * wy;
-    axis.y = f.z * wx - f.x * wz;
-    axis.z = f.x * wy - f.y * wx;
-    let al = Math.hypot(axis.x, axis.y, axis.z);
-    if (al < 1e-6) {
-      axis.x = 0;
-      axis.y = 1;
-      axis.z = 0;
-      al = 1;
-    }
-    axis.x /= al;
-    axis.y /= al;
-    axis.z /= al;
-    // ロドリゲスの回転（f は axis に垂直なので項が 2 つ）
-    const c = Math.cos(maxRad);
-    const s = Math.sin(maxRad);
-    const cx = axis.y * f.z - axis.z * f.y;
-    const cy = axis.z * f.x - axis.x * f.z;
-    const cz = axis.x * f.y - axis.y * f.x;
-    f.x = f.x * c + cx * s;
-    f.y = f.y * c + cy * s;
-    f.z = f.z * c + cz * s;
-    const fl = Math.hypot(f.x, f.y, f.z);
-    f.x /= fl;
-    f.y /= fl;
-    f.z /= fl;
-  }
-
-  /** 先読みの点が地面・海面に近ければ上へ、戦域の外へ向かっていれば中へ（want を書き換える） */
-  private avoid(want: Vec3): void {
-    const a = C.avoid;
-    const len = Math.hypot(want.x, want.y, want.z) || 1;
-    let climb = -Infinity;
-    for (const t of a.lookahead) {
-      const d = this.speed * t;
-      const px = this.position.x + this.forward.x * d;
-      const pz = this.position.z + this.forward.z * d;
-      const py = this.position.y + this.forward.y * d;
-      const short = this.floorAt(px, pz) + a.clearance - py;
-      if (short > 0) climb = Math.max(climb, short / Math.max(1, d));
-    }
-    if (climb > -Infinity) {
-      const minY = Math.sin((a.climbDeg * Math.PI) / 180) * Math.min(1, 0.4 + climb);
-      want.y = Math.max(want.y / len, minY) * len;
-    }
-    // 戦域: soft の外で外へ向かう分を中へ
-    const dx = this.position.x - this.center.x;
-    const dz = this.position.z - this.center.z;
-    const r = Math.hypot(dx, dz);
-    if (r > C.arena.soft) {
-      const k = Math.min(1, (r - C.arena.soft) / (C.arena.hard - C.arena.soft));
-      want.x = want.x * (1 - k) - (dx / r) * len * k * 1.5;
-      want.z = want.z * (1 - k) - (dz / r) * len * k * 1.5;
-    }
+    if (avoid) avoidTerrain(this, want);
+    rotateToward(this.forward, want, maxRad);
   }
 
   /** 速さを target へ（accel m/s²） */

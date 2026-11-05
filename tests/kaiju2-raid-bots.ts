@@ -8,7 +8,7 @@
 // - human（模擬の人）: 9-1 の模擬の人（初心者役 + 狙いのずれ 4°・9° で撃つ + 人の手）がタッチの初期値（方向へ倒す・カーブ 1.5・
 //   狙いの補助 標準・自動射撃 ON）で飛ぶ。予兆は 0.6 秒遅れて 3 回に 1 回避ける
 // 機体は初期機 Kestrel（HP 200）。撃墜されても開始位置へ戻って続ける（本番と同じ）
-import { applyAimAssist } from '../src/combat/aim-assist';
+import { applyAimAssist, assistSpecFor } from '../src/combat/aim-assist';
 import { autoFireReady } from '../src/combat/auto-fire';
 import { createCombatInput } from '../src/combat/combat-input';
 import type { CombatTarget } from '../src/combat/target';
@@ -35,7 +35,7 @@ import { DirectStick } from '../scripts/replay-analysis/direct';
 import { DEFAULT_HANDS, Hands } from '../scripts/replay-analysis/hands';
 
 const DT = 1 / 60;
-export { KAIJU2_ROLES, type Kaiju2Role } from './kaiju2-bot-roles';
+export type { Kaiju2Role } from './kaiju2-bot-roles';
 
 export interface Kaiju2BotOptions {
   readonly role: Kaiju2Role;
@@ -60,6 +60,16 @@ export interface Kaiju2BotResult {
   readonly maxHit: number;
   readonly hitsTaken: Readonly<Record<string, number>>;
   readonly perches: number;
+  /** 9-6d: 攻撃（予兆）の回数・1 度でも当たった攻撃の回数・クリア時に減っていた体力の割合（成功でなければ null） */
+  readonly attacks: number;
+  readonly hitAttacks: number;
+  readonly hpLostAtClear: number | null;
+  /** 9-6d: 受けたダメージの合計（墜落を除く）/ 最大体力 */
+  readonly damageRatio: number;
+  /** 9-6d: 撃墜のうち攻撃によるもの（残りは墜落）・攻撃の種類ごとの回数・状態ごとの秒数 */
+  readonly attackDowns: number;
+  readonly attackKinds: Readonly<Record<string, number>>;
+  readonly stateSeconds: Readonly<Record<string, number>>;
   readonly data: ReplayData | null;
   /** 終わったときの状態のハッシュ */
   readonly hash: string;
@@ -151,6 +161,14 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
   let attackDamage = 0;
   let lastAttackState = k.state;
   let lastState = k.state;
+  let attacks = 0;
+  let hitAttacks = 0;
+  let attackHitsAtStart = 0;
+  let attackCounted = false;
+  let attackDowns = 0;
+  let lastDowns = s.playerDowns;
+  const stateSeconds: Record<string, number> = {};
+  const attackKinds: Record<string, number> = {};
   const max = o.maxSeconds ?? KAIJU2_RAID_CONFIG.totalSeconds[difficulty] + 10;
   let steps = 0;
   let lastSel = s.combat.targeting.selected;
@@ -219,7 +237,7 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
     if (target && s.player.active) {
       const aim = s.combat.leadValid ? s.combat.lead : target.position;
       const st = s.aircraft.state;
-      applyAimAssist(out, st.position, st.orientation, aim, false, assist);
+      applyAimAssist(out, st.position, st.orientation, aim, false, assistSpecFor(assist, target));
     }
     // 選択の変更（ボットは直接選ぶ）は HUD のタップと同じ「外部の操作」として記録する
     const sel = s.combat.targeting.selected;
@@ -243,10 +261,24 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
       maxHit = Math.max(maxHit, attackDamage);
       attackDamage = 0;
     }
+    const lastHitsAtDown = lastHits;
     lastHits = hitsNow;
     lastAttackState = k.state;
     lastHp = hp;
     if (k.state === 'perched' && lastState !== 'perched') perches++;
+    if (s.playerDowns > lastDowns && hitsNow > lastHitsAtDown) attackDowns++;
+    lastDowns = s.playerDowns;
+    stateSeconds[k.state] = (stateSeconds[k.state] ?? 0) + DT;
+    // 9-6d: 予兆に入ったら 1 回。その攻撃（次の予兆まで。雷球は飛んでいる間も）で当たったら被弾の 1 回
+    if (k.state === 'windup' && lastState !== 'windup') {
+      attacks++;
+      attackKinds[k.attack ?? ''] = (attackKinds[k.attack ?? ''] ?? 0) + 1;
+      attackHitsAtStart = hitsNow;
+      attackCounted = false;
+    } else if (!attackCounted && attacks > 0 && hitsNow > attackHitsAtStart) {
+      attackCounted = true;
+      hitAttacks++;
+    }
     lastState = k.state;
   }
   maxHit = Math.max(maxHit, attackDamage);
@@ -263,6 +295,13 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
     maxHit,
     hitsTaken: { ...k.hits },
     perches,
+    attacks,
+    hitAttacks,
+    attackDowns,
+    attackKinds,
+    stateSeconds,
+    damageRatio: s.player.damageTaken / s.player.maxHp,
+    hpLostAtClear: runner.status === 'success' ? 1 - s.player.hp / s.player.maxHp : null,
   };
 }
 

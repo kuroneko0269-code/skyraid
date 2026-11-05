@@ -74,7 +74,7 @@ describe('ネフィルガの state（9-6c）', () => {
       o.position.x = 1000.4;
       o.position.y = 600;
       o.position.z = -2000;
-      o.velocity.x = 150;
+      o.velocity.x = 196;
       o.velocity.y = -20;
     }
     const full = encodeMessage(stateMsg(h.state()));
@@ -95,7 +95,7 @@ describe('ネフィルガの state（9-6c）', () => {
     expect(k.elapsed).toBeCloseTo(123.4, 1);
     expect(k.orbs).toHaveLength(5);
     expect(k.orbs[0]?.position.x).toBeCloseTo(1000.5, 1);
-    expect(k.orbs[0]?.velocity.x).toBeCloseTo(150, 0);
+    expect(k.orbs[0]?.velocity.x).toBeCloseTo(196, 0);
     // 写しが受け取ると同じ値になる（壊れた部位はお知らせの数も進む）
     const m = new Kaiju2Mirror();
     m.receive(k);
@@ -204,8 +204,8 @@ describe('ネフィルガの協力のホストの判定（9-6c）', () => {
 });
 
 describe('ロビーと通信の版（9-6c）', () => {
-  it('協力のネフィルガの部屋の初期設定・設定の往復・通信の版 10', () => {
-    expect(NET_CONFIG.protocolVersion).toBe(10);
+  it('協力のネフィルガの部屋の初期設定・設定の往復・通信の版 11', () => {
+    expect(NET_CONFIG.protocolVersion).toBe(11);
     const s = initialSettings(true, null, 1);
     expect(s?.raidKaiju).toBe(1);
     expect(s?.mode).toBe('raid');
@@ -216,10 +216,12 @@ describe('ロビーと通信の版（9-6c）', () => {
 describe('2〜4 人の協力（インメモリの通信）', () => {
   it('写しがホストのネフィルガに付いていき、撃破の結果が全員で一致する（ボット 2 人・通常）', async () => {
     let worst = 0;
+    // 9-6d: 協力のボットは撃墜が多いので残機を外す（このテストは写しと結果の一致を見る。残機は kaiju2-threat.test.ts）
     const r = await runKaiju2Coop({
       role: 'skilled',
       players: 2,
       seed: 1,
+      lives: false,
       onSecond: (m) => {
         const h = m.host.raid2;
         const c = m.clients[0];

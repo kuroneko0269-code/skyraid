@@ -3,12 +3,13 @@
 import { AUTO_FIRE_CONFIG } from '../data/assist';
 import { inverseRotateVec3, type Quat, type Vec3 } from '../flight/math';
 import type { CombatTarget } from './target';
+import { assistedHitRadius } from './gun';
 
 const local: Vec3 = { x: 0, y: 0, z: 0 };
 
 /** 撃つ条件を満たすか。lead は予測照準点（leadValid が false なら撃たない）、hitRadiusScale は機銃の判定の拡大 */
 export function autoFireReady(
-  target: Readonly<Pick<CombatTarget, 'active' | 'hitRadius'>> | null,
+  target: Readonly<Pick<CombatTarget, 'active' | 'hitRadius' | 'assistScale'>> | null,
   lead: Readonly<Vec3>,
   leadValid: boolean,
   position: Readonly<Vec3>,
@@ -27,5 +28,5 @@ export function autoFireReady(
   const side = Math.hypot(local.x, local.y);
   const dist = Math.hypot(side, ahead);
   const angle = Math.atan2(side, ahead);
-  return angle <= Math.atan2(target.hitRadius * hitRadiusScale, dist) * scale;
+  return angle <= Math.atan2(assistedHitRadius(target, hitRadiusScale), dist) * scale;
 }

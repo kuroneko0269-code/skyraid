@@ -180,3 +180,18 @@ export function respawnFighter(
 export function kaijuPartOf(t: unknown, parts: readonly ArenaKaijuPart[]): ArenaKaijuPart | null {
   return t !== null && (parts as readonly unknown[]).includes(t) ? (t as ArenaKaijuPart) : null;
 }
+
+/** 9-6d: 残機（lives。null は無制限）を使い切った（観戦。レイドだけ） */
+export function outOfLives(f: { readonly deaths: number }, lives: number | null): boolean {
+  return lives !== null && f.deaths >= lives;
+}
+
+/** 9-6d: 今いる全員（再接続待ちを除く）が残機を使い切った */
+export function allOutOfLives(
+  list: readonly { readonly deaths: number; readonly away: boolean }[],
+  lives: number | null,
+): boolean {
+  if (lives === null) return false;
+  const present = list.filter((f) => !f.away);
+  return present.length > 0 && present.every((f) => outOfLives(f, lives));
+}
