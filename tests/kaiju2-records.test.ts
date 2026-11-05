@@ -35,11 +35,11 @@ describe('ネフィルガの記録のキー', () => {
     expect(modeProgress(save, []).raid).toBe('最速 3:20 / 2:30');
   });
 
-  it('オンライン: サーバーの準備（0003）ができるまではネフィルガを送らない・受け付けない', () => {
-    expect(RANKED_RAID_KAIJU).toEqual(['vorgas']);
-    expect(rankedRaidKaiju('nephirga')).toBe(false);
-    expect(validKeys('raid')).toEqual(['normal', 'hard']);
-    expect(checkRecord(raidRecord('nephirga:normal', 180, 'kestrel', 'A'))).toBe('key');
+  it('オンライン: 0003 を流した後（9-5d の事前修正）はネフィルガも送る・受け付ける', () => {
+    expect(RANKED_RAID_KAIJU).toEqual(['vorgas', 'nephirga']);
+    expect(rankedRaidKaiju('nephirga')).toBe(true);
+    expect(validKeys('raid')).toEqual(['normal', 'hard', 'nephirga:normal', 'nephirga:hard']);
+    expect(checkRecord(raidRecord('nephirga:normal', 180, 'kestrel', 'A'))).toBeNull();
     expect(checkRecord(raidRecord('normal', 180, 'kestrel', 'A'))).toBeNull();
   });
 });

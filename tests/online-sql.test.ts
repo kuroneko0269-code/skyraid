@@ -151,9 +151,11 @@ describe('クライアントと同じ数値', () => {
 
   it('受け付ける key・種類', () => {
     expect(sql).toContain(`kind in (${RECORD_KINDS.map((k) => `'${k}'`).join(', ')})`);
+    // レイドの key は 0003（ネフィルガ）で作り直した。0001 はヴォルガスの難易度だけ（0003 は kaiju2-records.test.ts）
     for (const kind of RECORD_KINDS)
       expect(sql).toContain(
         `kind = '${kind}' and key in (${validKeys(kind)
+          .filter((k) => kind !== 'raid' || !k.includes(':'))
           .map((k) => `'${k}'`)
           .join(', ')})`,
       );
