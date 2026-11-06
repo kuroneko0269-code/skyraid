@@ -3,6 +3,14 @@ import './theme.css';
 import './screen.css';
 import { SCREEN_CONFIG } from '../data/screens';
 import { noteScreenSwitch } from './screen-switch';
+import type { TitleScreen } from './title';
+
+/** 10-1: 起動の殻（app.ts）が先に作って出している画面（タイトル・読み込み中・暗転。ui/screens.ts が受け取る） */
+export interface ShellScreens {
+  readonly title: TitleScreen;
+  readonly loading: LoadingScreen;
+  readonly curtain: FadeCurtain;
+}
 
 /** フェード時間を CSS 変数 --screen-fade にする（画面・暗転幕・HUD の transition が使う） */
 export function applyScreenFade(root: HTMLElement): void {

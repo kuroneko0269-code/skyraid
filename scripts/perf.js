@@ -3,6 +3,7 @@
 //   chunks   dist のファイルの一覧（名前・サイズ・gzip 後）
 //   startup  起動時間（読み込みの始まりからタイトルの表示まで）。初回（キャッシュ・SW なし）と 2 回目（SW が制御）を
 //            N 回ずつ測って中央値。タイトルまでに読んだ JS・CSS（gzip 後の合計）と、2 回目にネットワークから取ったもの
+//            10-1: タイトルの表示の印（performance.mark）より前に読み始めたものを数え、上限（scripts/startup-budget.js）を超えたら終了コード 1
 //   modes    各モードに入ったときに追加で読み込むチャンク（遅延読み込みの確認）
 //   lighthouse Lighthouse（既定のモバイル設定・シミュレートした低速回線と CPU）を有効な 3 回（最大 9 回）の中央値。LCP が取れ
 //            なかった回（NO_LCP。ソフトウェア描画でよく起きる。スコアが 0 になる）は除く。--dir で別の dist（変更前のビルドなど）を測れる
@@ -13,6 +14,7 @@ import { createRequire } from 'node:module';
 import { join, relative } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { serveDist } from './serve-dist.js';
+import { STARTUP_BUDGET_KB } from './startup-budget.js';
 import { VIEWPORT, dialogButton, seed, shown, screenIs, watch } from './audit-helpers.js';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
@@ -72,12 +74,37 @@ async function loadTitle(page, base, reload) {
   await shown(page, '.title-screen');
   const ms = await page.evaluate(() => performance.now());
   page.off('response', onResponse);
-  return { ms, loaded: [...new Set(loaded)], network: [...new Set(network)] };
+  // 10-1: タイトルの表示の印（src/ui/title.ts）より前に読み始めたものだけを数える（タイトルの直後に裏で先読みする本体は除く）。
+  // 印の無い版（1.1.0 まで）は今までどおりタイトルが見えるまでに読んだもの全部
+  const before = await page.evaluate(() => {
+    const mark = performance.getEntriesByName('skyraid:title')[0];
+    if (!mark) return null;
+    return performance
+      .getEntriesByType('resource')
+      .filter((e) => e.startTime <= mark.startTime)
+      .map((e) => new URL(e.name).pathname.slice(1));
+  });
+  const titled = before ? loaded.filter((f) => before.includes(f)) : loaded;
+  // 10-1: タイトルの後に裏で読む本体を組み立て終えるまで（タイトルの表示から。印の無い版は 0）
+  const gameMs = await page
+    .waitForFunction(
+      () => {
+        const t = performance.getEntriesByName('skyraid:title')[0];
+        const g = performance.getEntriesByName('skyraid:game')[0];
+        return t ? (g ? g.startTime - t.startTime : false) : 0;
+      },
+      null,
+      { timeout: 30000 },
+    )
+    .then((h) => h.jsonValue());
+  return { ms, gameMs, loaded: [...new Set(titled)], network: [...new Set(network)] };
 }
 
 async function measureStartup(browser, base, sizes) {
   const first = [];
   const second = [];
+  const firstGame = [];
+  const secondGame = [];
   let detail = null;
   for (let i = 0; i < runs; i++) {
     const context = await browser.newContext({
@@ -97,6 +124,8 @@ async function measureStartup(browser, base, sizes) {
     const b = await loadTitle(page, base, true);
     first.push(a.ms);
     second.push(b.ms);
+    firstGame.push(a.gameMs);
+    secondGame.push(b.gameMs);
     detail ??= { first: a, second: b };
     await context.close();
   }
@@ -108,6 +137,9 @@ async function measureStartup(browser, base, sizes) {
     secondMs: Math.round(median(second)),
     firstAll: first.map(Math.round),
     secondAll: second.map(Math.round),
+    // 10-1: タイトルの表示から本体を組み立て終えるまで（中央値）
+    firstGameMs: Math.round(median(firstGame)),
+    secondGameMs: Math.round(median(secondGame)),
     titleFiles: detail.first.loaded,
     titleBytes: raw(detail.first.loaded),
     titleGzip: gz(detail.first.loaded),
@@ -255,6 +287,7 @@ const base = `http://localhost:${PORT}/`;
 const browser = await chromium.launch({ args: GL_ARGS });
 const report = { date: new Date().toISOString(), chunks };
 report.startup = await measureStartup(browser, base, sizes);
+report.startup.budgetKb = STARTUP_BUDGET_KB;
 report.modes = await measureModes(browser, base);
 await browser.close();
 if (!args.includes('--no-lighthouse')) report.lighthouse = await runLighthouse(base);
@@ -269,10 +302,16 @@ console.log(
   `\nタイトルまで（中央値・${s.runs} 回）: 初回 ${s.firstMs} ms / 2 回目 ${s.secondMs} ms`,
 );
 console.log(`  初回の各回 ${s.firstAll.join(', ')} / 2 回目の各回 ${s.secondAll.join(', ')}`);
+console.log(
+  `  タイトルの後に本体を組み立て終えるまで（中央値）: 初回 ${s.firstGameMs} ms / 2 回目 ${s.secondGameMs} ms`,
+);
 console.log(`  タイトルまでに読む JS・CSS ${kb(s.titleBytes)}（gzip ${kb(s.titleGzip)}）`);
+// 10-1: 起動の量の上限（scripts/startup-budget.js）。超えたら終了コード 1
+const overBudget = s.titleGzip > STARTUP_BUDGET_KB * 1024;
+console.log(`  上限 ${STARTUP_BUDGET_KB} KB: ${overBudget ? 'NG（上限を超えた）' : 'OK'}`);
 for (const f of s.titleFiles) console.log(`    ${f}`);
 console.log(`  2 回目にネットワークから取った JS・CSS ${s.secondNetworkFiles.length} 件`);
-console.log(`モード選択で先読み: ${report.modes.prefetch.join(', ') || 'なし'}`);
+console.log(`タイトルの後・モード選択で先読み: ${report.modes.prefetch.join(', ') || 'なし'}`);
 for (const m of report.modes.modes)
   console.log(`mode ${m.mode}\t${m.ok ? 'OK' : 'NG'}\t追加 ${m.files.join(', ') || 'なし'}`);
 if (report.lighthouse) {
@@ -287,4 +326,4 @@ if (report.lighthouse) {
   const why = [...new Set(lh.failed)].join(' / ');
   console.log(`  有効 ${lh.runs.length} 回・除外 ${lh.failed.length} 回${why ? `（${why}）` : ''}`);
 }
-process.exit(0);
+process.exit(overBudget ? 1 : 0);

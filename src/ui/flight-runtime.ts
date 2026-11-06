@@ -1,7 +1,7 @@
 // 飛行の実行の組み立て（main.ts から分けた。7-B で main.ts が 300 行を超えたため。並びと挙動は変えていない）:
 // 飛行の始め方・固定ステップ（記録・再生も）・描画フレーム・フォトモード（7-A）・リプレイ（7-B）をつないでゲームループを回す
 import type { GameAudio } from '../audio/game-audio';
-import { GameLoop } from '../core/loop';
+import type { GameLoop } from '../core/loop';
 import type { SaveStore } from '../progression/save-store';
 import { FlightFrame, type FlightFrameParts } from '../render/flight-frame';
 import { setCardSceneCapture } from './card/card-entry';
@@ -41,6 +41,10 @@ export type FlightRuntimeParts = Omit<
     readonly replayHub: ReplayHub;
     /** 記録と再生で同じ始め方をする世界（起動直後の写しはここで撮る） */
     readonly simWorld: SimWorld & { pristine: StateSnapshot | null };
+    /** 10-1: 起動の殻（app.ts）が回しているゲームループ（タイトルの背景を描いている） */
+    readonly loop: GameLoop;
+    /** 10-1: 殻が描いてきた島の周りの時間と前のフレームの時刻（続きから描く。渡したら殻は描くのをやめる） */
+    readonly clock: () => { worldTime: number; lastFrameMs: number | null };
   };
 
 export function startFlightRuntime(p: FlightRuntimeParts): {
@@ -69,7 +73,7 @@ export function startFlightRuntime(p: FlightRuntimeParts): {
     },
   });
 
-  const loop = new GameLoop();
+  const loop = p.loop;
   const { simulate } = linkFlightLoop(loop, {
     ...p,
     startFlight,
@@ -146,6 +150,7 @@ export function startFlightRuntime(p: FlightRuntimeParts): {
   // 起動直後の世界の写し（飛行の始めに前の飛行の名残を消す）は配線の最後に撮る
   simWorld.pristine = StateSnapshot.take([p.play], simSkip(p.play));
 
+  frame.continueFrom(p.clock());
   loop.onRender((alpha) => {
     replay.playback.render();
     pvp.render(alpha);
@@ -157,7 +162,6 @@ export function startFlightRuntime(p: FlightRuntimeParts): {
     if (game.state === 'flight') p.kaijuHud.update();
     p.tutorial.update(game.state === 'flight');
   });
-  loop.start();
   return {
     photo,
     onRender: (fn) => {

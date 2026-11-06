@@ -74,6 +74,8 @@ export class TitleScreen {
     // 展開アニメは起動して最初に出すときだけ（クラスを付けたままにして、2 回目以降は最後の状態のまま）
     if (shown && !this.deployed) {
       this.deployed = true;
+      // 10-1: 起動の計測（scripts/perf.js がこの印より前に読み始めたものを「タイトルまでに読む量」に数える）
+      performance.mark('skyraid:title');
       this.root.classList.add('is-deploying');
     }
     setScreenShown(this.root, shown);

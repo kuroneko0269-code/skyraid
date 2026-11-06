@@ -16,9 +16,9 @@ import { ModeSelectScreen } from './mode-select';
 import { PauseMenu, createPauseButton } from './pause';
 import { PilotNameScreen } from './pilot-name';
 import { ResultScreen } from './result';
-import { FadeCurtain, LoadingScreen, applyScreenFade } from './screen';
+import type { FadeCurtain, LoadingScreen, ShellScreens } from './screen';
 import { syncHudScreen } from './hud-screen';
-import { TitleScreen } from './title';
+import type { TitleScreen } from './title';
 import { InfoEntry } from './info-entry';
 import { SettingsNav } from './settings-nav';
 import { SettingsScreen } from './settings-screen';
@@ -102,14 +102,15 @@ export class Screens {
 
   constructor(
     parent: HTMLElement,
-    game: GameState,
+    private readonly game: GameState,
     missions: readonly MissionDef[],
     /** セーブ（3-1）: 進み具合・残高・パイロット名 */
     readonly save: SaveStore,
+    /** 10-1: 殻が先に作った画面（DOM の並びは 1.1.0 と同じ位置へ移す） */
+    shell: ShellScreens,
     /** ポーズメニューの「ミッションを中断」（遷移の前に呼ぶ） */
     private readonly onAbortMission: () => void,
   ) {
-    applyScreenFade(document.documentElement);
     const search = window.location.search;
     this.tutorialText = tutorialStrings();
     this.progress = new CampaignProgress(
@@ -120,13 +121,7 @@ export class Screens {
     this.hangar = new Hangar(save, (id) => this.progress.isCleared(id));
     this.paintshop = new Paintshop(save);
     const missionIds = missions.map((m) => m.id);
-    // 初回起動（パイロット名がまだない）はタイトルの後に名前の入力（3-1）
-    this.title = new TitleScreen(
-      parent,
-      () => game.transition(save.needsPilotName ? 'pilot_name' : 'mode_select'),
-      () => this.settingsNav.open(),
-    );
-    this.title.setPilotName(save.pilotName);
+    this.title = shell.title; // 10-1: 殻が作った（開始・歯車は殻が titleStart / settingsNav.open へ）
     this.pilotName = new PilotNameScreen(parent, {
       onSubmit: (name) => {
         this.title.setPilotName(save.setPilotName(name));
@@ -256,8 +251,10 @@ export class Screens {
     this.pauseButton = createPauseButton(parent, () => {
       if (!this.pvp?.onPause()) game.transition('pause');
     });
-    this.loading = new LoadingScreen(parent);
-    this.curtain = new FadeCurtain(parent);
+    // 10-1: 読み込み中・暗転は殻が先に作った。DOM の並び（重なり）は 1.1.0 と同じここへ移す
+    this.loading = shell.loading;
+    this.curtain = shell.curtain;
+    parent.append(this.loading.root, this.curtain.root);
     // 開発用: ?map=harbor でフリーフライト（?skipTitle も）のマップを選ぶ（6-4）
     const mapParam = new URLSearchParams(search).get('map');
     if (mapParam && MAPS[mapParam]) this.modeSelect.freeMapId = mapParam;
@@ -271,6 +268,11 @@ export class Screens {
       if (cut) this.curtain.cut();
       this.show(to);
     });
+  }
+
+  /** タイトルの「タップで開始」: 初回起動（パイロット名がまだない）はタイトルの後に名前の入力（3-1） */
+  titleStart(): void {
+    this.game.transition(this.save.needsPilotName ? 'pilot_name' : 'mode_select');
   }
 
   /** チュートリアルの指示の「中断」（4-11）: ランナーを止めてモード選択へ */

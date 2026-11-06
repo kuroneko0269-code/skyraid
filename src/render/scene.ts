@@ -7,7 +7,7 @@ import { CloudField } from './cloud-field';
 import { Clouds } from './clouds';
 import { SceneLights } from './lighting';
 import { SkyEnvironment } from './sky-environment';
-import { setAircraftEnvironment as setEnv } from './aircraft-model/material';
+import { setAircraftEnvironment as setEnv } from './aircraft-model/environment';
 import { WeatherView } from './weather/weather-view';
 import { Ocean } from './ocean';
 import { Terrain } from './terrain';
@@ -15,7 +15,8 @@ import { defaultHeightField } from './terrain-height';
 import { Vegetation } from './vegetation';
 import { ISLAND_MAP } from '../data/maps';
 import type { LoadedMap } from '../missions/active-map';
-import { CityView } from './city/city-view';
+import type { CityView } from './city/city-view';
+import type { BuildingField } from '../combat/buildings';
 import {
   bakeCoastTextures,
   createCoastDistanceTexture,
@@ -39,6 +40,11 @@ export class World {
   readonly weather: WeatherView;
   /** 街（6-4。港湾都市だけ） */
   city: CityView | null = null;
+  /**
+   * 10-1: 街の描画を作る（render/city/。港湾都市だけなので、起動時の殻には入れずゲーム本体（game-app.ts）が入れる。
+   * マップの切り替えはゲーム本体を読んだ後だけ）
+   */
+  createCity: ((buildings: BuildingField, count: number) => CityView) | null = null;
   private cityCount = 2000;
   private readonly scene: Scene;
   private mapId = ISLAND_MAP.id;
@@ -121,8 +127,8 @@ export class World {
       this.city.dispose();
       this.city = null;
     }
-    if (m.buildings) {
-      this.city = new CityView(m.buildings, this.cityCount);
+    if (m.buildings && this.createCity) {
+      this.city = this.createCity(m.buildings, this.cityCount);
       this.scene.add(this.city.object);
     }
   }

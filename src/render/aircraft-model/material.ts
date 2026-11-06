@@ -13,6 +13,7 @@ import {
 import { AIRCRAFT_MODEL_CONFIG } from '../../data/aircraft-model';
 import type { Hinge } from './build';
 import { panelTextures } from './panel-texture';
+import { useEnvironment } from './environment';
 import { MISSILE_PART_BASE, SURFACE_COUNT } from './planform';
 
 /** 操舵面の回転軸・角度とミサイルの残りの数（自機の 1 機ぶん。毎フレーム書き換える） */
@@ -108,28 +109,6 @@ function patch(
       '#include <beginnormal_vertex>',
       `#include <beginnormal_vertex>\n${MOVE_NORMAL}`,
     );
-  }
-}
-
-/** 空の環境マップ（4-10 事前修正）を受ける機体のマテリアルと効きの強さ。地形・海には付けない */
-const envTargets = new Map<MeshStandardMaterial, number>();
-let environment: Texture | null = null;
-
-function useEnvironment<T extends MeshStandardMaterial>(material: T, intensity: number): T {
-  envTargets.set(material, intensity);
-  material.envMap = environment;
-  material.envMapIntensity = intensity;
-  return material;
-}
-
-/** 起動時に 1 回、空から作った環境マップを機体のマテリアル（作成済み・これから作るものすべて）に付ける */
-export function setAircraftEnvironment(texture: Texture): void {
-  // 7-5: 焼き直しの付け替え（環境マップあり → あり）はシェーダーの作り直しが要らない
-  const first = environment === null;
-  environment = texture;
-  for (const [material, intensity] of envTargets) {
-    useEnvironment(material, intensity);
-    if (first) material.needsUpdate = true;
   }
 }
 
