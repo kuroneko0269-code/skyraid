@@ -2,7 +2,10 @@ import { t } from '../core/i18n';
 import './pause.css';
 import { SCREEN_CONFIG } from '../data/screens';
 import { TOUCH_CONFIG } from '../data/touch';
+import { PanelTabs } from './panel-tabs';
 import { createButton, createScreen, setScreenShown } from './screen';
+
+const PAUSE_TABS = ['quick', 'practice'] as const;
 
 /**
  * ポーズメニュー（再開 / フォトモード / すべての設定 / ミッションを中断（ミッション中だけ）/ タイトルへ）。
@@ -20,6 +23,7 @@ export class PauseMenu {
   private readonly photoButton: HTMLButtonElement;
   private readonly resumeButton: HTMLButtonElement;
   private readonly tiltButton: HTMLButtonElement;
+  private readonly sideTabs: PanelTabs<(typeof PAUSE_TABS)[number]>;
   /** 「フォトモード」（7-A。main がつなぐ） */
   onPhoto: (() => void) | null = null;
   /** 「傾きを合わせ直す」（9-4。傾き操作のときだけ出す） */
@@ -51,7 +55,16 @@ export class PauseMenu {
     this.extra = document.createElement('div');
     this.extra.className = 'pause-extra';
     this.extra.hidden = true;
-    body.append(actions, this.quick, this.extra);
+    // 9-9c: 練習場のときは右の列を「設定（4 つ）・練習場の設定」のタブに分ける（それまでは縦に積んでいて、スマホの横画面で
+    // 縦にスクロールしていた）。練習場でなければタブの列は出さない
+    const side = document.createElement('div');
+    side.className = 'pause-side';
+    this.sideTabs = new PanelTabs(side, PAUSE_TABS, (tab) => t(`pause.tab.${tab}`));
+    this.sideTabs.bar.hidden = true;
+    this.sideTabs.pane('quick').append(this.quick);
+    this.sideTabs.pane('practice').append(this.extra);
+    this.sideTabs.show('quick');
+    body.append(actions, side);
     panel.append(heading, body);
     root.appendChild(panel);
 
@@ -108,6 +121,8 @@ export class PauseMenu {
   setPracticeAvailable(available: boolean): void {
     this.restartButton.hidden = !available;
     this.extra.hidden = !available;
+    this.sideTabs.bar.hidden = !available;
+    this.sideTabs.show('quick');
   }
 
   /** 「傾きを合わせ直す」を出すか（9-4） */

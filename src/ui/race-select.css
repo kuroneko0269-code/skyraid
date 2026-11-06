@@ -1,0 +1,123 @@
+/*
+ * リングレースのコース一覧（9-9c）: 右の詳細は「概要・記録・機体」のタブ（panel-tabs.css）。
+ * 背の低い横画面（844×390・568×320）は画面ごとスクロールさせず、見出しと下のボタンの残りを一覧と詳細に充て、一覧はその中で
+ * スクロールする（それまでは縦に積んでいて、844×390 で 215px、568×320 で 690px ほど画面ごとスクロールしていた）
+ */
+.race-select-detail {
+  min-width: 0;
+}
+
+@container app (max-height: 480px) {
+  .screen.campaign-screen.race-select {
+    gap: 6px;
+    padding-top: max(8px, var(--ui-safe-top));
+    padding-bottom: max(8px, var(--ui-safe-bottom));
+    overflow-y: hidden;
+  }
+
+  .screen.race-select::before,
+  .screen.race-select::after {
+    flex: 0 0 0;
+  }
+
+  .race-select .campaign-heading {
+    margin: 0;
+  }
+
+  .race-select > .race-layout {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 8px;
+    min-height: 0;
+  }
+
+  .race-select .race-course-list {
+    flex: 0 1 340px;
+    gap: 6px;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .race-select .race-course-list > * {
+    flex-shrink: 0;
+  }
+
+  .race-select .race-course {
+    min-height: 0;
+    padding-block: 4px;
+  }
+
+  .race-select-detail {
+    flex: 1 1 420px;
+    gap: 4px;
+    padding: 4px 10px 6px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .race-select-detail .race-detail-title {
+    font-size: 17px;
+  }
+
+  .race-select-detail .campaign-text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+
+  .race-select-detail .race-facts {
+    gap: 2px 12px;
+    font-size: 12.5px;
+  }
+
+  .race-select-detail .practice-pane {
+    gap: 5px;
+  }
+
+  .race-select .campaign-buttons {
+    margin-top: 0;
+  }
+
+  .race-select .campaign-buttons .ui-button {
+    min-height: 40px;
+  }
+}
+
+/* 狭くて背の低い画面（568×320）: 一覧の幅を詰める */
+@container app (max-width: 600px) and (max-height: 480px) {
+  .race-select .race-course-list {
+    flex-basis: 190px;
+  }
+
+  .race-select .race-course {
+    padding-inline: 10px;
+  }
+
+  /* コース名は「…」で切らずに折り返す */
+  .race-select .race-course > .mission-entry-title {
+    white-space: normal;
+    overflow: visible;
+    line-height: 1.2;
+  }
+
+  /* マップ名と難しさが 1 行に入らなければ折り返す（切らない） */
+  .race-select .mission-entry-head {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .race-select-detail .race-kinds {
+    gap: 2px 10px;
+    font-size: 11px;
+  }
+
+  .race-select-detail .race-facts {
+    font-size: 12px;
+  }
+
+  .race-select-detail .campaign-fact-value {
+    font-size: 13.5px;
+  }
+}

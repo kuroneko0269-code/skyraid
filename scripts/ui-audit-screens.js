@@ -9,7 +9,7 @@ import { L } from './audit-lang.js';
 import { auditTutorialScreens } from './ui-audit-tutorial.js';
 
 /** M1 の失敗のリザルトを見本で出す（練習場への案内つき） */
-async function openFailedResultSample(page) {
+export async function openFailedResultSample(page) {
   await page.evaluate(async () => {
     const { ResultScreen } = await import('/src/ui/result.ts');
     const screen = new ResultScreen(document.body, {
@@ -44,7 +44,7 @@ async function openFailedResultSample(page) {
 }
 
 /** 練習場の結果の画面を見本で出す（60〜90 秒飛ばずに。設定の欄も見本のセーブで） */
-async function openPracticeResultSample(page) {
+export async function openPracticeResultSample(page) {
   await page.evaluate(async () => {
     const { PracticeResultScreen } = await import('/src/ui/practice-result.ts');
     const { PracticeSettingsPanel } = await import('/src/ui/practice-settings.ts');
@@ -56,6 +56,9 @@ async function openPracticeResultSample(page) {
     const save = { settings: { controls: defaultControls() }, updateControls: () => undefined };
     const tilt = { enable: () => Promise.resolve('unsupported'), disable: () => undefined };
     new PracticeSettingsPanel(screen.settingsSlot, save, tilt, () => undefined);
+    // 9-9c: 「リプレイを保存」（飛行の後はいつもある）
+    const { ReplaySaveBox } = await import('/src/ui/replay-save.ts');
+    new ReplaySaveBox(screen.extras, () => Promise.resolve('')).reset('PRACTICE', true);
     const result = {
       drill: 'bandit',
       seconds: 90,
@@ -162,7 +165,7 @@ export async function showOnlineSample(page) {
 }
 
 /** 記録カードの画面をミッションの結果の見本で開く（場面の画像なし） */
-async function openCardSample(page) {
+export async function openCardSample(page) {
   await page.evaluate(async () => {
     const { CardDialog } = await import('/src/ui/card/card-dialog.ts');
     const d = new CardDialog(document.body);

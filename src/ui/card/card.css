@@ -22,6 +22,11 @@
   --fill: var(--ui-bg-strong);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  /* 9-9c: ボタンは操作の列の外（縦長の画面は一番下、横に広い画面はプレビューの下。下の @container） */
+  grid-template-areas:
+    'view'
+    'side'
+    'buttons';
   gap: var(--ui-space-3);
   width: min(960px, 100%);
   max-height: 100%;
@@ -33,6 +38,7 @@
 }
 
 .card-view {
+  grid-area: view;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -50,6 +56,7 @@
 }
 
 .card-side {
+  grid-area: side;
   display: flex;
   flex-direction: column;
   gap: var(--ui-space-2);
@@ -96,6 +103,7 @@
 }
 
 .card-buttons {
+  grid-area: buttons;
   display: flex;
   flex-wrap: wrap;
   gap: var(--ui-space-2);
@@ -106,21 +114,88 @@
   min-height: 44px;
 }
 
-/* 横に広い画面: プレビュー（左）と操作（右） */
+/*
+ * 横に広い画面: プレビュー（左）と操作（右）。9-9c: ボタンはプレビューの下（それまでは右の列の下で、画像の上下が空いていた）。
+ * 右の列は左の列（画像 + ボタン）の高さまで伸ばし、共有の文面の欄を広げる。画像の大きさは変えない
+ */
 @container app (min-width: 640px) and (min-aspect-ratio: 4 / 3) {
   .card-dialog {
     grid-template-columns: minmax(0, 1.55fr) minmax(220px, 1fr);
-    align-items: center;
+    /* 画像とボタンは上下の空きの真ん中、右の列は全部の行にまたがる */
+    grid-template-rows: 1fr auto auto 1fr;
+    grid-template-areas:
+      '. side'
+      'view side'
+      'buttons side'
+      '. side';
+    row-gap: 0;
   }
 
   .card-preview {
     max-height: calc(100cqh - 80px);
+  }
+
+  .card-text {
+    flex: 1 1 auto;
+    min-height: 4.4em;
+  }
+
+  .card-buttons {
+    flex-wrap: nowrap;
+    margin-top: var(--ui-space-2);
+  }
+
+  .card-buttons .ui-button {
+    flex: 1 1 0;
+    min-width: max-content;
+  }
+}
+
+/*
+ * 9-9c: 狭くて背の低い横画面（568×320 など）も 2 列: プレビューは今までと同じ大きさ（高さ 52cqh。それまでは全幅の枠の中で
+ * 左右が空いていた）で、その下にボタン、右の列に操作と共有の文面（縦にスクロールしない）
+ */
+@container app (max-width: 639.98px) and (max-height: 480px) and (min-aspect-ratio: 3 / 2) {
+  .card-dialog {
+    grid-template-columns: auto minmax(0, 1fr);
+    /* 画像とボタンは上下の空きの真ん中、右の列は全部の行にまたがる */
+    grid-template-rows: 1fr auto auto 1fr;
+    grid-template-areas:
+      '. side'
+      'view side'
+      'buttons side'
+      '. side';
+    row-gap: 0;
+  }
+
+  .card-preview {
+    width: auto;
+    height: 52cqh;
+    max-height: none;
+  }
+
+  .card-text {
+    flex: 1 1 auto;
+    min-height: 4.2em;
+  }
+
+  .card-buttons {
+    flex-wrap: nowrap;
+    margin-top: var(--ui-space-2);
+  }
+
+  .card-buttons .ui-button {
+    flex: 1 1 0;
+    min-width: max-content;
+    padding-inline: 10px;
   }
 }
 
 /* 背の低い横画面（スマホ）: 文面は 2 行、余白を詰める */
 @container app (max-height: 480px) {
   .card-dialog {
+    /* 9-9c: 画面の高さいっぱい（右の列の共有の文面の欄を伸ばす） */
+    height: 100%;
     padding: var(--ui-space-3);
     gap: var(--ui-space-2);
   }

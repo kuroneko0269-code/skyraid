@@ -27,6 +27,17 @@
     "/src/ui/practice-result.ts",
     "/src/ui/practice-settings.ts",
     "/src/core/control-settings.ts",
-    "/src/ui/badge-link.ts"
+    "/src/ui/badge-link.ts",
+    "/src/ui/replay-list.ts",
+    "/src/ui/replay-save.ts",
+    "/src/ui/pvp-board.ts",
+    "/src/ui/pvp-overlay.ts",
+    "/src/ui/pvp-hud.ts",
+    "/src/ui/lobby-hangar.ts",
+    "/src/ui/lobby-share.ts",
+    "/src/ui/raid-briefing.ts",
+    "/src/ui/kaiju2-briefing.ts",
+    "/src/ui/ranking-screen.ts",
+    "/src/ui/sync-dialog.ts"
   ]
 }

@@ -158,7 +158,27 @@ export function fitRoot(doc: Document = document): boolean {
   const style = doc.documentElement.style;
   style.setProperty('--app-width', `${size.width}px`);
   style.setProperty('--app-height', `${size.height}px`);
+  relayoutOverlays(doc);
   return true;
+}
+
+/**
+ * 9-9c: 大きさが変わったら、開いているダイアログ（モード選択の上の .mode-prompt・記録カード）の配置を作り直させる
+ * （一度 display: none にして戻す。同じフレームの中なので見た目はチラつかない。中のスクロールは先頭に戻る）。
+ * 実機の iPhone で、チュートリアルの章の一覧を開いたまま縦 → 横に戻すと、カードの高さが縦向きのまま残った。
+ * モード選択のカード（画面の中の流れ）は 9-9b で直っていて、ダイアログ（画面の中の position: absolute）だけが残るため、
+ * WebKit が body の大きさ（@container app）の変化をダイアログの中に伝えきれていないとみた（Chromium では再現しない）
+ */
+function relayoutOverlays(doc: Document): void {
+  for (const e of doc.querySelectorAll<HTMLElement>(
+    '.mode-prompt:not([hidden]), .card-overlay:not([hidden])',
+  )) {
+    const display = e.style.display;
+    e.style.display = 'none';
+    // 読むと配置が作り直される（none の状態を確定させる）
+    e.getBoundingClientRect();
+    e.style.display = display;
+  }
 }
 
 /**

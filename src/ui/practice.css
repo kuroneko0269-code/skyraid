@@ -88,19 +88,23 @@
   width: min(720px, 100%);
 }
 
-/* ポーズ: 設定の欄は右の列（4 つの設定の下） */
-.pause-extra {
-  grid-column: 2;
-}
-
+/* ポーズ: 設定の欄は右の列の「練習場の設定」のタブ（9-9c。pause.ts） */
 .pause-extra[hidden] {
   display: none;
 }
 
-@container app (max-width: 600px) {
-  .pause-extra {
-    grid-column: 1;
-  }
+.pause-side .practice-tabs[hidden] {
+  display: none;
+}
+
+/* 練習場の設定のタブ: 見出しはタブと同じなので出さない */
+.pause-side .practice-settings {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.pause-side .practice-settings-heading {
+  display: none;
 }
 
 /* 背の低い横画面（スマホ 844×390 など）: 詰める */
@@ -136,46 +140,6 @@
   min-width: 0;
   min-height: 0;
   gap: 8px;
-}
-
-.practice-tabs {
-  display: flex;
-  gap: 4px;
-  border-bottom: var(--ui-line-width) solid var(--ui-line-faint);
-}
-
-.practice-tab {
-  flex: 1 1 0;
-  min-height: 38px;
-  padding: 4px 8px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--ui-text-dim);
-  font: 600 14px/1.2 var(--ui-font-body);
-  letter-spacing: 0.08em;
-  cursor: pointer;
-}
-
-.practice-tab.is-selected {
-  border-bottom-color: var(--ui-accent);
-  color: var(--ui-text);
-}
-
-.practice-tab:focus-visible {
-  outline: 2px solid var(--ui-accent);
-  outline-offset: -2px;
-}
-
-.practice-pane {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 0;
-}
-
-.practice-pane[hidden] {
-  display: none;
 }
 
 /* 背の高い画面は上に説明があるので、概要の中の説明は出さない */
@@ -298,11 +262,6 @@
 
   .practice-detail .race-facts {
     font-size: 12.5px;
-  }
-
-  .practice-tab {
-    min-height: 36px;
-    font-size: 13px;
   }
 
   .practice-pane {

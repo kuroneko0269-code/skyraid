@@ -12,6 +12,7 @@
 //   hscroll  横スクロールが出ている（画面の幅を超える）
 //   offscreen ボタンが画面の外（左右）にある
 //   vscroll  画面が縦にスクロールする（情報。7-C で背の低い画面は可とした）
+//   scroll   縦にスクロールする入れ物とはみ出す高さ（情報。9-9c: 1 画面に収まらない画面を探す）
 //   band     固定部分（見出し・戻る・タブ。.menu-top）の高さが画面の 30% を超える（7-4c）
 //   tabsMoved タブの位置がタブの切り替え・内容のスクロールで動いた（7-4c）
 //   hscrollEl 横にスクロールできる要素がある（8-6d。画面の外のダイアログ・お知らせも。意図した一覧は audit-inspect.js の除外リスト）
@@ -332,5 +333,8 @@ for (const r of results) {
     `${r.size}\t${r.screen}\t${r.vscroll ? 'vscroll ' : ''}${kinds.length ? kinds.join(',') : 'OK'}${band}`,
   );
   for (const i of r.issues) console.log(`    ${i.kind}: ${i.target}`);
+  // 9-9c: 縦にスクロールする入れ物と、はみ出している高さ（情報）
+  for (const s of r.scrollers ?? [])
+    console.log(`    scroll: ${s.target} (+${s.over}px / ${s.client}px)`);
 }
 for (const f of flows) console.log(`${f.size}\t${f.flow}\t${f.ok ? 'OK' : 'NG'}`);

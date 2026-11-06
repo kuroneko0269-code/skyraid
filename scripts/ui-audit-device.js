@@ -10,7 +10,8 @@
 //   HalfFloat の描画先の NaN を数える（8-6b。scripts/ui-audit-device-nozzle.js）
 // - passthrough: 画面の切り替え直後に同じタップが次の画面へ届かない（9-9b。scripts/ui-audit-device-switch.js）
 // - cards: モード選択の全カード・タイルとダイアログのボタンで、同じタップが次の画面のボタンを押さない（9-11a。ui-audit-device-cards.js）
-// - rotate: 縦 → 横に回した後（と iOS の古い値を模した回転の後）も各画面が最初と同じ配置（9-9b。ui-audit-device-rotate.js）
+// - rotate: 縦 → 横に回した後（と iOS の古い値を模した回転の後）も各画面が最初と同じ配置（9-9b。ui-audit-device-rotate.js）。
+//   9-9c: 対象は src/ui の全部の画面とダイアログ（rotate-coverage.js がソースから拾う。測れない組は失敗）
 // - weather: 天候が快晴と違うモードで、始まったときから目的の天候（9-9b。ui-audit-device-weather.js）
 // 使い方: `node scripts/ui-audit-device.js <出力先> [--only viewport,debug]`。結果は <出力先>/device.json と PNG
 import { auditCards } from './ui-audit-device-cards.js';

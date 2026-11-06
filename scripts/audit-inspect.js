@@ -137,9 +137,19 @@ export function inspect(rootSelector) {
       }
     }
   }
+  // 9-9c: 縦にスクロールする入れ物（画面に出ているもの）と、はみ出している高さ（px）。情報（問題としては数えない）
+  const scrollers = [];
+  for (const e of document.body.querySelectorAll('*')) {
+    if (e instanceof SVGElement || !vis(e)) continue;
+    const s = getComputedStyle(e);
+    if (s.overflowY !== 'auto' && s.overflowY !== 'scroll') continue;
+    const over = e.scrollHeight - e.clientHeight;
+    if (over > 1) scrollers.push({ target: path(e), client: e.clientHeight, over });
+  }
   return {
     issues,
     allowed,
+    scrollers,
     vscroll: root ? root.scrollHeight > root.clientHeight + 1 : false,
     buttons: count,
   };

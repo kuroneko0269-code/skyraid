@@ -809,6 +809,10 @@
     "loading": "読み込み中…"
   },
   "pause": {
+    "tab": {
+      "quick": "設定",
+      "practice": "練習場の設定"
+    },
     "heading": "ポーズ",
     "resume": "再開",
     "photoMode": "フォトモード",
@@ -844,6 +848,11 @@
       "checkpoint": "チェックポイント（飛ばせない）"
     },
     "select": {
+      "tab": {
+        "overview": "概要",
+        "records": "記録",
+        "aircraft": "機体"
+      },
       "heading": "リングレース",
       "bestTimes": "ベスト {count}",
       "start": "スタート",
@@ -1218,6 +1227,7 @@
     "back": "← 戻る",
     "tab": {
       "perf": "性能",
+      "upgrades": "強化",
       "paint": "塗装"
     },
     "upgradesHeading": "強化（この機体だけ）",
@@ -2003,6 +2013,11 @@
       "changed": "途中で設定を変えたので記録しません",
       "settingsRecord": "この設定の最高",
       "drillBest": "課題の最高",
+      "tab": {
+        "advice": "助言",
+        "stats": "指標",
+        "settings": "設定"
+      },
       "issuesHeading": "この回の直すとよい所",
       "noIssues": "大きな問題はありません。狙いの補助を弱めたり自動射撃を切ったりして、腕前を比べてみましょう。"
     },

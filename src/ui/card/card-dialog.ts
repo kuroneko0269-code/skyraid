@@ -64,7 +64,8 @@ export class CardDialog {
     this.text.setAttribute('aria-label', t('card.textLabel'));
     this.status = el('div', 'card-status', side);
     this.status.setAttribute('role', 'status');
-    const buttons = el('div', 'card-buttons', side);
+    // 9-9c: ボタンはプレビューの下（横に広い画面は画像の下の余白、縦長の画面は一番下。card.css の grid-template-areas）
+    const buttons = el('div', 'card-buttons', box);
     this.shareButton = createButton(
       buttons,
       'ui-button is-primary card-share',
