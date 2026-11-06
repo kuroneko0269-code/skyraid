@@ -1,9 +1,12 @@
 // リングレース（7-1）のコース一覧: 左にコース（難易度・ベストタイム・最高ランク）、右に選んだコースの詳細
-// （マップ・天候・リング・ゴールドタイム・制限時間・ベスト 5）と機体の選択（所持機体。ハンガーの選択も変わる）と「スタート」
+// （マップ・天候・リング・ゴールドタイム・制限時間・ベスト 5）と機体の選択（所持機体。ハンガーの選択も変わる）と「スタート」。
+// 9-9c: 右の詳細を「概要・記録・機体」のタブに分け、一覧はその中だけスクロールする（それまでは縦に積んでいて、スマホの横画面で
+// 画面ごとスクロールしていた。9-5d の練習場の課題の一覧と同じ）
 import { formatDate } from '../core/format';
 import { t, tn } from '../core/i18n';
 import './campaign.css';
 import './race.css';
+import './race-select.css';
 import './segmented.css';
 import { AIRCRAFT_MODELS } from '../data/aircraft';
 import { findMap } from '../data/maps';
@@ -16,6 +19,7 @@ import type { RaceRecord } from '../progression/save-races';
 import { el } from './hud-dom';
 import { formatCredits } from './mission-text';
 import { createToggleButton } from './mobile';
+import { PanelTabs } from './panel-tabs';
 import { createButton, createScreen, setScreenShown } from './screen';
 
 const KIND_TEXT: Readonly<Record<RingKind, string>> = {
@@ -38,6 +42,8 @@ function formatRecordDate(date: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   return m ? formatDate(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : date;
 }
+
+const RACE_TABS = ['overview', 'records', 'aircraft'] as const;
 
 interface Entry {
   readonly course: CourseDef;
@@ -72,8 +78,11 @@ export class RaceSelectScreen {
     if (!first) throw new Error('no courses');
     this.selected = first;
     const root = createScreen(parent, 'campaign-screen race-screen');
-    el('h2', 'ui-heading campaign-heading', root, t('race.select.heading'));
-    const balance = el('div', 'campaign-balance', root);
+    root.classList.add('race-select');
+    // 9-9c: 見出しと残高は 1 つの帯（背の低い画面は 1 行）
+    const top = el('div', 'campaign-top', root);
+    el('h2', 'ui-heading campaign-heading', top, t('race.select.heading'));
+    const balance = el('div', 'campaign-balance', top);
     el('span', '', balance, t('campaign.balance'));
     this.balance = el('span', 'campaign-balance-value', balance);
     const layout = el('div', 'race-layout', root);
@@ -89,11 +98,13 @@ export class RaceSelectScreen {
       const best = el('span', 'race-course-best', button);
       this.entries.push({ course, button, best });
     }
-    const detail = el('div', 'race-detail', layout);
-    this.title = el('h3', 'ui-title race-detail-title', detail);
-    this.note = el('p', 'campaign-text', detail);
-    this.facts = el('div', 'race-facts', detail);
-    const kinds = el('div', 'race-kinds', detail);
+    const detail = el('div', 'race-detail race-select-detail', layout);
+    const tabs = new PanelTabs(detail, RACE_TABS, (tab) => t(`race.select.tab.${tab}`));
+    const overview = tabs.pane('overview');
+    this.title = el('h3', 'ui-title race-detail-title', overview);
+    this.note = el('p', 'campaign-text', overview);
+    this.facts = el('div', 'race-facts', overview);
+    const kinds = el('div', 'race-kinds', overview);
     for (const k of Object.keys(KIND_TEXT) as RingKind[]) {
       const span = el('span', 'race-kind', kinds, KIND_TEXT[k]);
       span.style.setProperty(
@@ -101,16 +112,19 @@ export class RaceSelectScreen {
         `#${RACE_CONFIG.colors[k].toString(16).padStart(6, '0')}`,
       );
     }
+    const records = tabs.pane('records');
     el(
       'div',
       'campaign-label',
-      detail,
+      records,
       t('race.select.bestTimes', { count: RACE_CONFIG.bestTimes }),
     );
-    this.times = el('table', 'race-times', detail);
-    el('div', 'campaign-label', detail, t('campaign.briefing.aircraft'));
-    this.aircraft = el('div', 'race-aircraft', detail);
+    this.times = el('table', 'race-times', records);
+    const aircraft = tabs.pane('aircraft');
+    el('div', 'campaign-label', aircraft, t('campaign.briefing.aircraft'));
+    this.aircraft = el('div', 'race-aircraft', aircraft);
     this.aircraft.setAttribute('role', 'radiogroup');
+    tabs.show('overview');
     const buttons = el('div', 'campaign-buttons', root);
     createButton(
       buttons,

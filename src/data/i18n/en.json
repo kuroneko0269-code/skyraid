@@ -812,6 +812,10 @@
     "loading": "Loading…"
   },
   "pause": {
+    "tab": {
+      "quick": "Settings",
+      "practice": "Practice Setup"
+    },
     "heading": "Paused",
     "resume": "Resume",
     "photoMode": "Photo Mode",
@@ -847,6 +851,11 @@
       "checkpoint": "Checkpoint (can't skip)"
     },
     "select": {
+      "tab": {
+        "overview": "Overview",
+        "records": "Records",
+        "aircraft": "Aircraft"
+      },
       "heading": "Ring Race",
       "bestTimes": "Top {count}",
       "start": "Start",
@@ -1225,6 +1234,7 @@
     "back": "← Back",
     "tab": {
       "perf": "Stats",
+      "upgrades": "Upgrades",
       "paint": "Paint"
     },
     "upgradesHeading": "Upgrades (this aircraft only)",
@@ -2021,6 +2031,11 @@
       "changed": "Not recorded: settings were changed during the run",
       "settingsRecord": "Best for this setting",
       "drillBest": "Drill best",
+      "tab": {
+        "advice": "Advice",
+        "stats": "Stats",
+        "settings": "Settings"
+      },
       "issuesHeading": "What to fix next time",
       "noIssues": "No big problems. Try a lower aim assist or auto-fire off to measure your skill."
     },

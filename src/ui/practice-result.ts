@@ -1,14 +1,18 @@
 // 練習場（9-5）の結果: スコア・撃墜数・命中率・撃墜までの平均時間と、9-1 の解析と同じ数え方の「照準の外で撃った割合」
 // 「敵が画面の外にいた時間」「行き過ぎて戻した回数」、一言の助言、記録（この設定の最高・課題の最高）、設定の欄（その場で変えて
-// すぐやり直せる）。「もう一度」は飛行へ直接、「練習場へ」は課題の一覧
+// すぐやり直せる）。「もう一度」は飛行へ直接、「練習場へ」は課題の一覧。
+// 9-9c: スコアの下を「助言・指標・設定」のタブに分けた（それまでは縦に積んでいて、スマホの横画面で縦にスクロールしていた）。
+// 「リプレイを保存」と「練習場へ」「もう一度」はタブの外の一番下（いつも見える）
 import { t } from '../core/i18n';
 import './campaign.css';
 import './race.css';
 import './practice.css';
+import './practice-result.css';
 import { PRACTICE_DRILL_LABELS } from '../data/practice';
 import type { PracticeResult } from '../missions/practice/score';
 import type { PracticeRecordOutcome } from '../progression/practice-records';
 import { el } from './hud-dom';
+import { PanelTabs } from './panel-tabs';
 import { formatRatio, formatSeconds, practiceSettingsLabel } from './practice-text';
 import { adviceContext, goodText, issueText } from './practice-advice-text';
 import { createButton, createScreen, setScreenShown } from './screen';
@@ -16,6 +20,9 @@ import { createButton, createScreen, setScreenShown } from './screen';
 /** 記録の扱い（saved: 記録した / changed: 途中で設定を変えたので記録しない / replay: 再生中） */
 export type PracticeRecordState =
   { readonly kind: 'saved'; readonly out: PracticeRecordOutcome } | { readonly kind: 'changed' };
+
+const RESULT_TABS = ['advice', 'stats', 'settings'] as const;
+type ResultTab = (typeof RESULT_TABS)[number];
 
 export class PracticeResultScreen {
   readonly root: HTMLDivElement;
@@ -31,23 +38,31 @@ export class PracticeResultScreen {
   private readonly good: HTMLParagraphElement;
   private readonly facts: HTMLDivElement;
   private readonly retry: HTMLButtonElement;
+  private readonly tabs: PanelTabs<ResultTab>;
 
   constructor(parent: HTMLElement, handlers: { onRetry: () => void; onList: () => void }) {
     const root = createScreen(parent, 'campaign-screen result-screen practice-result-screen');
     const panel = el('div', 'ui-panel campaign-panel', root);
-    el('div', 'ui-kicker campaign-kicker', panel, 'PRACTICE RESULT');
-    this.drill = el('div', 'result-pilot', panel);
-    this.score = el('div', 'race-result-time practice-result-score', panel);
-    this.badges = el('div', 'race-result-badges', panel);
+    // 9-9c: 見出しとスコアの組（ふだんは今までどおり縦に並ぶ。背の低い画面は左に見出し・右にスコアの 1 段。practice-result.css）
+    const head = el('div', 'practice-result-head', panel);
+    const title = el('div', 'practice-result-title', head);
+    el('div', 'ui-kicker campaign-kicker', title, 'PRACTICE RESULT');
+    this.drill = el('div', 'result-pilot', title);
+    const scoreBox = el('div', 'practice-result-scorebox', head);
+    this.score = el('div', 'race-result-time practice-result-score', scoreBox);
+    this.badges = el('div', 'race-result-badges', scoreBox);
+    this.tabs = new PanelTabs(panel, RESULT_TABS, (tab) => t(`practice.result.tab.${tab}`));
     // 9-5c: その回の問題（優先度順に最大 3 つ・直し方つき）と良かった点
-    this.advice = el('div', 'practice-advice', panel);
+    this.advice = el('div', 'practice-advice', this.tabs.pane('advice'));
     el('div', 'practice-advice-heading', this.advice, t('practice.result.issuesHeading'));
     this.issues = el('ol', 'practice-issues', this.advice);
     this.good = el('p', 'practice-good', this.advice);
-    this.facts = el('div', 'campaign-facts', panel);
-    this.settingsSlot = el('div', 'practice-settings-slot', panel);
-    this.extras = el('div', 'result-extras', panel);
-    const buttons = el('div', 'campaign-buttons', panel);
+    this.facts = el('div', 'campaign-facts', this.tabs.pane('stats'));
+    this.settingsSlot = el('div', 'practice-settings-slot', this.tabs.pane('settings'));
+    this.tabs.show('advice');
+    const bottom = el('div', 'practice-result-bottom', panel);
+    this.extras = el('div', 'result-extras', bottom);
+    const buttons = el('div', 'campaign-buttons', bottom);
     createButton(buttons, 'ui-button is-ghost campaign-back', t('practice.result.toList'), () => {
       handlers.onList();
     });
@@ -66,6 +81,8 @@ export class PracticeResultScreen {
     extras: { settings: string; pilotName: string | null },
   ): void {
     this.root.classList.add('is-success');
+    // 新しい結果は助言のタブから
+    this.tabs.show('advice');
     const name = PRACTICE_DRILL_LABELS[r.drill].name;
     this.drill.textContent = `${name}${extras.pilotName ? `  /  PILOT ${extras.pilotName}` : ''}`;
     this.score.textContent = t('practice.result.score', { score: String(r.score) });

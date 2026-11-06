@@ -15,6 +15,7 @@ import {
 } from '../data/practice';
 import { practiceEntries, type PracticeRecords } from '../progression/practice-records';
 import { el } from './hud-dom';
+import { PanelTabs } from './panel-tabs';
 import { formatRatio, practiceSettingsLabel } from './practice-text';
 import { createButton, createScreen, setScreenShown } from './screen';
 
@@ -37,8 +38,7 @@ export class PracticeSelectScreen {
   private readonly facts: HTMLDivElement;
   private readonly table: HTMLTableElement;
   private readonly start: HTMLButtonElement;
-  private readonly tabButtons = new Map<Tab, HTMLButtonElement>();
-  private readonly panes = new Map<Tab, HTMLDivElement>();
+  private readonly tabs: PanelTabs<Tab>;
   selected: PracticeDrill = 'static';
 
   constructor(
@@ -74,26 +74,14 @@ export class PracticeSelectScreen {
       this.entries.push({ drill, button, best });
     }
     const detail = el('div', 'race-detail practice-detail', layout);
-    const tabs = el('div', 'practice-tabs', detail);
-    tabs.setAttribute('role', 'tablist');
-    for (const tab of TABS) {
-      const b = createButton(tabs, 'practice-tab', t(`practice.select.tab.${tab}`), () => {
-        this.showTab(tab);
-      });
-      b.dataset.tab = tab;
-      b.setAttribute('role', 'tab');
-      this.tabButtons.set(tab, b);
-      const pane = el('div', `practice-pane practice-pane-${tab}`, detail);
-      pane.setAttribute('role', 'tabpanel');
-      this.panes.set(tab, pane);
-    }
-    const overview = this.pane('overview');
+    this.tabs = new PanelTabs(detail, TABS, (tab) => t(`practice.select.tab.${tab}`));
+    const overview = this.tabs.pane('overview');
     this.title = el('h3', 'ui-title race-detail-title', overview);
     this.note = el('p', 'campaign-text', overview);
     // 背の低い画面は上の説明を隠し、ここに出す（CSS）
     el('p', 'campaign-text practice-lead-inline', overview, t('practice.select.lead'));
     this.facts = el('div', 'race-facts', overview);
-    const records = this.pane('records');
+    const records = this.tabs.pane('records');
     el(
       'div',
       'campaign-label',
@@ -101,7 +89,7 @@ export class PracticeSelectScreen {
       t('practice.select.records', { count: PRACTICE_CONFIG.listRows }),
     );
     this.table = el('table', 'race-times practice-records', records);
-    this.settingsSlot = el('div', 'practice-settings-slot', this.pane('settings'));
+    this.settingsSlot = el('div', 'practice-settings-slot', this.tabs.pane('settings'));
     this.showTab('overview');
     const buttons = el('div', 'campaign-buttons', root);
     createButton(
@@ -121,19 +109,9 @@ export class PracticeSelectScreen {
     this.root = root;
   }
 
-  private pane(tab: Tab): HTMLDivElement {
-    const p = this.panes.get(tab);
-    if (!p) throw new Error(`no pane: ${tab}`);
-    return p;
-  }
-
   /** タブを切り替える（課題を選び直しても今のタブのまま） */
   showTab(tab: Tab): void {
-    for (const [k, b] of this.tabButtons) {
-      b.setAttribute('aria-selected', String(k === tab));
-      b.classList.toggle('is-selected', k === tab);
-    }
-    for (const [k, p] of this.panes) p.hidden = k !== tab;
+    this.tabs.show(tab);
   }
 
   select(drill: PracticeDrill): void {

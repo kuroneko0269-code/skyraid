@@ -52,6 +52,7 @@ export class HangarScreen {
   private readonly confirm: ConfirmDialog;
   private readonly tabs: Segmented;
   private readonly perf: HTMLDivElement;
+  private readonly upgradePane: HTMLDivElement;
   private readonly paint: PaintPanel;
 
   constructor(
@@ -87,17 +88,18 @@ export class HangarScreen {
     this.balance = el('div', 'hangar-balance', detail);
     this.name = el('h2', 'ui-title campaign-title hangar-name', detail);
     this.role = el('div', 'hangar-role', detail);
-    // 7-3: 性能（強化）と塗装のタブ
+    // 7-3: 性能（強化）と塗装のタブ。9-9c: 強化を性能から分けた（スマホの横画面で性能のタブが縦にスクロールしていた）
     this.tabs = new Segmented(
       detail,
       '',
       [
         { value: 'perf', label: t('hangar.tab.perf') },
+        { value: 'upgrades', label: t('hangar.tab.upgrades') },
         { value: 'paint', label: t('hangar.tab.paint') },
       ],
       'perf',
       (v) => {
-        this.showTab(v === 'paint');
+        this.showTab(v === 'paint' ? 'paint' : v === 'upgrades' ? 'upgrades' : 'perf');
       },
       'hangar-tabs',
     );
@@ -109,8 +111,11 @@ export class HangarScreen {
       this.buy();
     });
     this.notice = el('div', 'hangar-notice', perf);
-    el('div', 'campaign-label', perf, t('hangar.upgradesHeading'));
-    this.upgradeWrap = el('div', 'hangar-upgrades', perf);
+    const upgrades = el('div', 'hangar-perf hangar-upgrade-pane', detail);
+    upgrades.hidden = true;
+    this.upgradePane = upgrades;
+    el('div', 'campaign-label', upgrades, t('hangar.upgradesHeading'));
+    this.upgradeWrap = el('div', 'hangar-upgrades', upgrades);
     for (const k of UPGRADE_KINDS)
       this.upgrades.set(
         k,
@@ -131,10 +136,12 @@ export class HangarScreen {
     this.root = root;
   }
 
-  /** 性能 / 塗装のタブを切り替える。塗装を閉じるときは試し塗りを捨てる */
-  private showTab(paint: boolean): void {
-    this.tabs.value = paint ? 'paint' : 'perf';
-    this.perf.hidden = paint;
+  /** 性能 / 強化 / 塗装のタブを切り替える。塗装を閉じるときは試し塗りを捨てる */
+  private showTab(tab: 'perf' | 'upgrades' | 'paint'): void {
+    const paint = tab === 'paint';
+    this.tabs.value = tab;
+    this.perf.hidden = tab !== 'perf';
+    this.upgradePane.hidden = tab !== 'upgrades';
     this.paint.root.hidden = !paint;
     if (!paint) {
       const saved = this.paint.revert();
@@ -154,7 +161,7 @@ export class HangarScreen {
     setScreenShown(this.root, shown);
     if (!shown) {
       this.confirm.close();
-      if (!this.paint.root.hidden) this.showTab(false);
+      if (this.tabs.value !== 'perf') this.showTab('perf');
       return;
     }
     this.notice.textContent = '';

@@ -1,5 +1,6 @@
 // リプレイの一覧（7-B）: モード選択の「リプレイ」から。左に一覧（モード・日付・時間・結果。自動保存は「自動」、名前を付けた
-// 保存は名前）、右に選んだ記録の詳細と操作（再生・名前を付けて保存・名前の変更・書き出し・削除）。下に容量と読み込み・戻る
+// 保存は名前）、右に選んだ記録の詳細と操作（再生・名前を付けて保存・名前の変更・書き出し・削除）。下に容量と読み込み・戻る。
+// 9-9c: 一覧は画面の残りの高さいっぱい（それまでは画面の 56% までで、スマホの横画面では 2〜3 本しか見えなかった。replay.css）
 import { APP_VERSION } from 'virtual:app-info';
 import { formatDateTime } from '../core/format';
 import { t } from '../core/i18n';
@@ -55,8 +56,10 @@ export class ReplayListScreen {
     private readonly h: ReplayListHandlers,
   ) {
     const root = createScreen(parent, 'campaign-screen race-screen replay-screen');
-    el('h2', 'ui-heading campaign-heading', root, t('replay.list.heading'));
-    this.usage = el('div', 'campaign-balance replay-usage', root);
+    // 9-9c: 見出しと容量は 1 つの帯（背の低い画面は 1 行。campaign.css の .campaign-top）
+    const top = el('div', 'campaign-top replay-top', root);
+    el('h2', 'ui-heading campaign-heading', top, t('replay.list.heading'));
+    this.usage = el('div', 'campaign-balance replay-usage', top);
     const layout = el('div', 'race-layout', root);
     this.list = el('div', 'race-course-list replay-list', layout);
     this.detail = el('div', 'race-detail replay-detail', layout);

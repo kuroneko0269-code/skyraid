@@ -54,7 +54,11 @@ export class TutorialList {
     const s = tutorialStrings();
     this.wrap = el('div', 'mode-prompt tutorial-list', root);
     this.wrap.hidden = true;
-    this.listBox = el('div', 'ui-dialog mode-prompt-box mode-prompt-wide', this.wrap);
+    this.listBox = el(
+      'div',
+      'ui-dialog mode-prompt-box mode-prompt-wide tutorial-list-box',
+      this.wrap,
+    );
     el('h3', 'ui-heading mode-prompt-title', this.listBox, s.list.heading);
     el('p', 'mode-prompt-text', this.listBox, s.list.body);
     this.list = el('div', 'tutorial-list-chapters', this.listBox);

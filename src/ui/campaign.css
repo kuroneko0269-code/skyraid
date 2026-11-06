@@ -12,6 +12,14 @@
     max(var(--ui-space-3), var(--ui-safe-bottom)) max(var(--ui-space-3), var(--ui-safe-left));
 }
 
+/*
+ * 9-9c: 枠が 1 つだけの画面（ブリーフィング・結果）は、上下の伸びる空白（screen.css の ::before / ::after）との間に gap を入れない。
+ * 枠が画面の高さいっぱい（max-height: 100%）のとき、その gap の 24px だけ画面ごと縦にスクロールしていた。収まるときの見た目は同じ
+ */
+.screen.campaign-screen:has(> .campaign-panel:only-child) {
+  gap: 0;
+}
+
 .mission-list {
   display: flex;
   flex-direction: column;
@@ -218,6 +226,12 @@
 }
 
 @container app (max-height: 480px) {
+  /* 9-9c: ブリーフィングの上下の余白を詰める（英語で 24px ほど縦にスクロールしていた） */
+  .screen.campaign-screen.briefing-screen {
+    padding-top: max(8px, var(--ui-safe-top));
+    padding-bottom: max(8px, var(--ui-safe-bottom));
+  }
+
   /* 9-7: 8 本を横画面のスマホ（844×390・568×320）に収める: 2 列（左に前半・右に後半）、見出しと残高を 1 行に */
   .screen.campaign-screen.mission-select-screen {
     gap: 6px;

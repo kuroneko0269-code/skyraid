@@ -1,11 +1,47 @@
 /* リプレイ（7-B）: 一覧・再生中の操作バー・リザルトの「リプレイを保存」 */
 
 /* ---- 一覧（リングレースのコース一覧と同じ並び） ---- */
+/*
+ * 9-9c: 画面の高さを使う。画面そのものはスクロールさせず、見出し・下のボタンの残りを一覧と詳細に充てて、一覧はその中で
+ * スクロールする（それまでは一覧が画面の 56%・520px まで、スマホの横画面は画面ごとスクロールして 2〜3 本しか見えなかった）
+ */
+.screen.replay-screen {
+  overflow-y: hidden;
+}
+
+.screen.replay-screen::before,
+.screen.replay-screen::after {
+  flex: 0 0 0;
+}
+
+.screen.replay-screen > .race-layout {
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  min-height: 0;
+}
+
 .replay-list {
-  max-height: min(56cqh, 520px);
+  flex: 1 1 0;
+  min-width: 0;
+  max-height: 100%;
   overflow-y: auto;
   /* 8-6d: 縦だけスクロールする（overflow-y: auto だけだと横も auto になり、中身が数 px 広いと横にずれる） */
   overflow-x: hidden;
+}
+
+/* 一覧の項目は縮めない（入れ物がスクロールする） */
+.replay-list > * {
+  flex-shrink: 0;
+}
+
+.replay-detail {
+  flex: 1 1 0;
+  min-width: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .replay-entry-sub {
@@ -35,6 +71,116 @@
   margin-top: var(--ui-space-2);
   color: var(--ui-text-dim);
   text-align: center;
+}
+
+/*
+ * 背の低い横画面（844×390・568×320）: 見出しと容量を 1 行に、一覧の項目を 2 行（種類・題 / 日時・長さ・結果）に詰める。
+ * 詳細は操作（名前・ボタン）を上に、情報を下に（収まらなければ詳細の中だけスクロール）
+ */
+@container app (max-height: 480px) {
+  .screen.campaign-screen.replay-screen {
+    gap: 6px;
+    padding-top: max(8px, var(--ui-safe-top));
+    padding-bottom: max(8px, var(--ui-safe-bottom));
+  }
+
+  .replay-top .campaign-heading {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .replay-screen > .race-layout {
+    gap: 8px;
+  }
+
+  .replay-list {
+    gap: 6px;
+  }
+
+  .replay-entry.mission-entry {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0 8px;
+    min-height: 0;
+    padding: 4px 10px;
+  }
+
+  .replay-entry .mission-entry-title {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .replay-entry .replay-entry-sub {
+    grid-column: 1 / -1;
+    font-size: 12px;
+  }
+
+  .replay-detail {
+    gap: 4px;
+    padding: 8px 10px;
+  }
+
+  .replay-detail .race-detail-title {
+    font-size: 16px;
+  }
+
+  .replay-detail .replay-name {
+    order: 1;
+    margin-top: 0;
+    min-height: 36px;
+    padding-block: 4px;
+  }
+
+  .replay-detail .replay-actions {
+    order: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 0;
+  }
+
+  .replay-detail .race-facts {
+    order: 3;
+    gap: 2px 10px;
+    font-size: 12px;
+  }
+
+  .replay-detail .replay-warn {
+    order: 4;
+    margin: 0;
+    font-size: 12px;
+  }
+
+  .replay-actions .ui-button {
+    /* 文字に合わせた最小幅（.ui-button の 200px だと 2 列に入らない） */
+    min-width: max-content;
+    min-height: 38px;
+    padding-inline: 6px;
+    font-size: 13px;
+  }
+
+  .replay-message {
+    min-height: 0;
+    margin-top: 0;
+  }
+
+  .replay-screen .campaign-buttons {
+    margin-top: 0;
+  }
+
+  .replay-screen .campaign-buttons .ui-button {
+    min-height: 40px;
+  }
+}
+
+/* 狭くて背の低い画面（568×320）: 詳細の情報は 1 列 */
+@container app (max-width: 600px) and (max-height: 480px) {
+  .replay-detail .race-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ---- 再生中の操作バー（画面の下に小さく） ---- */
