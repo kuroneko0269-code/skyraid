@@ -226,6 +226,8 @@ export class LobbyScreen {
     this.connecting.hidden = view !== 'connecting';
     this.room.root.hidden = view !== 'room';
     this.result.hidden = view !== 'result';
-    this.panel.classList.toggle('is-wide', view === 'room' || view === 'result');
+    // 9-10d: 部屋の画面は画面いっぱい（lobby-room.css）、リザルトは広め
+    this.panel.classList.toggle('is-room', view === 'room');
+    this.panel.classList.toggle('is-result', view === 'result');
   }
 }

@@ -22,7 +22,7 @@ import { TitleScreen } from './title';
 import { InfoEntry } from './info-entry';
 import { SettingsNav } from './settings-nav';
 import { SettingsScreen } from './settings-screen';
-import { modeProgress } from '../progression/mode-progress';
+import { modeProgress, raidBestText } from '../progression/mode-progress';
 import { TutorialEntry } from './tutorial-entry';
 import { MAPS } from '../data/maps';
 import { RAID_MISSION } from '../data/missions-special';
@@ -180,6 +180,8 @@ export class Screens {
       onBack: () => game.transition('title'),
     });
     this.modeSelect.progress = () => modeProgress(save.snapshot, missionIds);
+    // 9-10d: レイドの怪獣選びの自己ベスト（怪獣・難易度ごと）
+    this.modeSelect.raidBest = (kaiju, d) => raidBestText(save.snapshot, kaiju, d);
     this.info = new InfoEntry(parent, this.modeSelect, game);
     this.missionSelect = new MissionSelectScreen(
       parent,

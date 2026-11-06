@@ -547,7 +547,27 @@
       "qrFailed": "QR コードを作れませんでした"
     },
     "optionsAssist": "・狙いの補助 {aim}・自動射撃 {fire}",
-    "protocol": "通信の版 {version}"
+    "protocol": "通信の版 {version}",
+    "room": {
+      "players": "プレイヤー {count} / {max}",
+      "you": "（あなた）",
+      "empty": "部屋コードか QR で招待",
+      "hostOnly": "ホストだけが変えられます",
+      "aircraft": "機体 · {name}",
+      "chat": "定型文",
+      "chatTitle": "定型文を送る",
+      "readyCount": "全員の「準備OK」を待っています（{ready} / {total}）",
+      "title": "{kind} · {detail}",
+      "mapFixed": "マップ {map}（固定）",
+      "code": "部屋コード",
+      "statusReady": "準備OK"
+    },
+    "modeShort": {
+      "ffa": "個人戦",
+      "team": "チーム戦",
+      "raid": "レイド",
+      "defense": "防衛戦"
+    }
   },
   "common": {
     "waves": {
@@ -712,7 +732,8 @@
       "weak": "弱風",
       "strong": "強風"
     },
-    "label": "{time}・{sky}・{wind}"
+    "label": "{time}・{sky}・{wind}",
+    "short": "{time}・{sky}"
   },
   "raid": {
     "difficulty": {
@@ -2019,7 +2040,15 @@
         "settings": "設定"
       },
       "issuesHeading": "この回の直すとよい所",
-      "noIssues": "大きな問題はありません。狙いの補助を弱めたり自動射撃を切ったりして、腕前を比べてみましょう。"
+      "noIssues": "大きな問題はありません。狙いの補助を弱めたり自動射撃を切ったりして、腕前を比べてみましょう。",
+      "goodLabel": "良かった点",
+      "focusFirst": "次の 1 回は 1 番だけを意識してみましょう。",
+      "flaggedNote": "オレンジの枠は、助言に出た指標です",
+      "time": "{seconds} 秒",
+      "noIssuesTitle": "大きな問題はありません",
+      "scoreLabel": "スコア",
+      "thisSettings": "この回の設定: {settings}",
+      "records": "この設定の最高 {settings} · 課題の最高 {drill}"
     },
     "hint": {
       "go": "練習場へ",
@@ -2080,6 +2109,101 @@
         "up": "的は上 {deg}° — 機首を上げ続けて",
         "down": "的は下 {deg}° — 機首を下げ続けて"
       }
+    },
+    "metric": {
+      "count": "{count} 回",
+      "kills": {
+        "label": "撃墜数",
+        "short": "撃墜",
+        "sub": "{seconds} 秒で"
+      },
+      "accuracy": {
+        "label": "命中率",
+        "short": "命中率",
+        "sub": "{hits} / {shots} 発"
+      },
+      "avgKill": {
+        "label": "撃墜までの平均",
+        "short": "撃墜まで",
+        "sub": "{kills} 機の平均",
+        "none": "撃墜なし"
+      },
+      "overtakes": {
+        "label": "追い越した回数",
+        "short": "追い越し",
+        "sub": "射程の内で前へ出た"
+      },
+      "offRange": {
+        "label": "射程外で撃った割合",
+        "short": "射程外",
+        "sub": "撃った時間のうち"
+      },
+      "offAim": {
+        "label": "照準の外で撃った割合",
+        "short": "照準の外",
+        "sub": "撃った時間のうち"
+      },
+      "offScreen": {
+        "label": "敵が画面の外にいた時間",
+        "short": "画面の外",
+        "sub": "追った時間の {ratio}",
+        "none": "対象なし"
+      },
+      "overshoot": {
+        "label": "行き過ぎて戻した回数",
+        "short": "行き過ぎ",
+        "sub": "1 分あたり {perMinute} 回"
+      }
+    },
+    "issueCard": {
+      "noShots": "撃てていません",
+      "overtake": "速すぎて追い越しています",
+      "offRange": "射程の外で撃っています",
+      "lost": "的を見失いがちです",
+      "offAim": "照準の外で撃っています",
+      "overshoot": "狙いが行き過ぎています",
+      "noKills": "撃墜まであと一息です",
+      "slowKill": "撃墜に時間がかかっています"
+    },
+    "issueFix": {
+      "noShots": {
+        "auto": "的の先の○に機首の印（-○-）を重ねると、○が白く光って自動で撃ちます。",
+        "manual": "的の先の○に機首の印（-○-）を重ね、○が白く光ったら撃ちましょう。"
+      },
+      "overtake": {
+        "off": "近づいたらスロットルを下げるか、設定の「速度合わせ」を ON にしましょう。",
+        "on": "機首を的へ向けたまま近づくと速度合わせが効きます。横から近づくときはスロットルを下げましょう。",
+        "manual": "1km を切ったらスロットルを半分より下げましょう。"
+      },
+      "offRange": {
+        "auto": "OUT OF RANGE が出たら撃つのをやめて近づきましょう。自動射撃なら射程（1.5km）の内だけで撃ちます。",
+        "manual": "○が実線になる 1.5km より内に入ってから撃ちましょう。"
+      },
+      "lost": {
+        "all": "画面の端の矢印の方へ曲がり続けて、的を前に戻しましょう。"
+      },
+      "offAim": {
+        "all": "機首の印を○に重ねて、○が白く光ってから撃ちましょう。"
+      },
+      "overshoot": {
+        "touch": "近づいたら小さく倒しましょう（感度のカーブ 2.0・狙いの補助「強」も試せます）。",
+        "all": "近づいたら小さく動かしましょう。"
+      },
+      "noKills": {
+        "all": "的の後ろから 1km ほどまで近づき、○が白く光ってから撃ちましょう。"
+      },
+      "slowKill": {
+        "all": "的の後ろへ回り込んでから近づくと早く落とせます。"
+      }
+    },
+    "goodCard": {
+      "accuracy": "よく狙えています",
+      "fastKills": "速く落とせています",
+      "noOvertake": "一度も追い越さずに付いていけました",
+      "inRange": "射程の内で撃てています",
+      "onScreen": "的を前に捉え続けられています",
+      "kills": "{kills} 機撃墜できました",
+      "tried": "最後まで的を追いかけました"
     }
   },
   "daily": {
@@ -2521,5 +2645,75 @@
       "pct": "{n}%"
     },
     "done": "済"
+  },
+  "raidSelect": {
+    "back": "‹ 戻る",
+    "kaijuLabel": "怪獣",
+    "size": "大きさ",
+    "motion": "動き方",
+    "parts": "部位",
+    "attacks": "攻撃",
+    "opening": "攻めどき",
+    "difficulty": "難易度",
+    "lives": "残機 {count}",
+    "best": "自己ベスト {time}",
+    "noBest": "自己ベスト —",
+    "coopNote": "部屋を作るか、部屋コードで参加（難易度はホストが選ぶ）",
+    "kaiju": {
+      "vorgas": {
+        "tagline": "海から上陸する二足の巨獣",
+        "size": "全高 約 145m",
+        "motion": "湾から上陸し、街へ歩く",
+        "parts": "頭・結晶・両脚・尾",
+        "opening": "脚を壊すと 15 秒ダウンして止まります。熱線は横へ逃げ、咆哮は高度 600m 以上かフレアで防げます。",
+        "hard": "高難度: HP ×1.4・予兆が短い・最終フェーズ 3.5 分・報酬 ×1.8",
+        "normal": "通常: 最終フェーズ 5.5 分",
+        "attacks": {
+          "sweep": {
+            "name": "薙ぎ払い",
+            "note": "尾で 1 回転。足元の近く"
+          },
+          "roar": {
+            "name": "咆哮",
+            "note": "近くの機体を 2 秒止める"
+          },
+          "beam": {
+            "name": "熱線",
+            "note": "口から直線。予兆あり"
+          },
+          "throw": {
+            "name": "投擲",
+            "note": "岩を放物線で投げる"
+          }
+        }
+      },
+      "nephirga": {
+        "tagline": "嵐をまとう翼竜",
+        "size": "翼開長 240m",
+        "motion": "周りを飛び、疲れると高所で休む",
+        "parts": "両翼・頭・尾（胴は壊れない）",
+        "opening": "止まり木で休む間はダメージ ×1.25。急降下の後と、部位を壊して怯む 3 秒も狙いどき。",
+        "hard": "高難度: 体力 ×1.3・嵐 4 分・全体 10 分・報酬 ×1.8",
+        "normal": "通常: 嵐 4.5 分・全体 12 分",
+        "attacks": {
+          "orb": {
+            "name": "雷球",
+            "note": "見越して追ってくる"
+          },
+          "gust": {
+            "name": "突風",
+            "note": "翼の前方を押し流す"
+          },
+          "dive": {
+            "name": "急降下",
+            "note": "段階 2 から。後に隙"
+          },
+          "tail": {
+            "name": "尾",
+            "note": "近くを打ち払う"
+          }
+        }
+      }
+    }
   }
 }

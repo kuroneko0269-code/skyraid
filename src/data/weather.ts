@@ -211,6 +211,15 @@ export function weatherLabel(id: string): string {
   });
 }
 
+/** 9-10d: 短い名前（時間帯・空。ロビーのボタン。風は空で決まるので省く） */
+export function weatherShortLabel(id: string): string {
+  const p = findWeather(id);
+  return t('weather.short', {
+    time: TIME_OF_DAY_CONFIG[p.time].label,
+    sky: SKY_KIND_CONFIG[p.sky].label,
+  });
+}
+
 /**
  * キャンペーンのミッションごとの天候（固定）。M1 昼・M2 早朝・M3 曇り・M4 夕方・M5 夜・雨・9-7: M6 夜・快晴・M7 早朝・霧・
  * M8 曇り（始め。嵐の段階で雨、撃破で夕方・快晴へ移るのは src/ui/kaiju2-finale.ts）。

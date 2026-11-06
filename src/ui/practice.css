@@ -46,48 +46,6 @@
   min-height: 40px;
 }
 
-/* 結果: スコアの下に助言（9-5c: 問題を優先度順に最大 3 つ・良かった点） */
-.practice-advice {
-  margin: 0;
-  padding: 8px 12px;
-  font: 500 14px/1.45 var(--ui-font-body);
-  color: var(--ui-text);
-  background: var(--ui-bg);
-  border-left: 3px solid var(--ui-accent);
-}
-
-.practice-advice-heading {
-  font: 600 12px/1.3 var(--ui-font-body);
-  color: var(--ui-text-dim);
-}
-
-.practice-issues {
-  margin: 4px 0 6px;
-  padding-left: 1.4em;
-}
-
-.practice-issue {
-  font-weight: 600;
-}
-
-.practice-issue + .practice-issue {
-  margin-top: 3px;
-}
-
-.practice-issue.is-none {
-  list-style: none;
-  margin-left: -1.4em;
-}
-
-.practice-good {
-  margin: 0;
-  color: var(--ui-accent);
-}
-
-.practice-result-screen .campaign-panel {
-  width: min(720px, 100%);
-}
-
 /* ポーズ: 設定の欄は右の列の「練習場の設定」のタブ（9-9c。pause.ts） */
 .pause-extra[hidden] {
   display: none;
@@ -111,11 +69,6 @@
 @container app (max-height: 480px) {
   .practice-lead {
     font-size: 12px;
-  }
-
-  .practice-advice {
-    padding: 6px 10px;
-    font-size: 12.5px;
   }
 
   .practice-settings-grid .settings-item {

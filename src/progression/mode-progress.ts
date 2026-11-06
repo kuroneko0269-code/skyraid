@@ -1,6 +1,7 @@
 // モード選択のカードに小さく出す進捗（7-D。Three.js・DOM 非依存）: キャンペーンのクリア数・レースのランクの数・
 // 防衛戦の最高波・レイドの最速・練習場（9-5）の課題ごとの最高スコア。記録がなければ出さない（キャンペーンは 0/5 を出す）
-import { NEPHIRGA_ID } from '../data/raid-kaiju';
+import { NEPHIRGA_ID, raidRecordKey, type RaidKaijuId } from '../data/raid-kaiju';
+import type { RaidDifficulty } from '../data/raid';
 import { t } from '../core/i18n';
 import { PRACTICE_DRILLS } from '../data/practice';
 import { RANKS } from '../data/ranking';
@@ -48,4 +49,14 @@ export function modeProgress(
       scores: bests.map((b) => (b === undefined ? '—' : String(b))).join(' / '),
     });
   return out;
+}
+
+/** 9-10d: レイドの怪獣選びの自己ベスト（怪獣・難易度ごとの撃破までの最短。記録なしは null） */
+export function raidBestText(
+  save: Pick<Readonly<SaveData>, 'records'>,
+  kaiju: RaidKaijuId,
+  difficulty: RaidDifficulty,
+): string | null {
+  const ms = save.records.raidBestMs[raidRecordKey(kaiju, difficulty)];
+  return ms === undefined ? null : formatMinutes(ms);
 }

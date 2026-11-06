@@ -18,7 +18,6 @@ import { ByteReader, ByteWriter } from '../src/net/codec';
 import { readSettings, writeSettings } from '../src/net/codec-lobby';
 import type { GameSettings } from '../src/net/protocol';
 import { replayControls, type ReplayHeader } from '../src/replay/types';
-import { optionsSummary } from '../src/ui/lobby-controls';
 import { arenaForce } from './ai-sim';
 import { DEG, IDENTITY } from './combat-helpers';
 
@@ -181,13 +180,6 @@ describe('ネット対戦の部屋の補正（ロビー）', () => {
       writeSettings(w, s);
       expect(readSettings(new ByteReader(w.finish()))).toEqual(s);
     }
-  });
-
-  it('補正の 1 行: 個人戦・チーム戦は狙いの補助・自動射撃も出す（協力は出さない）', () => {
-    const ffa = optionsSummary({ ...base, aimAssist: true });
-    expect(ffa).toContain('狙いの補助 ON');
-    expect(ffa).toContain('自動射撃 OFF');
-    expect(optionsSummary({ ...base, mode: 'raid' })).not.toContain('狙いの補助');
   });
 });
 

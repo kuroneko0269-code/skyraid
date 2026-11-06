@@ -549,7 +549,27 @@
       "qrFailed": "Couldn't create the QR code"
     },
     "optionsAssist": " · Aim assist+ {aim} · Auto-fire {fire}",
-    "protocol": "Protocol v{version}"
+    "protocol": "Protocol v{version}",
+    "room": {
+      "players": "Players {count} / {max}",
+      "you": " (you)",
+      "empty": "Invite with the room code or QR",
+      "hostOnly": "Only the host can change these",
+      "aircraft": "Aircraft · {name}",
+      "chat": "Quick chat",
+      "chatTitle": "Send a quick message",
+      "readyCount": "Waiting for everyone to be ready ({ready} / {total})",
+      "title": "{kind} · {detail}",
+      "mapFixed": "Map: {map} (fixed)",
+      "code": "Room code",
+      "statusReady": "READY"
+    },
+    "modeShort": {
+      "ffa": "FFA",
+      "team": "Team",
+      "raid": "Raid",
+      "defense": "Defense"
+    }
   },
   "common": {
     "waves": {
@@ -715,7 +735,8 @@
       "weak": "Breezy",
       "strong": "Windy"
     },
-    "label": "{time} · {sky} · {wind}"
+    "label": "{time} · {sky} · {wind}",
+    "short": "{time} · {sky}"
   },
   "raid": {
     "difficulty": {
@@ -2037,7 +2058,15 @@
         "settings": "Settings"
       },
       "issuesHeading": "What to fix next time",
-      "noIssues": "No big problems. Try a lower aim assist or auto-fire off to measure your skill."
+      "noIssues": "No big problems. Try a lower aim assist or auto-fire off to measure your skill.",
+      "goodLabel": "Well done",
+      "focusFirst": "Next run, focus on just No. 1.",
+      "flaggedNote": "Orange frames are the stats behind the advice",
+      "time": "{seconds} s",
+      "noIssuesTitle": "No big problems",
+      "scoreLabel": "Score",
+      "thisSettings": "This run: {settings}",
+      "records": "Best for this setting {settings} · Drill best {drill}"
     },
     "hint": {
       "go": "Practice Range",
@@ -2098,6 +2127,101 @@
         "up": "Target {deg}° up — keep pulling up",
         "down": "Target {deg}° down — keep pushing down"
       }
+    },
+    "metric": {
+      "count": "{count}",
+      "kills": {
+        "label": "Kills",
+        "short": "Kills",
+        "sub": "in {seconds} s"
+      },
+      "accuracy": {
+        "label": "Accuracy",
+        "short": "Accuracy",
+        "sub": "{hits} / {shots} rounds"
+      },
+      "avgKill": {
+        "label": "Average time to kill",
+        "short": "Per kill",
+        "sub": "average of {kills}",
+        "none": "No kills"
+      },
+      "overtakes": {
+        "label": "Flew past targets",
+        "short": "Flew past",
+        "sub": "within range"
+      },
+      "offRange": {
+        "label": "Fired out of range",
+        "short": "Out of range",
+        "sub": "of firing time"
+      },
+      "offAim": {
+        "label": "Fired off target",
+        "short": "Off target",
+        "sub": "of firing time"
+      },
+      "offScreen": {
+        "label": "Enemy off-screen",
+        "short": "Off-screen",
+        "sub": "{ratio} of the chase",
+        "none": "No target"
+      },
+      "overshoot": {
+        "label": "Overshoots",
+        "short": "Overshoots",
+        "sub": "{perMinute} per minute"
+      }
+    },
+    "issueCard": {
+      "noShots": "You didn't fire",
+      "overtake": "Too fast: flying past",
+      "offRange": "Firing out of range",
+      "lost": "Losing sight of the target",
+      "offAim": "Firing off target",
+      "overshoot": "Overshooting the aim",
+      "noKills": "Almost a kill",
+      "slowKill": "Kills are taking long"
+    },
+    "issueFix": {
+      "noShots": {
+        "auto": "Put the nose mark (-○-) on the circle ahead; it glows white and fires on its own.",
+        "manual": "Put the nose mark (-○-) on the circle ahead and fire when it glows white."
+      },
+      "overtake": {
+        "off": "Lower the throttle as you close in, or turn on Speed match in Settings.",
+        "on": "Keep your nose on the target as you close so Speed match works. From the side, lower the throttle.",
+        "manual": "Under 1 km, keep the throttle below half."
+      },
+      "offRange": {
+        "auto": "When OUT OF RANGE shows, stop and close in. Auto-fire only shoots within 1.5 km.",
+        "manual": "Get within 1.5 km, where the circle turns solid, before firing."
+      },
+      "lost": {
+        "all": "Keep turning toward the edge arrow to bring the target back in front."
+      },
+      "offAim": {
+        "all": "Put the nose mark on the circle and fire once it glows white."
+      },
+      "overshoot": {
+        "touch": "Use small stick movements up close (try curve 2.0 or High aim assist).",
+        "all": "Use small movements up close."
+      },
+      "noKills": {
+        "all": "Get within about 1 km behind the target and fire once the circle glows white."
+      },
+      "slowKill": {
+        "all": "Swing in behind the target before closing in to finish faster."
+      }
+    },
+    "goodCard": {
+      "accuracy": "Nice aiming",
+      "fastKills": "Quick kills",
+      "noOvertake": "Never flew past the target",
+      "inRange": "Fired within range",
+      "onScreen": "Kept the target in front",
+      "kills": "{kills} kills",
+      "tried": "Chased the target to the end"
     }
   },
   "daily": {
@@ -2541,5 +2665,75 @@
       "pct": "{n}%"
     },
     "done": "Done"
+  },
+  "raidSelect": {
+    "back": "‹ Back",
+    "kaijuLabel": "Kaiju",
+    "size": "Size",
+    "motion": "Movement",
+    "parts": "Parts",
+    "attacks": "Attacks",
+    "opening": "When to strike",
+    "difficulty": "Difficulty",
+    "lives": "Lives {count}",
+    "best": "Best {time}",
+    "noBest": "Best —",
+    "coopNote": "Create a room or join with a code (the host picks the difficulty)",
+    "kaiju": {
+      "vorgas": {
+        "tagline": "A two-legged titan rising from the sea",
+        "size": "~145 m tall",
+        "motion": "Walks from the bay to the city",
+        "parts": "Head, crystal, legs, tail",
+        "opening": "Break a leg: it goes down for 15 s. Dodge the beam sideways; flare or fly above 600 m to resist the roar.",
+        "hard": "Hard: HP ×1.4, shorter tells, 3.5-min final phase, reward ×1.8",
+        "normal": "Normal: 5.5-min final phase",
+        "attacks": {
+          "sweep": {
+            "name": "Sweep",
+            "note": "Tail spin near its feet"
+          },
+          "roar": {
+            "name": "Roar",
+            "note": "Stuns nearby planes 2 s"
+          },
+          "beam": {
+            "name": "Heat beam",
+            "note": "Straight line; has a tell"
+          },
+          "throw": {
+            "name": "Throw",
+            "note": "Hurls a rock in an arc"
+          }
+        }
+      },
+      "nephirga": {
+        "tagline": "A storm-clad wyvern",
+        "size": "240 m wingspan",
+        "motion": "Circles you; rests when tired",
+        "parts": "Wings, head, tail (body holds)",
+        "opening": "×1.25 damage while perched. Strike after a dive, or in the 3 s it flinches when a part breaks.",
+        "hard": "Hard: HP ×1.3, 4-min storm, 10-min limit, reward ×1.8",
+        "normal": "Normal: 4.5-min storm, 12-min limit",
+        "attacks": {
+          "orb": {
+            "name": "Lightning orb",
+            "note": "Leads and homes in"
+          },
+          "gust": {
+            "name": "Gust",
+            "note": "Pushes planes ahead of it"
+          },
+          "dive": {
+            "name": "Dive",
+            "note": "From stage 2; opens a gap"
+          },
+          "tail": {
+            "name": "Tail",
+            "note": "Swipes nearby planes"
+          }
+        }
+      }
+    }
   }
 }

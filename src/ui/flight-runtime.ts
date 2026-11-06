@@ -47,6 +47,8 @@ export function startFlightRuntime(p: FlightRuntimeParts): {
   photo: PhotoEntry;
   /** 描画フレームごとに呼ぶ関数を足す（9-6a: ネフィルガ） */
   onRender: (fn: (alpha: number) => void) => void;
+  /** 描画の 1 フレーム（9-10d: 怪獣の画像を描く ?dev=kaiju-art がカメラを置く） */
+  frame: FlightFrame;
 } {
   const { game, screens, race, defense, practice, replayHub, simWorld, pvp, touch } = p;
   const startFlight = createFlightStarter({
@@ -161,5 +163,6 @@ export function startFlightRuntime(p: FlightRuntimeParts): {
     onRender: (fn) => {
       loop.onRender(fn);
     },
+    frame,
   };
 }

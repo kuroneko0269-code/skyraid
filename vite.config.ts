@@ -85,12 +85,15 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        // 9-10d: レイドの怪獣選びの画像（public/kaiju-art/*.webp）もオフラインで出す
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,ico,webmanifest}'],
         // 8-2 の事前修正: 環境変数なしのビルドではオンライン連携（Supabase）のチャンクは読まないのでプリキャッシュしない
         // （判定はアプリの src/ui/online-link.ts と同じ readOnlineEnv）
         // 9-6a: ?dev=<名前> の開発中の機能のチャンク（kaiju2-dev）も遊ぶ人は読まないのでプリキャッシュしない
         globIgnores: [
           '**/assets/kaiju2-dev-*',
+          // 9-10d: ?dev=kaiju-art（怪獣の画像を描く開発用の部品）も同じ
+          '**/assets/kaiju-art-*',
           ...(readOnlineEnv(loadEnv(mode, root, 'VITE_')) ? [] : ['**/assets/online-app-*']),
         ],
         // 8-2: 遅延読み込みのチャンク（PvP・怪獣・フォトモード・リプレイ・情報画面）もすべてプリキャッシュする（オフラインで

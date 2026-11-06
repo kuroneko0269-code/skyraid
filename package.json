@@ -1,7 +1,7 @@
 {
   "name": "skyraid",
   "private": true,
-  "version": "1.0.19",
+  "version": "1.0.20",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,8 @@
     "perf": "npm run build && node scripts/perf.js",
     "unused": "knip",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "render-kaiju-art": "node scripts/render-kaiju-art.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

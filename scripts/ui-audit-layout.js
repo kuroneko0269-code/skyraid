@@ -1,5 +1,6 @@
 /* global console, document, innerHeight, innerWidth, process, getComputedStyle */
-// 画面の配置の点検（9-9c）: 記録カードの画面・リプレイの一覧（見本の記録 14 本）・練習場の結果を 844×390・568×320 で開き、
+// 画面の配置の点検（9-9c）: 記録カードの画面・リプレイの一覧（見本の記録 14 本）・練習場の結果（9-10d: レイドの怪獣選び・ロビーの
+// 部屋の画面も）を 844×390・568×320 で開き、
 // 主な要素の位置と大きさ・縦にスクロールする入れ物を測って PNG を撮る（変更の前後の比べ用）。
 // 使い方: 開発サーバーを立ててから `node scripts/ui-audit-layout.js <出力先> [URL] [--lang en]`（結果は <出力先>/layout.json）
 import { CONTEXT_LOCALE } from './audit-lang.js';
@@ -7,7 +8,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { pickBrowsers } from './audit-browsers.js';
 import { seed, shown, throttleMenuFrames } from './audit-helpers.js';
 import { openReplaySample } from './audit-samples.js';
-import { openCardSample, openPracticeResultSample } from './ui-audit-screens.js';
+import { openCardSample, openLobbySample, openPracticeResultSample } from './ui-audit-screens.js';
 
 const argv = process.argv.slice(2);
 const positional = argv.filter((a, i) => !a.startsWith('--') && argv[i - 1] !== '--lang');
@@ -106,7 +107,7 @@ const CASES = [
       settings: '.practice-result-screen.is-shown .practice-settings',
       buttons: '.practice-result-screen.is-shown .campaign-buttons',
     },
-    tabs: ['settings'],
+    tabs: ['stats', 'settings'],
   },
 ];
 
@@ -128,6 +129,20 @@ CASES.push(
     },
     tabs: ['records', 'aircraft'],
   },
+  // 9-10d: レイドの怪獣選び（ネフィルガ・高難度も）
+  {
+    name: 'raid',
+    open: viaModeSelect('.mode-card[data-mode="raid"]'),
+    root: '.raid-select-wrap:not([hidden])',
+    selectors: {
+      art: '.raid-select .raid-art',
+      info: '.raid-select .raid-info',
+      attacks: '.raid-select .raid-attacks',
+      difficulty: '.raid-select .raid-difficulty',
+      actions: '.raid-select .raid-actions',
+    },
+    tabs: ['nephirga', 'hard'],
+  },
   {
     name: 'hangar',
     open: viaModeSelect('.mode-tile[data-mode="hangar"]'),
@@ -136,6 +151,26 @@ CASES.push(
     tabs: ['upgrades'],
   },
 );
+// 9-10d: ロビーの部屋の画面（見本。ホスト・参加者・チーム戦・協力レイド・協力防衛戦）
+for (const variant of ['host-ffa', 'guest-ffa', 'host-team', 'host-raid', 'guest-defense'])
+  CASES.push({
+    name: `lobby-${variant}`,
+    open: async (page) => {
+      await page.locator('.title-screen').click({ position: { x: 40, y: 150 } });
+      await shown(page, '.mode-select-screen');
+      await openLobbySample(page, variant);
+    },
+    root: '.lobby-screen.is-shown',
+    selectors: {
+      top: '.lobby-screen.is-shown .lobby-top',
+      code: '.lobby-screen.is-shown .lobby-code',
+      seats: '.lobby-screen.is-shown .lobby-seat-list',
+      config: '.lobby-screen.is-shown .lobby-config',
+      bottom: '.lobby-screen.is-shown .lobby-bottom',
+      main: '.lobby-screen.is-shown .lobby-main:not([hidden])',
+    },
+    tabs: variant === 'host-ffa' || variant === 'guest-defense' ? ['options'] : [],
+  });
 if (process.env.ONLY)
   CASES.splice(
     0,
