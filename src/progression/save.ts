@@ -19,6 +19,7 @@ import { dropGhosts, normalizeRaces, type RaceRecord } from './save-races';
 import { defaultSkins, normalizeSkins, type SaveSkins } from './save-skins';
 import { defaultRecords, normalizeRecords, type SaveRecords } from './save-records';
 import { defaultBadges, normalizeBadges, type SaveBadges } from './badges';
+import { defaultStats, normalizeStats, type SaveStats } from './stats';
 
 export { type SaveSettings } from './save-settings';
 
@@ -88,6 +89,8 @@ export interface SaveData {
   records: SaveRecords;
   /** 勲章（9-10。v10 から）: 取った段階ごとの時刻と、記録からのさかのぼりのお知らせを出した印 */
   badges: SaveBadges;
+  /** 通算の記録（9-10b。v11 から）: 撃墜・出撃・成功・飛行時間・距離・機動などの数（progression/stats.ts） */
+  stats: SaveStats;
 }
 
 export function initialUpgrades(): UpgradeLevels {
@@ -112,6 +115,7 @@ export function createInitialSave(): SaveData {
     skins: defaultSkins(),
     records: defaultRecords(),
     badges: defaultBadges(),
+    stats: defaultStats(),
   };
 }
 
@@ -133,6 +137,7 @@ const V1_STARTER_ID = 'starter';
  * - v9 → v10（9-10）: 勲章（badges）を空で足す（記録から取れる勲章は起動の判定でさかのぼって付く: progression/badges.ts）。
  *   版を上げたのは、勲章を知らない古いアプリ（Service Worker のキャッシュ・別の端末）がセーブを読み直して書いたときに
  *   勲章が消えないようにするため（新しい版のセーブは書かない: 9-6a の事前修正）
+ * - v10 → v11（9-10b）: 通算の記録（stats）を空で足す（この版を入れた日から数える。勲章・記録・クレジットはそのまま）
  * 難易度の一度だけの normal → easy（4-11 の事前修正）は版によらず normalizeSettings で（印 settings.difficultyEased）
  */
 export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
@@ -194,6 +199,7 @@ export const SAVE_MIGRATIONS: Readonly<Record<number, (data: Json) => Json>> = {
   7: (d) => ({ ...d, version: 8, skins: defaultSkins() }),
   8: (d) => ({ ...d, version: 9, records: defaultRecords() }),
   9: (d) => ({ ...d, version: 10, badges: defaultBadges() }),
+  10: (d) => ({ ...d, version: 11, stats: defaultStats() }),
 };
 
 /**
@@ -261,6 +267,7 @@ export function normalizeSave(d: Json): SaveData | null {
   save.skins = normalizeSkins(d.skins);
   save.records = normalizeRecords(d.records);
   save.badges = normalizeBadges(d.badges);
+  save.stats = normalizeStats(d.stats);
   return save;
 }
 

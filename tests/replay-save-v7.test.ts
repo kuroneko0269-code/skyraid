@@ -6,7 +6,7 @@ import { createInitialSave, migrateSave } from '../src/progression/save';
 
 describe('セーブ v6 → v7', () => {
   it('古いゴーストを捨て、ベスト・ランク・完走回数は残す', () => {
-    expect(SAVE_CONFIG.version).toBe(10);
+    expect(SAVE_CONFIG.version).toBe(11);
     const v7 = createInitialSave();
     const entry = {
       time: 50.5,

@@ -8,7 +8,33 @@ import { NEPHIRGA_ID } from '../../data/raid-kaiju';
 import type { ReplayControls, ReplayStart } from '../../replay/types';
 import { freeExtraOf } from '../free-extra';
 import type { GamePlay } from '../game-play';
+import type { CombatTarget } from '../../combat/target';
+import type { PlayerWeapon } from '../../combat/kill-feed';
+import { killKindOf } from './kill-kind';
 import { ManeuverWatch } from './maneuvers';
+
+/** 補助の段（9-10b）: 組の かんたん / ふつう / むずかしい に合わせた 3 段。キーボード・パッドは「むずかしい」 */
+export type AssistLevel = 'easy' | 'normal' | 'hard';
+
+/**
+ * 記録の操作の設定（始めた時点）の補助の段: タッチは自動射撃・速度合わせ・狙いの補助「強」のどれかで「かんたん」、
+ * 狙いの補助「標準」で「ふつう」、「弱」で「むずかしい」（組と同じ値ならその組。カスタムも同じ規則）。
+ * キーボード（補助なし）・パッド（狙いの補助「弱」だけ）は「むずかしい」。設定の無い記録（9-2 より前）は null
+ */
+export function assistLevelOf(c: Readonly<ReplayControls> | null | undefined): AssistLevel | null {
+  if (!c) return null;
+  if (c.device !== 'touch') return 'hard';
+  const aim = c.aimAssist ?? 'normal';
+  if (c.autoFire === true || c.speedMatch === true || aim === 'strong') return 'easy';
+  return aim === 'normal' ? 'normal' : 'hard';
+}
+
+/** 補助の段の低い方（始めと終わりの設定・飛行中の自動射撃） */
+export function lowerAssist(a: AssistLevel | null, b: AssistLevel | null): AssistLevel | null {
+  if (a === null || b === null) return null;
+  const order: readonly AssistLevel[] = ['easy', 'normal', 'hard'];
+  return order[Math.min(order.indexOf(a), order.indexOf(b))] ?? null;
+}
 
 /**
  * 補助の組「ふつう」以上か（記録の操作の設定 = 始めた時点）: キーボード（補助なし）・パッド（狙いの補助「弱」だけ）はそのまま、
@@ -16,10 +42,8 @@ import { ManeuverWatch } from './maneuvers';
  * 設定の無い記録（9-2 より前）は数えない
  */
 export function assistQualifies(c: Readonly<ReplayControls> | null | undefined): boolean {
-  if (!c) return false;
-  if (c.device !== 'touch') return true;
-  const aim = c.aimAssist ?? 'normal';
-  return (aim === 'weak' || aim === 'normal') && c.autoFire !== true && c.speedMatch !== true;
+  const level = assistLevelOf(c);
+  return level !== null && level !== 'easy';
 }
 
 /** 1 回の飛行の数え（固定ステップの後に step） */
@@ -31,6 +55,12 @@ export class SortieWatch {
   ordnanceUsed = false;
   /** 自動射撃で撃った（記録の印 8。補助の判定に使う） */
   autoFired = false;
+  /** 9-10b: 落とした対象の数（「w.武器」「t.種類」「wt.武器.種類」→ 数）・飛行時間（秒）・距離（m） */
+  killCounts: Record<string, number> = {};
+  flightSeconds = 0;
+  flightMeters = 0;
+  /** 数えている飛行の間だけ撃墜を受ける（リプレイの再生・記録しない飛行では数えない） */
+  private live = false;
   private kills = 0;
   private fighters = 0;
   private missiles = 0;
@@ -44,7 +74,24 @@ export class SortieWatch {
     this.missileUsed = false;
     this.ordnanceUsed = false;
     this.autoFired = false;
+    this.killCounts = {};
+    this.flightSeconds = 0;
+    this.flightMeters = 0;
+    this.live = true;
     this.keep(play);
+  }
+
+  /** 飛行の終わり（ここから後の撃墜は数えない） */
+  end(): void {
+    this.live = false;
+  }
+
+  /** プレイヤーが落とした（CombatSystem.onPlayerKill から。固定ステップの中） */
+  kill(target: CombatTarget, weapon: PlayerWeapon): void {
+    if (!this.live) return;
+    const kind = killKindOf(target);
+    for (const k of [`w.${weapon}`, `t.${kind}`, `wt.${weapon}.${kind}`])
+      this.killCounts[k] = (this.killCounts[k] ?? 0) + 1;
   }
 
   /** 固定ステップの後。autoFire はこのステップの引き金が自動射撃からか（記録の flags の 8） */
@@ -64,6 +111,10 @@ export class SortieWatch {
       },
       dt,
     );
+    if (s.player.active) {
+      this.flightSeconds += dt;
+      this.flightMeters += Math.max(0, st.speed) * dt;
+    }
     const kills = c.kills - this.kills;
     const fighters = s.destroyedCount('enemyFighter') - this.fighters;
     if (kills > 0 && fighters > 0) this.fighterKills += Math.min(kills, fighters);
@@ -142,6 +193,8 @@ export interface MatchSummary {
   readonly players: number;
   /** PvP で勝った（個人戦の 1 位・チーム戦の勝ったチーム） */
   readonly pvpWin: boolean;
+  /** 9-10b: 自分の撃墜数（PvP の通算の記録） */
+  readonly kills: number;
 }
 
 export function judgeMatch(m: Readonly<MatchSummary>): string[] {

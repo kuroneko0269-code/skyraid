@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { createCombatInput } from '../src/combat/combat-input';
 import { createControls } from '../src/entities/aircraft';
 import { judgeSortie, SortieWatch } from '../src/missions/badges/sortie';
+import { tallySortie } from '../src/missions/badges/tally';
 import { ReplayPlayer } from '../src/replay/player';
 import { ReplayRecorder } from '../src/replay/recorder';
 import { applyFrame, captureFrame, simHash, startFromHeader, stepWorld } from '../src/replay/sim';
@@ -65,6 +66,10 @@ function recordWithBadges(
     startHash: simHash(w),
   });
   const watch = new SortieWatch();
+  // 9-10b: 本番（ui/badge-link.ts）と同じく、落とした対象と武器を受ける
+  w.play.session.combat.killFeed.on((target, weapon) => {
+    watch.kill(target, weapon);
+  });
   watch.begin(w.play);
   const controls = createControls();
   const input = createCombatInput();
@@ -87,6 +92,9 @@ function replayWithBadges(data: ReplayData): { watch: SortieWatch; hash: string;
   const w = createWorld();
   const player = new ReplayPlayer(w, data, w.controls);
   const watch = new SortieWatch();
+  w.play.session.combat.killFeed.on((target, weapon) => {
+    watch.kill(target, weapon);
+  });
   player.onStep = (tick) => {
     const flags = data.channels[FLAGS]?.[tick - 1] ?? 0;
     watch.step(w.play, DT, (flags & 8) !== 0);
@@ -105,6 +113,12 @@ describe('勲章のリプレイ', () => {
     expect(rec.watch.maneuvers.done.has('loop')).toBe(true);
     const assist = true;
     const liveIds = judgeSortie(start, live.play, rec.watch, assist);
+    const liveTally = tallySortie(start, live.play, rec.watch, 'hard');
+    expect(liveTally.stats.sortie).toBe(1);
+    expect(liveTally.stats['sortie.m.free']).toBe(1);
+    expect(liveTally.stats['mv.loop']).toBeGreaterThanOrEqual(1);
+    expect(liveTally.stats.time).toBeGreaterThan(30);
+    expect(liveTally.stats.dist).toBeGreaterThan(1000);
     // 2 回再生して同じ
     for (let k = 0; k < 2; k++) {
       const r = replayWithBadges(rec.data);
@@ -115,6 +129,8 @@ describe('勲章のリプレイ', () => {
       expect(judgeSortie(rec.data.header, r.w.play, r.watch, assist).sort()).toEqual(
         [...liveIds].sort(),
       );
+      // 9-10b: 通算の記録に足す分（撃墜の武器・種類・飛行時間・距離・機動の回数）も同じ
+      expect(tallySortie(rec.data.header, r.w.play, r.watch, 'hard')).toEqual(liveTally);
     }
   });
 

@@ -53,7 +53,7 @@ function freshStore(): { store: SaveStore; storage: FakeStorage } {
 
 describe('セーブ v5 → v6', () => {
   it('v5 のデータにレースの記録（空）を足す。ほかはそのまま', () => {
-    expect(SAVE_CONFIG.version).toBe(10);
+    expect(SAVE_CONFIG.version).toBe(11);
     const v6 = createInitialSave();
     const v5: Record<string, unknown> = { ...v6, version: 5, credits: 1234, pilotName: 'ACE' };
     delete v5.races;

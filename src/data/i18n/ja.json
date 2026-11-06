@@ -2162,14 +2162,17 @@
       "practice": "練習場",
       "daily": "日替わり",
       "coop": "協力",
-      "pvp": "PvP"
+      "pvp": "PvP",
+      "career": "通算",
+      "collect": "集め"
     },
     "toast": {
       "earned": "勲章を獲得: {names}（+{credits}）",
       "backfill": "これまでの記録から勲章を {count} 個付けました: {names}（+{credits}）",
       "more": " ほか {count} 個",
       "separator": "・",
-      "tiered": "{name}（{tier}）"
+      "tiered": "{name}（{tier}）",
+      "milestone": "勲章 {count} 個の節目"
     },
     "items": {
       "loop": {
@@ -2289,6 +2292,271 @@
       "pvpKills": {
         "name": "撃墜王",
         "note": "PvP で累計 25 機を撃墜する"
+      }
+    },
+    "collect": {
+      "name": "勲章コレクター {pct}%",
+      "note": "勲章（集めを除く）の {pct}% を取る"
+    },
+    "words": {
+      "diff": {
+        "normal": "通常",
+        "hard": "高難度"
+      },
+      "assist": {
+        "normal": "補助の組「ふつう」以上",
+        "hard": "補助の組「むずかしい」"
+      },
+      "assistShort": {
+        "normal": "補助ふつう",
+        "hard": "補助むずかしい"
+      }
+    },
+    "filter": {
+      "group": "カテゴリ",
+      "status": "状態",
+      "allGroups": "全カテゴリ",
+      "allStatuses": "全状態"
+    },
+    "status": {
+      "earned": "取った",
+      "progress": "進行中",
+      "none": "未着手"
+    },
+    "sort": {
+      "label": "並び",
+      "default": "標準",
+      "recent": "取った日",
+      "progress": "進み具合",
+      "name": "名前",
+      "option": "並び: {name}"
+    },
+    "shown": "{count} 件",
+    "overview": "取得 {earned} / {total}（{pct}%）",
+    "milestone": "次の節目まで あと {left} 個（+{credits}）",
+    "milestoneDone": "節目の報酬はすべて受け取りました",
+    "hidden": "？？？",
+    "hiddenNote": "隠し勲章（取ると名前と条件が分かります）",
+    "detail": {
+      "condition": "条件",
+      "progress": "進み具合",
+      "earned": "取った日",
+      "reward": "報酬",
+      "notEarned": "まだ取っていません",
+      "group": "カテゴリ"
+    },
+    "since": "通算の記録は {date} から数えています",
+    "sinceNone": "通算の記録はこの版から数えます（これまでの分は 0 から）",
+    "empty": "該当する勲章はありません",
+    "pick": "一覧から勲章を選ぶと詳細が出ます",
+    "rewardOnce": "{credits}（取ったときに 1 回）",
+    "list": "勲章の一覧",
+    "ladder": {
+      "kill": {
+        "name": "撃墜 {n}",
+        "note": "キャンペーン・レイド・防衛戦で通算 {n} 機・基を撃墜・破壊する"
+      },
+      "killGun": {
+        "name": "機銃 {n}",
+        "note": "機銃で通算 {n} 機・基を撃墜・破壊する（キャンペーン・レイド・防衛戦）"
+      },
+      "killMissile": {
+        "name": "ミサイル {n}",
+        "note": "ミサイルで通算 {n} 機・基を撃墜・破壊する（キャンペーン・レイド・防衛戦）"
+      },
+      "killRocket": {
+        "name": "ロケット {n}",
+        "note": "ロケットで通算 {n} 機・基を撃墜・破壊する（キャンペーン・レイド・防衛戦）"
+      },
+      "killBomb": {
+        "name": "爆撃 {n}",
+        "note": "爆弾で通算 {n} 機・基を破壊する（キャンペーン・レイド・防衛戦）"
+      },
+      "killFighter": {
+        "name": "空戦 {n}",
+        "note": "敵の戦闘機を通算 {n} 機撃墜する（キャンペーン・レイド・防衛戦）"
+      },
+      "killBomber": {
+        "name": "爆撃機狩り {n}",
+        "note": "爆撃機を通算 {n} 機撃墜する"
+      },
+      "killCruise": {
+        "name": "迎撃 {n}",
+        "note": "巡航ミサイルを通算 {n} 発撃ち落とす"
+      },
+      "killGround": {
+        "name": "対地攻撃 {n}",
+        "note": "地上目標（対空砲も）を通算 {n} 基破壊する"
+      },
+      "killHard": {
+        "name": "高難度の撃墜 {n}",
+        "note": "レイド・防衛戦の高難度とフリーフライトの敵「むずかしい」で通算 {n} 機・基を撃墜・破壊する"
+      },
+      "killFree": {
+        "name": "フリーフライト撃墜 {n}",
+        "note": "フリーフライトで通算 {n} 機を撃墜する"
+      },
+      "noHit": {
+        "name": "無傷の帰還 {n}",
+        "note": "キャンペーン（M1 を除く）・レイドを被弾なしで通算 {n} 回クリアする"
+      },
+      "noDown": {
+        "name": "生還 {n}",
+        "note": "キャンペーン（M1 を除く）・レイドを撃墜されずに通算 {n} 回クリアする"
+      },
+      "mvLoop": {
+        "name": "宙返り {n}",
+        "note": "宙返りを通算 {n} 回する"
+      },
+      "mvImmelmann": {
+        "name": "インメルマン {n}",
+        "note": "インメルマンを通算 {n} 回する"
+      },
+      "mvLowPass": {
+        "name": "低空飛行 {n}",
+        "note": "低空飛行（30m 未満・200 m/s 以上を 8 秒）を通算 {n} 回する"
+      },
+      "mvInverted": {
+        "name": "背面飛行 {n}",
+        "note": "背面飛行（10 秒）を通算 {n} 回する"
+      },
+      "mvTopSpeed": {
+        "name": "最高速 {n}",
+        "note": "速さ 430 m/s を通算 {n} 回超える"
+      },
+      "sortie": {
+        "name": "出撃 {n}",
+        "note": "通算 {n} 回出撃する（記録する飛行のすべてのモード）"
+      },
+      "win": {
+        "name": "成功 {n}",
+        "note": "通算 {n} 回成功する（ミッション・レイドの成功・レースの完走・防衛戦の全波・練習場 / 日替わりを最後まで）"
+      },
+      "time": {
+        "name": "飛行時間 {n} 時間",
+        "note": "通算 {n} 時間飛ぶ"
+      },
+      "dist": {
+        "name": "飛行距離 {n} km",
+        "note": "通算 {n} km 飛ぶ"
+      },
+      "ac": {
+        "name": "{aircraft} {n}",
+        "note": "{aircraft} で通算 {n} 回出撃する"
+      },
+      "winNormal": {
+        "name": "補助ふつうで成功 {n}",
+        "note": "補助の組「ふつう」以上で通算 {n} 回成功する"
+      },
+      "winHard": {
+        "name": "補助むずかしいで成功 {n}",
+        "note": "補助の組「むずかしい」（キーボード・パッドも）で通算 {n} 回成功する"
+      },
+      "sortieMission": {
+        "name": "キャンペーン出撃 {n}",
+        "note": "キャンペーンに通算 {n} 回出撃する"
+      },
+      "sortieRaid": {
+        "name": "レイド出撃 {n}",
+        "note": "ソロのレイドに通算 {n} 回出撃する"
+      },
+      "parts": {
+        "name": "部位破壊 {n}",
+        "note": "レイド・M5・M8 で怪獣の部位を通算 {n} か所壊す（ソロ）"
+      },
+      "sortieRace": {
+        "name": "レース出走 {n}",
+        "note": "リングレースに通算 {n} 回出走する"
+      },
+      "ring": {
+        "name": "リング {n}",
+        "note": "リングを通算 {n} 個くぐる（日替わりの周回も）"
+      },
+      "sortieDefense": {
+        "name": "防衛戦出撃 {n}",
+        "note": "ソロの防衛戦に通算 {n} 回出撃する"
+      },
+      "waves": {
+        "name": "防衛 {n} 波",
+        "note": "ソロの防衛戦で通算 {n} 波を守り切る"
+      },
+      "sortiePractice": {
+        "name": "練習 {n}",
+        "note": "練習場で通算 {n} 回飛ぶ"
+      },
+      "killTarget": {
+        "name": "的あて {n}",
+        "note": "的・ドローンを通算 {n} 個落とす（練習場・日替わり・フリーフライト）"
+      },
+      "dailyDays": {
+        "name": "日替わり {n} 日",
+        "note": "日替わりを通算 {n} 日遊ぶ（続けなくてよい）"
+      },
+      "coopClear": {
+        "name": "協力クリア {n}",
+        "note": "協力のレイドか防衛戦を通算 {n} 回クリアする"
+      },
+      "coop2": {
+        "name": "2 人でクリア {n}",
+        "note": "2 人の協力で通算 {n} 回クリアする"
+      },
+      "coop3": {
+        "name": "3 人でクリア {n}",
+        "note": "3 人の協力で通算 {n} 回クリアする"
+      },
+      "coop4": {
+        "name": "4 人でクリア {n}",
+        "note": "4 人の協力で通算 {n} 回クリアする"
+      },
+      "pvpPlay": {
+        "name": "PvP 参戦 {n}",
+        "note": "PvP を通算 {n} 回遊ぶ（2 人以上）"
+      },
+      "pvpWin": {
+        "name": "PvP 勝利 {n}",
+        "note": "PvP で通算 {n} 回勝つ"
+      },
+      "pvpKill": {
+        "name": "PvP 撃墜 {n}",
+        "note": "PvP で通算 {n} 機撃墜する（9-10b の版から数える）"
+      }
+    },
+    "combo": {
+      "raidClear": {
+        "name": "{kaiju}・{diff}",
+        "note": "ソロのレイドで{kaiju}を{diff}で倒す"
+      },
+      "raidTimed": {
+        "name": "{kaiju}・{diff}・速攻",
+        "note": "ソロのレイドで{kaiju}を{diff}で 7 分未満で倒す"
+      },
+      "raidNoHit": {
+        "name": "{kaiju}・{diff}・無傷",
+        "note": "ソロのレイドで{kaiju}を{diff}で被弾なしで倒す"
+      },
+      "raidNoDown": {
+        "name": "{kaiju}・{diff}・不沈",
+        "note": "ソロのレイドで{kaiju}を{diff}で一度も撃墜されずに倒す"
+      },
+      "raidAssistHard": {
+        "name": "{kaiju}・{diff}・補助むずかしい",
+        "note": "ソロのレイドで{kaiju}を{diff}・補助の組「むずかしい」（キーボード・パッドも）で倒す"
+      },
+      "missionS": {
+        "name": "{mission}・{aircraft}・S",
+        "note": "キャンペーン「{mission}」を {aircraft} で S にする"
+      },
+      "missionSAssist": {
+        "name": "{mission}・{assistShort}・S",
+        "note": "キャンペーン「{mission}」を{assist}で S にする"
+      },
+      "courseGold": {
+        "name": "{course}・{aircraft}・ゴールド",
+        "note": "リングレース「{course}」を {aircraft} でゴールド（S）で完走する"
+      },
+      "defenseClear": {
+        "name": "防衛 {map}・{diff}",
+        "note": "ソロの防衛戦「{map}」を{diff}で 10 波守り切る"
       }
     }
   }

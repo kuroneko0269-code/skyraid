@@ -4,6 +4,12 @@
 // 最初の起動でさかのぼって付く（backfilled はそのお知らせを 1 回だけ出す印）。
 // 飛行の中の出来事から取るもの（操縦・戦い）は src/missions/badges/ が判定し、ここの awardBadges で入れる
 import { BADGE_CONFIG, BADGES, badgeTiers, findBadge, type BadgeDef } from '../data/badges';
+import { BADGE_REWARDS, comboId } from '../data/badges-catalog';
+import { statShown } from '../data/badges-text';
+import { DEFENSE_DIFFICULTIES, DEFENSE_MAPS } from '../data/defense';
+import { RAID_DIFFICULTIES, RAID_RULES } from '../data/raid';
+import { RAID_KAIJU_IDS, raidRecordKey } from '../data/raid-kaiju';
+import { statSum } from './stats';
 import { COURSES } from '../data/courses';
 import { DAILY_KINDS } from '../data/daily';
 import { DEFENSE_CONFIG } from '../data/defense';
@@ -25,10 +31,12 @@ export interface SaveBadges {
   earned: Record<string, number[]>;
   /** 記録からのさかのぼりのお知らせを出した（v10 に移した直後の最初の判定で立てる） */
   backfilled: boolean;
+  /** 9-10b: 払った節目の数（勲章を BADGE_REWARDS.milestoneEvery 個取るごとに 1 つ） */
+  milestones: number;
 }
 
 export function defaultBadges(): SaveBadges {
-  return { earned: {}, backfilled: false };
+  return { earned: {}, backfilled: false, milestones: 0 };
 }
 
 /** 読み込んだ値を確かめる（知らない勲章・壊れた時刻は捨てる） */
@@ -36,6 +44,8 @@ export function normalizeBadges(raw: unknown): SaveBadges {
   const out = defaultBadges();
   if (!isObject(raw)) return out;
   out.backfilled = raw.backfilled === true;
+  if (typeof raw.milestones === 'number' && Number.isInteger(raw.milestones) && raw.milestones > 0)
+    out.milestones = raw.milestones;
   if (!isObject(raw.earned)) return out;
   for (const [id, v] of Object.entries(raw.earned)) {
     const def = findBadge(id);
@@ -55,11 +65,12 @@ export function earnedTier(b: Readonly<SaveBadges>, id: string): number {
   return b.earned[id]?.length ?? 0;
 }
 
-/** 新しく取った勲章の段階 */
+/** 新しく取った勲章の段階（9-10b: milestone は節目の報酬。そのときの id は空・milestone に取った数） */
 export interface BadgeAward {
   readonly id: string;
   readonly tier: number;
   readonly credits: number;
+  readonly milestone?: number;
 }
 
 /**
@@ -158,7 +169,49 @@ export function recordBadges(data: Readonly<SaveData>): Record<string, RecordBad
     dailyStreak: countTiers(r.daily.streak.count, BADGE_CONFIG.dailyStreak),
     dailyAll: countTiers(DAILY_KINDS.filter((k) => dailyKinds.has(k)).length, [DAILY_KINDS.length]),
     pvpKills: countTiers(data.skins.pvpKills, [BADGE_CONFIG.pvpKills]),
+    ...extraRecordBadges(data),
   };
+}
+
+/**
+ * 9-10b: 通算の記録の段階の数え・記録からさかのぼれる組み合わせ（怪獣 × 難易度のクリアと時間内・防衛戦のマップ × 難易度）・集め
+ */
+function extraRecordBadges(data: Readonly<SaveData>): Record<string, RecordBadge> {
+  const out: Record<string, RecordBadge> = {};
+  const r = data.records;
+  for (const def of BADGES) {
+    const s = def.stat;
+    if (!s) continue;
+    const value = statSum(data.stats, s.keys);
+    const done = value >= s.goal;
+    out[def.id] = {
+      tier: done ? 1 : 0,
+      progress: done ? null : { current: Math.min(statShown(s, value), s.shown), goal: s.shown },
+    };
+  }
+  // 速攻: 報酬の時間ボーナスの最も速い段（7 分未満）と同じ
+  const fast = RAID_RULES.reward.timeBonus[0].underSeconds * 1000;
+  for (const kaiju of RAID_KAIJU_IDS) {
+    for (const diff of RAID_DIFFICULTIES) {
+      const best = r.raidBestMs[raidRecordKey(kaiju, diff)];
+      out[comboId.raidClear(kaiju, diff)] = yes(best !== undefined);
+      out[comboId.raidTimed(kaiju, diff)] = yes(best !== undefined && best < fast);
+    }
+  }
+  for (const m of DEFENSE_MAPS)
+    for (const diff of DEFENSE_DIFFICULTIES)
+      out[comboId.defenseClear(m.mapId, diff)] = yes(
+        (r.defenseWaves[`${m.mapId}:${diff}`] ?? 0) >= DEFENSE_CONFIG.waves,
+      );
+  // 集め: 集め以外の勲章のうち取った数
+  const pool = BADGES.filter((d) => d.collect === undefined);
+  const have = pool.filter((d) => earnedTier(data.badges, d.id) > 0).length;
+  for (const def of BADGES) {
+    if (def.collect === undefined) continue;
+    const goal = Math.ceil(pool.length * def.collect);
+    out[def.id] = countTiers(have, [goal]);
+  }
+  return out;
 }
 
 /**
@@ -166,10 +219,48 @@ export function recordBadges(data: Readonly<SaveData>): Record<string, RecordBad
  * 新しく取った段階を返す
  */
 export function syncRecordBadges(data: SaveData, at: number): BadgeAward[] {
-  const wins = Object.entries(recordBadges(data))
-    .filter(([id, b]) => b.tier > earnedTier(data.badges, id))
-    .map(([id, b]) => ({ id, tier: b.tier }));
-  return wins.length > 0 ? awardBadges(data, wins, at) : [];
+  const out: BadgeAward[] = [];
+  // 集めは取った数で決まるので、新しく取らなくなるまで繰り返す（割合は 4 段なので数回で止まる）
+  for (let pass = 0; pass < 6; pass++) {
+    const wins = Object.entries(recordBadges(data))
+      .filter(([id, b]) => b.tier > earnedTier(data.badges, id))
+      .map(([id, b]) => ({ id, tier: b.tier }));
+    if (wins.length === 0) break;
+    out.push(...awardBadges(data, wins, at));
+  }
+  out.push(...awardMilestones(data));
+  return out;
+}
+
+/** 9-10b: 節目の報酬（勲章を milestoneEvery 個取るごと）。払っていない節目をまとめて払う */
+export function awardMilestones(data: SaveData): BadgeAward[] {
+  const out: BadgeAward[] = [];
+  const earned = badgeTotals(data.badges).earned;
+  const due = Math.floor(earned / BADGE_REWARDS.milestoneEvery);
+  while (data.badges.milestones < due) {
+    data.badges.milestones++;
+    const credits = BADGE_REWARDS.milestone;
+    data.credits = addCredits(data.credits, credits);
+    out.push({
+      id: '',
+      tier: 1,
+      credits,
+      milestone: data.badges.milestones * BADGE_REWARDS.milestoneEvery,
+    });
+  }
+  return out;
+}
+
+/** 次の節目（取った数・あと何個・報酬） */
+export function nextMilestone(b: Readonly<SaveBadges>): {
+  at: number;
+  left: number;
+  credits: number;
+} {
+  const earned = badgeTotals(b).earned;
+  const every = BADGE_REWARDS.milestoneEvery;
+  const at = (Math.floor(earned / every) + 1) * every;
+  return { at, left: at - earned, credits: BADGE_REWARDS.milestone };
 }
 
 /** 一覧の数え: 取った勲章の数と全部の数、取った段階の数と全部の数 */

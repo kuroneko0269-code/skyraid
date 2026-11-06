@@ -2182,14 +2182,17 @@
       "practice": "Practice",
       "daily": "Daily",
       "coop": "Co-op",
-      "pvp": "PvP"
+      "pvp": "PvP",
+      "career": "Career",
+      "collect": "Collection"
     },
     "toast": {
       "earned": "Badge earned: {names} (+{credits})",
       "backfill": "Awarded {count} badges from your past records: {names} (+{credits})",
       "more": " and {count} more",
       "separator": ", ",
-      "tiered": "{name} ({tier})"
+      "tiered": "{name} ({tier})",
+      "milestone": "{count}-badge milestone"
     },
     "items": {
       "loop": {
@@ -2309,6 +2312,271 @@
       "pvpKills": {
         "name": "Ace of Aces",
         "note": "Shoot down 25 players in PvP in total"
+      }
+    },
+    "collect": {
+      "name": "Collector {pct}%",
+      "note": "Earn {pct}% of all badges (Collection excluded)"
+    },
+    "words": {
+      "diff": {
+        "normal": "Normal",
+        "hard": "Hard"
+      },
+      "assist": {
+        "normal": "Normal assist or less",
+        "hard": "Hard assist"
+      },
+      "assistShort": {
+        "normal": "Normal Assist",
+        "hard": "Hard Assist"
+      }
+    },
+    "filter": {
+      "group": "Category",
+      "status": "Status",
+      "allGroups": "All categories",
+      "allStatuses": "All statuses"
+    },
+    "status": {
+      "earned": "Earned",
+      "progress": "In progress",
+      "none": "Not started"
+    },
+    "sort": {
+      "label": "Sort",
+      "default": "Default",
+      "recent": "Recent",
+      "progress": "Progress",
+      "name": "Name",
+      "option": "Sort: {name}"
+    },
+    "shown": "{count} shown",
+    "overview": "Earned {earned} / {total} ({pct}%)",
+    "milestone": "Next milestone: {left} more (+{credits})",
+    "milestoneDone": "All milestone rewards collected",
+    "hidden": "???",
+    "hiddenNote": "Hidden badge (name and condition revealed when earned)",
+    "detail": {
+      "condition": "Condition",
+      "progress": "Progress",
+      "earned": "Earned",
+      "reward": "Reward",
+      "notEarned": "Not earned yet",
+      "group": "Category"
+    },
+    "since": "Career stats counted since {date}",
+    "sinceNone": "Career stats start counting from this version (earlier play counts as 0)",
+    "empty": "No badges match",
+    "pick": "Pick a badge from the list to see details",
+    "rewardOnce": "{credits} (once, when earned)",
+    "list": "Badge list",
+    "ladder": {
+      "kill": {
+        "name": "Kills {n}",
+        "note": "Destroy {n} enemies in total in Campaign, Raid and Defense"
+      },
+      "killGun": {
+        "name": "Guns {n}",
+        "note": "Destroy {n} enemies with guns (Campaign, Raid, Defense)"
+      },
+      "killMissile": {
+        "name": "Missiles {n}",
+        "note": "Destroy {n} enemies with missiles (Campaign, Raid, Defense)"
+      },
+      "killRocket": {
+        "name": "Rockets {n}",
+        "note": "Destroy {n} enemies with rockets (Campaign, Raid, Defense)"
+      },
+      "killBomb": {
+        "name": "Bombs {n}",
+        "note": "Destroy {n} enemies with bombs (Campaign, Raid, Defense)"
+      },
+      "killFighter": {
+        "name": "Dogfighter {n}",
+        "note": "Down {n} enemy fighters (Campaign, Raid, Defense)"
+      },
+      "killBomber": {
+        "name": "Bomber Hunter {n}",
+        "note": "Down {n} bombers"
+      },
+      "killCruise": {
+        "name": "Interceptor {n}",
+        "note": "Shoot down {n} cruise missiles"
+      },
+      "killGround": {
+        "name": "Ground Strike {n}",
+        "note": "Destroy {n} ground targets (AA guns included)"
+      },
+      "killHard": {
+        "name": "Hard Kills {n}",
+        "note": "Destroy {n} enemies on Hard (Raid, Defense, Free Flight)"
+      },
+      "killFree": {
+        "name": "Free Flight Kills {n}",
+        "note": "Down {n} enemies in Free Flight"
+      },
+      "noHit": {
+        "name": "Untouched {n}",
+        "note": "Clear Campaign (except M1) or Raid without taking damage {n} times"
+      },
+      "noDown": {
+        "name": "Survivor {n}",
+        "note": "Clear Campaign (except M1) or Raid without being shot down {n} times"
+      },
+      "mvLoop": {
+        "name": "Loops {n}",
+        "note": "Fly {n} loops"
+      },
+      "mvImmelmann": {
+        "name": "Immelmanns {n}",
+        "note": "Fly {n} Immelmann turns"
+      },
+      "mvLowPass": {
+        "name": "Low Passes {n}",
+        "note": "Fly {n} low passes (below 30 m at 200 m/s+ for 8 s)"
+      },
+      "mvInverted": {
+        "name": "Inverted {n}",
+        "note": "Fly inverted for 10 s, {n} times"
+      },
+      "mvTopSpeed": {
+        "name": "Top Speed {n}",
+        "note": "Exceed 430 m/s {n} times"
+      },
+      "sortie": {
+        "name": "Sorties {n}",
+        "note": "Fly {n} sorties (any recorded mode)"
+      },
+      "win": {
+        "name": "Successes {n}",
+        "note": "Succeed {n} times (mission/raid clear, race finish, all waves, full practice/daily run)"
+      },
+      "time": {
+        "name": "Flight Time {n} h",
+        "note": "Fly for {n} hours in total"
+      },
+      "dist": {
+        "name": "Distance {n} km",
+        "note": "Fly {n} km in total"
+      },
+      "ac": {
+        "name": "{aircraft} {n}",
+        "note": "Fly {n} sorties in the {aircraft}"
+      },
+      "winNormal": {
+        "name": "Normal Assist Wins {n}",
+        "note": "Succeed {n} times with Normal assist or less"
+      },
+      "winHard": {
+        "name": "Hard Assist Wins {n}",
+        "note": "Succeed {n} times with Hard assist (keyboard/gamepad count)"
+      },
+      "sortieMission": {
+        "name": "Campaign Sorties {n}",
+        "note": "Fly {n} Campaign sorties"
+      },
+      "sortieRaid": {
+        "name": "Raid Sorties {n}",
+        "note": "Fly {n} solo raids"
+      },
+      "parts": {
+        "name": "Part Breaker {n}",
+        "note": "Break {n} kaiju parts (solo Raid, M5, M8)"
+      },
+      "sortieRace": {
+        "name": "Races {n}",
+        "note": "Run {n} ring races"
+      },
+      "ring": {
+        "name": "Rings {n}",
+        "note": "Pass {n} rings (daily laps included)"
+      },
+      "sortieDefense": {
+        "name": "Defense Sorties {n}",
+        "note": "Fly {n} solo Defense sorties"
+      },
+      "waves": {
+        "name": "Waves {n}",
+        "note": "Hold {n} waves in solo Defense"
+      },
+      "sortiePractice": {
+        "name": "Practice {n}",
+        "note": "Fly {n} practice runs"
+      },
+      "killTarget": {
+        "name": "Targets {n}",
+        "note": "Hit down {n} targets and drones (Practice, Daily, Free Flight)"
+      },
+      "dailyDays": {
+        "name": "Daily {n} Days",
+        "note": "Play the Daily on {n} days (need not be in a row)"
+      },
+      "coopClear": {
+        "name": "Co-op Clears {n}",
+        "note": "Clear {n} co-op raids or defenses"
+      },
+      "coop2": {
+        "name": "Duo Clears {n}",
+        "note": "Clear {n} times with 2 players"
+      },
+      "coop3": {
+        "name": "Trio Clears {n}",
+        "note": "Clear {n} times with 3 players"
+      },
+      "coop4": {
+        "name": "Squad Clears {n}",
+        "note": "Clear {n} times with 4 players"
+      },
+      "pvpPlay": {
+        "name": "PvP Matches {n}",
+        "note": "Play {n} PvP matches (2+ players)"
+      },
+      "pvpWin": {
+        "name": "PvP Wins {n}",
+        "note": "Win {n} PvP matches"
+      },
+      "pvpKill": {
+        "name": "PvP Kills {n}",
+        "note": "Down {n} players in PvP (counted from this version)"
+      }
+    },
+    "combo": {
+      "raidClear": {
+        "name": "{kaiju} · {diff}",
+        "note": "Defeat {kaiju} on {diff} in a solo raid"
+      },
+      "raidTimed": {
+        "name": "{kaiju} · {diff} · Blitz",
+        "note": "Defeat {kaiju} on {diff} in under 7 minutes (solo)"
+      },
+      "raidNoHit": {
+        "name": "{kaiju} · {diff} · Untouched",
+        "note": "Defeat {kaiju} on {diff} without taking damage (solo)"
+      },
+      "raidNoDown": {
+        "name": "{kaiju} · {diff} · Unsinkable",
+        "note": "Defeat {kaiju} on {diff} without being shot down (solo)"
+      },
+      "raidAssistHard": {
+        "name": "{kaiju} · {diff} · Hard Assist",
+        "note": "Defeat {kaiju} on {diff} with Hard assist (keyboard/gamepad count, solo)"
+      },
+      "missionS": {
+        "name": "{mission} · {aircraft} · S",
+        "note": "Get S on “{mission}” in the {aircraft}"
+      },
+      "missionSAssist": {
+        "name": "{mission} · {assistShort} · S",
+        "note": "Get S on “{mission}” with {assist}"
+      },
+      "courseGold": {
+        "name": "{course} · {aircraft} · Gold",
+        "note": "Finish “{course}” with Gold (S) in the {aircraft}"
+      },
+      "defenseClear": {
+        "name": "Defense {map} · {diff}",
+        "note": "Hold all 10 waves of “{map}” on {diff} (solo)"
       }
     }
   }

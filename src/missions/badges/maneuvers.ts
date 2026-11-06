@@ -28,6 +28,15 @@ export interface ManeuverSample {
 export class ManeuverWatch {
   /** 取った操縦（飛行 1 回の中で） */
   readonly done = new Set<Maneuver>();
+  /** 9-10b: 操縦ごとの回数（通算の記録。低空・背面は続けた 1 回ごと、最高速は超えるたび） */
+  readonly counts: Record<Maneuver, number> = {
+    loop: 0,
+    immelmann: 0,
+    lowPass: 0,
+    inverted: 0,
+    topSpeed: 0,
+  };
+  private fast = false;
   private readonly f = vec3();
   private readonly u = vec3();
   private readonly r = vec3();
@@ -50,6 +59,7 @@ export class ManeuverWatch {
   /** 飛行の始め */
   reset(): void {
     this.done.clear();
+    for (const m of MANEUVERS) this.counts[m] = 0;
     this.hasPrev = false;
     this.restart();
   }
@@ -73,7 +83,11 @@ export class ManeuverWatch {
       this.hasPrev = s.active;
       return;
     }
-    if (s.speed >= c.topSpeed) this.done.add('topSpeed');
+    if (s.speed >= c.topSpeed) {
+      this.done.add('topSpeed');
+      if (!this.fast) this.counts.topSpeed++;
+      this.fast = true;
+    } else if (s.speed < c.topSpeed - c.topSpeedRearm) this.fast = false;
     this.stepLow(s, dt);
     this.stepInverted(s, dt);
     this.stepPitch(p, dt);
@@ -93,20 +107,25 @@ export class ManeuverWatch {
     this.resetPitch(0);
     this.lowTime = 0;
     this.invTime = 0;
+    this.fast = false;
   }
 
   private stepLow(s: ManeuverSample, dt: number): void {
     const c = BADGE_CONFIG.lowPass;
+    const before = this.lowTime;
     if (s.agl > 0 && s.agl < c.maxAglM && s.speed >= c.minSpeed) this.lowTime += dt;
     else this.lowTime = 0;
     if (this.lowTime >= c.seconds) this.done.add('lowPass');
+    if (before < c.seconds && this.lowTime >= c.seconds) this.counts.lowPass++;
   }
 
   private stepInverted(s: ManeuverSample, dt: number): void {
     const c = BADGE_CONFIG.inverted;
+    const before = this.invTime;
     if (this.u.y <= c.upY && s.agl >= c.minAglM) this.invTime += dt;
     else this.invTime = 0;
     if (this.invTime >= c.seconds) this.done.add('inverted');
+    if (before < c.seconds && this.invTime >= c.seconds) this.counts.inverted++;
   }
 
   /** 機首を上げる向きの回転を足し、宙返り・インメルマンを見る */
@@ -135,6 +154,7 @@ export class ManeuverWatch {
     if (this.sawUp && this.sawInverted && this.f.y <= c.loop.noseDown) this.sawDown = true;
     if (this.pitch >= c.loop.pitchDeg && this.sawUp && this.sawInverted && this.sawDown) {
       this.done.add('loop');
+      this.counts.loop++;
       this.resetPitch(p.y);
       return;
     }
@@ -151,6 +171,7 @@ export class ManeuverWatch {
     const dot = (this.f.x * this.startHeading.x + this.f.z * this.startHeading.z) / h;
     if (dot <= c.reverse && p.y - this.startY >= c.climbM) {
       this.done.add('immelmann');
+      this.counts.immelmann++;
       this.resetPitch(p.y);
     }
   }
