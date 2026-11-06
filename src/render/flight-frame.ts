@@ -88,6 +88,12 @@ export class FlightFrame {
     this.aircraftMesh = p.playerView.mesh;
   }
 
+  /** 10-1: 起動の殻（app.ts）がタイトルの背景を描いてきた続きから（島の周りの時間・前のフレームの時刻） */
+  continueFrom(clock: { worldTime: number; lastFrameMs: number | null }): void {
+    this.worldTime = clock.worldTime;
+    this.lastFrameMs = clock.lastFrameMs;
+  }
+
   /** 描画フレーム 1 回分。menuTick は固定更新が止まっている間（タイトル・メニュー・ポーズ）の入力 */
   render(state: ScreenState, alpha: number, menuTick: () => void): void {
     const p = this.p;

@@ -5,6 +5,7 @@ import { ISLAND_MAP } from '../src/data/maps';
 import { QUALITY_PRESETS } from '../src/data/quality';
 import { ActiveMap } from '../src/missions/active-map';
 import { World } from '../src/render/scene';
+import { CityView } from '../src/render/city/city-view';
 import { createHeightField } from '../src/render/terrain-height';
 
 // Node の API（@types/node は入れていないので、使う分だけ型を書く）
@@ -58,6 +59,7 @@ describe('マップの切り替え', () => {
   it('描画（地形のチャンク・水深と海岸線のテクスチャ・木・街）も作り直し、街は港湾都市だけ', () => {
     const scene = new Scene();
     const world = new World(scene, 5000);
+    world.createCity = (b, n) => new CityView(b, n);
     world.applyQuality(QUALITY_PRESETS.medium);
     const map = new ActiveMap();
     map.onChange((m) => {
@@ -78,6 +80,7 @@ describe('マップの切り替え', () => {
   it('10 回切り替えても（描画を含めて）メモリの増加は 50MB 以内', async () => {
     const gc = await gcFn();
     const world = new World(new Scene(), 5000);
+    world.createCity = (b, n) => new CityView(b, n);
     world.applyQuality(QUALITY_PRESETS.medium);
     const map = new ActiveMap();
     map.onChange((m) => {

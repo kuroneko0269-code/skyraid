@@ -49,13 +49,17 @@ const renderer = createRenderer(container);
 if (!renderer) {
   showCompatNotice(document.body, webglProblem(probeWebGL(document)));
 } else {
-  try {
-    startApp(renderer);
-    // ?debug=viewport・タイトルの版の表示を 5 回押す: 画面の大きさの値を左上に（8-6d）
-    installViewportDebug(document.querySelector('.title-version'));
-  } catch (e) {
+  const startFailed = (e: unknown): void => {
     console.error(e);
     renderer.domElement.remove();
     showCompatNotice(document.body, 'start-failed', String(e).slice(0, 200));
+  };
+  try {
+    // 10-1: 本体（game-app.ts）は遅延チャンク。組み立ての例外は startFailed で同じ案内
+    startApp(renderer, startFailed);
+    // ?debug=viewport・タイトルの版の表示を 5 回押す: 画面の大きさの値を左上に（8-6d）
+    installViewportDebug(document.querySelector('.title-version'));
+  } catch (e) {
+    startFailed(e);
   }
 }
