@@ -6,14 +6,15 @@ import { parseChangelog } from '../src/core/changelog';
 import { DATA_POLICY } from '../src/data/data-policy';
 
 describe('版と更新履歴', () => {
-  it('版は 1.0.20（9-10d 画面の作り直し）', () => {
-    expect(APP_VERSION).toBe('1.0.20');
+  it('版は 1.1.0（9-11b フェーズ 9 の公開）', () => {
+    expect(APP_VERSION).toBe('1.1.0');
   });
 
-  it('更新履歴は新しい順に 1.0.20・1.0.19・1.0.18・1.0.17・1.0.16・1.0.15・1.0.14・1.0.13・1.0.12・1.0.11・1.0.10・1.0.9・1.0.8・1.0.7・1.0.6・1.0.5・1.0.4・1.0.3・1.0.2・1.0.1・1.0.0・0.9.0〜0.1.0、各版 3〜5 行', () => {
+  it('更新履歴は新しい順に 1.1.0・1.0.20・1.0.19・1.0.18・1.0.17・1.0.16・1.0.15・1.0.14・1.0.13・1.0.12・1.0.11・1.0.10・1.0.9・1.0.8・1.0.7・1.0.6・1.0.5・1.0.4・1.0.3・1.0.2・1.0.1・1.0.0・0.9.0〜0.1.0、各版 3〜5 行（1.1.0 はフェーズ 9 のまとめで 5〜8 行）', () => {
     const entries = parseChangelog(changelogText);
     const versions = entries.map((e) => /^(\d+\.\d+\.\d+)/.exec(e.title)?.[1]);
     expect(versions).toEqual([
+      '1.1.0',
       '1.0.20',
       '1.0.19',
       '1.0.18',
@@ -46,8 +47,9 @@ describe('版と更新履歴', () => {
       '0.1.0',
     ]);
     for (const e of entries) {
-      expect(e.items.length, e.title).toBeGreaterThanOrEqual(3);
-      expect(e.items.length, e.title).toBeLessThanOrEqual(5);
+      const phase = e.title.startsWith('1.1.0');
+      expect(e.items.length, e.title).toBeGreaterThanOrEqual(phase ? 5 : 3);
+      expect(e.items.length, e.title).toBeLessThanOrEqual(phase ? 8 : 5);
     }
   });
 });

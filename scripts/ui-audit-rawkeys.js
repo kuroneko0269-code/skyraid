@@ -1,10 +1,11 @@
-/* global document */
+/* global document, process */
 // 公開前の点検（9-11b）: 全ミッション・全モードの画面に文言のキーがそのまま出ていないか（「objectives.wave」の形。
 // scripts/audit-rawkeys.js）。`node scripts/ui-audit.js <出力先> --release [--lang en]` の rawKeys。844×390 のタッチ端末で:
 //   キャンペーン M1〜M8（?unlockAll）: 一覧 → ブリーフィング → 飛行（6 秒。目標・無線・M8 の登場の演出）→ 機首を下げて墜落 → 結果
 //   リングレース全コース: 一覧 → 下見 → 飛行 → ポーズ → 中断
 //   レイド（ヴォルガス・ネフィルガ）: 怪獣選び → 飛行 → ポーズ → 中断
 //   練習場の全課題・日替わり・防衛戦（ソロ）・フリーフライト・チュートリアル全章: 選ぶ画面 → 飛行 → ポーズ → 中断
+// 環境変数 RAWKEYS_ONLY=campaign,race（区切りの名前）で一部だけ、RAWKEYS_FROM=6 でキャンペーンを M6 から（調べ直し用）。
 // 画面ごとに文書全体（隠れている画面の文も）を調べる。結果は report.rawKeys（steps に画面の数と生のキー、問題の画面は PNG）
 import { CONTEXT_LOCALE, L } from './audit-lang.js';
 import { rawKeysOn } from './audit-rawkeys.js';
@@ -20,6 +21,8 @@ import {
 } from './audit-helpers.js';
 
 const FLIGHT_WAIT_MS = 6000;
+const ONLY = (process.env.RAWKEYS_ONLY ?? '').split(',').filter(Boolean);
+const FROM = Number(process.env.RAWKEYS_FROM ?? '1');
 
 export async function auditRawKeys(browser, base, out) {
   const context = await browser.newContext({
@@ -64,11 +67,24 @@ export async function auditRawKeys(browser, base, out) {
       .click();
     await page.waitForFunction(() => document.documentElement.dataset.screen !== 'pause');
   };
+  /** 機首を下げ続けて墜落 → 結果画面。60 秒で落ちなければ横にも倒してらせんで降りる（M7 は低空で水平に近いまま残った） */
+  const crash = async () => {
+    await page.keyboard.down('KeyW');
+    let result = await screenIs(page, 'result', 60000);
+    if (!result) {
+      await page.keyboard.down('KeyA');
+      result = await screenIs(page, 'result', 120000);
+      await page.keyboard.up('KeyA');
+    }
+    await page.keyboard.up('KeyW');
+    return result;
+  };
   const home = async () => {
     await toModeSelect(page, url);
   };
   /** 1 つの区切り。例外は記録して次へ（全体は NG） */
   const section = async (name, fn) => {
+    if (ONLY.length > 0 && !ONLY.some((o) => name.startsWith(o))) return;
     try {
       await home();
       await fn();
@@ -93,16 +109,14 @@ export async function auditRawKeys(browser, base, out) {
     await entries.first().waitFor();
     await scan('campaign-list');
     const count = await entries.count();
-    for (let i = 0; i < count; i++) {
+    for (let i = FROM - 1; i < count; i++) {
       const m = `m${i + 1}`;
       await entries.nth(i).click();
       await shown(page, '.briefing-screen');
       await scan(`${m}-briefing`);
       await page.locator('.briefing-screen.is-shown .ui-button.is-primary').click();
       await flight(m);
-      await page.keyboard.down('KeyW');
-      const result = await screenIs(page, 'result', 120000);
-      await page.keyboard.up('KeyW');
+      const result = await crash();
       if (!result) throw new Error(`${m}: 結果画面にならない`);
       await page.waitForTimeout(800);
       await scan(`${m}-result`);
