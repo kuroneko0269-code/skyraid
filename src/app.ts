@@ -9,6 +9,7 @@ import { GameState, usesDemoCamera } from './core/game-state';
 import { lazyChunk } from './core/lazy-chunk';
 import { GameLoop } from './core/loop';
 import { watchViewport } from './core/viewport';
+import { APP_SHELL_CONFIG } from './data/app';
 import { DEFAULT_WEATHER_ID } from './data/weather';
 import type { SaveStore } from './progression/save-store';
 import { DemoCamera } from './render/demo-camera';
@@ -198,10 +199,11 @@ export function startApp(
     .then(() => {
       game.transition(parseSkipTitle(search) ? 'flight' : 'title');
       app?.afterBoot();
-      // タイトルを出した次のフレームから本体を裏で読む（表示を遅らせない。押したときは withGame が待つ）
+      // タイトルの展開アニメ（0.6 秒）が済んでから本体を裏で読む（読んで組み立てる間は主スレッドがふさがるので、アニメを
+      // かくつかせない。表示も遅らせない）。その前に押したときは withGame が待つ
       if (!app)
-        requestAnimationFrame(() => {
+        window.setTimeout(() => {
           prefetchChunk(loadGame);
-        });
+        }, APP_SHELL_CONFIG.titleDeploySeconds * 1000);
     });
 }

@@ -1,4 +1,4 @@
-/* global console, process, performance, navigator, URL */
+/* global console, process, performance, navigator, URL, window */
 // 性能と容量の計測（8-2）: `npm run perf`（本番ビルドの後に `node scripts/perf.js [出力先] [--runs N] [--no-lighthouse]`）。
 //   chunks   dist のファイルの一覧（名前・サイズ・gzip 後）
 //   startup  起動時間（読み込みの始まりからタイトルの表示まで）。初回（キャッシュ・SW なし）と 2 回目（SW が制御）を
@@ -15,6 +15,7 @@ import { join, relative } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { serveDist } from './serve-dist.js';
 import { STARTUP_BUDGET_KB } from './startup-budget.js';
+import { initTitleWatch, titleDetail } from './perf-title.js';
 import { VIEWPORT, dialogButton, seed, shown, screenIs, watch } from './audit-helpers.js';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
@@ -72,31 +73,10 @@ async function loadTitle(page, base, reload) {
   if (reload) await page.goto('about:blank');
   await page.goto(base);
   await shown(page, '.title-screen');
-  const ms = await page.evaluate(() => performance.now());
+  // 10-1: タイトルが出た時刻（下の initTitleWatch が記録）。後ろの処理（裏で読む本体の組み立て）を待たずに測る
+  const ms = await page.evaluate(() => window.__titleShownAt ?? performance.now());
   page.off('response', onResponse);
-  // 10-1: タイトルの表示の印（src/ui/title.ts）より前に読み始めたものだけを数える（タイトルの直後に裏で先読みする本体は除く）。
-  // 印の無い版（1.1.0 まで）は今までどおりタイトルが見えるまでに読んだもの全部
-  const before = await page.evaluate(() => {
-    const mark = performance.getEntriesByName('skyraid:title')[0];
-    if (!mark) return null;
-    return performance
-      .getEntriesByType('resource')
-      .filter((e) => e.startTime <= mark.startTime)
-      .map((e) => new URL(e.name).pathname.slice(1));
-  });
-  const titled = before ? loaded.filter((f) => before.includes(f)) : loaded;
-  // 10-1: タイトルの後に裏で読む本体を組み立て終えるまで（タイトルの表示から。印の無い版は 0）
-  const gameMs = await page
-    .waitForFunction(
-      () => {
-        const t = performance.getEntriesByName('skyraid:title')[0];
-        const g = performance.getEntriesByName('skyraid:game')[0];
-        return t ? (g ? g.startTime - t.startTime : false) : 0;
-      },
-      null,
-      { timeout: 30000 },
-    )
-    .then((h) => h.jsonValue());
+  const { titled, gameMs } = await titleDetail(page, loaded);
   return { ms, gameMs, loaded: [...new Set(titled)], network: [...new Set(network)] };
 }
 
@@ -113,6 +93,7 @@ async function measureStartup(browser, base, sizes) {
       locale: 'ja-JP',
     });
     await watch(context);
+    await context.addInitScript(initTitleWatch);
     const page = await context.newPage();
     const a = await loadTitle(page, base, false);
     await page.evaluate(() => navigator.serviceWorker.ready);
