@@ -49,5 +49,6 @@ export function matchSummary(result: Readonly<ResultView>): MatchSummary {
     coopClear: result.reason === 'raidClear' || result.reason === 'defenseClear',
     players: result.rows.length,
     pvpWin,
+    kills: me?.kills ?? 0,
   };
 }

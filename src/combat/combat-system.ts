@@ -21,12 +21,15 @@ import { RocketPod } from './rocket';
 import { TEAM_PLAYER, nearestPerGroup, teamOf, type CombatTarget } from './target';
 import { Targeting } from './targeting';
 import type { CombatInput } from './combat-input';
+import { countIncoming } from './incoming';
+import { PlayerKillFeed } from './kill-feed';
 
 // 入力の型は combat-input.ts（300 行の目安で分けた）。既存の import 先を変えないよう再エクスポートする
 export { createCombatInput, type CombatInput } from './combat-input';
 
 export type ImpactListener = (x: number, y: number, z: number, onTarget: boolean) => void;
 export type DestroyedListener = (target: CombatTarget) => void;
+
 /** ミサイルの起爆。onTarget は信管が対象に反応したか（false なら地面）。radius は範囲ダメージの半径（爆発の規模。4-4） */
 export type ExplosionListener = (
   x: number,
@@ -65,6 +68,8 @@ export class CombatSystem {
   hitMarkerTimer = 0;
   private readonly impactListeners: ImpactListener[] = [];
   private readonly destroyedListeners: DestroyedListener[] = [];
+  /** プレイヤーが落とした対象と武器（9-10b。勲章の観測役が受ける） */
+  readonly killFeed = new PlayerKillFeed();
   private readonly explosionListeners: ExplosionListener[] = [];
   private readonly ordnanceListeners: ((
     x: number,
@@ -257,7 +262,9 @@ export class CombatSystem {
    */
   dealDamage(target: CombatTarget, amount: number, attackerTeam: number): void {
     if (!target.applyDamage(amount)) return;
-    if (attackerTeam === TEAM_PLAYER && teamOf(target) !== TEAM_PLAYER) this.kills++;
+    const mine = attackerTeam === TEAM_PLAYER && teamOf(target) !== TEAM_PLAYER;
+    if (mine) this.kills++;
+    if (mine) this.killFeed.emit(target);
     this.notifyDestroyed(target);
     const blast = target.deathBlast;
     if (blast) {
@@ -303,14 +310,7 @@ export class CombatSystem {
 
   /** target を追っている別陣営のミサイルの数（警告用） */
   incomingMissiles(target: CombatTarget): number {
-    const pool = this.missiles.missiles;
-    const team = teamOf(target);
-    let n = 0;
-    for (let i = 0; i < pool.count; i++) {
-      const m = pool.get(i);
-      if (m.target === target && m.owner !== team) n++;
-    }
-    return n;
+    return countIncoming(this.missiles.missiles, target);
   }
 
   /** 爆心から半径 radius 以内（表面まで）の対象。spareTeam の陣営は除き、怪獣の部位は最も近い 1 つだけ（6-1） */
@@ -340,11 +340,13 @@ export class CombatSystem {
     this.reportImpact(hit.x, hit.y, hit.z, target !== null);
     if (!target) return;
     this.hitMarkerTimer = this.hitMarkerSeconds;
+    this.killFeed.weapon = 'gun';
     this.dealDamage(target, this.gunDamage, TEAM_PLAYER);
   };
 
   private readonly handleRocketImpact = (i: Readonly<Impact>): void => {
     for (const fn of this.ordnanceListeners) fn(i.x, i.y, i.z, ROCKET_CONFIG.blast.radius);
+    this.killFeed.weapon = 'rocket';
     this.applyBlast(
       i.x,
       i.y,
@@ -358,6 +360,7 @@ export class CombatSystem {
 
   private readonly handleBombImpact = (i: Readonly<Impact>): void => {
     for (const fn of this.ordnanceListeners) fn(i.x, i.y, i.z, BOMB_CONFIG.blast.radius);
+    this.killFeed.weapon = 'bomb';
     this.applyBlast(i.x, i.y, i.z, BOMB_CONFIG.blast, TEAM_PLAYER, TEAM_PLAYER, i.target !== null);
   };
 
@@ -366,6 +369,7 @@ export class CombatSystem {
     const spec = this.missiles.spec;
     for (const fn of this.explosionListeners)
       fn(d.x, d.y, d.z, d.target !== null, spec.blastRadius);
+    this.killFeed.weapon = 'missile';
     for (const t of this.inBlast(d.x, d.y, d.z, spec.blastRadius, d.owner)) {
       const p = t.position;
       const dist = Math.hypot(p.x - d.x, p.y - d.y, p.z - d.z) - t.hitRadius;

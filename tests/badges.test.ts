@@ -1,7 +1,17 @@
 // 勲章（9-10）: 記録からの判定と
 // さかのぼり（v9 のセーブから）・入れ方（1 回だけ・報酬・段階）・読み込みの確かめ・補助の組の判定・協力 / PvP の集計
 import { describe, expect, it } from 'vitest';
-import { BADGE_CONFIG, BADGES, badgeTiers, findBadge } from '../src/data/badges';
+import {
+  BADGE_CONFIG,
+  BADGES,
+  badgeCondition,
+  badgeName,
+  badgeTiers,
+  findBadge,
+  LEGACY_BADGE_IDS,
+} from '../src/data/badges';
+import { BADGE_REWARDS } from '../src/data/badges-catalog';
+import { useLocale } from './i18n-helpers';
 import { COURSES } from '../src/data/courses';
 import { MISSIONS } from '../src/data/missions';
 import { TUTORIAL_CHAPTERS } from '../src/data/tutorial';
@@ -48,32 +58,73 @@ describe('補助の組の判定（補助ふつう以上）', () => {
 
 describe('協力・PvP の集計', () => {
   it('協力のクリア・4 人で・PvP の勝ち（1 人では数えない）', () => {
-    expect(judgeMatch({ coop: true, coopClear: true, players: 2, pvpWin: false })).toEqual([
-      'coopClear',
-    ]);
-    expect(judgeMatch({ coop: true, coopClear: true, players: 4, pvpWin: false })).toEqual([
-      'coopClear',
-      'coopFour',
-    ]);
-    expect(judgeMatch({ coop: true, coopClear: false, players: 4, pvpWin: false })).toEqual([]);
-    expect(judgeMatch({ coop: false, coopClear: false, players: 3, pvpWin: true })).toEqual([
-      'pvpWin',
-    ]);
-    expect(judgeMatch({ coop: false, coopClear: false, players: 1, pvpWin: true })).toEqual([]);
+    expect(
+      judgeMatch({ coop: true, coopClear: true, players: 2, pvpWin: false, kills: 0 }),
+    ).toEqual(['coopClear']);
+    expect(
+      judgeMatch({ coop: true, coopClear: true, players: 4, pvpWin: false, kills: 0 }),
+    ).toEqual(['coopClear', 'coopFour']);
+    expect(
+      judgeMatch({ coop: true, coopClear: false, players: 4, pvpWin: false, kills: 0 }),
+    ).toEqual([]);
+    expect(
+      judgeMatch({ coop: false, coopClear: false, players: 3, pvpWin: true, kills: 0 }),
+    ).toEqual(['pvpWin']);
+    expect(
+      judgeMatch({ coop: false, coopClear: false, players: 1, pvpWin: true, kills: 0 }),
+    ).toEqual([]);
   });
 });
 
 describe('勲章の定義', () => {
-  it('20〜30 個・id は重ならない・段階は 1 か 3・報酬は正・名前と条件の文がある', () => {
-    expect(BADGES.length).toBeGreaterThanOrEqual(20);
-    expect(BADGES.length).toBeLessThanOrEqual(30);
+  it('9-10b: 150〜300 個・id は重ならない・段階は 1 か 3・報酬は正', () => {
+    expect(BADGES.length).toBeGreaterThanOrEqual(150);
+    expect(BADGES.length).toBeLessThanOrEqual(300);
     expect(new Set(BADGES.map((b) => b.id)).size).toBe(BADGES.length);
     for (const b of BADGES) {
       expect([1, 3]).toContain(badgeTiers(b));
       for (const r of b.rewards) expect(r).toBeGreaterThan(0);
     }
-    // 1 回だけの報酬の合計（稼ぎ場にならない大きさ: キャンペーン 8 本を全部 S にした報酬の合計の程度）
-    expect(totalBadgeRewards()).toBe(46500);
+  });
+
+  it('9-10 の 28 個は id・報酬がそのまま（合計 46,500 CR）で先頭に並ぶ', () => {
+    expect(LEGACY_BADGE_IDS.length).toBe(28);
+    expect(BADGES.slice(0, 28).map((b) => b.id)).toEqual(LEGACY_BADGE_IDS);
+    const legacy = BADGES.filter((b) => LEGACY_BADGE_IDS.includes(b.id));
+    expect(totalBadgeRewards(legacy)).toBe(46500);
+  });
+
+  it('9-10b の報酬: 1 つ 100 CR・集め 4 つで 15,000 CR・節目は 10 個ごとに 500 CR（合計が増えすぎない）', () => {
+    const extra = BADGES.filter((b) => !LEGACY_BADGE_IDS.includes(b.id));
+    const collect = extra.filter((b) => b.collect !== undefined);
+    expect(collect.map((b) => b.rewards[0])).toEqual([1000, 2000, 4000, 8000]);
+    for (const b of extra)
+      if (b.collect === undefined) expect(b.rewards).toEqual([BADGE_REWARDS.each]);
+    const milestones =
+      Math.floor(BADGES.length / BADGE_REWARDS.milestoneEvery) * BADGE_REWARDS.milestone;
+    // 9-10 の 46,500 と合わせて 10 万 CR 以内（使い道の合計 316,000 CR の 3 分の 1 以下。docs/control-analysis.md）
+    expect(totalBadgeRewards() + milestones).toBeLessThanOrEqual(100_000);
+  });
+
+  it('名前と条件の文が日本語・英語ともにある（キーのまま出ない）', () => {
+    for (const lang of ['ja', 'en'] as const) {
+      useLocale(lang);
+      for (const b of BADGES) {
+        const name = badgeName(b.id);
+        const cond = badgeCondition(b.id);
+        expect(name).not.toContain('badges.');
+        expect(cond).not.toContain('badges.');
+        expect(name).not.toMatch(/[{}]/);
+        expect(cond).not.toMatch(/[{}]/);
+      }
+    }
+    useLocale('ja');
+  });
+
+  it('隠し勲章は 1 割前後（取るまで「？？？」）', () => {
+    const hidden = BADGES.filter((b) => b.hidden).length;
+    expect(hidden).toBeGreaterThanOrEqual(10);
+    expect(hidden).toBeLessThanOrEqual(BADGES.length * 0.15);
   });
 });
 
@@ -112,19 +163,25 @@ describe('入れ方とセーブ', () => {
     expect(b).toEqual({
       earned: { loop: [5], campaign: [1, 2, 3], dailyStreak: [1] },
       backfilled: true,
+      milestones: 0,
     });
-    expect(normalizeBadges(null)).toEqual({ earned: {}, backfilled: false });
+    expect(normalizeBadges(null)).toEqual({ earned: {}, backfilled: false, milestones: 0 });
+    expect(normalizeBadges({ earned: { 'l.kill.10': [7] }, milestones: 2 })).toMatchObject({
+      earned: { 'l.kill.10': [7] },
+      milestones: 2,
+    });
   });
 
-  it('v9 → v10 の移行で空の勲章を足す（ほかはそのまま）', () => {
+  it('v9 → v10 → v11 の移行で空の勲章・空の通算の記録を足す（ほかはそのまま）', () => {
     const v9: Record<string, unknown> = { ...createInitialSave(), version: 9, credits: 4321 };
     delete v9.badges;
     const step = SAVE_MIGRATIONS[9];
     expect(step).toBeDefined();
     const save = parseSave(JSON.stringify(v9));
-    expect(save?.version).toBe(10);
+    expect(save?.version).toBe(11);
     expect(save?.credits).toBe(4321);
-    expect(save?.badges).toEqual({ earned: {}, backfilled: false });
+    expect(save?.badges).toEqual({ earned: {}, backfilled: false, milestones: 0 });
+    expect(save?.stats).toEqual({ counts: {}, since: 0, lastDaily: null });
   });
 });
 
@@ -168,8 +225,21 @@ describe('記録からの判定とさかのぼり', () => {
         'defenseAll:1',
         'dailyStreak:1',
         'dailyStreak:2',
+        // 9-10b: 記録からさかのぼれる組み合わせ（ヴォルガス通常のクリアと 7 分未満・ネフィルガ高難度・島の防衛戦の通常）
+        'c.raidClear.vorgas.normal:1',
+        'c.raidTimed.vorgas.normal:1',
+        'c.raidClear.nephirga.hard:1',
+        'c.defenseClear.island.normal:1',
+        // 15 個で節目（10 個）の報酬
+        ':1',
       ].sort(),
     );
+    expect(got.find((a) => a.milestone !== undefined)).toEqual({
+      id: '',
+      tier: 1,
+      credits: BADGE_REWARDS.milestone,
+      milestone: 10,
+    });
     const credits = got.reduce((s, a) => s + a.credits, 0);
     expect(save.credits).toBe(1000 + credits);
     expect(earnedTier(save.badges, 'campaign')).toBe(2);

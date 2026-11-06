@@ -217,6 +217,23 @@ for (const size of SIZES) {
         bandit: [row('touch:tilt:weak:1:1.5', 330, 3, 0.1)],
       },
     };
+    // 9-10b: 通算の記録（勲章の段階の数え・進み具合）
+    s.stats = {
+      counts: {
+        kill: 137,
+        'kill.w.gun': 80,
+        'kill.w.missile': 57,
+        'kill.t.fighter': 120,
+        'mv.loop': 23,
+        sortie: 64,
+        win: 41,
+        time: 3600 * 6.2,
+        dist: 2_300_000,
+        'sortie.ac.kestrel': 60,
+      },
+      since: Date.parse('2026-11-06T00:00:00Z'),
+      lastDaily: null,
+    };
     localStorage.setItem('skyraid.save', JSON.stringify(s));
   });
   await page.goto(base);
@@ -261,15 +278,29 @@ for (const size of SIZES) {
   }
   await page.click('.info-screen .menu-back');
   await flow('情報 → 戻る', await shownOnly('.mode-select-screen', '.info-screen'));
-  // 9-10: 勲章の一覧（タイトルの前のセーブの記録からさかのぼって付いたもの・進み具合）。一番下まで送って撮る
+  // 9-10: 勲章の一覧（タイトルの前のセーブの記録からさかのぼって付いたもの・進み具合）。
+  // 9-10b: 左の一覧・右の詳細。取った勲章を選ぶ → 状態「進行中」で並びを進み具合に → 一覧の一番下 → 通算の隠し勲章（名前の並び）
   await page.click('.mode-tile[data-mode="badges"]');
   await shown('.badge-screen');
   await shot('badges', '.badge-screen');
+  await page.click('.badge-item[data-state="earned"]');
+  await shot('badges-detail', '.badge-screen');
+  const selects = page.locator('.badge-screen .badge-select');
+  await selects.nth(1).selectOption('progress');
+  await selects.nth(2).selectOption('progress');
+  await page.click('.badge-item >> nth=0');
+  await shot('badges-progress', '.badge-screen');
+  await selects.nth(1).selectOption('all');
+  await selects.nth(2).selectOption('default');
   await page.evaluate(() => {
-    const s = document.querySelector('.badge-screen .menu-scroll');
+    const s = document.querySelector('.badge-screen .badge-list');
     if (s) s.scrollTop = s.scrollHeight;
   });
   await shot('badges-end', '.badge-screen');
+  await selects.nth(0).selectOption('career');
+  await selects.nth(2).selectOption('name');
+  await page.click('.badge-item >> nth=-1');
+  await shot('badges-hidden', '.badge-screen');
   await page.click('.badge-screen .menu-back');
   await flow('勲章 → 戻る', await shownOnly('.mode-select-screen', '.badge-screen'));
 

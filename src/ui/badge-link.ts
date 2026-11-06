@@ -9,8 +9,19 @@ import { t } from '../core/i18n';
 import type { Input } from '../core/input';
 import { BADGE_CONFIG, badgeName, badgeTierName, findBadge, badgeTiers } from '../data/badges';
 import type { GamePlay } from '../missions/game-play';
-import { assistQualifies, judgeMatch, judgeSortie, SortieWatch } from '../missions/badges/sortie';
+import {
+  assistLevelOf,
+  assistQualifies,
+  judgeMatch,
+  judgeSortie,
+  lowerAssist,
+  SortieWatch,
+  type AssistLevel,
+  type MatchSummary,
+} from '../missions/badges/sortie';
+import { tallySortie } from '../missions/badges/tally';
 import { awardBadges, syncRecordBadges, type BadgeAward } from '../progression/badges';
+import { addDailyDay, addStats, statKey } from '../progression/stats';
 import { onMatchEnd } from '../progression/match-events';
 import type { SaveStore } from '../progression/save-store';
 import type { ReplayHub } from '../replay/hub';
@@ -42,8 +53,9 @@ export interface BadgeLink {
 /** 飛行の画面（ポーズ・フォトモードも） */
 const inFlight = (s: ScreenState): boolean => s === 'flight' || s === 'pause' || s === 'photo';
 
-/** 取った勲章の 1 行（段階付きは段階の名前も） */
-export function awardLabel(a: Pick<BadgeAward, 'id' | 'tier'>): string {
+/** 取った勲章の 1 行（段階付きは段階の名前も。9-10b: 節目は「勲章 N 個」） */
+export function awardLabel(a: Pick<BadgeAward, 'id' | 'tier' | 'milestone'>): string {
+  if (a.milestone !== undefined) return t('badges.toast.milestone', { count: a.milestone });
   const def = findBadge(a.id);
   const name = badgeName(a.id);
   return def && badgeTiers(def) > 1
@@ -67,16 +79,19 @@ export function createBadgeLink(p: BadgeLinkParts): BadgeLink {
   const { game, save, play, hub } = p;
   const now = p.now ?? (() => Date.now());
   const watch = new SortieWatch();
-  let active: { start: ReplayStart; assist: boolean } | null = null;
+  let active: { start: ReplayStart; assist: boolean; level: AssistLevel | null } | null = null;
+  // 9-10b: プレイヤーが落とした対象（武器・種類）。数えている飛行の間だけ受ける
+  play.session.combat.killFeed.on((target, weapon) => {
+    watch.kill(target, weapon);
+  });
   /** まだ知らせていない勲章（飛行の外に出たら出す） */
   let pending: BadgeAward[] = [];
   let pendingBackfill: BadgeAward[] = [];
   let syncing = false;
 
-  const assistNow = (): boolean =>
-    assistQualifies(
-      replayControlsOf(save.settings.controls, p.input.lastDevice, p.input.steerMode),
-    );
+  const controlsNow = () =>
+    replayControlsOf(save.settings.controls, p.input.lastDevice, p.input.steerMode);
+  const assistNow = (): boolean => assistQualifies(controlsNow());
 
   const flush = (): void => {
     const state = game.state;
@@ -91,11 +106,17 @@ export function createBadgeLink(p: BadgeLinkParts): BadgeLink {
     }
   };
 
-  /** 判定した勲章を入れて知らせる */
-  const give = (ids: readonly string[]): void => {
-    if (ids.length === 0) return;
+  /** 判定した勲章を入れて知らせる（9-10b: 通算の記録に足す分・日替わりの日も同じ保存で） */
+  const give = (
+    ids: readonly string[],
+    stats: Readonly<Record<string, number>> = {},
+    dailyDay: string | null = null,
+  ): void => {
+    if (ids.length === 0 && Object.keys(stats).length === 0 && dailyDay === null) return;
     const got: BadgeAward[] = [];
     save.transact((data) => {
+      addStats(data.stats, stats, now());
+      if (dailyDay !== null) addDailyDay(data.stats, dailyDay);
       got.push(
         ...awardBadges(
           data,
@@ -103,7 +124,7 @@ export function createBadgeLink(p: BadgeLinkParts): BadgeLink {
           now(),
         ),
       );
-      return got.length > 0;
+      return true;
     });
     pending.push(...got);
     flush();
@@ -134,12 +155,17 @@ export function createBadgeLink(p: BadgeLinkParts): BadgeLink {
   const finish = (): void => {
     const a = active;
     active = null;
+    watch.end();
     if (!a || hub.playing) return;
-    give(judgeSortie(a.start, play, watch, a.assist && assistNow()));
+    const legacy = judgeSortie(a.start, play, watch, a.assist && assistNow());
+    // 9-10b: 補助の段は始めと終わりの設定の低い方。飛行中に自動射撃で撃ったら「かんたん」
+    const level = watch.autoFired ? 'easy' : lowerAssist(a.level, assistLevelOf(controlsNow()));
+    const tally = tallySortie(a.start, play, watch, level);
+    give([...legacy, ...tally.badges], tally.stats, a.start.daily?.day ?? null);
   };
 
   onMatchEnd((m) => {
-    give(judgeMatch(m));
+    give(judgeMatch(m), matchStats(m));
   });
 
   game.onChange(({ from, to }) => {
@@ -156,7 +182,8 @@ export function createBadgeLink(p: BadgeLinkParts): BadgeLink {
       finish();
       if (hub.playing) return;
       watch.begin(play);
-      active = { start, assist: assistNow() };
+      const controls = controlsNow();
+      active = { start, assist: assistQualifies(controls), level: assistLevelOf(controls) };
     },
     step(dt) {
       if (!active || !hub.recording) return;
@@ -168,4 +195,19 @@ export function createBadgeLink(p: BadgeLinkParts): BadgeLink {
       screen.show();
     },
   };
+}
+
+/** 9-10b: 協力・PvP の対戦の終わりに通算の記録に足す分（協力は人数別の遊んだ / クリア、PvP は遊んだ・勝ち・撃墜） */
+export function matchStats(m: Readonly<MatchSummary>): Record<string, number> {
+  const out: Record<string, number> = {};
+  const players = Math.max(1, Math.min(4, Math.round(m.players)));
+  if (m.coop) {
+    out[statKey.coopPlays(players)] = 1;
+    if (m.coopClear) out[statKey.coopClears(players)] = 1;
+  } else if (m.players >= 2) {
+    out[statKey.pvpPlays] = 1;
+    if (m.pvpWin) out[statKey.pvpWins] = 1;
+    if (m.kills > 0) out[statKey.pvpKills] = m.kills;
+  }
+  return out;
 }
