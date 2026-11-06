@@ -15,13 +15,9 @@ const ISLAND_PATROL = [
   { x: -2000, y: 900, z: 2000 },
 ] as const;
 
-/** 波の目標の表示名（「第 1 波」） */
-function waveLabel(n: number): { readonly label: string } {
-  return {
-    get label() {
-      return t('objectives.wave', { n });
-    },
-  };
+/** 波の目標の表示名（「第 1 波」）。目標に getter のまま置く（`...` で広げると広げた時点の値になり、文言の表を読む前のキーが残る） */
+function waveLabel(n: number): string {
+  return t('objectives.wave', { n });
 }
 
 /** M6: 波の間隔・同じ波の 2 機目が遅れて来る秒数（秒）と、敵機の HP の倍率（M2 と同じ） */
@@ -82,7 +78,9 @@ export const NIGHT_INTERCEPT_MISSION: MissionDef = {
       target: 'enemyFighter',
       group: 'night-wave1',
       count: 2,
-      ...waveLabel(1),
+      get label() {
+        return waveLabel(1);
+      },
     },
     {
       id: 'wave2',
@@ -92,7 +90,9 @@ export const NIGHT_INTERCEPT_MISSION: MissionDef = {
       target: 'enemyFighter',
       group: 'night-wave2',
       count: 2,
-      ...waveLabel(2),
+      get label() {
+        return waveLabel(2);
+      },
     },
     {
       id: 'wave3',
@@ -102,7 +102,9 @@ export const NIGHT_INTERCEPT_MISSION: MissionDef = {
       target: 'enemyFighter',
       group: 'night-wave3',
       count: 2,
-      ...waveLabel(3),
+      get label() {
+        return waveLabel(3);
+      },
     },
   ],
   success: 'allRequiredObjectives',

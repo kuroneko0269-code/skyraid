@@ -18,6 +18,7 @@
 //   hscrollEl 横にスクロールできる要素がある（8-6d。画面の外のダイアログ・お知らせも。意図した一覧は audit-inspect.js の除外リスト）
 //   hclip    縦にスクロールする入れ物で中身が横に切れている（8-6d）
 //   serif    文字の計算後のフォントがブラウザ既定（serif）（8-6d。アプリのフォントを受け継いでいない）
+//   rawKey   文言のキーがそのまま出ている（9-11b。「objectives.wave」の形。隠れている画面の文も。scripts/audit-rawkeys.js）
 // 8-6d: 画面はタイトル・名前の入力・設定 5 タブ・モード選択・情報 4 タブ・勲章（9-10）・お知らせ・ポーズ・ポーズの設定 5 タブに加え、
 //      キャンペーン・ブリーフィング・レース・各ダイアログ・ハンガー・リプレイ・ロビー・設定のデータ（オンライン連携の見本）・
 //      記録カード（scripts/ui-audit-screens.js）。ページの中の点検は scripts/audit-inspect.js
@@ -33,6 +34,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { pickBrowsers } from './audit-browsers.js';
 import { showSampleToasts, throttleMenuFrames } from './audit-helpers.js';
 import { inspect } from './audit-inspect.js';
+import { rawKeysOn } from './audit-rawkeys.js';
 import { auditMoreScreens, setScreensOut } from './ui-audit-screens.js';
 
 const argv = process.argv.slice(2);
@@ -136,6 +138,8 @@ for (const size of SIZES) {
     progress(size.name, name);
     await page.waitForTimeout(700);
     const r = await page.evaluate(inspect, selector);
+    // 9-11b: 文言のキーがそのまま出ていないか
+    r.issues.push(...(await rawKeysOn(page)));
     const band = await measureBand(page, selector);
     if (band) {
       r.band = band;

@@ -9,6 +9,7 @@
 //   pwa      manifest・アイコン・Service Worker の登録・オフラインでの起動
 //   offline  環境変数なしのビルドでオンライン機能が隠れる（設定の「オンライン連携」・「ランキング」が無く、Supabase に通信しない）
 //   card     記録カード（8-5。日本語・英語）: 結果画面からの生成（オフライン）・保存・文面のコピー・パイロット名を外す・共有の切り替え
+//   rawKeys  全ミッション・全モードの画面に文言のキーがそのまま出ていない（9-11b。scripts/ui-audit-rawkeys.js）
 // Google Fonts はクラウドの環境から外へ出られないので、空の CSS を返す（CSP の判定はブラウザが先に行うので影響しない）。
 // 結果は <出力先>/release.json と各 PNG
 import { AUDIT_LANG, CONTEXT_LOCALE, L } from './audit-lang.js';
@@ -28,6 +29,7 @@ import {
 import { auditCard } from './ui-audit-card.js';
 import { auditCompat } from './ui-audit-compat.js';
 import { auditModes } from './ui-audit-modes.js';
+import { auditRawKeys } from './ui-audit-rawkeys.js';
 import { printReleaseReport } from './audit-report.js';
 import { serveDist } from './serve-dist.js';
 
@@ -300,6 +302,8 @@ export async function runReleaseAudit(engine, out, dir = 'dist', port = 4174) {
     compat: await auditCompat(browser, base, out),
     // 8-5: 記録カード（日本語・英語。scripts/ui-audit-card.js）
     card: await auditCard(browser, base, out),
+    // 9-11b: 文言のキーがそのまま出ていないか（全ミッション・全モード。scripts/ui-audit-rawkeys.js）
+    rawKeys: await auditRawKeys(browser, base, out),
   };
   await browser.close();
   server.close();
