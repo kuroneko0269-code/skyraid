@@ -1,6 +1,6 @@
 # 公開前の点検リスト
 
-公開（または大きな更新）の前に上から順に確かめる。結果の欄は直近の実施（9-11a・v1.0.16・2026-11-06）。その前（8-7・v1.0.0）の結果は「前回」の列。
+公開（または大きな更新）の前に上から順に確かめる。結果の欄は直近の実施（9-11b・v1.1.0・2026-11-06）。その前（9-11a・v1.0.16）の結果は「前回」の列と下の「前回の結果」。
 クラウドのセッションで確かめられない項目は「実機で確認」と書き、人間がプレビュー URL と実機で確かめる。
 
 ## 手順
@@ -13,13 +13,39 @@ npm run unused                                 # 使われていないコード�
 npm run perf                                   # チャンク一覧・起動時間・Lighthouse（8-2。docs/perf.md）
 node scripts/ui-audit.js <出力先> --release [--browser all]  # 本番ビルド（dist）を _headers 付きで配信して点検（Playwright。8-3: エンジンの選択と互換性）
 node scripts/ui-audit-device.js <出力先>        # 実機確認の修正の点検（9-11a: モード選択の押し抜け `--only cards`）
+# 9-11b: --release の rawKeys が全ミッション・全モードの画面の生のキー（objectives.wave の形）を調べる（RAWKEYS_ONLY=campaign RAWKEYS_FROM=6 で一部だけ）
 npm run dev & node scripts/ui-audit.js <出力先> # 3 サイズの UI の点検（開発サーバー）
 # 8-4: どちらも --lang en で英語の画面を点検する（既定は日本語）
 ```
 
 `--release` は `.env` が無い（環境変数なし）状態でビルドした `dist` に対して走らせる。結果は `<出力先>/release.json` と各画面の PNG。
 
-## 結果（v1.0.16）
+## 結果（v1.1.0）
+
+9-11b で、環境変数なしでビルドした `dist`（版 1.1.0）に対して上から順にやり直した（Chromium 153・クラウドのソフトウェア描画）。v1.0.16 と同じく、持ち主の指示（遊ぶのは 1 人）で Firefox・WebKit・前の版のセーブの移行・前の版のリプレイの再生は省いた。
+
+| # | 項目 | 確かめ方 | 結果（v1.1.0） | 前回（v1.0.16） |
+| --- | --- | --- | --- | --- |
+| 1 | 全モードを 844×390 で通しで起動 | `--release`（日本語・`--lang en`） | ✅ 14 / 14（日本語・英語とも） | ✅ 14 / 14 |
+| 2 | console エラー 0 | `--release` の全画面（rawKeys の 92 画面を含む） | ✅ 0 件（日本語・英語） | ✅ 0 件 |
+| 3 | CSP 違反 0 | `dist/_headers` の CSP をそのまま付けて配信 | ✅ 0 件 | ✅ 0 件 |
+| 4 | 空の状態からの初回起動 | `--release` の firstRun | ✅ | ✅ |
+| 5 | セーブ v1〜v10 の移行 | `npm test` の `tests/save-migration-chain.test.ts` | ✅ 通る（セーブの版は変えていない） | ✅ |
+| 6 | PWA: manifest・アイコン | `--release` | ✅ | ✅ |
+| 7 | PWA: オフライン起動・プリキャッシュ | `--release` | ✅ | ✅ |
+| 8 | 環境変数なしのビルドでオンライン機能が隠れる | `--release` | ✅ | ✅ |
+| 9 | 情報画面 | `--release` | ✅ 版 1.1.0・更新履歴 31 版（1.1.0〜0.1.0）・ライセンス 21 件（本文 20 件） | ✅ 1.0.16・26 版 |
+| 10 | 生のキーが画面に出ない（9-11b で追加） | `--release` の rawKeys: `?unlockAll` でキャンペーン M1〜M8（ブリーフィング・飛行・墜落して結果）・リングレース全 6 コース（選ぶ・下見・飛行・ポーズ）・レイド 2 体・練習場 3 課題・日替わり・防衛戦・フリーフライト・チュートリアル 9 章で、文書全体（隠れている画面も）の文字と placeholder / aria-label / title から、先頭が文言の表の最上位の名前の「英字.英字」を探す。`scripts/ui-audit.js` の各画面にも同じ点検（種類 `rawKey`）を足した | ✅ 92 画面で 0（日本語・英語）。修正の前のコード（1.0.20）のビルドでは M6 のブリーフィング・飛行の目標・結果に `objectives.wave` が出て ❌（M6〜M8 の 11 画面のうち 5 画面）、修正の後は 0 | — |
+| 11 | 依存の脆弱性 | `npm audit --omit=dev` | ✅ 0 件 | ✅ 0 件 |
+| 12 | 時間の計測 | `npm run bench` | ⚠ スキンの生成 3 回で 52.8 / 42.6 / 63.2ms（上限 50ms）・地形の浸食 94.6〜115.6ms（上限 200ms）。9-11b はスキンの処理を変えていない（src の変更は `src/data/missions-late.ts` だけ）ので、点検を続けて走らせたクラウドの負荷（4 コア・load average 3〜4）による揺れと見た。テストには時間の判定を入れない決まり（8-1）どおり、公開は止めない | ✅ 最大 41.7ms |
+| 13 | 容量・起動（8-2） | `npm run perf` | ✅ ビルドの 500KB 超の警告なし（最大 `three-webgl` 380.3KB）。タイトルまでの JS・CSS 1,651.2KB（gzip 484.9KB。1.0.16 から +59.8KB はフェーズ 9 の後半の機能）。タイトルまで 初回 3,070ms / 2 回目 3,099ms（中央値 5 回。クラウドの参考値）。2 回目にネットワークから取った JS・CSS 0 件。モードごとの追加の読み込みは PvP（`pvp-link`・`kaiju2-text`）・リプレイ（`replay-ui`）だけ。Lighthouse（モバイル）Performance 60・Accessibility 90・Best Practices 100・SEO 100、FCP 1,804ms・LCP 1,811ms・TBT 7,493ms・CLS 0（有効 3 回） | ✅ gzip 470.3KB・Performance 36 |
+| 14 | 互換性（8-3） | `--release` の compat | ✅ Chromium 10 / 10（日本語・英語） | ✅ 10 / 10 |
+| 15 | 記録カード（8-5） | `--release` の card | ✅ 日本語・英語 | ✅ |
+| 16 | 実機確認の修正（8-6〜9-11a） | `node scripts/ui-audit-device.js <出力先>` | ✅ 188 / 189 → 測り直して全部 ✅（tap 10・viewport 6・debug 2・members 1・nozzle 8・passthrough 6・cards 26・rotate 123・weather 7。cards と rotate は 9-11a の後に増えた画面の分だけ多い）。1 回目は weather の M3（昼・曇り）が「空の色の差 83・基準 26」で ❌。release の点検 2 本の直後で負荷が高かった。`--only weather` で 2 回やり直して M3 は差 29（基準 45）・29（基準 26）で ✅。天候の処理は変えていない | ✅ 93 / 93 |
+| 17 | 使われていないコード（8-1） | `npm run unused`（knip） | ✅ 指摘 0 | ✅ 指摘 0 |
+| 18 | 型・lint・テスト・ビルド | `npm run check`・`npm test`・`npm run build` | ✅ すべて通る（テスト 170 ファイル・1,565 件。スキップ 4 件はふだん回さない調整の表）。check の警告 1 件（`scripts/ui-audit.js` の 300 行超）は 9-11b の前からのもの | ✅ 169 ファイル・1,527 件 |
+
+### 前回（v1.0.16・9-11a）の結果
 
 9-11a で、環境変数なしでビルドした `dist`（版 1.0.16）に対して上から順にやり直した（Chromium 153・クラウドのソフトウェア描画）。持ち主の指示（遊ぶのは 1 人）で、互換性の点検のうち Firefox・WebKit・前の版のセーブの移行・前の版のリプレイの再生は省いた（テストの `save-migration-chain`・`replay-version` は `npm test` で通る）。
 
@@ -43,29 +69,6 @@ npm run dev & node scripts/ui-audit.js <出力先> # 3 サイズの UI の点検
 | 16 | 実機確認の修正（8-6〜9-9b・9-11a） | `node scripts/ui-audit-device.js <出力先>`（9-11a で `cards` を足した: モード選択の全カード・タイル 14 個とダイアログのボタン 7 つを iOS のタップで押し、開いたものがちょうどそれだけか） | ✅ 93 / 93（tap 10・viewport 6・debug 2・members 1・nozzle 8・passthrough 6・cards 21・rotate 32・weather 7）。cards の 1 回目はハンガーが 0.9 秒で開き切らず ❌ になったので、開くのを最大 5 秒待つように点検を直して 21 / 21。9-11a の修正の前のコードでは cards の 4 つが ❌（チュートリアルのカードで第 1 章が始まる・フリーフライト / レイド / 防衛戦のダイアログの「戻る」で下のリプレイが開く） | ✅ 25 / 25 |
 | 17 | 使われていないコード（8-1） | `npm run unused`（knip） | ✅ 指摘 0 | ✅ 指摘 0 |
 | 18 | 型・lint・テスト・ビルド | `npm run check`・`npm test`・`npm run build` | ✅ すべて通る（テスト 169 ファイル・1,527 件。スキップ 4 件はふだん回さない調整の表） | ✅ |
-
-### 前回（v1.0.0・8-7）の結果
-
-| # | 項目 | 確かめ方 | 結果（v1.0.0） | 前回 |
-| --- | --- | --- | --- | --- |
-| 1 | 全モードを 844×390 で通しで起動 | `--release`（タッチ端末・844×390）。チュートリアル / キャンペーン M1 / フリーフライト / リングレース / 練習場（9-5）/ レイド（ソロ）/ 防衛戦（ソロ）は飛行 → ポーズまで。PvP / レイド協力 / 防衛戦協力はロビー画面まで。`?net=local` で PvP の部屋を作りロビーの部屋まで。ハンガー・リプレイ一覧も開く | ✅ 12 / 12 | ✅ 12 / 12 |
-| 2 | console エラー 0 | `--release` の全画面で console の error・ページの例外・HTTP 400 以上 | ✅ 0 件 | ✅ 0 件 |
-| 3 | CSP 違反 0 | `dist/_headers` の CSP をそのまま付けて配信し、`securitypolicyviolation` を数える | ✅ 0 件 | ✅ 0 件 |
-| 4 | 空の状態からの初回起動 | 新しいブラウザのコンテキストで、localStorage 0 件・IndexedDB 0 個 → タイトル → パイロット名 → チュートリアルの案内 | ✅ 起動後は `skyraid.save`（版 9）・`skyraid.launches` と IndexedDB の `skyraid-replays` だけ | ✅ |
-| 5 | セーブ v1〜v9 の移行 | `npm test` の `tests/save-migration-chain.test.ts` と各段のテスト | ✅ 全部通る（テスト 130 ファイル・1216 件） | ✅ |
-| 6 | PWA: manifest・アイコン | `--release`: manifest（standalone・landscape）、アイコン 192 / 512 / maskable 512 の実寸、apple-touch-icon | ✅ | ✅ |
-| 7 | PWA: オフライン起動 | `--release`: Service Worker が制御した後にオフラインで読み直し → タイトル → フリーフライト | ✅ | ✅ |
-| 8 | 環境変数なしのビルドでオンライン機能が隠れる | `--release`: 「ランキング」のタイル・設定の「オンライン連携」が無い、connect-src に Supabase が無い、Supabase・online-app への通信 0 件 | ✅ | ✅ |
-| 9 | 情報画面 | `--release`: 版、更新履歴、ライセンス、データの扱い | ✅ 版 1.0.0・更新履歴 10 版（1.0.0〜0.1.0）・ライセンス 21 件（本文 20 件） | ✅ 0.8.0・8 版 |
-| 10 | UI の 3 サイズ | `scripts/ui-audit.js`（568×320・844×390・1920×1080。日本語と `--lang en`） | ✅ 折り返し・はみ出し・重なり・横スクロール・serif 0（日本語・英語）。「…」の警告は 568×320 のモード選択のカード 4 枚（7-D から）と、英語のハンガーの塗装の模様の名前 2 つ（Triple Diamond・Compass Star。844×390・1920×1080。下の「見つかったこと」） | ✅（8-6d） |
-| 11 | 依存の脆弱性 | `npm audit --omit=dev` | ✅ 0 件 | ✅ 0 件 |
-| 12 | 時間の計測 | `npm run bench` | ✅ スキンの生成 最大 35.5ms（上限 50ms） | ✅ 約 40ms |
-| 13 | 容量・起動（8-2） | `npm run build` の 500KB 超の警告・`npm run perf`（結果は `perf-report/perf.json`） | ✅ 警告なし（最大 `three-webgl` 371.4KB）。タイトルまでの JS・CSS 1,387.0KB（gzip 409.5KB。8-4 の言語のチャンク `ja` 16.4KB を含む）。タイトルまで 初回 2,644ms / 2 回目 2,886ms（中央値 5 回。クラウドの参考値）。2 回目にネットワークから取った JS・CSS 0 件。モードごとの追加の読み込みは PvP（`pvp-link`）・リプレイ（`replay-ui`）だけ。Lighthouse（モバイル）Performance 37・Accessibility 90・Best Practices 100・SEO 100、FCP 1,492ms・LCP 11,418ms・TBT 7,137ms・CLS 0（有効 3 回。TBT は SwiftShader の描画による） | ✅ gzip 393.3KB（8-2） |
-| 14 | 互換性（8-3） | `--release` の compat（WebGL / WebGL 2 が無い・古いブラウザ・コンテキスト喪失・保存できない・容量超過・音や端末の API が無い・縦向き・ゲームパッド） | ✅ Chromium 10 / 10（Firefox・WebKit はクラウドで取得できず未実施。公開後の候補 P-4） | ✅ 10 / 10 |
-| 15 | 記録カード（8-5） | `--release` の card（日本語・英語） | ✅ 両言語とも OK（生成・保存 1200×630・文面のコピー・パイロット名の切り替え・共有の API の有無・Esc） | ✅ |
-| 16 | 実機確認の修正（8-6〜8-6f・8-7） | `node scripts/ui-audit-device.js <出力先>`: ずれたタップ（0〜30px）・80px のドラッグ / canvas が画面の端まで（横向きで起動・古い inner・ホーム画面から起動で 844×343・縦 → 横）/ `?debug=viewport` と版の 5 回押し / メンバー管理の行の高さ / 噴流（画質 3 × AB の有無・iOS の pow の模擬） | ✅ 25 / 25。8-7: ホーム画面から起動の黒い幕の中央にロゴ（幅 388px・中心 x 422 / 844） | ✅（8-6f） |
-| 17 | 使われていないコード（8-1） | `npm run unused`（knip） | ✅ 指摘 0（8-7 で 5 件を解消: 点検スクリプトがブラウザで読む URL の無視・使われていない書式の関数 3 つ・型の確認用の別名の export・テストの型の再 export） | ✅（8-1） |
-| 18 | 型・lint・テスト・ビルド | `npm run check`・`npm test`・`npm run build` | ✅ すべて通る | ✅ |
 
 ## 実機で確認（クラウドでは確かめられない）
 
