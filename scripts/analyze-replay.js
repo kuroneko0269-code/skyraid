@@ -13,7 +13,7 @@
 //   --assist             9-3 の狙いの補助の強さ（弱・標準・強）× 自動射撃（OFF / ON）。方向へ倒す・カーブ 1.5 の模擬の人（--missions・--seeds）
 //   --device-fix         9-5b 速度合わせの有無（練習場の動く的・M1・M2。--seeds・--only before,after）
 //   --advice             9-5c 練習場の助言の当たり方（実機の記録・変更前・変更後。--seeds・--drills moving,static,bandit）
-//   --tutorial           9-5c チュートリアルの通し（模擬の人・初心者役 × 6 方式 × 8 章。--seeds・--roles human,beginner）
+//   --tutorial           9-5c チュートリアルの通し（模擬の人・初心者役 × 6 方式 × 8 章。--seeds・--roles human,beginner・--chapters gun・--modes keyboard,gamepad）
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { runnerImport } from 'vite';
@@ -57,7 +57,13 @@ if (flags.get('--advice')) {
 } else if (flags.get('--tutorial')) {
   // 9-5c: チュートリアルの通し
   console.log(
-    m.runTutorialMatrix(seeds, (l) => console.error(l), list('--roles', ['human', 'beginner'])),
+    m.runTutorialMatrix(
+      seeds,
+      (l) => console.error(l),
+      list('--roles', ['human', 'beginner']),
+      list('--chapters', undefined),
+      list('--modes', undefined),
+    ),
   );
 } else if (flags.get('--presets')) {
   // 9-5d: 補助の組ごとの練習場の動く的・M1・M2（docs/control-analysis.md）

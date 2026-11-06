@@ -3,7 +3,7 @@
 // iOS のタップを模す: タッチ（touchstart → touchend。8-6 の自前判定がここで click() して画面が切り替わる）の後に、
 // ブラウザの互換のクリックを同じ点に送る（CDP のマウス。isTrusted のクリック）。切り替わった後の画面のボタンが
 // 押されない（ほかの画面・ダイアログが出ない）ことを確かめる。日替わり → モード選択のほか、画面の組をいくつか
-const shownScreens = (page) =>
+export const shownScreens = (page) =>
   page.evaluate(() =>
     [...document.querySelectorAll('.screen.is-shown')]
       .map((s) => [...s.classList].filter((c) => c !== 'screen' && c !== 'is-shown').join('.'))
@@ -15,7 +15,7 @@ const shownScreens = (page) =>
   );
 
 /** 要素の中心を、タッチ → 少し後に互換のクリック（iOS の順）で押す */
-async function iosTap(page, cdp, selector) {
+export async function iosTap(page, cdp, selector) {
   await page.locator(selector).first().scrollIntoViewIfNeeded();
   await page.waitForTimeout(300);
   const box = await page.locator(selector).first().boundingBox();

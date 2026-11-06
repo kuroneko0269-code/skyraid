@@ -126,9 +126,9 @@
     "hintLabel": "Hint",
     "live": {
       "overtake": {
-        "direct": "You overshot. Keep your nose on the target while closing so THR AUTO (speed match) can slow you",
-        "keys": "You overshot. Lower the throttle with {throttleDown} as you close in",
-        "pad": "You overshot. Pull the right stick down to lower the throttle as you close in"
+        "direct": "You flew past it. Keep your nose on the target while closing so THR AUTO (speed match) can slow you",
+        "keys": "You flew past it. Lower the throttle with {throttleDown} as you close in",
+        "pad": "You flew past it. Pull the right stick down to lower the throttle as you close in"
       },
       "offRange": {
         "all": "Too far (OUT OF RANGE). Get within 1.5 km before you shoot"
@@ -152,7 +152,7 @@
         "pad": "Hit. Press B as soon as the MISSILE warning appears"
       },
       "replaced": {
-        "all": "The target is back in front of you. Don't overshoot this time"
+        "all": "The target is back in front of you. Don't fly past it this time"
       }
     },
     "chapters": {
@@ -209,7 +209,7 @@
       },
       "speed": {
         "name": "Speed",
-        "goal": "Throttle and AB, overshooting, speed match",
+        "goal": "Throttle and AB, flying past, speed match",
         "steps": {
           "ab": {
             "text": {
@@ -225,9 +225,9 @@
           },
           "slow": {
             "text": {
-              "direct": "Now lower the throttle and slow to 220 m/s. Too fast and you overshoot targets",
-              "keys": "Now lower the throttle with {throttleDown} and slow to 220 m/s. Too fast and you overshoot targets",
-              "pad": "Now pull the right stick down to lower the throttle and slow to 220 m/s. Too fast and you overshoot targets"
+              "direct": "Now lower the throttle and slow to 220 m/s. Too fast and you fly past targets",
+              "keys": "Now lower the throttle with {throttleDown} and slow to 220 m/s. Too fast and you fly past targets",
+              "pad": "Now pull the right stick down to lower the throttle and slow to 220 m/s. Too fast and you fly past targets"
             },
             "hint": {
               "direct": "Pull the throttle (right edge) all the way down and wait a moment",
@@ -238,13 +238,13 @@
           "follow": {
             "text": {
               "direct": "Stay behind the drone ahead (within 1.4 km) for 4 seconds. As you close in, THR turns orange AUTO and matches your speed (speed match)",
-              "keys": "Stay behind the drone ahead (within 1.4 km) for 4 seconds. Lower the throttle with {throttleDown} as you close in so you don't overshoot",
-              "pad": "Stay behind the drone ahead (within 1.4 km) for 4 seconds. Lower the throttle with the right stick as you close in so you don't overshoot"
+              "keys": "Stay behind the drone ahead (within 1.4 km) for 4 seconds. Lower the throttle with {throttleDown} as you close in so you don't fly past",
+              "pad": "Stay behind the drone ahead (within 1.4 km) for 4 seconds. Lower the throttle with the right stick as you close in so you don't fly past"
             },
             "hint": {
               "direct": "Speed match works while your nose points at the drone. If it doesn't, turn on Speed match in Settings → Controls",
-              "keys": "Close and fast means overshooting. Under 1 km, keep the throttle below half",
-              "pad": "Close and fast means overshooting. Under 1 km, keep the throttle below half"
+              "keys": "Close and fast means flying past. Under 1 km, keep the throttle below half",
+              "pad": "Close and fast means flying past. Under 1 km, keep the throttle below half"
             }
           }
         }
@@ -282,7 +282,7 @@
         "steps": {
           "drones": {
             "text": {
-              "direct": "Shoot down a moving drone with the gun. The circle leads ahead of them. Come from behind and match speed so you don't overshoot",
+              "direct": "Shoot down a moving drone with the gun. The circle leads ahead of them. Come from behind and match speed so you don't fly past",
               "keys": "Shoot down a moving drone with the gun. The circle leads ahead of them. Come from behind and match speed with {throttleDown} as you close",
               "pad": "Shoot down a moving drone with the gun. The circle leads ahead of them. Come from behind and match speed with the right stick as you close"
             },
@@ -415,11 +415,11 @@
         "page": [
           "In Settings → Controls you can tune how easy hitting is (touch controls).",
           "The assist preset below sets all three at once: Easy (fires and matches speed for you), Normal (you choose when to fire and how fast to fly), Hard (light assist, everything is up to you).",
-          "• Aim assist (weak, normal, strong): how strongly the nose is pulled onto the target near the aim circle.",
+          "• Aim assist (Low, Standard, High): how strongly the nose is pulled onto the target near the aim circle.",
           "• Auto-fire: fires only while the circle glows white. It never fires out of range.",
-          "• Speed match: lowers the throttle as you close on the chosen target so you don't overshoot (THR shows orange AUTO).",
+          "• Speed match: lowers the throttle as you close on the chosen target so you don't fly past it (THR shows orange AUTO).",
           "• Sensitivity curve: 2.0 makes small stick movements finer (if you overshoot near the circle).",
-          "At the practice range you can practice aiming at still targets, moving targets and a mock enemy. The results show what to fix next time."
+          "At the practice range you can practice aiming at fixed targets, moving targets and a dummy bandit. The results show what to fix next time."
         ],
         "settings": "Open settings",
         "practice": "Practice range",
@@ -953,7 +953,7 @@
       "title": "Raid: Vorgas",
       "body": "Solo: pick a difficulty and launch right away (Hard: HP ×1.4, shorter tells, 3.5-min final phase, reward ×1.8). For 2–4 players, create a room or join with a room code (everyone on one team; the host picks the difficulty).",
       "difficulty": "Difficulty (Solo)",
-      "bodyNephirga": "Solo: pick a difficulty and launch right away (Hard: health ×1.55, shorter tells, 4-min storm, 10-min overall limit, reward ×1.8). For 2–4 players, create a room or join with a room code (everyone on one team; the host picks the difficulty)."
+      "bodyNephirga": "Solo: pick a difficulty and launch right away (Hard: HP ×1.55, shorter tells, 4-min storm, 10-min overall limit, reward ×1.8). For 2–4 players, create a room or join with a room code (everyone on one team; the host picks the difficulty)."
     },
     "defenseDialog": {
       "body": "Defend the base HQ from all 10 waves. Between waves, pass low and slow over the base (below 300 m, speed under 150) to resupply. Hard: enemies ×1.3, HQ HP 1500. For 2–4 players, create a room or join with a room code (everyone on one team).",
@@ -1147,7 +1147,7 @@
       "strong": "High"
     },
     "autoFire": "Auto-fire (touch)",
-    "speedMatch": "Speed matching (touch)",
+    "speedMatch": "Speed match (touch)",
     "preset": {
       "title": "Assist preset (touch)",
       "easy": "Easy",
@@ -1156,7 +1156,7 @@
       "custom": "Custom",
       "on": "ON",
       "off": "OFF",
-      "summary": "Aim assist {aim} · Auto-fire {fire} · Speed matching {speed}",
+      "summary": "Aim assist {aim} · Auto-fire {fire} · Speed match {speed}",
       "status": "Now: {name} ({summary})",
       "note": "Keyboard, gamepad and PvP room rules are not affected",
       "desc": {
@@ -1166,7 +1166,7 @@
       },
       "prompt": {
         "title": "Choose an assist preset",
-        "body": "Sets aim assist, auto-fire and speed matching together. You can change it any time in Settings → Controls",
+        "body": "Sets aim assist, auto-fire and speed match together. You can change it any time in Settings → Controls",
         "keep": "Keep my current settings ({name})"
       }
     }
@@ -1955,7 +1955,7 @@
       "offScreen": "The enemy was off-screen for a long time. Turn toward the edge arrow and the radar to find it faster.",
       "overshoot": "You often overshot near the sights. Use small inputs when close (or try curve 2.0).",
       "noKills": "Almost there. Close in (within 1 km) before firing to land more hits.",
-      "steady": "Steady aim. Try weaker aim assist or auto-fire off to test your skill."
+      "steady": "Steady aim. Try a lower aim assist or auto-fire off to test your skill."
     },
     "settings": {
       "heading": "SETTINGS (TOUCH)",
@@ -2014,15 +2014,15 @@
       "overshootHint": "Times the target crossed to the other side of the nose within 10° of the sights",
       "offRange": "Shots fired out of range",
       "offRangeHint": "Share of firing time when the nearest target was beyond gun range (1.5 km)",
-      "overtakes": "Overshot targets",
+      "overtakes": "Flew past targets",
       "overtakesValue": "{count}",
-      "overtakesHint": "Times a target ahead within range ended up behind you because you closed too fast (speed matching helps)",
+      "overtakesHint": "Times a target ahead within range ended up behind you because you closed too fast (Speed match helps)",
       "record": "Record",
       "changed": "Not recorded: settings were changed during the run",
       "settingsRecord": "Best for this setting",
       "drillBest": "Drill best",
       "issuesHeading": "What to fix next time",
-      "noIssues": "No big problems. Try weaker aim assist or auto-fire off to measure your skill."
+      "noIssues": "No big problems. Try a lower aim assist or auto-fire off to measure your skill."
     },
     "hint": {
       "go": "Practice Range",
@@ -2035,9 +2035,9 @@
         "manual": "You didn't fire. Put the nose mark (-○-) on the circle ahead of the target and fire when it glows white."
       },
       "overtake": {
-        "off": "Too fast: you overshot the target ({count} times). Lower the throttle as you close in, or turn on Speed match in Settings.",
-        "on": "Too fast: you overshot the target ({count} times). Speed match works when you close in with your nose on the target. Lower the throttle when coming from the side.",
-        "manual": "Too fast: you overshot the target ({count} times). Under 1 km, keep the throttle below half."
+        "off": "Too fast: you flew past the target ({count} times). Lower the throttle as you close in, or turn on Speed match in Settings.",
+        "on": "Too fast: you flew past the target ({count} times). Speed match works when you close in with your nose on the target. Lower the throttle when coming from the side.",
+        "manual": "Too fast: you flew past the target ({count} times). Under 1 km, keep the throttle below half."
       },
       "offRange": {
         "auto": "You fired out of range (beyond 1.5 km) for {ratio} of your firing time. When OUT OF RANGE shows, stop and close in. Auto-fire only shoots within range.",
@@ -2050,7 +2050,7 @@
         "all": "You fired off target for {ratio} of your firing time. Put the nose mark on the circle and fire once it glows white."
       },
       "overshoot": {
-        "touch": "You overshoot and correct back near the aim point ({perMinute} times a minute). Use small stick movements up close (try curve 2.0 or strong aim assist).",
+        "touch": "You overshoot and correct back near the aim point ({perMinute} times a minute). Use small stick movements up close (try curve 2.0 or High aim assist).",
         "all": "You overshoot and correct back near the aim point ({perMinute} times a minute). Use small movements up close."
       },
       "noKills": {
@@ -2063,7 +2063,7 @@
     "good": {
       "accuracy": "Well done: {ratio} accuracy. Nice aiming.",
       "fastKills": "Well done: {seconds} per kill on average. Quick work.",
-      "noOvertake": "Well done: you stayed behind without overshooting once.",
+      "noOvertake": "Well done: you stayed behind without flying past once.",
       "inRange": "Well done: you fired within range (out of range only {ratio}).",
       "onScreen": "Well done: you kept the target in front (off screen only {ratio}).",
       "kills": "Well done: {kills} kills.",
@@ -2071,8 +2071,8 @@
     },
     "tips": {
       "overtake": {
-        "on": "Overshot — close in with your nose on the target",
-        "off": "Overshot — lower the throttle as you close in"
+        "on": "Flew past — close in with your nose on the target",
+        "off": "Flew past — lower the throttle as you close in"
       },
       "offRange": {
         "all": "Too far — get within 1.5 km first"
@@ -2148,7 +2148,7 @@
     "title": "Badges",
     "back": "← Modes",
     "summary": "Earned {earned} / {total} · Tiers {tiers} / {totalTiers}",
-    "skill": "Assist: Normal or less",
+    "skill": "Assist: Normal/Hard",
     "earnedOn": "Earned {dates}",
     "reward": "Reward {credits}",
     "progress": "{current} / {goal}",
@@ -2292,7 +2292,7 @@
         "note": "Win a PvP match (1st in free-for-all, or winning team)"
       },
       "pvpKills": {
-        "name": "Top Gun",
+        "name": "Ace of Aces",
         "note": "Shoot down 25 players in PvP in total"
       }
     }

@@ -29,7 +29,7 @@
 | 練習場（9-5） | Practice Range |
 | 日替わり / 日替わりチャレンジ（9-9） | Daily / Daily Challenge |
 | 的あて / 動く的 / 敵機の連戦 / 周回レース（日替わりの課題。9-9） | Target Shoot / Moving Targets / Bandit Gauntlet / Lap Race |
-| 勲章 / 銅・銀・金 / 補助ふつう以上（9-10） | Badge / Bronze・Silver・Gold / Assist: Normal or less |
+| 勲章 / 銅・銀・金 / 補助ふつう以上（9-10。9-11a で Normal or less → Normal/Hard） | Badge / Bronze・Silver・Gold / Assist: Normal/Hard |
 | 連続（続けて遊んだ日数。9-9） | Streak |
 | 挑戦する（9-9） | Take It On |
 | 止まった的 / 動く的 / 模擬の敵 | Fixed Targets / Moving Targets / Dummy Bandit |
@@ -167,3 +167,32 @@
 | 共有 / 画像を保存 / 文面をコピー | Share / Save Image / Copy Text |
 | クリアタイム / 経過時間 / クリアした波 / 守った建物 / 自己ベスト更新（カード） | Clear Time / Elapsed / Waves Cleared / Buildings Saved / New Personal Best |
 | 標準塗装 | Factory paint |
+
+## フェーズ 9 で増えた語（9-11a で見直し）
+
+| 日本語 | English |
+| --- | --- |
+| 方向へ倒す / ピッチ・ロール（元の操作） / 傾き / ドラッグ（操縦の方式） | Point to steer / Pitch & roll (classic) / Tilt / Drag |
+| 感度のカーブ | Response curve（文の中は curve 2.0） |
+| 補助の組 かんたん / ふつう / むずかしい / カスタム | Assist preset Easy / Normal / Hard / Custom |
+| 狙いの補助 弱 / 標準 / 強 | Aim assist Low / Standard / High（文の中も同じ語。9-11a で weak / strong を揃えた） |
+| 自動射撃 / 速度合わせ | Auto-fire / Speed match（9-11a で Speed matching を揃えた） |
+| 追い越し（的を追い越して後ろにする） | fly past / Flew past（9-11a。overshoot と分ける） |
+| 行き過ぎ（照準の近くで行き過ぎて戻す） | overshoot / Overshoots |
+| 射程外 / 見失い / 照準の外 | OUT OF RANGE・out of range / Target lost / off target |
+| 照準の○ / 機首の印 | aim circle / nose mark (-○-) |
+| 操縦 / 速さ / 照準と機銃 / 動く的 / ミサイル / フレア / 宙返り / 的の選び方と探し方 / 補助の設定と練習場（チュートリアルの章） | Steering / Speed / Aiming and guns / Moving targets / Missiles / Flares / Loops / Picking and finding targets / Assists and the practice range |
+| 第 N 章 / 章の一覧 / 最初から | Chapter N / Chapters / From the start |
+| ネフィルガ / 嵐の翼竜 | Nephirga / storm wyvern（9-11a で pterosaur を wyvern に揃えた） |
+| 胴 / 左翼 / 右翼 / 頭（喉の袋） / 尾（ネフィルガの部位） | Body / Left wing / Right wing / Head (throat sac) / Tail |
+| 雷球 / 翼の突風 / 急降下 / 尾の打ち払い | Lightning orbs / Wing gust / Dive / Tail sweep |
+| 予兆 / 止まり木 / 攻めどき / 怯み / 嵐（体力 40% 以下の段階） | Tells / Perch / OPENING / Flinch / STORM |
+| 残機 | Lives |
+| 夜景クルーズ / 峰のらせん（9-8 のコース） | Night Harbor Cruise / Peak Spiral |
+| コースの下見 / レースの道筋の点線 / 通り損ね | Course preview（ボタン Preview） / Race guide line / Missed ring |
+| 上へ / 下へ / 宙返り / 引き起こし（リングの印） | UP / DOWN / LOOP / PULL UP |
+| 宙返り / インメルマン / 低空飛行 / 背面飛行 / 最高速（勲章） | Loop / Immelmann / Low Pass / Inverted / Top Speed |
+| 初撃墜 / エース / 機銃一筋 / 無傷 | First Kill / Ace / Guns Only / Flawless |
+| 訓練課程 / ヴォルガス撃破 / ネフィルガ撃破 / 部位破壊 / 不沈 / 高難度レイド | Flight School / Vorgas Down / Nephirga Down / Dismantled / Unsinkable / Hard Raid |
+| ノーミス / 防衛成功 / 鉄壁 / 練習熱心 / 名射手 | Clean Run / Defended / Iron Wall / Dedicated / Sharpshooter |
+| 日替わり連続 / 日替わり全種 / 協力 / 4 人で / 勝利 / 撃墜王 | Daily Streak / Daily Variety / Teamwork / Full Flight / Victory / Ace of Aces（9-11a で Top Gun から。実在の作品の題を使わない） |

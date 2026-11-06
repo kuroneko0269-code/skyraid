@@ -1,5 +1,6 @@
 // 補助の組（9-5d）の画面の部品: 組を選ぶセグメント（かんたん / ふつう / むずかしい）と今の値の一行（違えば「カスタム」）、
 // 初めての人・今の利用者に一度だけ出す「補助の組を選んでください」のダイアログ。値は src/core/assist-preset.ts
+import { noteScreenSwitch } from './screen-switch';
 import './assist-preset.css';
 import { assistPresetOf, isAssistPreset, type AssistPresetState } from '../core/assist-preset';
 import type { ControlSettings } from '../core/control-settings';
@@ -130,6 +131,8 @@ export class AssistPresetPrompt {
       name: assistPresetName(state),
     });
     this.keepButton.hidden = !keep;
+    // 9-11a: 出したタップが選択のボタンへ押し抜けない（9-9b）
+    noteScreenSwitch();
     this.wrap.hidden = false;
     this.wrap.scrollTop = 0;
     // 初期値（かんたん）にフォーカス（Enter で決められる）
@@ -145,6 +148,8 @@ export class AssistPresetPrompt {
 
   private finish(): void {
     this.wrap.hidden = true;
+    // 9-11a: 閉じて出た下の画面のボタンへ押し抜けない
+    noteScreenSwitch();
     const d = this.done;
     this.done = null;
     d?.();

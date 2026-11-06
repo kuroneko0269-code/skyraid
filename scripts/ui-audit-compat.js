@@ -25,6 +25,7 @@ import {
   dialogButton,
   finish,
   newPage,
+  pickAssistPreset,
   screenIs,
   seed,
   shown,
@@ -206,6 +207,8 @@ async function auditStorage(browser, base, out, kind) {
   const told = await toast();
   await page.screenshot({ path: `${out}/compat-storage-${kind}.png` });
   const count = await page.locator('.app-toast', { hasText: STORAGE_NOTE }).count();
+  // 9-5d の補助の組・チュートリアルの案内を閉じる（9-11a）
+  await pickAssistPreset(page);
   await page.keyboard.press('Escape');
   await page.click('.mode-tile[data-mode="replay"]');
   const replay = await page

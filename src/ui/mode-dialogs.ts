@@ -254,6 +254,8 @@ export class ModeDialogs {
   close(): boolean {
     if (this.all.every((d) => d.hidden)) return false;
     for (const d of this.all) d.hidden = true;
+    // 9-11a: 閉じて出たモード選択のカード・タイル（「戻る」の下のリプレイなど）へ、同じタップが押し抜けない
+    noteScreenSwitch();
     return true;
   }
 

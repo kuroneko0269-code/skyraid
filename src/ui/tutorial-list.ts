@@ -1,6 +1,7 @@
 // チュートリアルの章の一覧（9-5c）: モード選択の上に重ねるダイアログ。章ごとに番号・名前・目当てと、終えた章の ✓。
 // 押した章から始める（どの章からでも・何度でも）。最後の章（補助の設定と練習場）は飛ばずに、この中で読む頁を出す。
 // 今の利用者には一度だけ「チュートリアルが新しくなりました」も出す（showNotice）
+import { noteScreenSwitch } from './screen-switch';
 import './tutorial-list.css';
 import { formatCredits } from '../core/format';
 import {
@@ -135,6 +136,8 @@ export class TutorialList {
 
   /** 章の一覧を出す（page: 補助の章の頁から） */
   show(page = false): void {
+    // 9-11a: モード選択の「チュートリアル」を押したタップが、出た一覧の章のボタンへ押し抜けない（9-9b の対策をここにも）
+    noteScreenSwitch();
     this.noticeWrap.hidden = true;
     this.wrap.hidden = false;
     this.wrap.scrollTop = 0;
@@ -144,6 +147,7 @@ export class TutorialList {
 
   showNotice(): void {
     this.close();
+    noteScreenSwitch();
     this.noticeWrap.hidden = false;
     this.noticeOpen.focus({ preventScroll: true });
   }
@@ -153,10 +157,14 @@ export class TutorialList {
     const open = !this.wrap.hidden || !this.noticeWrap.hidden;
     this.wrap.hidden = true;
     this.noticeWrap.hidden = true;
+    // 9-11a: 閉じて出たモード選択のカード・タイルへ押し抜けない
+    if (open) noteScreenSwitch();
     return open;
   }
 
   private showList(): void {
+    // 頁 ↔ 一覧の切り替えも、押したボタンの下の章のボタンへ押し抜けない
+    noteScreenSwitch();
     this.page.hidden = true;
     this.listBox.hidden = false;
     const done = this.done();
@@ -170,6 +178,7 @@ export class TutorialList {
   }
 
   private showPage(): void {
+    noteScreenSwitch();
     this.listBox.hidden = true;
     this.page.hidden = false;
     this.preset.sync();
