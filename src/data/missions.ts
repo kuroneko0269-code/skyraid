@@ -95,14 +95,16 @@ export const ISLAND_PATROL = [
   { x: -2000, y: 900, z: 2000 },
 ] as const;
 
-/** M2 の敵機の HP の倍率（8-6c。120 → 72） */
-const M2_ENEMY_HP_SCALE = 0.6;
+/** M2 の敵機の HP の倍率（8-6c で 120 → 72。9-11a で ×0.8 = 96 に一部戻した。機銃 6 発 → 8 発） */
+const M2_ENEMY_HP_SCALE = 0.8;
 
 /**
  * M2 初陣: 敵機 3 機を撃墜する。1 機ずつ来る（2-6 の事前修正。それまでは開始時に 2 機同時）:
  * 開始時に北西、30 秒後に北東、60 秒後に北西。開始位置は起動位置と同じ島の南の沖合。
  * 8-6c: 3 機とも easy（3 機目は normal だった）・HP ×0.6（120 → 72）・間隔 20 → 30 秒。初心者役のボットがミサイルありでも
  * 8 回中 1 回しか成功しなかった（docs/decisions.md の 8-6c）
+ * 9-11a: HP を ×0.6 → ×0.8 に一部戻した（補助の組「ふつう」で手応えが無かった。3 機目を normal に戻す案は「かんたん」の
+ * 初心者役が 8 回中 5 回に落ちたので採らなかった。docs/decisions.md の 9-11a）
  */
 export const FIRST_SORTIE_MISSION: MissionDef = {
   id: 'first-sortie',

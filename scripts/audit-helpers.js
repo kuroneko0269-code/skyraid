@@ -69,6 +69,21 @@ export async function seed(page) {
   });
 }
 
+/** 9-11a: 初回の補助の組（9-5d）を「かんたん」で決める（出ていなければ何もしない）。true = 出ていた */
+export async function pickAssistPreset(page) {
+  const card = page.locator('.assist-preset-prompt:not([hidden]) .assist-preset-card').first();
+  const there = await card.waitFor({ timeout: 3000 }).then(
+    () => true,
+    () => false,
+  );
+  if (there) {
+    await page.waitForTimeout(1200);
+    await card.click();
+    await page.waitForTimeout(300);
+  }
+  return there;
+}
+
 export async function toModeSelect(page, base) {
   await page.goto(base);
   await shown(page, '.title-screen');

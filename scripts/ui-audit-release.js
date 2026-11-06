@@ -18,6 +18,7 @@ import {
   VIEWPORT,
   collectCsp,
   dialogButton,
+  pickAssistPreset,
   screenIs,
   seed,
   shown,
@@ -59,6 +60,9 @@ async function auditFirstRun(browser, base, out) {
   await page.fill('.pilot-name-input', 'ROOKIE');
   await page.keyboard.press('Enter');
   await shown(page, '.mode-select-screen');
+  // 9-5d: 初回は補助の組を選ぶ画面が先（9-11a で点検を合わせた）
+  const preset = await pickAssistPreset(page);
+  r.steps.push(preset ? '補助の組を選ぶ画面 → かんたん' : '補助の組を選ぶ画面が出ない');
   const prompt = await page
     .locator('.mode-prompt:not([hidden])')
     .filter({ hasText: L('チュートリアル') })
@@ -75,7 +79,11 @@ async function auditFirstRun(browser, base, out) {
     `初回起動後 localStorage: ${after.local.join(', ')} / IndexedDB: ${after.idb.join(', ')}`,
   );
   r.ok =
-    empty.local.length === 0 && empty.idb.length === 0 && prompt && saved?.pilotName === 'ROOKIE';
+    empty.local.length === 0 &&
+    empty.idb.length === 0 &&
+    preset &&
+    prompt &&
+    saved?.pilotName === 'ROOKIE';
   await collectCsp(page, log);
   Object.assign(r, { errors: log.errors, csp: log.csp });
   await context.close();

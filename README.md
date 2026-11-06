@@ -1,35 +1,39 @@
 # SkyRaid: Titan Skies
 
 > **English:** SkyRaid: Titan Skies is a 3D arcade flight shooter that runs in your browser — no install needed.
-> Fly the campaign and ring races, battle friends in 2–4 player PvP, or team up
-> (1–4 players) to defend your base and take down the giant monster Vorgas. Works on PCs and phones (touch, keyboard and
-> gamepad). The game is available in English and Japanese: it follows your browser's language on first launch, and you
-> can switch in Settings → Display → Language. Requires a browser with WebGL 2 (iOS 16.4+, Chrome/Edge 105+,
-> Safari 16.4+, Firefox 121+). Online Link (cloud save and rankings) is optional and limited to approved members.
+> Fly an 8-mission campaign and ring races, take on the Daily Challenge, sharpen your aim at the Practice Range,
+> battle friends in 2–4 player PvP, or team up (1–4 players) to defend your base and take down the giant monsters
+> Vorgas and Nephirga. Earn badges along the way. Works on PCs and phones (touch, keyboard and gamepad; touch
+> assist presets Easy / Normal / Hard). The game is available in English and Japanese: it follows your browser's
+> language on first launch, and you can switch in Settings → Display → Language. Requires a browser with WebGL 2
+> (iOS 16.4+, Chrome/Edge 105+, Safari 16.4+, Firefox 121+). Online Link (cloud save and rankings) is optional and
+> limited to approved members.
 
-ブラウザで動く 3D フライトシューティング（v1.0.1）。インストール不要で、パソコンとスマホで遊べます。ホーム画面に追加するとアプリのように全画面で起動し、PvP・協力以外はオフラインでも遊べます。
+ブラウザで動く 3D フライトシューティング（v1.0.16）。インストール不要で、パソコンとスマホで遊べます。ホーム画面に追加するとアプリのように全画面で起動し、PvP・協力以外はオフラインでも遊べます。
 
 ## 遊び方
 
-タイトル →「モード選択」の「遊ぶ」から選びます。初めてのときはチュートリアル（5 段階・撃墜されない練習）を勧めます。
+タイトル →「モード選択」の「遊ぶ」から選びます。初めてのときは補助の組（タッチの当てやすさ。かんたん / ふつう / むずかしい）を選び、チュートリアル（撃墜されない練習）を勧めます。
 
 | モード | 人数 | 内容 |
 | --- | --- | --- |
-| チュートリアル | ソロ | 旋回・加速・機銃・ミサイル・フレアの練習 |
-| キャンペーン | ソロ | 5 ミッション（訓練 → 怪獣の出現）。報酬のクレジットで機体の購入・強化・塗装 |
+| 日替わり | ソロ | 毎日（日本時間の 0 時で切り替え）全員が同じ条件で遊ぶ 2〜4 分の課題（的あて・動く的・敵機の連戦・周回レース）。その日の最高・続けて遊んだ日数 |
+| チュートリアル | ソロ | 9 章（操縦・速さ・照準と機銃・動く的・ミサイル・フレア・宙返り・的の選び方と探し方・補助の設定と練習場）。章を選んで何度でもやり直せる |
+| キャンペーン | ソロ | 8 ミッション（訓練 → 夜間迎撃・対空陣地 → 決戦のネフィルガ）。報酬のクレジットで機体の購入・強化・塗装 |
+| 練習場 | ソロ | 止まった的・動く的・模擬の敵（60〜90 秒・機銃だけ・撃墜されない）。命中率などの指標と、次に直すとよい所 |
+| リングレース | ソロ | 6 コース。道案内（次のリングの札・矢印・点線）とコースの下見、ゴーストと競ってタイムとランク |
 | フリーフライト | ソロ | マップ・天候・時間帯を選んで自由に飛ぶ（敵機の有無・難易度も選べる） |
-| リングレース | ソロ | 4 コース。ゴーストと競ってタイムとランク |
-| PvP | 2〜4 人 | 部屋コード・共有 / QR で集まって個人戦・チーム戦（2 対 2） |
-| レイド | 1〜4 人 | 港湾都市に上陸する怪獣ヴォルガスを部位を壊して倒す（通常 / 高難度） |
+| レイド | 1〜4 人 | 港湾都市を襲う怪獣を部位を壊して倒す。地上のヴォルガスか空を飛ぶネフィルガ（通常 / 高難度・残機 3） |
 | 防衛戦 | 1〜4 人 | 基地を全 10 波の攻撃から守る |
+| PvP | 2〜4 人 | 部屋コード・共有 / QR で集まって個人戦・チーム戦（2 対 2） |
 
-「管理」からハンガー（機体・強化・塗装）・リプレイ（記録の再生・書き出し）・設定・情報（版・更新履歴・ライセンス・データの扱い）を開けます。結果画面の「記録カード」で結果を画像にして共有できます。
+「勲章」で取った勲章（28 個。取るとクレジットの報酬）を見られます。「管理」からハンガー（機体・強化・塗装）・リプレイ（記録の再生・書き出し）・設定・情報（版・更新履歴・ライセンス・データの扱い）を開けます。結果画面の「記録カード」で結果を画像にして共有できます。
 
 ### 操作（主なもの）
 
 | 動作 | キーボード | ゲームパッド | タッチ |
 | --- | --- | --- | --- |
-| 機首の上げ下げ・傾け | WASD / 矢印 | 左スティック | 左下のスティック |
+| 機首の上げ下げ・傾け | WASD / 矢印 | 左スティック | 左下のスティック（倒した方向へ曲がる。設定で ピッチとロール / 傾き / ドラッグ） |
 | ヨー | Q / E | LT / RT | 左上・右上の ◀ ▶ |
 | スロットル | Shift / Z | 右スティック上下 | 右端のスライダー |
 | 機銃 / ミサイル | Space / F | RB / A | GUN / MSL |
@@ -37,7 +41,7 @@
 | ターゲット切替 | Tab | Y | HUD の対象をタップ |
 | ポーズ | Esc | Start | 右上の ⏸ |
 
-キーの割り当て・感度・操作補助（エイムアシストなど）は設定で変えられます。全部の操作は `docs/spec.md` の「操作」。
+キーの割り当て・感度・操作補助（補助の組・狙いの補助・自動射撃・速度合わせなど）は設定 → 操作で変えられます。全部の操作は `docs/spec.md` の「操作」。
 
 ## 動作環境
 

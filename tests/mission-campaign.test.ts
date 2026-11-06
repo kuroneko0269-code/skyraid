@@ -70,7 +70,7 @@ describe('初期ミッション 5 本のデータ', () => {
     }
   });
 
-  it('M2: 敵機 3 機が 1 機ずつ 30 秒差（0 / 30 / 60 秒）で出る。3 機とも easy・HP ×0.6（8-6c。それまでは 20 秒差・easy・easy・normal）', () => {
+  it('M2: 敵機 3 機が 1 機ずつ 30 秒差（0 / 30 / 60 秒）で出る。3 機とも easy・HP ×0.8（8-6c で ×0.6、9-11a で ×0.8 に一部戻した。8-6c の前は 20 秒差・easy・easy・normal）', () => {
     const fighters = FIRST_SORTIE_MISSION.spawns.filter((s) => s.kind === 'enemyFighter');
     expect(
       fighters.map((s) => [
@@ -80,9 +80,9 @@ describe('初期ミッション 5 本のデータ', () => {
         s.hpScale,
       ]),
     ).toEqual([
-      [1, 'easy', 'start', 0.6],
-      [1, 'easy', 30, 0.6],
-      [1, 'easy', 60, 0.6],
+      [1, 'easy', 'start', 0.8],
+      [1, 'easy', 30, 0.8],
+      [1, 'easy', 60, 0.8],
     ]);
   });
 
@@ -249,7 +249,7 @@ describe('初期ミッションの通し（シード固定のボット）', () =
     ]);
   });
 
-  it('M2 初陣（8-6c: 30 秒差・easy × 3・HP ×0.6）の成功率: 8 シードで 熟練者役 8/8・平均的 7/8（戦域外の警告で戻る。4-11 の 20 秒差・easy・easy・normal は 6/8・0/8、戻る動きなし）', () => {
+  it('M2 初陣（8-6c: 30 秒差・easy × 3。9-11a: HP ×0.8）の成功率: 8 シードで 熟練者役 8/8・平均的 7/8（戦域外の警告で戻る。4-11 の 20 秒差・easy・easy・normal は 6/8・0/8、戻る動きなし）', () => {
     const rate = (skill: typeof VETERAN): number => {
       let ok = 0;
       for (let seed = 1; seed <= 8; seed++) {

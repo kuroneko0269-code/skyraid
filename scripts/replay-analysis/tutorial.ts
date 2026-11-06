@@ -12,16 +12,21 @@ export function runTutorialMatrix(
   seeds: number,
   progress: (line: string) => void,
   roles: readonly TutorialBotRole[] = ['human', 'beginner'],
+  /** 9-11a: 章・方式を絞る（省略は全部） */
+  chapters: readonly string[] = TUTORIAL_FLIGHT_CHAPTERS,
+  modes: readonly string[] = TUTORIAL_BOT_MODES,
 ): string {
+  const chapterList = TUTORIAL_FLIGHT_CHAPTERS.filter((c) => chapters.includes(c));
+  const modeList = TUTORIAL_BOT_MODES.filter((m) => modes.includes(m));
   const out = [
-    '役 | 章 | ' + TUTORIAL_BOT_MODES.join(' | '),
-    '--- | --- | ' + TUTORIAL_BOT_MODES.map(() => '---').join(' | '),
+    '役 | 章 | ' + modeList.join(' | '),
+    '--- | --- | ' + modeList.map(() => '---').join(' | '),
   ];
   const hints = new Map<string, number>();
   for (const role of roles)
-    for (const c of TUTORIAL_FLIGHT_CHAPTERS) {
+    for (const c of chapterList) {
       const cells: string[] = [];
-      for (const mode of TUTORIAL_BOT_MODES) {
+      for (const mode of modeList) {
         let ok = 0;
         const times: number[] = [];
         for (let seed = 1; seed <= seeds; seed++) {
