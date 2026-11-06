@@ -72,3 +72,18 @@ export function tipText(
   const v = tip === 'overtake' ? (c.touch && c.speedMatch ? 'on' : 'off') : 'all';
   return t(`practice.tips.${tip}.${v}`);
 }
+
+/** 9-10d: 助言の札の短い見出し（例: 速すぎて追い越しています） */
+export function issueTitle(k: PracticeIssue): string {
+  return t(`practice.issueCard.${k}`);
+}
+
+/** 9-10d: 助言の札の直し方の文（見出しと数は札の別の欄に出すので、直し方だけ） */
+export function issueFix(k: PracticeIssue, c: AdviceContext): string {
+  return t(`practice.issueFix.${k}.${issueVariant(k, c)}`);
+}
+
+/** 9-10d: 良かった点の札の見出し（例: よく狙えています） */
+export function goodTitle(k: PracticeGood, r: Readonly<PracticeResult>): string {
+  return t(`practice.goodCard.${k}`, { kills: String(r.kills) });
+}

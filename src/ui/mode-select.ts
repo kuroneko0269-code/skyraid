@@ -1,5 +1,6 @@
 import { t } from '../core/i18n';
 import type { RaidDifficulty } from '../data/raid';
+import type { RaidKaijuId } from '../data/raid-kaiju';
 import type { DefenseDifficulty } from '../data/defense';
 import './mode-select.css';
 import { createGlyph, type GlyphKind } from './glyphs';
@@ -210,6 +211,10 @@ export class ModeSelectScreen {
   set freeTimeFlow(v: boolean) {
     this.dialogs.freeTimeFlow = v;
   }
+  /** 9-10d: レイドの怪獣選びの自己ベスト（撃破までの最短の表示。Screens が差し込む） */
+  set raidBest(fn: (kaiju: RaidKaijuId, difficulty: RaidDifficulty) => string | null) {
+    this.dialogs.raidBest = fn;
+  }
   /** 防衛戦（7-2）のマップと難易度（選ぶたびに変わる） */
   get defenseMapId(): string {
     return this.dialogs.defenseMapId;
@@ -223,7 +228,7 @@ export class ModeSelectScreen {
     this.dialogs.showFree();
   }
 
-  /** レイドの人数・難易度の選択を出す（6-2） */
+  /** レイドの怪獣選びを出す（6-2。9-10d で作り直した） */
   showRaidPrompt(): void {
     this.dialogs.showRaid();
   }

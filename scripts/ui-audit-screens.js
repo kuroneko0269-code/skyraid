@@ -7,6 +7,9 @@
 // 「やり直す」と設定の欄・結果の見本と M1 の失敗の案内）・チュートリアル（9-5c。ui-audit-tutorial.js）
 import { L } from './audit-lang.js';
 import { auditTutorialScreens } from './ui-audit-tutorial.js';
+import { openLobbySample } from './lobby-samples.js';
+
+export { openLobbySample };
 
 /** M1 の失敗のリザルトを見本で出す（練習場への案内つき） */
 export async function openFailedResultSample(page) {
@@ -261,6 +264,25 @@ export async function auditMoreScreens(page, base, size, shot, shown) {
   await page.click('.mode-card[data-mode="pvp"]');
   await shown('.lobby-screen');
   await shot('lobby', '.lobby-screen.is-shown');
+  // 9-10d: 部屋の画面（ホスト・参加者・チーム戦・協力レイド・協力防衛戦）と定型文のダイアログ
+  for (const variant of ['host-ffa', 'guest-ffa', 'host-team', 'host-raid', 'guest-defense']) {
+    await toModeSelect();
+    await openLobbySample(page, variant);
+    await shot(`lobby-${variant}`, '.lobby-screen.is-shown');
+    if (variant === 'host-ffa') {
+      await page.click(`.lobby-screen.is-shown .lobby-config .practice-tab[data-tab="options"]`);
+      await shot('lobby-host-ffa-options', '.lobby-screen.is-shown');
+      await page.click('.lobby-screen.is-shown .lobby-chat-open');
+      await shot('dialog-lobby-chat', '.lobby-chat-dialog');
+    }
+  }
+  // 9-10d: レイドの怪獣選び（ネフィルガ・高難度）
+  await toModeSelect();
+  await page.click('.mode-card[data-mode="raid"]');
+  await page.locator('.raid-select-wrap:not([hidden])').waitFor();
+  await page.click('.raid-select .raid-kaiju-seg .ui-seg-item[data-value="nephirga"]');
+  await page.click('.raid-select .raid-diff-seg .ui-seg-item[data-value="hard"]');
+  await shot('dialog-raid-nephirga', '.raid-select-wrap');
 
   // 設定のデータ: オンライン連携中・メンバー管理の見本、セーブデータの削除の確認、取り消しの確認のダイアログ
   await toModeSelect();

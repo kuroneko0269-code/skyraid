@@ -35,62 +35,12 @@ export function toggle(parent: HTMLElement, label: string, onClick: () => void):
   return b;
 }
 
-/** ロビーのモードの表示名（6-2 でレイドを足した） */
-export const MODE_LABELS: Readonly<Record<PvpMode, string>> = {
-  get ffa() {
-    return t('lobby.mode.ffa');
-  },
-  get team() {
-    return t('lobby.mode.team');
-  },
-  get raid() {
-    return t('lobby.mode.raid');
-  },
-  get defense() {
-    return t('lobby.mode.defense');
-  },
-};
-
 export function parseMode(v: string): PvpMode {
   return v === 'team' || v === 'raid' || v === 'defense' ? v : 'ffa';
 }
 
 /** 制限時間の表示（秒 → 「5 分」） */
 export const minutes = (s: number): string => tn('lobby.minutes', Math.round(s / 60));
-
-/** ルールの 1 行（クライアントに出す。レイド・防衛戦は撃墜数・制限時間を使わない） */
-export function rulesSummary(st: Readonly<GameSettings>): string {
-  if (st.mode === 'raid')
-    return t('lobby.rules.raid', {
-      kaiju: raidKaijuName(raidKaijuOf(st.raidKaiju)),
-      difficulty: RAID_DIFFICULTY_LABELS[st.hard ? 'hard' : 'normal'],
-    });
-  if (st.mode === 'defense')
-    return t('lobby.rules.defense', {
-      difficulty: st.hard ? t('defense.difficulty.hard') : t('defense.difficulty.normal'),
-    });
-  return t('lobby.rules.versus', {
-    mode: st.mode === 'team' ? t('lobby.rules.team') : t('lobby.rules.ffa'),
-    score: st.scoreLimit,
-    time: minutes(st.timeLimitSeconds),
-  });
-}
-
-/** 補正の 1 行（強化の有効・無効と初心者保護。9-3: 個人戦・チーム戦は狙いの補助・自動射撃も） */
-export function optionsSummary(st: Readonly<GameSettings>): string {
-  const base = t('lobby.options', {
-    upgrades: st.noUpgrades ? t('lobby.upgradesOff') : t('lobby.upgradesOn'),
-    rookie: st.rookieGuard ? 'ON' : 'OFF',
-  });
-  if (st.mode === 'raid' || st.mode === 'defense') return base;
-  return (
-    base +
-    t('lobby.optionsAssist', {
-      aim: st.aimAssist ? 'ON' : 'OFF',
-      fire: st.autoFire ? 'ON' : 'OFF',
-    })
-  );
-}
 
 export type RuleToggle = 'noUpgrades' | 'rookieGuard' | 'aimAssist' | 'autoFire';
 

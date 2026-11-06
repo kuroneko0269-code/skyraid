@@ -55,11 +55,12 @@ export class LobbyShare {
 
   constructor(parent: HTMLElement, dialogParent: HTMLElement) {
     this.root = el('div', 'lobby-share', parent);
-    createButton(this.root, 'ui-button lobby-share-button', t('lobby.share.share'), () => {
-      void this.share();
-    });
+    // 9-10d: 並びを「コピー」「共有」「QR」に
     createButton(this.root, 'ui-button lobby-share-button', t('lobby.share.copy'), () => {
       void this.copy(this.code, t('lobby.share.codeCopied'));
+    });
+    createButton(this.root, 'ui-button lobby-share-button', t('lobby.share.share'), () => {
+      void this.share();
     });
     createButton(this.root, 'ui-button lobby-share-button', 'QR', () => {
       this.openQr();

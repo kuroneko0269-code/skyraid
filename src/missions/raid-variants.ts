@@ -26,10 +26,6 @@ export function registerRaidVariant(v: RaidVariant): void {
   else variants.push(v);
 }
 
-export function raidVariants(): readonly RaidVariant[] {
-  return variants;
-}
-
 export function findRaidVariant(id: string | undefined): RaidVariant | null {
   return id === undefined ? null : (variants.find((v) => v.id === id) ?? null);
 }

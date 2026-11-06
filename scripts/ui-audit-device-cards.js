@@ -3,6 +3,7 @@
 // 9-9b の passthrough と同じく iOS のタップ（タッチ → 少し後に互換のクリック）で押し、開いた画面・ダイアログのボタンが
 // 同じタップで押されない（チュートリアルの章の一覧を飛ばして始まる・ダイアログの出撃が押される など）ことを確かめる
 import { iosTap, shownScreens } from './ui-audit-device-switch.js';
+import { openLobbySample } from './lobby-samples.js';
 
 const screenName = (page) => page.evaluate(() => document.documentElement.dataset.screen ?? '');
 
@@ -14,7 +15,7 @@ const CARDS = [
   ['練習場', '.mode-card[data-mode="practice"]', 'practice-screen'],
   ['リングレース', '.mode-card[data-mode="race"]', 'race-screen'],
   ['フリーフライト', '.mode-card[data-mode="free"]', 'dialog:mode-prompt'],
-  ['レイド', '.mode-card[data-mode="raid"]', 'dialog:mode-prompt'],
+  ['レイド', '.mode-card[data-mode="raid"]', 'dialog:mode-prompt raid-select-wrap'],
   ['防衛戦', '.mode-card[data-mode="defense"]', 'dialog:mode-prompt'],
   ['PvP', '.mode-card[data-mode="pvp"]', 'lobby-screen'],
   ['ハンガー', '.mode-tile[data-mode="hangar"]', 'hangar-screen'],
@@ -104,6 +105,20 @@ export async function auditCards({ browser, base, touchContext, toTitle }) {
       'flight',
     ],
     ['フリーフライト →「出撃」', '.mode-card[data-mode="free"]', '.ui-button.is-primary', 'flight'],
+    // 9-10d: レイドの怪獣選び（怪獣・難易度の切り替えはダイアログのまま・「ソロで出撃」で飛ぶ）
+    [
+      'レイド → 怪獣の切り替え（ネフィルガ）',
+      '.mode-card[data-mode="raid"]',
+      '.raid-kaiju-seg .ui-seg-item[data-value="nephirga"]',
+      'dialog',
+    ],
+    [
+      'レイド → 難易度の切り替え（高難度）',
+      '.mode-card[data-mode="raid"]',
+      '.raid-diff-seg .ui-seg-item[data-value="hard"]',
+      'dialog',
+    ],
+    ['レイド →「ソロで出撃」', '.mode-card[data-mode="raid"]', '.raid-solo', 'flight'],
   ];
   for (const [what, card, button, expect] of dialogCases) {
     await toModes();
@@ -129,11 +144,32 @@ export async function auditCards({ browser, base, touchContext, toTitle }) {
     const name = await screenName(page);
     let ok;
     if (expect === 'modes') ok = screens.length === 1 && screens[0].includes('mode-select-screen');
+    else if (expect === 'dialog')
+      ok = matches(screens, 'dialog:mode-prompt raid-select-wrap') && name !== 'flight';
     else if (expect === 'page')
       ok = (await page.locator('.tutorial-page:not([hidden])').isVisible()) && name !== 'flight';
     else ok = name === 'flight';
     rows.push({ what: `ダイアログ: ${what}`, ok, screens: [...screens, `screen=${name}`] });
   }
+  // 9-10d: ロビーの部屋の画面（見本）の「定型文」→ ダイアログが開くだけ、定型文を選ぶ → 閉じるだけ（下の席・ボタンが押されない）
+  await toModes();
+  await openLobbySample(page, 'guest-ffa');
+  await page.waitForTimeout(600);
+  await iosTap(page, cdp, '.lobby-screen.is-shown .lobby-chat-open');
+  await page.waitForTimeout(600);
+  const chatOpen = await page.locator('.lobby-chat-dialog').isVisible();
+  rows.push({ what: 'ロビー →「定型文」（ダイアログが開くだけ）', ok: chatOpen, screens: [] });
+  await iosTap(page, cdp, '.lobby-chat-dialog .lobby-chat-button');
+  await page.waitForTimeout(600);
+  const after = await page.evaluate(() => ({
+    chat: document.querySelector('.lobby-chat-dialog')?.closest('[hidden]') === null,
+    overlays: [...document.querySelectorAll('.lobby-overlay')].filter((e) => !e.hidden).length,
+  }));
+  rows.push({
+    what: 'ロビーの定型文 → 選ぶ（閉じるだけ。ハンガー・QR が開かない）',
+    ok: !after.chat && after.overlays === 0,
+    screens: [],
+  });
   await ctx.close();
   return rows;
 }

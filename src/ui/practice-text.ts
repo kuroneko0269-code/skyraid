@@ -47,11 +47,6 @@ export function formatRatio(v: number | null): string {
   return v === null ? '—' : `${formatDecimal(v * 100, 1)}%`;
 }
 
-/** 秒 → 「8.5 秒」（null は —） */
-export function formatSeconds(v: number | null): string {
-  return v === null ? '—' : t('practice.seconds', { seconds: formatDecimal(v, 1) });
-}
-
 /** 練習場への案内（9-5）: チュートリアル（9-5c: 狙いの章・最後に飛ぶ章）の完了、M1・M2 の失敗（狙いの練習が要りそうなとき） */
 export function practiceHintFor(
   tutorial: boolean,

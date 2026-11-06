@@ -101,6 +101,22 @@ npm run build   # 本番ビルド（dist/）
 
 OGP の `og:image` は、Cloudflare Pages ではビルドに渡される `CF_PAGES_URL` で絶対 URL になります。独自ドメインで公開するときは環境変数 `VITE_SITE_URL`（例 `https://skyraid.example.com`）を入れると、その URL を使います（無ければ `/brand/og-image.jpg`）。
 
+## 怪獣の画像の差し替え（9-10d）
+
+モード選択の「レイド」で開く怪獣選びの左半分の画像です。今はゲームの描画で作った画像が入っています。
+
+| ファイル | 怪獣 | 今の構図 |
+| --- | --- | --- |
+| `public/kaiju-art/vorgas.webp` | ヴォルガス | 夕方の湾。海面すれすれから見上げる |
+| `public/kaiju-art/nephirga.webp` | ネフィルガ | 雨の空。斜め下から見上げる |
+
+- 大きさと形式: **正方形 960×960px の WebP**（画質 80〜90。300KB 以下を目安）。名前は同じにする。ビルドでプリキャッシュに入り、オフラインでも出ます
+- 構図: **怪獣を真ん中に**置く。画面の枠は 844×390 で横長（約 440×374）、568×320 で縦長（約 220×304）なので、正方形の中央から切り取られます。下の 3 割には名前の帯（暗いグラデーション）が重なり、左上には「‹ 戻る」と怪獣の切り替えが重なります
+- フォトモードの写真から作るとき: フォトモード（ポーズ →「フォトモード」）で撮った PNG を、怪獣が中央に来るように正方形に切り抜き、960×960 に縮めて WebP に書き出す（例 `cwebp -q 90 -resize 960 960 photo.png -o public/kaiju-art/vorgas.webp`、Pillow なら `Image.open(p).crop(box).resize((960, 960)).save(out, 'WEBP', quality=90)`）
+- 切り取る中心を変えたいとき: `src/data/kaiju-profiles.ts` の `focus`（CSS の object-position。例 `'50% 40%'`）
+- ゲームの描画で作り直す: `npm run render-kaiju-art`（両方）・`npm run render-kaiju-art -- nephirga`（1 体だけ）。開発サーバーを立て、画質「高」でソロのレイドに出て撮ります（クラウドの GPU の無い環境で 1 体 1 分ほど）。構図（天候・カメラの位置・画角・待つ秒数）は `src/data/kaiju-profiles.ts` の `scene`
+- 怪獣を足すとき: `src/data/kaiju-profiles.ts` に 1 件、文を `src/data/i18n/ja.json` / `en.json` の `raidSelect.kaiju.<id>` に、画像を `public/kaiju-art/<id>.webp` に足す（レイドの怪獣として登録されたものだけが並びます）
+
 ## BGM の差し替え
 
 効果音はすべてコードで合成しているので音声ファイルはいりません。BGM だけは次の場所に MP3 を置くと流れます（無ければ無音）。

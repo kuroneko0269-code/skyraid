@@ -54,6 +54,7 @@ import {
   openFailedResultSample,
   openPracticeResultSample,
 } from './ui-audit-screens.js';
+import { openLobbySample } from './lobby-samples.js';
 
 /** 出ている画面（ダイアログが開いていればダイアログ）の中の要素の枠 */
 const layout = (page, root) =>
@@ -239,6 +240,8 @@ export async function auditRotate({ browser, base, touchContext, toTitle, view }
     if (!root) continue;
     await check(mode, root);
     if (TABS[mode]) await tabs(mode, root, TABS[mode]);
+    // 9-10d: レイドの怪獣選び（ネフィルガ）
+    if (mode === 'raid') await tabs(mode, root, '.raid-select .raid-kaiju-seg .ui-seg-item');
   }
   // チュートリアル: 章の一覧の後に、補助の章の頁（章のボタンの最後）
   if (await openMode('tutorial')) {
@@ -262,12 +265,28 @@ export async function auditRotate({ browser, base, touchContext, toTitle, view }
       '.result-screen.is-shown:not(.practice-result-screen)',
     ],
     ['記録カード', openCardSample, '.card-overlay'],
+    // 9-10d: ロビーの部屋の画面（チーム戦のホスト・協力防衛戦の参加者）
+    [
+      'ロビー（チーム戦のホスト）',
+      (p) => openLobbySample(p, 'host-team'),
+      '.lobby-screen.is-shown',
+    ],
+    [
+      'ロビー（防衛戦の参加者）',
+      (p) => openLobbySample(p, 'guest-defense'),
+      '.lobby-screen.is-shown',
+    ],
   ];
   for (const [what, open, root] of samples) {
     await toModes();
     await open(page);
     await check(what, root);
     if (what === '練習場の結果') await tabs(what, root, `${root} .practice-tab`);
+    if (what.startsWith('ロビー')) await tabs(what, root, `${root} .lobby-config .practice-tab`);
+    if (what === 'ロビー（チーム戦のホスト）') {
+      await page.click(`${root} .lobby-chat-open`);
+      await check('ロビー（定型文のダイアログ）', '.lobby-chat-dialog');
+    }
   }
   // 飛行: ポーズ・タッチ操作のボタン（HUD は飛ぶと動くので、タッチ操作のボタンの配置を見る）
   await toModes();

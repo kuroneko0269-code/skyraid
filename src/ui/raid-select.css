@@ -1,0 +1,405 @@
+/*
+ * レイドの怪獣選び（9-10d。src/ui/raid-select.ts）: 画面いっぱいのダイアログ。左半分に怪獣の画像（上に切り替えと戻る、下の帯に名前）、
+ * 右半分に概要・攻撃・攻めどき・難易度・出撃。844×390 が基準（左 440px）。PC は 1180 × 680 まで
+ */
+.mode-prompt.raid-select-wrap {
+  padding: max(8px, var(--ui-safe-top)) max(8px, var(--ui-safe-right))
+    max(8px, var(--ui-safe-bottom)) max(8px, var(--ui-safe-left));
+  overflow: hidden;
+}
+
+.mode-prompt-box.raid-select {
+  --cut: var(--ui-cut-lg);
+  display: grid;
+  grid-template-columns: minmax(0, 52fr) minmax(0, 48fr);
+  gap: 0;
+  width: min(1180px, 100%);
+  height: min(680px, 100%);
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ---- 左: 画像 ---- */
+.raid-art {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 40%, rgb(30, 52, 70), rgb(4, 10, 18));
+}
+
+.raid-art-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.raid-art-top {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  background: linear-gradient(rgba(0, 6, 14, 0.6), transparent);
+}
+
+.raid-art-top .raid-back {
+  flex: 0 0 auto;
+  min-width: max-content;
+  min-height: 40px;
+  padding-inline: 12px;
+}
+
+.raid-kaiju-slot {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.raid-kaiju-seg .ui-seg-item {
+  min-height: 40px;
+  padding: 4px 10px;
+  font-size: 14px;
+}
+
+.raid-art-band {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 28px 16px 12px;
+  background: linear-gradient(transparent, rgba(0, 6, 14, 0.88) 45%);
+  text-shadow: var(--ui-shadow-text);
+}
+
+.raid-art-latin {
+  color: var(--ui-accent);
+  font: 700 34px/1 var(--ui-font-display);
+  letter-spacing: 0.14em;
+}
+
+.raid-art-name {
+  font: 700 17px/1.25 var(--ui-font-body);
+}
+
+.raid-art-name[hidden] {
+  display: none;
+}
+
+.raid-art-tagline {
+  color: var(--ui-text-dim);
+  font: 500 13px/1.3 var(--ui-font-body);
+}
+
+/* ---- 右: 中身 ---- */
+.raid-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px 14px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.raid-card-label {
+  color: var(--ui-text-dim);
+  font: 600 11.5px/1.2 var(--ui-font-display);
+  letter-spacing: 0.1em;
+}
+
+.raid-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.raid-summary-card,
+.raid-attack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 5px 8px;
+  border: var(--ui-line-width) solid var(--ui-line-faint);
+  background: var(--ui-bg-sunken);
+}
+
+.raid-summary-value {
+  font: 600 13px/1.3 var(--ui-font-body);
+}
+
+.raid-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.raid-attacks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 6px;
+}
+
+.raid-attack-name {
+  color: var(--ui-warn-text);
+  font: 700 13px/1.2 var(--ui-font-body);
+}
+
+.raid-attack-note {
+  color: var(--ui-text-dim);
+  font: 500 11.5px/1.3 var(--ui-font-body);
+}
+
+.raid-opening-text {
+  margin: 0;
+  font: 500 12.5px/1.4 var(--ui-font-body);
+}
+
+.raid-difficulty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.raid-diff-seg {
+  flex: 1 1 auto;
+}
+
+.raid-diff-seg .ui-seg-item {
+  min-height: 40px;
+  padding: 4px 10px;
+}
+
+.raid-diff-stats {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  font: 600 12.5px/1.35 var(--ui-font-body);
+  white-space: nowrap;
+}
+
+.raid-best {
+  color: var(--ui-gold);
+}
+
+.raid-diff-note {
+  margin: 0;
+  color: var(--ui-text-dim);
+  font: 500 11.5px/1.3 var(--ui-font-body);
+}
+
+.raid-select[data-difficulty='hard'] .raid-diff-note {
+  color: var(--ui-warn-text);
+}
+
+.raid-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.raid-actions .ui-button {
+  min-width: max-content;
+  min-height: 44px;
+  padding-inline: 12px;
+}
+
+.raid-actions .raid-coop {
+  flex: 1 1 0;
+}
+
+.raid-actions .raid-solo {
+  flex: 1.4 1 0;
+}
+
+/* ---- 背の低い横画面（844×390 が基準: 左 約 440px） ---- */
+@container app (max-height: 480px) {
+  .mode-prompt-box.raid-select {
+    grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+    width: 100%;
+    height: 100%;
+  }
+
+  .raid-info {
+    gap: 6px;
+    padding: 8px 12px;
+  }
+
+  .raid-art-latin {
+    font-size: 30px;
+  }
+
+  .raid-art-band {
+    padding: 24px 14px 10px;
+  }
+
+  .raid-summary-card,
+  .raid-attack {
+    padding: 3px 7px;
+  }
+
+  .raid-summary-value {
+    font-size: 11.5px;
+    line-height: 1.25;
+  }
+
+  .raid-block {
+    gap: 2px;
+  }
+
+  .raid-attacks {
+    gap: 3px 6px;
+  }
+
+  .raid-attack-name {
+    font-size: 12px;
+  }
+
+  .raid-attack-note {
+    font-size: 10.5px;
+    line-height: 1.25;
+  }
+
+  .raid-opening-text {
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+
+  .raid-diff-seg .ui-seg-label {
+    min-width: 0;
+    font-size: 11.5px;
+  }
+
+  .raid-diff-seg .ui-seg-item {
+    min-height: 38px;
+  }
+
+  .raid-diff-note {
+    font-size: 10.5px;
+  }
+
+  .raid-actions .ui-button {
+    min-height: 40px;
+  }
+}
+
+/* 狭くて背の低い画面（568×320）: 画像を 4 割にし、攻撃は名前だけ（2 × 2）、難易度の見出しは出さない */
+@container app (max-width: 640px) and (max-height: 480px) {
+  .mode-prompt-box.raid-select {
+    grid-template-columns: minmax(0, 40fr) minmax(0, 60fr);
+  }
+
+  .raid-art-top {
+    flex-direction: column;
+    padding: 6px;
+    gap: 4px;
+  }
+
+  .raid-art-top .raid-back {
+    align-self: flex-start;
+    min-height: 36px;
+  }
+
+  .raid-kaiju-slot {
+    width: 100%;
+  }
+
+  .raid-kaiju-seg .ui-seg-item {
+    min-height: 36px;
+    padding: 2px 6px;
+    font-size: 12px;
+  }
+
+  .raid-art-band {
+    padding: 18px 8px 6px;
+  }
+
+  .raid-art-latin {
+    font-size: 21px;
+    letter-spacing: 0.08em;
+  }
+
+  .raid-art-name {
+    font-size: 13px;
+  }
+
+  .raid-art-tagline {
+    font-size: 11px;
+  }
+
+  .raid-info {
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .raid-summary {
+    gap: 4px;
+  }
+
+  .raid-summary-value {
+    font-size: 10.5px;
+  }
+
+  .raid-card-label {
+    font-size: 10px;
+  }
+
+  .raid-attacks {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .raid-attack {
+    padding: 3px 5px;
+  }
+
+  .raid-attack-note {
+    display: none;
+  }
+
+  .raid-attack-name {
+    font-size: 11px;
+  }
+
+  .raid-opening-text {
+    font-size: 10.5px;
+    line-height: 1.3;
+  }
+
+  .raid-difficulty {
+    gap: 6px;
+  }
+
+  .raid-diff-seg .ui-seg-label {
+    display: none;
+  }
+
+  .raid-diff-seg .ui-seg-item {
+    min-height: 36px;
+    font-size: 13px;
+  }
+
+  .raid-diff-stats {
+    font-size: 10.5px;
+  }
+
+  .raid-diff-note {
+    font-size: 10px;
+  }
+
+  .raid-actions {
+    gap: 6px;
+  }
+
+  .raid-actions .ui-button {
+    min-height: 38px;
+    padding-inline: 8px;
+    font-size: 14px;
+  }
+}
