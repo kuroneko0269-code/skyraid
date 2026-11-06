@@ -1,9 +1,10 @@
-// 9-10b で足した勲章の名前と条件の文: 段階の数えは表の badges.ladder.<id>（{n} にしきい値）、組み合わせは badges.combo.<family>
-// （{kaiju}・{diff}・{mission}・{aircraft}・{assist}・{course}・{map} に今の言語の名前）から組み立てる
+// 勲章の名前（9-10c: すべて「〜した」の条件の文）と補足と段の短い名前: 9-10 からの勲章は表の badges.items.<id>、段階の数えは
+// badges.ladder.<id>（{n} にしきい値）、組み合わせは badges.combo.<family>（{kaiju}・{diff}・{mission}・{aircraft}・{assist}・
+// {course}・{map} に今の言語の名前）、収集は badges.collect。それぞれ name が名前、note（無くてもよい）が詳細の補足
 import { formatInteger } from '../core/format';
-import { t } from '../core/i18n';
+import { hasMessage, t } from '../core/i18n';
 import { findAircraftModel } from './aircraft';
-import type { BadgeCombo, BadgeStat } from './badges-catalog';
+import type { BadgeCombo, BadgeDef, BadgeStat, BadgeStep } from './badges-catalog';
 import { COURSES } from './courses';
 import { DEFENSE_MAPS } from './defense';
 import { isRaidKaijuId, raidKaijuName } from './raid-kaiju';
@@ -34,14 +35,6 @@ function comboParams(c: BadgeCombo): Record<string, string> {
   return out;
 }
 
-export function comboName(c: BadgeCombo): string {
-  return t(`badges.combo.${c.family}.name`, comboParams(c));
-}
-
-export function comboNote(c: BadgeCombo): string {
-  return t(`badges.combo.${c.family}.note`, comboParams(c));
-}
-
 /** 段階の数えの表のキーと値（機体ごとは 1 つの文に機体の名前） */
 function ladderParams(s: BadgeStat): { key: string; params: Record<string, string> } {
   const n = formatInteger(s.shown);
@@ -50,14 +43,38 @@ function ladderParams(s: BadgeStat): { key: string; params: Record<string, strin
   return { key: s.ladder, params: { n } };
 }
 
-export function ladderName(s: BadgeStat): string {
-  const { key, params } = ladderParams(s);
-  return t(`badges.ladder.${key}.name`, params);
+/** 表のキー（name・note の親）と値 */
+function textOf(def: BadgeDef): { key: string; params: Record<string, string> } {
+  if (def.stat) {
+    const { key, params } = ladderParams(def.stat);
+    return { key: `badges.ladder.${key}`, params };
+  }
+  if (def.combo) return { key: `badges.combo.${def.combo.family}`, params: comboParams(def.combo) };
+  if (def.collect !== undefined)
+    return { key: 'badges.collect', params: { pct: String(Math.round(def.collect * 100)) } };
+  return { key: `badges.items.${def.id}`, params: {} };
 }
 
-export function ladderNote(s: BadgeStat): string {
-  const { key, params } = ladderParams(s);
-  return t(`badges.ladder.${key}.note`, params);
+export function badgeTitleOf(def: BadgeDef): string {
+  const { key, params } = textOf(def);
+  return t(`${key}.name`, params);
+}
+
+export function badgeNoteOf(def: BadgeDef): string {
+  const { key, params } = textOf(def);
+  return hasMessage(`${key}.note`) ? t(`${key}.note`, params) : '';
+}
+
+/** 段の短い名前（数は単位つき） */
+export function stepText(step: BadgeStep): string {
+  if ('key' in step) return t(step.key);
+  if ('word' in step) return word(step.word, step.id);
+  const n = formatInteger(step.n);
+  return step.unit === 'count' ? n : t(`badges.unit.${step.unit}`, { n });
+}
+
+export function badgeStepOf(def: BadgeDef): string {
+  return def.step ? stepText(def.step) : '';
 }
 
 /** 進み具合の数の表示（時間・km は単位を換算して切り捨て） */

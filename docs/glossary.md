@@ -29,7 +29,10 @@
 | 練習場（9-5） | Practice Range |
 | 日替わり / 日替わりチャレンジ（9-9） | Daily / Daily Challenge |
 | 的あて / 動く的 / 敵機の連戦 / 周回レース（日替わりの課題。9-9） | Target Shoot / Moving Targets / Bandit Gauntlet / Lap Race |
-| 勲章 / 銅・銀・金 / 補助ふつう以上（9-10。9-11a で Normal or less → Normal/Hard） | Badge / Bronze・Silver・Gold / Assist: Normal/Hard |
+| 勲章 / 補助ふつう以上（9-10。9-11a で Normal or less → Normal/Hard。銅・銀・金は 9-10c で無くした） | Badge / Assist: Normal/Hard |
+| 勲章の名前（9-10c）: 「〜した」の条件の文。数えは「累計 N」、1 回で決まるものは「1 回の〜で」 | 過去形の文・文頭だけ大文字・数字は算用数字・句点なし。数えは "… in total"、1 回は "in one sortie" など（例 Shot down 100 enemy fighters in total / Flew a loop / Cleared a solo raid without being shot down） |
+| 勲章のカテゴリ（9-10c）: すべて・通算・操縦・戦闘・任務・レース・防衛・練習・日替わり・協力・対戦・レイド・収集 | All・Career・Flying・Combat・Missions・Race・Defense・Practice・Daily・Co-op・PvP・Raid・Collect |
+| 勲章の状態（9-10c）: すべて・取得・進行中・未着手 / 済 / 同じ段の勲章 | All・Earned・Started・Locked / Done / Same series（並び順は No.・Date・Progress・Name） |
 | 連続（続けて遊んだ日数。9-9） | Streak |
 | 挑戦する（9-9） | Take It On |
 | 止まった的 / 動く的 / 模擬の敵 | Fixed Targets / Moving Targets / Dummy Bandit |

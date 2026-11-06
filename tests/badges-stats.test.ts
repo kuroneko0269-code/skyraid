@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { BADGES } from '../src/data/badges';
 import { MISSIONS } from '../src/data/missions';
 import { assistLevelOf, lowerAssist } from '../src/missions/badges/sortie';
-import { earnedTier, recordBadges, syncRecordBadges } from '../src/progression/badges';
+import { hasBadge, recordBadges, syncRecordBadges } from '../src/progression/badges';
 import { createInitialSave, parseSave } from '../src/progression/save';
 import { addDailyDay, addStats, normalizeStats, statSum } from '../src/progression/stats';
 import type { ReplayControls } from '../src/replay/types';
@@ -40,7 +40,7 @@ describe('通算の記録のセーブ', () => {
     expect(s.counts['daily.days']).toBe(2);
   });
 
-  it('今のセーブ（v10）を読むと勲章・記録・クレジットはそのままで、通算の記録が空で足される', () => {
+  it('今のセーブ（v10）を読むと勲章・記録・クレジットはそのままで、通算の記録が空で足される（9-10c: 段階は分けた id へ）', () => {
     const v10: Record<string, unknown> = {
       ...createInitialSave(),
       version: 10,
@@ -51,7 +51,7 @@ describe('通算の記録のセーブ', () => {
     const save = parseSave(JSON.stringify(v10));
     expect(save?.version).toBe(11);
     expect(save?.credits).toBe(98765);
-    expect(save?.badges.earned).toEqual({ loop: [111], campaign: [1, 2] });
+    expect(save?.badges.earned).toEqual({ loop: [111], campaign: [1], campaignA: [2] });
     expect(save?.stats.counts).toEqual({});
   });
 });
@@ -108,7 +108,7 @@ describe('段階の数え・集め・節目', () => {
   it('集め: 集め以外の 25% で付き、節目は 10 個ごとに 1 回だけ払う', () => {
     const d = createInitialSave();
     const pool = recordBadges(d);
-    expect(pool['collect.25']?.tier).toBe(0);
+    expect(pool['collect.25']?.done).toBe(false);
     // 記録から取れる組み合わせを全部取る（キャンペーンのランク・レース・レイド・防衛戦）+ 通算の記録をたくさん
     for (const m of MISSIONS) d.missions[m.id] = { unlocked: true, bestRank: 'S' };
     d.records.raidBestMs = { normal: 1, hard: 1, 'nephirga:normal': 1, 'nephirga:hard': 1 };
@@ -137,8 +137,9 @@ describe('段階の数え・集め・節目', () => {
     expect(milestones.length).toBe(Math.floor(earned / 10));
     expect(d.badges.milestones).toBe(milestones.length);
     expect(syncRecordBadges(d, 2)).toEqual([]);
-    // 集め 25% は 69 個から（この数では付かない）
-    expect(earnedTier(d.badges, 'collect.25')).toBe(earned >= 69 ? 1 : 0);
+    // 収集 25% は収集以外の 25% から
+    const goal = Math.ceil(BADGES.filter((b) => b.collect === undefined).length * 0.25);
+    expect(hasBadge(d.badges, 'collect.25')).toBe(earned >= goal);
   });
 });
 
@@ -168,7 +169,7 @@ describe('一覧の行', () => {
     const d = createInitialSave();
     d.stats.counts = { 'mv.loop': 20 };
     d.badges.earned = { loop: [500], 'l.mvLoop.10': [900] };
-    const flight = badgeRows(d, { group: 'flight', status: 'all', sort: 'default' });
+    const flight = badgeRows(d, { group: 'flight', status: 'all', sort: 'number' });
     expect(flight.every((r) => BADGES.find((b) => b.id === r.id)?.group === 'flight')).toBe(true);
     const hidden = flight.find((r) => r.id === 'l.mvLoop.1000');
     expect(hidden?.masked).toBe(true);

@@ -2161,162 +2161,139 @@
   },
   "badges": {
     "title": "Badges",
-    "back": "← Modes",
-    "summary": "Earned {earned} / {total} · Tiers {tiers} / {totalTiers}",
+    "back": "‹ Modes",
     "skill": "Assist: Normal/Hard",
-    "earnedOn": "Earned {dates}",
-    "reward": "Reward {credits}",
     "progress": "{current} / {goal}",
-    "tier": {
-      "1": "Bronze",
-      "2": "Silver",
-      "3": "Gold"
-    },
     "groups": {
+      "all": "All",
+      "career": "Career",
       "flight": "Flying",
       "combat": "Combat",
-      "campaign": "Campaign & Tutorial",
-      "raid": "Raid",
-      "race": "Ring Race",
+      "campaign": "Missions",
+      "race": "Race",
       "defense": "Defense",
       "practice": "Practice",
       "daily": "Daily",
       "coop": "Co-op",
       "pvp": "PvP",
-      "career": "Career",
-      "collect": "Collection"
+      "raid": "Raid",
+      "collect": "Collect"
     },
     "toast": {
       "earned": "Badge earned: {names} (+{credits})",
       "backfill": "Awarded {count} badges from your past records: {names} (+{credits})",
       "more": " and {count} more",
       "separator": ", ",
-      "tiered": "{name} ({tier})",
       "milestone": "{count}-badge milestone"
     },
     "items": {
       "loop": {
-        "name": "Loop",
-        "note": "Fly a full vertical loop (nose straight up, inverted, then down)"
+        "name": "Flew a loop",
+        "note": "One full vertical circle: nose straight up, inverted, then down"
       },
       "immelmann": {
-        "name": "Immelmann",
+        "name": "Flew an Immelmann turn",
         "note": "Half loop up, then roll upright (reversed heading, 150 m+ higher)"
       },
       "lowPass": {
-        "name": "Low Pass",
-        "note": "Fly below 30 m above ground or sea at 200 m/s+ for 8 s"
+        "name": "Made a low pass",
+        "note": "Below 30 m above ground or sea at 200 m/s+ for 8 s"
       },
       "inverted": {
-        "name": "Inverted",
-        "note": "Fly inverted for 10 s (100 m+ above ground)"
+        "name": "Flew inverted",
+        "note": "Inverted for 10 s, 100 m+ above ground"
       },
       "topSpeed": {
-        "name": "Top Speed",
-        "note": "Reach 430 m/s (dive to build speed)"
+        "name": "Exceeded 430 m/s",
+        "note": "Dive to build speed"
       },
       "firstKill": {
-        "name": "First Kill",
-        "note": "Shoot down an enemy fighter"
+        "name": "Shot down an enemy fighter",
+        "note": "Any mode"
       },
       "ace": {
-        "name": "Ace",
-        "note": "Down 5 enemy fighters in one sortie (Campaign, Raid, Defense)"
+        "name": "Shot down 5 enemy fighters in one sortie",
+        "note": "Campaign, Raid, Defense"
       },
       "gunsOnly": {
-        "name": "Guns Only",
-        "note": "Clear a Campaign mission from M2 on without missiles, rockets or bombs"
+        "name": "Cleared a mission with guns only",
+        "note": "Campaign M2 and later. No missiles, rockets or bombs"
       },
       "flawless": {
-        "name": "Flawless",
-        "note": "Clear a Campaign mission from M2 on without taking a hit"
+        "name": "Cleared a mission without taking a hit",
+        "note": "Campaign M2 and later"
       },
       "campaign": {
-        "name": "Campaign",
-        "tier1": "Clear all 8 missions",
-        "tier2": "Clear every mission with A or better",
-        "tier3": "Clear every mission with S"
+        "name": "Cleared all 8 Campaign missions"
+      },
+      "campaignA": {
+        "name": "Got A or better on every Campaign mission"
+      },
+      "campaignS": {
+        "name": "Got S on every Campaign mission"
       },
       "tutorial": {
-        "name": "Flight School",
-        "note": "Finish all 9 tutorial chapters"
-      },
-      "vorgas": {
-        "name": "Vorgas Down",
-        "note": "Defeat Vorgas in a solo raid"
-      },
-      "nephirga": {
-        "name": "Nephirga Down",
-        "note": "Defeat Nephirga in a solo raid"
+        "name": "Finished all 9 tutorial chapters"
       },
       "nephirgaParts": {
-        "name": "Dismantled",
-        "note": "Break both wings, head and tail of Nephirga, then defeat it (solo raid, M8)"
+        "name": "Broke every part of Nephirga and defeated it",
+        "note": "Both wings, head and tail. Solo raid or M8"
       },
       "raidNoLoss": {
-        "name": "Unsinkable",
-        "note": "Clear a solo raid without being shot down"
-      },
-      "raidHard": {
-        "name": "Hard Raid",
-        "note": "Clear a solo raid on Hard"
+        "name": "Cleared a solo raid without being shot down"
       },
       "raceMedals": {
-        "name": "Ring Race",
-        "tier1": "Finish every course",
-        "tier2": "Finish every course with A or better",
-        "tier3": "Finish every course with Gold (S)"
+        "name": "Finished every ring race course"
+      },
+      "raceMedalsA": {
+        "name": "Got A or better on every ring race course"
+      },
+      "raceMedalsS": {
+        "name": "Got Gold on every ring race course",
+        "note": "Gold is rank S"
       },
       "cleanRun": {
-        "name": "Clean Run",
-        "note": "Finish a race without missing a ring (daily laps count)"
-      },
-      "defenseAll": {
-        "name": "Defended",
-        "note": "Hold all 10 waves in solo Defense"
-      },
-      "defenseHard": {
-        "name": "Iron Wall",
-        "note": "Hold all 10 waves in solo Defense on Hard"
+        "name": "Finished a race without missing a ring",
+        "note": "Daily laps count"
       },
       "practiceAll": {
-        "name": "Dedicated",
-        "note": "Set a record in all 3 Practice drills"
+        "name": "Set a record in all 3 practice drills"
       },
       "sharpshooter": {
-        "name": "Sharpshooter",
-        "note": "10+ kills at 50%+ accuracy in one Practice run"
+        "name": "Downed 10+ in one practice run at 50%+ accuracy",
+        "note": "Daily excluded"
       },
       "dailyStreak": {
-        "name": "Daily Streak",
-        "tier1": "Play the daily challenge 3 days in a row",
-        "tier2": "Play the daily challenge 7 days in a row",
-        "tier3": "Play the daily challenge 30 days in a row"
+        "name": "Played the Daily 3 days in a row"
+      },
+      "dailyStreak7": {
+        "name": "Played the Daily 7 days in a row"
+      },
+      "dailyStreak30": {
+        "name": "Played the Daily 30 days in a row"
       },
       "dailyAll": {
-        "name": "Daily Variety",
-        "note": "Play all 4 daily challenge types (within the 14 days kept)"
+        "name": "Played all 4 Daily types",
+        "note": "Within the 14 days kept"
       },
       "coopClear": {
-        "name": "Teamwork",
-        "note": "Clear a co-op Raid or Defense"
+        "name": "Cleared a co-op Raid or Defense"
       },
       "coopFour": {
-        "name": "Full Flight",
-        "note": "Clear a co-op Raid or Defense with 4 players"
+        "name": "Cleared co-op with 4 players",
+        "note": "Raid or Defense"
       },
       "pvpWin": {
-        "name": "Victory",
-        "note": "Win a PvP match (1st in free-for-all, or winning team)"
+        "name": "Won a PvP match",
+        "note": "1st in free-for-all, or winning team"
       },
       "pvpKills": {
-        "name": "Ace of Aces",
-        "note": "Shoot down 25 players in PvP in total"
+        "name": "Shot down 25 players in PvP in total"
       }
     },
     "collect": {
-      "name": "Collector {pct}%",
-      "note": "Earn {pct}% of all badges (Collection excluded)"
+      "name": "Earned {pct}% of all badges",
+      "note": "Collect excluded"
     },
     "words": {
       "diff": {
@@ -2324,7 +2301,7 @@
         "hard": "Hard"
       },
       "assist": {
-        "normal": "Normal assist or less",
+        "normal": "Normal or Hard assist",
         "hard": "Hard assist"
       },
       "assistShort": {
@@ -2334,250 +2311,235 @@
     },
     "filter": {
       "group": "Category",
-      "status": "Status",
-      "allGroups": "All categories",
-      "allStatuses": "All statuses"
+      "status": "Status"
     },
     "status": {
+      "all": "All",
       "earned": "Earned",
-      "progress": "In progress",
-      "none": "Not started"
+      "progress": "Started",
+      "none": "Locked"
     },
     "sort": {
       "label": "Sort",
-      "default": "Default",
-      "recent": "Recent",
+      "number": "No.",
+      "recent": "Date",
       "progress": "Progress",
-      "name": "Name",
-      "option": "Sort: {name}"
+      "name": "Name"
     },
-    "shown": "{count} shown",
-    "overview": "Earned {earned} / {total} ({pct}%)",
-    "milestone": "Next milestone: {left} more (+{credits})",
-    "milestoneDone": "All milestone rewards collected",
+    "overview": "{earned} / {total} ({pct}%)",
+    "milestone": "{left} to next milestone · +{credits}",
+    "milestoneDone": "All milestone rewards received",
     "hidden": "???",
     "hiddenNote": "Hidden badge (name and condition revealed when earned)",
     "detail": {
-      "condition": "Condition",
-      "progress": "Progress",
       "earned": "Earned",
       "reward": "Reward",
       "notEarned": "Not earned yet",
-      "group": "Category"
+      "chain": "Same series"
     },
     "since": "Career stats counted since {date}",
     "sinceNone": "Career stats start counting from this version (earlier play counts as 0)",
     "empty": "No badges match",
-    "pick": "Pick a badge from the list to see details",
+    "pick": "Pick a badge to see details",
     "rewardOnce": "{credits} (once, when earned)",
     "list": "Badge list",
     "ladder": {
       "kill": {
-        "name": "Kills {n}",
-        "note": "Destroy {n} enemies in total in Campaign, Raid and Defense"
+        "name": "Destroyed {n} enemies in total",
+        "note": "Fighters, bombers, cruise missiles and ground targets in Campaign, Raid and Defense"
       },
       "killGun": {
-        "name": "Guns {n}",
-        "note": "Destroy {n} enemies with guns (Campaign, Raid, Defense)"
+        "name": "Destroyed {n} enemies with guns in total",
+        "note": "Campaign, Raid, Defense"
       },
       "killMissile": {
-        "name": "Missiles {n}",
-        "note": "Destroy {n} enemies with missiles (Campaign, Raid, Defense)"
+        "name": "Destroyed {n} enemies with missiles in total",
+        "note": "Campaign, Raid, Defense"
       },
       "killRocket": {
-        "name": "Rockets {n}",
-        "note": "Destroy {n} enemies with rockets (Campaign, Raid, Defense)"
+        "name": "Destroyed {n} enemies with rockets in total",
+        "note": "Campaign, Raid, Defense"
       },
       "killBomb": {
-        "name": "Bombs {n}",
-        "note": "Destroy {n} enemies with bombs (Campaign, Raid, Defense)"
+        "name": "Destroyed {n} enemies with bombs in total",
+        "note": "Campaign, Raid, Defense"
       },
       "killFighter": {
-        "name": "Dogfighter {n}",
-        "note": "Down {n} enemy fighters (Campaign, Raid, Defense)"
+        "name": "Shot down {n} enemy fighters in total",
+        "note": "Campaign, Raid, Defense"
       },
       "killBomber": {
-        "name": "Bomber Hunter {n}",
-        "note": "Down {n} bombers"
+        "name": "Shot down {n} bombers in total"
       },
       "killCruise": {
-        "name": "Interceptor {n}",
-        "note": "Shoot down {n} cruise missiles"
+        "name": "Shot down {n} cruise missiles in total"
       },
       "killGround": {
-        "name": "Ground Strike {n}",
-        "note": "Destroy {n} ground targets (AA guns included)"
+        "name": "Destroyed {n} ground targets in total",
+        "note": "AA guns included"
       },
       "killHard": {
-        "name": "Hard Kills {n}",
-        "note": "Destroy {n} enemies on Hard (Raid, Defense, Free Flight)"
+        "name": "Destroyed {n} enemies on Hard in total",
+        "note": "Raid and Defense on Hard, and Free Flight with Hard enemies"
       },
       "killFree": {
-        "name": "Free Flight Kills {n}",
-        "note": "Down {n} enemies in Free Flight"
+        "name": "Shot down {n} enemies in Free Flight in total"
       },
       "noHit": {
-        "name": "Untouched {n}",
-        "note": "Clear Campaign (except M1) or Raid without taking damage {n} times"
+        "name": "Cleared {n} times without taking a hit",
+        "note": "Campaign (except M1) and Raid"
       },
       "noDown": {
-        "name": "Survivor {n}",
-        "note": "Clear Campaign (except M1) or Raid without being shot down {n} times"
+        "name": "Cleared {n} times without being shot down",
+        "note": "Campaign (except M1) and Raid"
       },
       "mvLoop": {
-        "name": "Loops {n}",
-        "note": "Fly {n} loops"
+        "name": "Flew {n} loops in total"
       },
       "mvImmelmann": {
-        "name": "Immelmanns {n}",
-        "note": "Fly {n} Immelmann turns"
+        "name": "Flew {n} Immelmann turns in total"
       },
       "mvLowPass": {
-        "name": "Low Passes {n}",
-        "note": "Fly {n} low passes (below 30 m at 200 m/s+ for 8 s)"
+        "name": "Made {n} low passes in total",
+        "note": "Each is below 30 m at 200 m/s+ for 8 s"
       },
       "mvInverted": {
-        "name": "Inverted {n}",
-        "note": "Fly inverted for 10 s, {n} times"
+        "name": "Flew inverted {n} times in total",
+        "note": "Each is 10 s inverted"
       },
       "mvTopSpeed": {
-        "name": "Top Speed {n}",
-        "note": "Exceed 430 m/s {n} times"
+        "name": "Exceeded 430 m/s {n} times in total",
+        "note": "Drop 30 m/s, then exceed again for the next one"
       },
       "sortie": {
-        "name": "Sorties {n}",
-        "note": "Fly {n} sorties (any recorded mode)"
+        "name": "Flew {n} sorties in total",
+        "note": "Any recorded mode"
       },
       "win": {
-        "name": "Successes {n}",
-        "note": "Succeed {n} times (mission/raid clear, race finish, all waves, full practice/daily run)"
+        "name": "Succeeded {n} times in total",
+        "note": "Mission/raid clear, race finish, all waves, full practice or daily run"
       },
       "time": {
-        "name": "Flight Time {n} h",
-        "note": "Fly for {n} hours in total"
+        "name": "Flew {n} hours in total"
       },
       "dist": {
-        "name": "Distance {n} km",
-        "note": "Fly {n} km in total"
+        "name": "Flew {n} km in total"
       },
       "ac": {
-        "name": "{aircraft} {n}",
-        "note": "Fly {n} sorties in the {aircraft}"
+        "name": "Flew {n} sorties in the {aircraft}"
       },
       "winNormal": {
-        "name": "Normal Assist Wins {n}",
-        "note": "Succeed {n} times with Normal assist or less"
+        "name": "Succeeded {n} times with Normal or Hard assist"
       },
       "winHard": {
-        "name": "Hard Assist Wins {n}",
-        "note": "Succeed {n} times with Hard assist (keyboard/gamepad count)"
+        "name": "Succeeded {n} times with Hard assist",
+        "note": "Keyboard and gamepad count"
       },
       "sortieMission": {
-        "name": "Campaign Sorties {n}",
-        "note": "Fly {n} Campaign sorties"
+        "name": "Flew {n} Campaign sorties in total"
       },
       "sortieRaid": {
-        "name": "Raid Sorties {n}",
-        "note": "Fly {n} solo raids"
+        "name": "Flew {n} solo raids in total"
       },
       "parts": {
-        "name": "Part Breaker {n}",
-        "note": "Break {n} kaiju parts (solo Raid, M5, M8)"
+        "name": "Broke {n} kaiju parts in total",
+        "note": "Solo raid, M5, M8"
       },
       "sortieRace": {
-        "name": "Races {n}",
-        "note": "Run {n} ring races"
+        "name": "Ran {n} ring races in total"
       },
       "ring": {
-        "name": "Rings {n}",
-        "note": "Pass {n} rings (daily laps included)"
+        "name": "Passed {n} rings in total",
+        "note": "Daily laps count"
       },
       "sortieDefense": {
-        "name": "Defense Sorties {n}",
-        "note": "Fly {n} solo Defense sorties"
+        "name": "Flew {n} solo Defense sorties in total"
       },
       "waves": {
-        "name": "Waves {n}",
-        "note": "Hold {n} waves in solo Defense"
+        "name": "Held {n} waves in solo Defense in total"
       },
       "sortiePractice": {
-        "name": "Practice {n}",
-        "note": "Fly {n} practice runs"
+        "name": "Flew {n} practice runs in total"
       },
       "killTarget": {
-        "name": "Targets {n}",
-        "note": "Hit down {n} targets and drones (Practice, Daily, Free Flight)"
+        "name": "Downed {n} targets and drones in total",
+        "note": "Practice, Daily, Free Flight"
       },
       "dailyDays": {
-        "name": "Daily {n} Days",
-        "note": "Play the Daily on {n} days (need not be in a row)"
+        "name": "Played the Daily on {n} days in total",
+        "note": "Need not be in a row"
       },
       "coopClear": {
-        "name": "Co-op Clears {n}",
-        "note": "Clear {n} co-op raids or defenses"
+        "name": "Cleared co-op {n} times in total",
+        "note": "Raid or Defense"
       },
       "coop2": {
-        "name": "Duo Clears {n}",
-        "note": "Clear {n} times with 2 players"
+        "name": "Cleared co-op with 2 players {n} times"
       },
       "coop3": {
-        "name": "Trio Clears {n}",
-        "note": "Clear {n} times with 3 players"
+        "name": "Cleared co-op with 3 players {n} times"
       },
       "coop4": {
-        "name": "Squad Clears {n}",
-        "note": "Clear {n} times with 4 players"
+        "name": "Cleared co-op with 4 players {n} times"
       },
       "pvpPlay": {
-        "name": "PvP Matches {n}",
-        "note": "Play {n} PvP matches (2+ players)"
+        "name": "Played {n} PvP matches in total",
+        "note": "2+ players"
       },
       "pvpWin": {
-        "name": "PvP Wins {n}",
-        "note": "Win {n} PvP matches"
+        "name": "Won {n} PvP matches in total"
       },
       "pvpKill": {
-        "name": "PvP Kills {n}",
-        "note": "Down {n} players in PvP (counted from this version)"
+        "name": "Shot down {n} players in PvP in total",
+        "note": "Counted from version 1.0.18"
       }
     },
     "combo": {
       "raidClear": {
-        "name": "{kaiju} · {diff}",
-        "note": "Defeat {kaiju} on {diff} in a solo raid"
+        "name": "Defeated {kaiju} on {diff} in a solo raid"
       },
       "raidTimed": {
-        "name": "{kaiju} · {diff} · Blitz",
-        "note": "Defeat {kaiju} on {diff} in under 7 minutes (solo)"
-      },
-      "raidNoHit": {
-        "name": "{kaiju} · {diff} · Untouched",
-        "note": "Defeat {kaiju} on {diff} without taking damage (solo)"
+        "name": "Defeated {kaiju} on {diff} in under 7 minutes in a solo raid"
       },
       "raidNoDown": {
-        "name": "{kaiju} · {diff} · Unsinkable",
-        "note": "Defeat {kaiju} on {diff} without being shot down (solo)"
+        "name": "Defeated {kaiju} on {diff} in a solo raid without being shot down"
+      },
+      "raidNoHit": {
+        "name": "Defeated {kaiju} on {diff} in a solo raid without taking a hit"
       },
       "raidAssistHard": {
-        "name": "{kaiju} · {diff} · Hard Assist",
-        "note": "Defeat {kaiju} on {diff} with Hard assist (keyboard/gamepad count, solo)"
+        "name": "Defeated {kaiju} on {diff} in a solo raid with Hard assist",
+        "note": "Keyboard and gamepad count"
       },
       "missionS": {
-        "name": "{mission} · {aircraft} · S",
-        "note": "Get S on “{mission}” in the {aircraft}"
+        "name": "Got S on “{mission}” in the {aircraft}",
+        "note": "Campaign"
       },
       "missionSAssist": {
-        "name": "{mission} · {assistShort} · S",
-        "note": "Get S on “{mission}” with {assist}"
+        "name": "Got S on “{mission}” with {assistShort}",
+        "note": "{assist}. Campaign"
       },
       "courseGold": {
-        "name": "{course} · {aircraft} · Gold",
-        "note": "Finish “{course}” with Gold (S) in the {aircraft}"
+        "name": "Got Gold on “{course}” in the {aircraft}",
+        "note": "Ring race. Gold is rank S"
       },
       "defenseClear": {
-        "name": "Defense {map} · {diff}",
-        "note": "Hold all 10 waves of “{map}” on {diff} (solo)"
+        "name": "Held all 10 waves of “{map}” on {diff} in solo Defense"
       }
-    }
+    },
+    "step": {
+      "clearAll": "Clear",
+      "finishAll": "Finish",
+      "rankA": "A+",
+      "rankS": "S",
+      "gold": "Gold"
+    },
+    "unit": {
+      "hours": "{n} h",
+      "km": "{n} km",
+      "days": "{n} days",
+      "pct": "{n}%"
+    },
+    "done": "Done"
   }
 }

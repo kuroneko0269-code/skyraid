@@ -7,7 +7,7 @@ import { formatCredits } from '../core/format';
 import type { GameState, ScreenState } from '../core/game-state';
 import { t } from '../core/i18n';
 import type { Input } from '../core/input';
-import { BADGE_CONFIG, badgeName, badgeTierName, findBadge, badgeTiers } from '../data/badges';
+import { BADGE_CONFIG, badgeName } from '../data/badges';
 import type { GamePlay } from '../missions/game-play';
 import {
   assistLevelOf,
@@ -53,14 +53,10 @@ export interface BadgeLink {
 /** 飛行の画面（ポーズ・フォトモードも） */
 const inFlight = (s: ScreenState): boolean => s === 'flight' || s === 'pause' || s === 'photo';
 
-/** 取った勲章の 1 行（段階付きは段階の名前も。9-10b: 節目は「勲章 N 個」） */
-export function awardLabel(a: Pick<BadgeAward, 'id' | 'tier' | 'milestone'>): string {
+/** 取った勲章の 1 行（条件の文。9-10b: 節目は「勲章 N 個」） */
+export function awardLabel(a: Pick<BadgeAward, 'id' | 'milestone'>): string {
   if (a.milestone !== undefined) return t('badges.toast.milestone', { count: a.milestone });
-  const def = findBadge(a.id);
-  const name = badgeName(a.id);
-  return def && badgeTiers(def) > 1
-    ? t('badges.toast.tiered', { name, tier: badgeTierName(a.tier) })
-    : name;
+  return badgeName(a.id);
 }
 
 /** お知らせの文（名前は BADGE_CONFIG.toastNames 個まで、ほかは「ほか N 個」） */
@@ -117,13 +113,7 @@ export function createBadgeLink(p: BadgeLinkParts): BadgeLink {
     save.transact((data) => {
       addStats(data.stats, stats, now());
       if (dailyDay !== null) addDailyDay(data.stats, dailyDay);
-      got.push(
-        ...awardBadges(
-          data,
-          ids.map((id) => ({ id, tier: 1 })),
-          now(),
-        ),
-      );
+      got.push(...awardBadges(data, ids, now()));
       return true;
     });
     pending.push(...got);

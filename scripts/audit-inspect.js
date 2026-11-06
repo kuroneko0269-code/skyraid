@@ -14,7 +14,9 @@ export function inspect(rootSelector) {
   // - .hangar-entries: ハンガーの機体の一覧。幅 640px 以下は 1 列の配置で、機体のカードを横に並べてスクロールする（7-C）
   // - .raid-result-wrap・.ranking-scroll: 結果・ランキングの表（列を折り返さず、狭い画面では表だけ横にスクロールする）
   // - .photo-bar・.photo-row: フォトモードの操作の帯（狭い画面ではボタンの列を横にスクロールする）
+  // - .badge-groups: 勲章のカテゴリ（9-10c。幅 700px 以下は上の横一列で、その中だけ横にスクロールする）
   const HSCROLL_ALLOWED = [
+    '.badge-groups',
     '.hangar-entries',
     '.raid-result-wrap',
     '.ranking-scroll',

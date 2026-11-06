@@ -1,78 +1,181 @@
-/* 勲章の一覧（9-10・9-10b。ui/badge-screen.ts）。モード選択の上に重ねる（情報・ランキングと同じ）。
-   上に取った数・節目・絞り込み、下は左に名前の一覧・右に詳細（それぞれだけがスクロールする） */
+/* 勲章の一覧（9-10・9-10b・9-10c。ui/badge-screen.ts・badge-detail.ts）。モード選択の上に重ねる（情報・ランキングと同じ）。
+   9-10c: 上の帯（戻る・題・全体の進み具合・次の節目）、下は 3 列: 左にカテゴリ・中央に状態 / 並び順と一覧・右に詳細。
+   それぞれの列の中だけがスクロールする（画面全体はスクロールしない）。568×320 はカテゴリを上の横一列に */
 .badge-screen {
-  --menu-width: min(960px, calc(100% - var(--ui-space-6)));
-  --badge-bronze: rgb(214, 140, 84);
-  --badge-silver: rgb(205, 218, 228);
+  --menu-width: min(1180px, calc(100% - var(--ui-space-4)));
   --badge-gold: var(--ui-gold);
+  --badge-groups-width: 140px;
+  --badge-detail-width: 270px;
   z-index: 56;
   gap: var(--ui-space-2);
   background: var(--ui-scrim);
 }
 
-.badge-bar {
+/* ---- 上の帯 ---- */
+.badge-top {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px var(--ui-space-2);
+  gap: 4px var(--ui-space-3);
   width: var(--menu-width);
+  margin-top: var(--ui-space-2);
+}
+
+/* screen.css の .menu-back（見出しの行の左に重ねる形）を、帯の流れの中に置く */
+.badge-top > .menu-back {
+  position: static;
+  transform: none;
+  min-height: 36px;
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
+.badge-heading {
+  margin: 0;
+  font-size: 19px;
+  letter-spacing: 0.2em;
+  white-space: nowrap;
 }
 
 .badge-summary {
   display: flex;
+  flex: 1 1 auto;
   flex-wrap: wrap;
-  gap: 0 var(--ui-space-2);
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px var(--ui-space-3);
   min-width: 0;
   font-size: 13px;
   color: var(--ui-text-dim);
 }
 
+.badge-total-bar {
+  position: relative;
+  flex: 0 1 180px;
+  min-width: 80px;
+  height: 8px;
+  overflow: hidden;
+  background: var(--ui-bg-sunken);
+}
+
+.badge-total-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--badge-gold);
+}
+
 .badge-overview {
   color: var(--ui-text);
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .badge-milestone {
   color: var(--ui-accent);
+  white-space: nowrap;
+}
+
+/* ---- 3 列: .screen の子を縮めない規則（screen.css）より強く、画面の残りの高さに収める ---- */
+.badge-screen.menu-fixed > .badge-body {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: var(--badge-groups-width) minmax(0, 1fr) var(--badge-detail-width);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: 'groups main detail';
+  gap: var(--ui-space-2);
+  width: var(--menu-width);
+  min-height: 0;
+  margin-bottom: var(--ui-space-2);
+}
+
+/* 左の列: カテゴリ（押すだけで切り替わる） */
+.badge-groups {
+  grid-area: groups;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.badge-group,
+.badge-status {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 30px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  background: var(--ui-bg-raised);
+  color: var(--ui-text-dim);
+  font: 500 13px/1.2 var(--ui-font-body, inherit);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.badge-group[aria-pressed='true'],
+.badge-status[aria-pressed='true'] {
+  border-color: var(--ui-accent);
+  background: var(--ui-bg-active);
+  color: var(--ui-text);
+}
+
+.badge-group-count,
+.badge-status-count {
+  font-size: 11px;
+  color: var(--ui-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 中央: 状態の切り替え・並び順と一覧 */
+.badge-main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
 }
 
 .badge-tools {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 6px;
+  gap: 4px;
+}
+
+.badge-statuses {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 1px;
+  min-width: 0;
+}
+
+.badge-status {
+  justify-content: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 2px 5px;
+  font-size: 12px;
 }
 
 .badge-select {
-  min-height: 32px;
-  padding: 2px 8px;
-  font-size: 13px;
-}
-
-.badge-count {
-  min-width: 3.5em;
+  flex: none;
+  min-height: 28px;
+  margin-left: auto;
+  padding: 2px 6px;
   font-size: 12px;
-  color: var(--ui-text-faint);
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* .screen の子を縮めない規則（screen.css）より強く: 画面の残りの高さに収める */
-.badge-screen.menu-fixed > .badge-split {
-  flex: 1 1 auto;
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  /* 行の高さは画面の残り（一覧・詳細それぞれがスクロールする） */
-  grid-template-rows: minmax(0, 1fr);
-  gap: var(--ui-space-2);
-  width: var(--menu-width);
-  min-height: 0;
-  margin-bottom: var(--ui-space-3);
 }
 
 .badge-list {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 2px;
   min-height: 0;
@@ -88,18 +191,19 @@
   color: var(--ui-text-faint);
 }
 
-/* 一覧の 1 行: 印と名前だけ */
+/* 一覧の 1 行（36px ほど。長い条件の文は 2 行に折り返す）: 印・番号・条件の文・進み具合 */
 .badge-item {
-  display: flex;
+  display: grid;
   flex: none;
+  grid-template-columns: 14px max-content minmax(0, 1fr) max-content;
   align-items: center;
   gap: 8px;
-  min-height: 34px;
-  padding: 4px 8px;
+  min-height: 36px;
+  padding: 3px 8px;
   border: 1px solid transparent;
   background: var(--ui-bg-raised);
   color: var(--ui-text-dim);
-  font: 500 14px/1.25 var(--ui-font-body, inherit);
+  font: 500 13px/1.25 var(--ui-font-body, inherit);
   text-align: left;
   cursor: pointer;
 }
@@ -115,59 +219,74 @@
 }
 
 @media (hover: hover) {
-  .badge-item:hover {
+  .badge-item:hover,
+  .badge-group:hover,
+  .badge-status:hover,
+  .badge-chain-item:hover {
     background: var(--ui-bg-hover);
   }
 }
 
-.badge-item-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.badge-item-no,
+.badge-detail-no,
+.badge-chain-no {
+  font-size: 11px;
+  color: var(--ui-text-faint);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-/* 印: 未着手は線だけ・進行中は半分・取った段階の色（段階なしは金） */
+.badge-item-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.badge-item-value,
+.badge-chain-value {
+  font-size: 11px;
+  color: var(--ui-text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+[data-state='earned'] > .badge-item-value,
+[data-state='earned'] > .badge-chain-value {
+  color: var(--badge-gold);
+}
+
+/* 状態の印: 取得 = 金の丸・進行中 = 半分の丸・未着手 = 枠だけ */
 .badge-mark {
   flex: none;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border: 2px solid var(--ui-line-faint);
   border-radius: 50%;
   box-sizing: border-box;
 }
 
 .badge-mark.is-large {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
 }
 
 [data-state='progress'] > .badge-mark {
-  border-color: var(--ui-accent);
-  background: linear-gradient(90deg, var(--ui-accent) 50%, transparent 50%);
+  border-color: var(--badge-gold);
+  background: linear-gradient(90deg, var(--badge-gold) 50%, transparent 50%);
 }
 
-[data-tier='1'] > .badge-mark {
-  border-color: var(--badge-bronze);
-  background: var(--badge-bronze);
-}
-
-[data-tier='2'] > .badge-mark {
-  border-color: var(--badge-silver);
-  background: var(--badge-silver);
-}
-
-[data-tier='3'] > .badge-mark {
+[data-state='earned'] > .badge-mark {
   border-color: var(--badge-gold);
   background: var(--badge-gold);
   box-shadow: var(--ui-gold-glow);
 }
 
-/* 詳細 */
+/* ---- 右の欄: 詳細 ---- */
 .badge-detail {
+  grid-area: detail;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
   min-height: 0;
   padding: 10px 12px;
   box-sizing: border-box;
@@ -175,25 +294,39 @@
   overscroll-behavior: contain;
 }
 
+.badge-detail > * {
+  flex: none;
+}
+
 .badge-detail-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 4px 8px;
+}
+
+.badge-detail-no {
+  font-size: 12px;
+  color: var(--ui-text-dim);
+}
+
+.badge-detail-group {
+  font-size: 12px;
+  color: var(--ui-text-faint);
 }
 
 .badge-detail-name {
   margin: 0;
-  min-width: 0;
-  font: 600 18px/1.25 var(--ui-font-display);
-  letter-spacing: 0.04em;
+  font: 600 15px/1.35 var(--ui-font-body, inherit);
   overflow-wrap: anywhere;
 }
 
-.badge-tags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 6px;
+.badge-detail-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ui-text-dim);
+  overflow-wrap: anywhere;
 }
 
 .badge-tag {
@@ -210,35 +343,17 @@
   color: var(--ui-accent);
 }
 
-.badge-pips {
-  display: inline-flex;
-  gap: 3px;
-}
-
-.badge-pip {
-  width: 9px;
-  height: 9px;
-  border: 1px solid var(--ui-line-faint);
-  border-radius: 50%;
-}
-
-.badge-pip.is-on[data-tier='1'] {
-  background: var(--badge-bronze);
-}
-
-.badge-pip.is-on[data-tier='2'] {
-  background: var(--badge-silver);
-}
-
-.badge-pip.is-on[data-tier='3'] {
-  background: var(--badge-gold);
+.badge-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .badge-field {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 10px;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -253,7 +368,6 @@
 
 .badge-progress {
   position: relative;
-  flex: none;
   height: 16px;
   overflow: hidden;
   background: var(--ui-bg-sunken);
@@ -271,6 +385,7 @@
   padding: 0 6px;
   font-size: 11px;
   line-height: 16px;
+  font-variant-numeric: tabular-nums;
 }
 
 .badge-since {
@@ -278,48 +393,134 @@
   color: var(--ui-text-faint);
 }
 
-/* 背の低い画面（844×390・568×320）: 行・詳細を詰める */
-@container app (max-height: 420px) {
+/* 同じ段の勲章 */
+.badge-chain-title {
+  margin-top: 2px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ui-text-faint);
+}
+
+.badge-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.badge-chain-item {
+  display: grid;
+  grid-template-columns: 14px max-content minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  background: var(--ui-bg-raised);
+  color: var(--ui-text-dim);
+  font: 500 12px/1.25 var(--ui-font-body, inherit);
+  text-align: left;
+  cursor: pointer;
+}
+
+.badge-chain-item[aria-current='true'] {
+  border-color: var(--ui-line);
+  color: var(--ui-text);
+}
+
+.badge-chain-step {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 狭い画面（568×320 など）: カテゴリを上の横一列（その中だけ横にスクロール）、下は一覧と詳細の 2 列 */
+@container app (max-width: 700px) {
   .badge-screen {
+    --menu-width: calc(100% - var(--ui-space-2));
+    --badge-detail-width: 190px;
     gap: 4px;
   }
 
-  .badge-select {
-    min-height: 30px;
-    font-size: 12px;
+  .badge-top {
+    gap: 2px var(--ui-space-2);
+    margin-top: var(--ui-space-1);
+  }
+
+  .badge-top > .menu-back {
+    padding: 2px 10px;
+    font-size: 13px;
+  }
+
+  .badge-heading {
+    font-size: 16px;
+    letter-spacing: 0.12em;
   }
 
   .badge-summary {
+    gap: 0 var(--ui-space-2);
+    font-size: 11px;
+  }
+
+  .badge-total-bar {
+    flex-basis: 60px;
+    min-width: 40px;
+  }
+
+  .badge-screen.menu-fixed > .badge-body {
+    grid-template-columns: minmax(0, 1fr) var(--badge-detail-width);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'groups groups'
+      'main detail';
+    gap: 4px var(--ui-space-2);
+    margin-bottom: var(--ui-space-1);
+  }
+
+  .badge-groups {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .badge-group {
+    min-height: 28px;
+    padding: 2px 7px;
     font-size: 12px;
   }
 
-  .badge-split {
-    margin-bottom: var(--ui-space-2);
+  .badge-group-count {
+    font-size: 10px;
+  }
+
+  .badge-statuses {
+    gap: 1px;
+  }
+
+  .badge-status {
+    gap: 4px;
+    min-height: 26px;
+    padding: 1px 4px;
+    font-size: 11px;
+  }
+
+  .badge-select {
+    min-height: 26px;
+    padding: 1px 4px;
+    font-size: 11px;
   }
 
   .badge-item {
-    min-height: 30px;
-    padding: 2px 8px;
-    font-size: 13px;
+    gap: 6px;
+    min-height: 32px;
+    padding: 2px 6px;
+    font-size: 12px;
   }
 
   .badge-detail {
     gap: 4px;
-    padding: 8px 10px;
+    padding: 8px;
   }
 
   .badge-detail-name {
-    font-size: 16px;
-  }
-
-  .badge-field {
-    font-size: 12px;
-  }
-}
-
-/* とても狭い画面（568 幅）: 選択の箱を詰める */
-@container app (max-width: 600px) {
-  .badge-select {
-    padding: 2px 4px;
+    font-size: 13px;
   }
 }

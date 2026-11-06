@@ -1,64 +1,18 @@
-// 勲章・実績（9-10）の決めた数値: 9-10 の 28 個の並び・段階（銅・銀・金）・報酬・「補助ふつう以上」の印と、
-// 判定のしきい値（宙返り・インメルマン・低空飛行・背面飛行・最高速・エースなど）。9-10b で足した 251 個は src/data/badges-catalog.ts。
+// 勲章・実績（9-10・9-10b・9-10c）: 並び（番号）と中身は src/data/badges-order.ts、型と報酬は src/data/badges-catalog.ts、
+// ここは判定のしきい値（宙返り・インメルマン・低空飛行・背面飛行・最高速・エースなど）と、名前・補足・番号の表示。
 // 判定は src/missions/badges/（飛行の決まった計算の中の値だけを読む。Three.js・DOM 非依存）、記録からの判定・セーブは
-// src/progression/badges.ts、画面は src/ui/badge-*.ts。名前と条件の文は表の badges.items.<id>（9-10b の分は src/data/badges-text.ts）。
-// 決定は docs/decisions.md の 9-10・9-10b
-import { t } from '../core/i18n';
-import { EXTRA_BADGES, type BadgeDef } from './badges-catalog';
-import { comboName, comboNote, ladderName, ladderNote } from './badges-text';
+// src/progression/badges.ts、画面は src/ui/badge-*.ts。決定は docs/decisions.md の 9-10・9-10b・9-10c
+import { BADGE_LIST } from './badges-order';
+import { badgeNoteOf, badgeStepOf, badgeTitleOf } from './badges-text';
+import type { BadgeDef } from './badges-catalog';
 
 export { BADGE_GROUPS, type BadgeDef, type BadgeGroup } from './badges-catalog';
 
 /**
- * 勲章の一覧（並びは一覧の画面の順）。id はセーブの badges.earned のキーなので変えない（足すのは可・消すと読み捨てる）。
- * 報酬は 1 回だけ（同じ勲章は 2 回取れない）なので稼ぎ場にならない。合計 46,500 CR（キャンペーン 8 本を全部 S にした報酬の合計 44,000 CR と同じくらい）
+ * 勲章の一覧（並びは番号の順）。id はセーブの badges.earned のキーなので変えない（足すのは可・消すと読み捨てる）。
+ * 報酬は 1 回だけ（同じ勲章は 2 回取れない）なので稼ぎ場にならない
  */
-const LEGACY_BADGES: readonly BadgeDef[] = [
-  // 操縦（記録する飛行ならどのモードでも）
-  { id: 'loop', group: 'flight', rewards: [300] },
-  { id: 'immelmann', group: 'flight', rewards: [500] },
-  { id: 'lowPass', group: 'flight', rewards: [500] },
-  { id: 'inverted', group: 'flight', rewards: [300] },
-  { id: 'topSpeed', group: 'flight', rewards: [300] },
-  // 戦い
-  { id: 'firstKill', group: 'combat', rewards: [300] },
-  { id: 'ace', group: 'combat', rewards: [1000] },
-  { id: 'gunsOnly', group: 'combat', rewards: [1500], skill: true },
-  { id: 'flawless', group: 'combat', rewards: [1500], skill: true },
-  // キャンペーン・チュートリアル（記録からさかのぼれる）
-  { id: 'campaign', group: 'campaign', rewards: [1000, 2000, 4000] },
-  { id: 'tutorial', group: 'campaign', rewards: [500] },
-  // レイド
-  { id: 'vorgas', group: 'raid', rewards: [1000] },
-  { id: 'nephirga', group: 'raid', rewards: [1500] },
-  { id: 'nephirgaParts', group: 'raid', rewards: [2000] },
-  { id: 'raidNoLoss', group: 'raid', rewards: [2000], skill: true },
-  { id: 'raidHard', group: 'raid', rewards: [2000] },
-  // リングレース
-  { id: 'raceMedals', group: 'race', rewards: [1000, 2000, 4000] },
-  { id: 'cleanRun', group: 'race', rewards: [500] },
-  // 防衛戦
-  { id: 'defenseAll', group: 'defense', rewards: [1500] },
-  { id: 'defenseHard', group: 'defense', rewards: [2500] },
-  // 練習場
-  { id: 'practiceAll', group: 'practice', rewards: [300] },
-  { id: 'sharpshooter', group: 'practice', rewards: [1000], skill: true },
-  // 日替わり
-  { id: 'dailyStreak', group: 'daily', rewards: [500, 1500, 4000] },
-  { id: 'dailyAll', group: 'daily', rewards: [500] },
-  // 協力
-  { id: 'coopClear', group: 'coop', rewards: [1000] },
-  { id: 'coopFour', group: 'coop', rewards: [1500] },
-  // PvP
-  { id: 'pvpWin', group: 'pvp', rewards: [1000] },
-  { id: 'pvpKills', group: 'pvp', rewards: [1500] },
-];
-
-/** 全部の勲章: 9-10 の 28 個（先頭・id と報酬はそのまま）と 9-10b で足した段階の数え・組み合わせ・集め（src/data/badges-catalog.ts） */
-export const BADGES: readonly BadgeDef[] = [...LEGACY_BADGES, ...EXTRA_BADGES];
-
-/** 9-10 の 28 個の id（報酬の数え・テスト） */
-export const LEGACY_BADGE_IDS: readonly string[] = LEGACY_BADGES.map((b) => b.id);
+export const BADGES: readonly BadgeDef[] = BADGE_LIST;
 
 const BY_ID = new Map(BADGES.map((b) => [b.id, b]));
 
@@ -66,9 +20,9 @@ export function findBadge(id: string): BadgeDef | undefined {
   return BY_ID.get(id);
 }
 
-/** 段階の数（1 か 3） */
-export function badgeTiers(def: Pick<BadgeDef, 'rewards'>): number {
-  return def.rewards.length;
+/** 同じ段の勲章（番号の順） */
+export function badgeChain(def: Pick<BadgeDef, 'chain'>): BadgeDef[] {
+  return BADGES.filter((b) => b.chain === def.chain);
 }
 
 /** 判定のしきい値（src/missions/badges/・src/progression/badges.ts） */
@@ -107,7 +61,7 @@ export const BADGE_CONFIG = {
   easyMissions: ['training'] as readonly string[],
   /** 名射手: 練習場（日替わりは除く）の 1 回で撃墜 kills 以上・命中率 accuracy 以上 */
   sharpshooter: { kills: 10, accuracy: 0.5 },
-  /** 日替わりの連続日数（銅・銀・金） */
+  /** 日替わりの連続日数（3 つの勲章） */
   dailyStreak: [3, 7, 30] as readonly number[],
   /** PvP の撃墜の累計 */
   pvpKills: 25,
@@ -119,28 +73,25 @@ export const BADGE_CONFIG = {
   toastSeconds: 6,
 } as const;
 
-/** 名前（9-10 は表の badges.items.<id>.name、9-10b は段階の数え・組み合わせ・集めの文から） */
+/** 名前（「〜した」の条件の文） */
 export function badgeName(id: string): string {
   const def = findBadge(id);
-  if (def?.stat) return ladderName(def.stat);
-  if (def?.combo) return comboName(def.combo);
-  if (def?.collect !== undefined)
-    return t('badges.collect.name', { pct: Math.round(def.collect * 100) });
-  return t(`badges.items.${id}.name`);
+  return def ? badgeTitleOf(def) : id;
 }
 
-/** 条件の文（段階付きは段階ごと。tier は 1〜3） */
-export function badgeCondition(id: string, tier = 1): string {
+/** 補足（数え方・対象のモードなど。無ければ空） */
+export function badgeNote(id: string): string {
   const def = findBadge(id);
-  if (def?.stat) return ladderNote(def.stat);
-  if (def?.combo) return comboNote(def.combo);
-  if (def?.collect !== undefined)
-    return t('badges.collect.note', { pct: Math.round(def.collect * 100) });
-  if (def && badgeTiers(def) > 1) return t(`badges.items.${id}.tier${String(tier)}`);
-  return t(`badges.items.${id}.note`);
+  return def ? badgeNoteOf(def) : '';
 }
 
-/** 段階の名前（銅・銀・金） */
-export function badgeTierName(tier: number): string {
-  return t(`badges.tier.${String(tier)}`);
+/** 同じ段の中の段の短い名前（「100」「高難度」「A 以上」） */
+export function badgeStep(id: string): string {
+  const def = findBadge(id);
+  return def ? badgeStepOf(def) : '';
+}
+
+/** 番号の表示（No.001） */
+export function badgeNumber(def: Pick<BadgeDef, 'no'>): string {
+  return `No.${String(def.no).padStart(3, '0')}`;
 }
