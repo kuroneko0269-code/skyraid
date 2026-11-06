@@ -9,7 +9,7 @@
 > (iOS 16.4+, Chrome/Edge 105+, Safari 16.4+, Firefox 121+). Online Link (cloud save and rankings) is optional and
 > limited to approved members.
 
-ブラウザで動く 3D フライトシューティング（v1.1.1）。インストール不要で、パソコンとスマホで遊べます。ホーム画面に追加するとアプリのように全画面で起動し、PvP・協力以外はオフラインでも遊べます。
+ブラウザで動く 3D フライトシューティング（v1.1.2）。インストール不要で、パソコンとスマホで遊べます。ホーム画面に追加するとアプリのように全画面で起動し、PvP・協力以外はオフラインでも遊べます。
 
 ## 遊び方
 

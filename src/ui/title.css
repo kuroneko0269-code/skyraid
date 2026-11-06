@@ -165,6 +165,11 @@
     both;
 }
 
+/* 10-1b: 測り直しの幕のロゴが重なって着いたとき、ロゴは動かさない（枠・文字は幕が明けるときに展開する） */
+.title-screen.is-logo-landed .title-logo {
+  animation: none;
+}
+
 .title-screen.is-deploying .title-prompt {
   animation:
     title-fade calc(var(--title-deploy) * 0.4) ease-out calc(var(--title-deploy) * 0.6) both,

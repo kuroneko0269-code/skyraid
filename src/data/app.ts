@@ -80,5 +80,23 @@ export const VIEWPORT_CONFIG = {
     /** v1.0.1: 幕のロゴがこの時間で読めなければ「SkyRaid」の文字にする（ms。幕の出し入れ・試みとは関係なく進む） */
     logoTimeoutMs: 1500,
   },
+  /**
+   * 10-1b: 幕のロゴの動き（src/core/cover-logo.ts）。ロゴはばねで目標を追う: 測り直しの間は幕の中央と大きさ（測り直しで変わると
+   * 少し行き過ぎて戻る = 揺れ）、試みが終わったらタイトルの文字の位置と大きさ（landMs で着く。最後は目標にぴたりと合わせる）。
+   * 着いたら幕を外す（フェードは nudge.coverFadeMs）。タイトルが出ていなければ landWaitMs まで待ち、それでも無ければ今までどおりその場で外す
+   */
+  coverLogo: {
+    /** ばねの硬さ（1/s²）と減衰（1/s）。減衰比 約 0.6 で 1 回だけ小さく行き過ぎる */
+    stiffness: 260,
+    damping: 19,
+    /** タイトルの文字へ移る時間（ms）。ばねの動きを時間で正規化して、この時間で必ず着く */
+    landMs: 480,
+    /** 着く先（タイトルの文字）が出るのを待つ上限（ms） */
+    landWaitMs: 1500,
+    /** 幕の中のロゴの大きさ（幕の幅・高さに対する割合。タイトルの .title-logo-image の 46cqw・24cqh と同じ）と上限（px） */
+    widthRatio: 0.46,
+    heightRatio: 0.24,
+    maxWidth: 760,
+  },
   debugToggle: { tapCount: 5, tapWindowMs: 3000, storageKey: 'skyraid.debugViewport' },
 } as const;
