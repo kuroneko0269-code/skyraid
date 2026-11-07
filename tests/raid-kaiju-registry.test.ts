@@ -50,8 +50,8 @@ describe('10-2: レイドの怪獣の登録簿', () => {
     expect(RAID_KEY_PATTERN.test('Albion:normal')).toBe(false);
   });
 
-  it('ランキング: SQL 0006 を流すまでは ranked の怪獣だけ。流した後は「id:難易度」の怪獣も。未公開は送らない', () => {
-    expect(RAID_KEY_RULE_ENABLED).toBe(false);
+  it('ランキング: SQL 0006 を流した（10-3a）。流す前は ranked の怪獣だけ、流した後は「id:難易度」の怪獣も。未公開は送らない', () => {
+    expect(RAID_KEY_RULE_ENABLED).toBe(true);
     expect(RANKED_RAID_KAIJU).toEqual(['vorgas', 'nephirga']);
     expect(validKeys('raid')).toEqual(['normal', 'hard', 'nephirga:normal', 'nephirga:hard']);
     const base = RAID_KAIJU[1] as RaidKaijuDef;

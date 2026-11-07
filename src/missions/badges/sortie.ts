@@ -6,7 +6,7 @@ import { BADGE_CONFIG } from '../../data/badges';
 import { KAIJU2_PARTS } from '../../data/kaiju2';
 import { NEPHIRGA_ID } from '../../data/raid-kaiju';
 import type { ReplayControls, ReplayStart } from '../../replay/types';
-import { freeExtraOf } from '../free-extra';
+import { freeExtrasOf } from '../free-extra';
 import type { GamePlay } from '../game-play';
 import type { CombatTarget } from '../../combat/target';
 import type { PlayerWeapon } from '../../combat/kill-feed';
@@ -138,10 +138,12 @@ export class SortieWatch {
 
 /** ネフィルガの壊した部位の数（遅延チャンクの差し込み口の状態。付いていなければ 0） */
 function nephirgaBroken(play: GamePlay): number {
-  const extra = freeExtraOf(play);
-  if (!extra?.active) return 0;
-  const root = extra.stateRoot;
-  return 'brokenCount' in root && typeof root.brokenCount === 'number' ? root.brokenCount : 0;
+  for (const extra of freeExtrasOf(play)) {
+    if (!extra.active) continue;
+    const root = extra.stateRoot;
+    if ('brokenCount' in root && typeof root.brokenCount === 'number') return root.brokenCount;
+  }
+  return 0;
 }
 
 /**
