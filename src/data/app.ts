@@ -97,6 +97,43 @@ export const VIEWPORT_CONFIG = {
     widthRatio: 0.46,
     heightRatio: 0.24,
     maxWidth: 760,
+    /**
+     * 10-1c: 幕が出ている間のロゴのグリッチ（src/core/cover-glitch.ts が計算、cover-glitch-view.ts が描く）。強さ（0〜1）は
+     * 合間は idle、測り直しの試みのたびに pulse へ跳ねて pulseMs で戻り、外すと決めたら peakMs だけ peak のまま（その場で）乱れ、
+     * 移る間（landMs）に (1 - 進み)^landEase で 0 へ収まる。重なったら幕のロゴとタイトルの文字に signalMs の短い乱れ
+     */
+    glitch: {
+      /** 乱れを変える間隔（ms。この間で不規則に） */
+      stepMinMs: 30,
+      stepMaxMs: 70,
+      idle: 0.22,
+      pulse: 0.85,
+      pulseMs: 450,
+      peak: 1,
+      /** 移り始める前の一番強い乱れ（ms。0 で省く）。幕が明けるのはこの分だけ遅れる（記録の off の時刻は変えない） */
+      peakMs: 220,
+      landEase: 2,
+      /** 小刻みな揺れ（強さ 1 のときの最大 px） */
+      jitterPx: 4,
+      /** 色ずれ（赤と青緑の影の左右のずれ。強さ 1 のときの最大 px）と色 */
+      splitPx: 6,
+      red: 'rgba(255, 40, 90, 0.8)',
+      cyan: 'rgba(0, 235, 255, 0.8)',
+      /** 横の帯ずれ: 切る本数・1 歩で帯を切る確率（強さ 1 のとき）・帯の最大のずれ（px） */
+      bands: 5,
+      bandChance: 0.6,
+      bandPx: 22,
+      /** ちらつき・一瞬の欠け: 1 歩で起きる確率（強さ 1 のとき）・そのときの濃さ・次までの最短の間（ms。光過敏への配慮で 1 秒に 3 回を超えない） */
+      flickerChance: 0.3,
+      flickerAlpha: 0.4,
+      flickerGapMs: 400,
+      /** 走査線とノイズの帯の濃さ（強さ 1 のとき） */
+      scanline: 0.3,
+      noise: 0.14,
+      /** 重なったときの「信号がつながった」乱れ（ms）と揺れ・色ずれ（px） */
+      signalMs: 200,
+      signalPx: 4,
+    },
   },
   debugToggle: { tapCount: 5, tapWindowMs: 3000, storageKey: 'skyraid.debugViewport' },
 } as const;

@@ -100,7 +100,13 @@ export function startApp(
   );
   title.setPilotName(save.pilotName);
   // 10-1b: 測り直しの幕のロゴは、外すときにタイトルの文字へ移って重なる（src/core/viewport-cover.ts）
-  setCoverLandingTarget(() => title.landingBox());
+  // 10-1c: 重なったらタイトルの文字にも短い乱れ
+  setCoverLandingTarget(
+    () => title.landingBox(),
+    () => {
+      title.signalLanded();
+    },
+  );
   const loading = new LoadingScreen(document.body);
   const curtain = new FadeCurtain(document.body);
 

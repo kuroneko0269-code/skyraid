@@ -170,6 +170,11 @@
   animation: none;
 }
 
+/* 10-1c: 重なった瞬間の短い乱れ（keyframes と動作を減らす設定は index.html の skyraid-signal） */
+.title-logo.is-signal > * {
+  animation: skyraid-signal var(--signal-ms, 200ms) both;
+}
+
 .title-screen.is-deploying .title-prompt {
   animation:
     title-fade calc(var(--title-deploy) * 0.4) ease-out calc(var(--title-deploy) * 0.6) both,
