@@ -249,8 +249,15 @@ async function standaloneShort({
     await page.waitForTimeout(1000);
     events = await history();
   }
-  await page.waitForTimeout(500);
+  // 10-1b: 外すと決めた後、ロゴがタイトルの文字へ移って重なってから明ける（移る 0.48 秒・フェード 0.25 秒。重いので長めに待つ）
+  await page
+    .waitForFunction(() => !document.querySelector('.viewport-cover'), null, { timeout: 5000 })
+    .catch(() => undefined);
   const coverLeft = await page.locator('.viewport-cover').count();
+  const landing = await page.evaluate(async () => {
+    const m = await import('/src/core/viewport-cover.ts');
+    return m.coverLanding.result;
+  });
   const coverLogo = await page.evaluate(() => window.__coverLogo ?? null);
   const s = await canvasState(page);
   const has = (text) => events.some((l) => l.includes(text));
@@ -271,8 +278,13 @@ async function standaloneShort({
       coverLogo.kind === (failLogo ? 'text' : 'logo') &&
       has(failLogo ? 'logo error' : 'logo ok') &&
       coverLogo.width > 100 &&
-      Math.abs(coverLogo.centerX - VIEW.width / 2) <= 2,
+      Math.abs(coverLogo.centerX - VIEW.width / 2) <= 2 &&
+      // 10-1b: タイトルの文字（画像・読めなければ文字）に 2px 以内で重なって止まった
+      landing !== null &&
+      landing.kind === (failLogo ? 'text' : 'logo') &&
+      landing.error <= 2,
     coverLogo,
+    landing,
     events,
     ...s,
   };

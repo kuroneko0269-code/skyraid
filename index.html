@@ -110,15 +110,44 @@
       .viewport-cover-logo.is-loaded {
         opacity: 1;
       }
+      /* 10-1b: タイトルの文字（src/ui/title.css の .title-logo-main・.title-logo）と同じ字体・色・影にそろえる */
+      .viewport-cover-logo,
+      .viewport-cover-text {
+        filter: drop-shadow(0 2px 6px rgba(0, 20, 50, 0.55));
+      }
       .viewport-cover-text {
         display: none;
         font:
-          italic 600 clamp(48px, 12vw, 120px) / 1 system-ui,
+          italic 600 clamp(60px, 15vw, 140px) / 1 var(--ui-font-display, system-ui),
           -apple-system,
           'Segoe UI',
           sans-serif;
         letter-spacing: 0.02em;
-        color: #e6fbff;
+        padding: 0 0.12em;
+        color: #fff;
+        background: linear-gradient(
+          180deg,
+          #ffffff 0%,
+          #e6fbff 48%,
+          var(--ui-accent, rgb(110, 240, 255)) 54%,
+          #2a8fb0 100%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      /* 10-1b: ロゴを動かす間（src/core/cover-logo.ts が transform で位置と大きさを決める） */
+      .viewport-cover.is-moving .viewport-cover-logo,
+      .viewport-cover.is-moving .viewport-cover-text {
+        position: fixed;
+        left: 0;
+        top: 0;
+        transform-origin: 0 0;
+        will-change: transform;
+      }
+      .viewport-cover.is-moving .viewport-cover-logo {
+        width: 400px;
+        max-height: none;
       }
       .viewport-cover.is-text .viewport-cover-logo {
         display: none;

@@ -3,6 +3,9 @@ import './title.css';
 import './save.css';
 import { APP_VERSION } from 'virtual:app-info';
 import { APP_SHELL_CONFIG } from '../data/app';
+import { SCREEN_CONFIG } from '../data/screens';
+import { coverActive, onCoverGone } from '../core/viewport-cover';
+import { visibleBox, type LogoBox } from '../core/cover-motion';
 import { logoUrl, probeImage, resolveLogo, type ImageProbe } from './brand';
 import { createGlyph } from './glyphs';
 import { el } from './hud-dom';
@@ -20,6 +23,10 @@ export class TitleScreen {
   private readonly logo: HTMLDivElement;
   private shown = false;
   private deployed = false;
+  /** 10-1b: 出した時刻（幕のロゴの着く先は、画面のフェードが済んでから） */
+  private shownAt = 0;
+  /** ロゴを画像にするか文字のままかが決まったか */
+  private logoResolved = false;
 
   constructor(
     parent: HTMLElement,
@@ -60,6 +67,7 @@ export class TitleScreen {
     this.root = root;
     void resolveLogo(probe).then((kind) => {
       if (kind === 'image') this.showLogoImage();
+      this.logoResolved = true;
     });
   }
 
@@ -76,9 +84,31 @@ export class TitleScreen {
       this.deployed = true;
       // 10-1: 起動の計測（scripts/perf.js がこの印より前に読み始めたものを「タイトルまでに読む量」に数える）
       performance.mark('skyraid:title');
-      this.root.classList.add('is-deploying');
+      this.shownAt = performance.now();
+      // 10-1b: 測り直しの幕の下で出したときは、展開アニメを幕が明けるときに回す。ロゴは幕のロゴが重なって着くので動かさない
+      if (coverActive()) {
+        const root = this.root;
+        onCoverGone(() => {
+          root.classList.add('is-deploying', 'is-logo-landed');
+        });
+      } else this.root.classList.add('is-deploying');
     }
     setScreenShown(this.root, shown);
+  }
+
+  /**
+   * 10-1b: 幕のロゴの着く先（ロゴの画像か文字の見えている箱）。出ていない・ロゴが決まっていない・画面のフェードの途中なら null
+   */
+  landingBox(): LogoBox | null {
+    if (!this.shown || !this.logoResolved) return null;
+    if (performance.now() - this.shownAt < SCREEN_CONFIG.fadeSeconds * 1000) return null;
+    const img = this.logo.querySelector('img');
+    if (img)
+      return img.naturalHeight > 0
+        ? visibleBox(img.getBoundingClientRect(), img.naturalWidth / img.naturalHeight)
+        : null;
+    const main = this.logo.querySelector<HTMLElement>('.title-logo-main');
+    return main ? visibleBox(main.getBoundingClientRect(), 0) : null;
   }
 
   /** ロゴを画像に差し替える（読めると分かってから。テキストは読み上げ用に残す） */

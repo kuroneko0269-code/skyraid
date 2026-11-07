@@ -2,10 +2,40 @@
 // 8-7: 中央にタイトルのロゴ（読めなければ「SkyRaid」の文字）。
 // v1.0.1: ロゴは飾り。読めない・遅い・作るときに例外が出ても、幕の出し入れと測り直しは止めない（ロゴの処理は try の中、
 // 時間切れで文字に切り替え）。出し入れとロゴの結果は viewport-log.ts に残す
+// 10-1b: 幕のロゴはばねで揺れながら幕の中央を追い、外すときはタイトルの文字の位置と大きさへ移って重なってから幕を明ける
+// （cover-logo.ts）。記録の「off」は今までどおり外すと決めた時刻（移る間は幕を残す）。動きを省く設定ではその場で外す
 import { BRAND_ASSETS, VIEWPORT_CONFIG } from '../data/app';
+import { CoverLogoMotion, prefersReducedMotion, type LandingResult } from './cover-logo';
+import type { LogoBox } from './cover-motion';
 import { noteStartup } from './viewport-log';
 
 let cover: HTMLElement | null = null;
+let motion: CoverLogoMotion | null = null;
+/** 外すと決めてから幕が明けるまで（タイトルの文字へ移る間）か */
+let revealing = false;
+/** 幕が明け始めたら呼ぶもの（タイトルの展開アニメ・本体の読み込み。app.ts） */
+const goneListeners: (() => void)[] = [];
+/** 着く先（タイトルの文字の見えている箱。まだ出ていなければ null。app.ts がタイトルを作ったら入れる） */
+let landingTarget: (() => LogoBox | null) | null = null;
+
+/** 点検（ui-audit-device）: 最後に着いたときの結果（移らずに外したら null のまま） */
+export const coverLanding: { result: LandingResult | null } = { result: null };
+
+/** 幕が出ているか（外すと決めてから明けるまでも含む） */
+export function coverActive(): boolean {
+  return cover !== null || revealing;
+}
+
+/** 幕が明け始めたときに 1 回呼ぶ（幕が無ければすぐ） */
+export function onCoverGone(fn: () => void): void {
+  if (!coverActive()) fn();
+  else goneListeners.push(fn);
+}
+
+/** 着く先を入れる（タイトルの文字。app.ts） */
+export function setCoverLandingTarget(fn: () => LogoBox | null): void {
+  landingTarget = fn;
+}
 /** 幕の時間切れ（試みのたびに延ばす。起動が重くて試みが遅れても、途中で外さない） */
 let coverTimer = 0;
 
@@ -32,6 +62,15 @@ export function showCover(): void {
   document.body.appendChild(c);
   noteStartup('cover', 'on');
   extendCover();
+  // 10-1b: ロゴの動き（飾り。例外が出ても幕の出し入れは止めない）
+  if (!prefersReducedMotion()) {
+    try {
+      motion = new CoverLogoMotion(c);
+      motion.start();
+    } catch {
+      motion = null;
+    }
+  }
 }
 
 /** 中央にロゴ（読めたら出す。読めない・時間切れなら「SkyRaid」の文字）。幕の出し入れ・時刻には関わらない */
@@ -46,7 +85,10 @@ function fillCover(c: HTMLElement): void {
     settled = true;
     window.clearTimeout(timer);
     if (loaded) img.classList.add('is-loaded');
-    else c.classList.add('is-text');
+    else {
+      c.classList.add('is-text');
+      motion?.refresh();
+    }
     noteStartup('cover', text);
   };
   const timer = window.setTimeout(() => {
@@ -73,8 +115,33 @@ export function hideCover(reason: string): void {
   cover = null;
   window.clearTimeout(coverTimer);
   noteStartup('cover', `off (${reason})`);
-  c.classList.add('is-hiding');
-  window.setTimeout(() => {
-    c.remove();
-  }, VIEWPORT_CONFIG.nudge.coverFadeMs);
+  const m = motion;
+  motion = null;
+  revealing = true;
+  const fade = (): void => {
+    m?.stop();
+    revealing = false;
+    c.classList.add('is-hiding');
+    window.setTimeout(() => {
+      c.remove();
+    }, VIEWPORT_CONFIG.nudge.coverFadeMs);
+    for (const fn of goneListeners.splice(0)) fn();
+  };
+  if (!m || !landingTarget) {
+    fade();
+    return;
+  }
+  // 10-1b: タイトルの文字が出るのを待って（landWaitMs まで）そこへ移り、重なったら明ける
+  const target = landingTarget;
+  const waitStart = performance.now();
+  const wait = (): void => {
+    if (target()) {
+      m.land(target, (r) => {
+        coverLanding.result = r;
+        fade();
+      });
+    } else if (performance.now() - waitStart > VIEWPORT_CONFIG.coverLogo.landWaitMs) fade();
+    else requestAnimationFrame(wait);
+  };
+  wait();
 }

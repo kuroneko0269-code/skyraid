@@ -9,6 +9,7 @@ import { GameState, usesDemoCamera } from './core/game-state';
 import { lazyChunk } from './core/lazy-chunk';
 import { GameLoop } from './core/loop';
 import { watchViewport } from './core/viewport';
+import { coverActive, onCoverGone, setCoverLandingTarget } from './core/viewport-cover';
 import { APP_SHELL_CONFIG } from './data/app';
 import { DEFAULT_WEATHER_ID } from './data/weather';
 import type { SaveStore } from './progression/save-store';
@@ -98,6 +99,8 @@ export function startApp(
     },
   );
   title.setPilotName(save.pilotName);
+  // 10-1b: 測り直しの幕のロゴは、外すときにタイトルの文字へ移って重なる（src/core/viewport-cover.ts）
+  setCoverLandingTarget(() => title.landingBox());
   const loading = new LoadingScreen(document.body);
   const curtain = new FadeCurtain(document.body);
 
@@ -201,9 +204,17 @@ export function startApp(
       app?.afterBoot();
       // タイトルの展開アニメ（0.6 秒）が済んでから本体を裏で読む（読んで組み立てる間は主スレッドがふさがるので、アニメを
       // かくつかせない。表示も遅らせない）。その前に押したときは withGame が待つ
-      if (!app)
-        window.setTimeout(() => {
-          prefetchChunk(loadGame);
-        }, APP_SHELL_CONFIG.titleDeploySeconds * 1000);
+      // 10-1b: 測り直しの幕（iOS のホーム画面から横向きの起動）が出ていれば、その間に本体のファイルを読んでおき、
+      // 組み立ては幕が明けて展開アニメが済んでから（測り直しの試みの時刻・幕のロゴの動きを遅らせない）
+      if (!app) {
+        if (coverActive()) prefetchChunk(gameChunk);
+        buildLater();
+      }
     });
+  function buildLater(): void {
+    window.setTimeout(() => {
+      if (coverActive()) onCoverGone(buildLater);
+      else prefetchChunk(loadGame);
+    }, APP_SHELL_CONFIG.titleDeploySeconds * 1000);
+  }
 }
