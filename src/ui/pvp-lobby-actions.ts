@@ -1,6 +1,8 @@
 // ロビーの操作（5-4。pvp-link.ts から分けた）: 開始・準備・ハンガー（所持機体）・ルール・チーム・定型文・「もう一度」を、
 // ホストなら部屋を直接、クライアントならホストへのメッセージで変える。名簿の変化のお知らせ（切断・再接続・離脱）の文も作る
 import { NET_CONFIG } from '../data/net';
+import { NEPHIRGA_ID, raidKaijuOf } from '../data/raid-kaiju';
+import { loadRaidKaiju, needsRaidKaijuChunk, prefetchCoopKaiju } from './raid-kaiju-link';
 import { t } from '../core/i18n';
 import { AIRCRAFT_MODELS } from '../data/aircraft';
 import { ClientRoom } from '../net/client-room';
@@ -57,8 +59,17 @@ export function lobbyActions(ctx: LobbyActionContext): Actions {
   return {
     onStart: () => {
       const room = ctx.room();
-      if (room instanceof HostRoom && startBlock(room.players, room.settings.mode) === null)
+      if (!(room instanceof HostRoom) || startBlock(room.players, room.settings.mode) !== null)
+        return;
+      // 10-3b: 差し込み口の怪獣（アルビオン）はホストの判定が遅延チャンクにあるので、読んでから始める
+      const kaiju = raidKaijuOf(room.settings.raidKaiju);
+      if (room.settings.mode !== 'raid' || kaiju === NEPHIRGA_ID || !needsRaidKaijuChunk(kaiju)) {
         room.start();
+        return;
+      }
+      void loadRaidKaiju(kaiju).then((ok) => {
+        if (ok && ctx.room() === room) room.start();
+      });
     },
     onReady: (ready) => {
       const room = ctx.room();
@@ -138,6 +149,8 @@ export function rosterNotices(
 
 /** ロビーの部屋の画面に出す値（pvp-link.ts から分けた） */
 export function roomView(room: HostRoom | ClientRoom): LobbyRoomView {
+  // 10-3b: レイドの怪獣の遅延チャンクを先読み（始まる前に読み終えるように）
+  if (room.settings.mode === 'raid') prefetchCoopKaiju(room.settings.raidKaiju);
   return {
     code: room.code,
     joinUrl: buildJoinUrl(window.location.href, room.code),

@@ -254,7 +254,22 @@ function build(): Record<BadgeGroup, Draft[]> {
     }));
     each('raidAssistHard', comboId.raidAssistHard, (hard) => (hard ? { hidden: true } : {}));
     // 怪獣ごとの勲章（登録簿の badges。ネフィルガは部位をすべて壊した）
-    for (const b of def.badges) item(b.id, b.reward);
+    // 10-3b: 通算の記録で取るもの（アルビオンの子分の撃墜）は記録の合計から
+    for (const b of def.badges) {
+      if (!b.stat) {
+        item(b.id, b.reward);
+        continue;
+      }
+      const n = b.stat.goal;
+      const chain = b.id.replace(/\d+$/, '');
+      push({
+        id: b.id,
+        reward: b.reward,
+        chain,
+        step: { n, unit: 'count' },
+        stat: { ladder: chain, keys: b.stat.keys, goal: n, shown: n, unit: 'count' },
+      });
+    }
   }
 
   group = 'collect';

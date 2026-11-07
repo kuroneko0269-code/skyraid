@@ -150,7 +150,8 @@ describe('白鯨アルビオン（10-3a）', () => {
       });
       expect(finiteAll(k)).toBe(true);
       expect(minGap).toBeGreaterThanOrEqual(C.floor.min);
-      expect(maxActive).toBe(C.minions.cap);
+      // 10-3b: 同時に飛べる数はソロ 12（プールは協力 4 人の 16）
+      expect(maxActive).toBe(k.swarm.limit);
       expect(k.body.laps).toBeGreaterThanOrEqual(1);
       expect(k.swarm.spawned).toBeGreaterThan(C.minions.cap);
     }

@@ -660,6 +660,13 @@
     "titleNormal": "Nephirga",
     "titleHard": "Nephirga (Hard)"
   },
+  "albion": {
+    "name": "Albion",
+    "missionTitle": "Raid: Albion",
+    "objective": "Defeat Albion",
+    "titleNormal": "Albion",
+    "titleHard": "Albion (Hard)"
+  },
   "maps": {
     "island": "Coast & Island",
     "harbor": "Harbor City"
@@ -1919,7 +1926,8 @@
       "win": "Victory",
       "lose": "Defeat",
       "over": "Match Over",
-      "raid2Clear": "Nephirga Defeated"
+      "raid2Clear": "Nephirga Defeated",
+      "raid3Clear": "Albion Defeated"
     },
     "result": {
       "protected": "Buildings saved {percent}%",
@@ -2413,6 +2421,10 @@
       },
       "pvpKills": {
         "name": "Shot down 25 players in PvP in total"
+      },
+      "albionNests": {
+        "name": "Broke all of Albion's belly nests and defeated it",
+        "note": "All 3 nests. Solo raid"
       }
     },
     "collect": {
@@ -2616,6 +2628,10 @@
       "pvpKill": {
         "name": "Shot down {n} players in PvP in total",
         "note": "Counted from version 1.0.18"
+      },
+      "albionMinions": {
+        "name": "Shot down {n} of Albion's swarm in total",
+        "note": "Solo raid"
       }
     },
     "combo": {
@@ -2739,6 +2755,33 @@
           "tail": {
             "name": "Tail",
             "note": "Swipes nearby planes"
+          }
+        }
+      },
+      "albion": {
+        "tagline": "A giant white whale swimming over the bay",
+        "size": "640 m long",
+        "motion": "Slowly circles an oval over the bay (a long fight)",
+        "parts": "3 belly nests, dorsal fin, tail, head (body is unbreakable)",
+        "opening": "It banks in the turns and shows its belly nests. Break nests to stop the swarm. The head is a weak point. In co-op, each of the swarm chases the nearest pilot.",
+        "hard": "Hard: HP ×1.3, faster attacks and swarm, 12 min total, reward ×1.8",
+        "normal": "Normal: 15 min total",
+        "attacks": {
+          "minion": {
+            "name": "Swarm",
+            "note": "Fly out of the nests and ram you"
+          },
+          "spout": {
+            "name": "Spout",
+            "note": "A column above the back. Move aside"
+          },
+          "slam": {
+            "name": "Tail slam",
+            "note": "Smashes the area right behind"
+          },
+          "cloud": {
+            "name": "Cloud",
+            "note": "From phase 2. Shorter lock range inside"
           }
         }
       }

@@ -116,21 +116,24 @@ export const ALBION_CONFIG = {
   /**
    * 体力（ソロ・通常。ヴォルガスの 13,000 の 2.5 倍）。10-3b でボットの表から決める
    */
-  hp: 32500,
+  hp: 7000,
   /** 子分（腹の巣 3 つから。10-2 の MinionSwarm）。体力は機銃 6 発（12 × 6）・ミサイル 1 発（150） */
   minions: {
-    cap: 12,
+    /** プールの大きさ（協力 4 人の上限。同時に飛べる数は ALBION_RAID_CONFIG.minionCap で人数ごとに） */
+    cap: 16,
     firstDelay: 8,
-    interval: 20,
+    interval: 18,
     perNest: 2,
     hp: 72,
-    speed: 150,
-    turnDeg: 80,
-    life: 60,
-    orbit: 60,
+    speed: 180,
+    turnDeg: 110,
+    life: 50,
+    orbit: 20,
     homeOrbit: 420,
     dropSeconds: 1.2,
   } satisfies MinionSpec,
+  /** 10-3b: 子分が寄る点の見越し（人の進む先。届くまでの秒数 × scale、最大 maxSeconds 秒） */
+  minionLead: { scale: 0.5, maxSeconds: 2 },
   /** 子分の体当たり: 自機から radius m 以内で damage（当たった子分は散って消える。撃墜に数えない） */
   minionRam: { radius: 14, damage: 10 },
   /** 子分が床・海面から空ける高さ */

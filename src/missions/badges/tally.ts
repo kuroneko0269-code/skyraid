@@ -123,6 +123,8 @@ export function tallySortie(
     add(statKey.kills, enemies);
   }
   add(statKey.killType('part'), kc['t.part'] ?? 0);
+  // 10-3b: レイドの怪獣の子分（勲章「子分を N 匹」）
+  add(statKey.killType('minion'), kc['t.minion'] ?? 0);
   add(statKey.killType('target'), kc['t.target'] ?? 0);
   // 飛行・機動
   add(statKey.flightSeconds, watch.flightSeconds);

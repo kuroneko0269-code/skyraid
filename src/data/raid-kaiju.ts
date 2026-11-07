@@ -34,6 +34,8 @@ export interface RaidUnlock {
 export interface RaidKaijuBadge {
   readonly id: string;
   readonly reward: number;
+  /** 10-3b: 通算の記録の合計で取る（keys の合計が goal 以上。記録からさかのぼれる）。無ければ飛行の中で判定する */
+  readonly stat?: { readonly keys: readonly string[]; readonly goal: number };
 }
 
 export interface RaidKaijuDef {
@@ -126,6 +128,37 @@ const DEFS = [
     city: false,
     coopClearKey: 'pvp.title.raid2Clear',
   },
+  {
+    id: 'albion',
+    nameKey: 'albion.name',
+    art: 'kaiju-art/albion.webp',
+    latinName: 'ALBION',
+    attacks: ['minion', 'spout', 'slam', 'cloud'],
+    focus: '50% 50%',
+    // 10-3b: 晴れた昼の湾: 腹の赤い巣と子分の群れを、斜め下から見上げる（白い巨体が青空に浮かぶ）
+    scene: {
+      weather: 'day-clear',
+      camera: { forward: 380, right: -520, up: -260 },
+      look: { forward: -10, right: 0, up: -40 },
+      fov: 54,
+      // 子分が巣から出た直後・最初の攻撃（潮吹き）の前（撮る時計はミッションの経過で、怪獣の時計より数秒遅れる）
+      waitSeconds: 5,
+    },
+    recordKey: 'kaiju',
+    // SQL 0006（キーの決まり）で受け付ける（0003 の一覧には無い）
+    ranked: false,
+    unlock: null,
+    badges: [
+      { id: 'albionNests', reward: 2000 },
+      { id: 'albionMinions100', reward: 100, stat: { keys: ['kill.t.minion'], goal: 100 } },
+      { id: 'albionMinions500', reward: 100, stat: { keys: ['kill.t.minion'], goal: 500 } },
+    ],
+    lazy: true,
+    dev: null,
+    coop: true,
+    city: false,
+    coopClearKey: 'pvp.title.raid3Clear',
+  },
 ] as const satisfies readonly RaidKaijuDef[];
 
 export type RaidKaijuId = (typeof DEFS)[number]['id'];
@@ -138,6 +171,7 @@ export const RAID_KAIJU_IDS: readonly RaidKaijuId[] = RAID_KAIJU.map((k) => k.id
 
 export const VORGAS_ID: RaidKaijuId = 'vorgas';
 export const NEPHIRGA_ID: RaidKaijuId = 'nephirga';
+export const ALBION_RAID_ID: RaidKaijuId = 'albion';
 
 export function isRaidKaijuId(v: unknown): v is RaidKaijuId {
   return typeof v === 'string' && (RAID_KAIJU_IDS as readonly string[]).includes(v);

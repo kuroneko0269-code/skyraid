@@ -42,6 +42,7 @@
     "/src/ui/lobby-share.ts",
     "/src/ui/raid-briefing.ts",
     "/src/ui/kaiju2-briefing.ts",
+    "/src/ui/albion-briefing.ts",
     "/src/ui/ranking-screen.ts",
     "/src/ui/sync-dialog.ts",
     "/src/ui/lobby.ts",

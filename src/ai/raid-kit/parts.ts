@@ -35,7 +35,7 @@ export interface PartHit {
 }
 
 export class PartSet {
-  readonly maxHp: number;
+  maxHp: number;
   hp: number;
   readonly partMaxHp: number[];
   readonly partHp: number[];
@@ -56,6 +56,16 @@ export class PartSet {
     this.partHp = [...this.partMaxHp];
     this.damageBy = Array.from({ length: ATTACKERS }, () => specs.map(() => 0));
     this.breaksBy = Array.from({ length: ATTACKERS }, () => 0);
+  }
+
+  /** 10-3b: 最大 HP を変える（難易度・協力の人数の倍率。部位 HP も同じ割合で作り直し、満タンにする） */
+  setMaxHp(maxHp: number): void {
+    this.maxHp = maxHp;
+    this.hp = maxHp;
+    this.specs.forEach((s, i) => {
+      this.partMaxHp[i] = maxHp * s.hpShare;
+      this.partHp[i] = maxHp * s.hpShare;
+    });
   }
 
   get count(): number {

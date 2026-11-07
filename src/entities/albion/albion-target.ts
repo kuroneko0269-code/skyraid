@@ -6,6 +6,16 @@ import { ALBION_MINION_RADIUS, ALBION_PARTS, ALBION_TARGET_SPHERES } from '../..
 import { vec3, type Vec3 } from '../../flight/math';
 import type { AlbionKaiju } from '../../ai/albion-ai';
 
+/**
+ * 10-3b: ダメージの行き先（レイドの AlbionRaid: 被弾の光・撃破。攻撃した人の ID 付き）。部位・子分の当たりはここへ渡す
+ */
+export interface AlbionDamageSink {
+  readonly kaiju: AlbionKaiju;
+  readonly targetable: boolean;
+  damagePart(index: number, amount: number, attacker?: number): boolean;
+  damageMinion(index: number, amount: number, attacker?: number): boolean;
+}
+
 /** 部位の判定の球 */
 export class AlbionPartTarget implements CombatTarget {
   readonly position: Vec3 = vec3();
@@ -20,11 +30,14 @@ export class AlbionPartTarget implements CombatTarget {
   readonly partIndex: number;
   /** 当てた回数（値の表示） */
   hits = 0;
+  private readonly k: AlbionKaiju;
 
   constructor(
-    private readonly k: AlbionKaiju,
+    private readonly sink: AlbionDamageSink,
     readonly sphere: number,
   ) {
+    const k = sink.kaiju;
+    this.k = k;
     const s = ALBION_TARGET_SPHERES[sphere];
     this.hitRadius = s?.radius ?? 30;
     this.visualRadius = this.hitRadius;
@@ -37,7 +50,21 @@ export class AlbionPartTarget implements CombatTarget {
   }
 
   get active(): boolean {
-    return this.k.body.visible && !this.k.parts.dead;
+    return this.sink.targetable && !this.k.parts.dead;
+  }
+
+  /** 10-3b: 協力の部位の番号（入力の targetId は KAIJU_ID_BASE + これ。判定の球の番号） */
+  get kaijuIndex(): number {
+    return this.sphere;
+  }
+
+  /** 部位の名前（ALBION_PARTS） */
+  get id(): string {
+    return ALBION_PARTS[this.partIndex] ?? 'body';
+  }
+
+  get broken(): boolean {
+    return this.k.parts.isBroken(this.partIndex);
   }
 
   get hp(): number {
@@ -53,8 +80,13 @@ export class AlbionPartTarget implements CombatTarget {
   }
 
   applyDamage(amount: number): boolean {
+    return this.damageBy(amount, 0);
+  }
+
+  /** 攻撃した人の ID 付き（協力の PvpArena の部位） */
+  damageBy(amount: number, attacker: number): boolean {
     this.hits++;
-    return this.k.damagePart(this.partIndex, amount);
+    return this.sink.damagePart(this.partIndex, amount, attacker);
   }
 
   /** 体の位置から置き直す（first は前の位置も同じに） */
@@ -80,12 +112,16 @@ export class AlbionMinionTarget implements CombatTarget {
   readonly visualRadius = ALBION_MINION_RADIUS;
   readonly team = TEAM_ENEMY;
   readonly maxHp: number;
+  /** 10-3b: 子分の印（勲章の撃墜の種類 'minion'。src/missions/badges/kill-kind.ts） */
+  readonly raidMinion = true;
+  private readonly k: AlbionKaiju;
 
   constructor(
-    private readonly k: AlbionKaiju,
+    private readonly sink: AlbionDamageSink,
     readonly index: number,
   ) {
-    this.maxHp = k.swarm.spec.hp;
+    this.k = sink.kaiju;
+    this.maxHp = this.k.swarm.spec.hp;
   }
 
   private get minion() {
@@ -101,7 +137,7 @@ export class AlbionMinionTarget implements CombatTarget {
   }
 
   get active(): boolean {
-    return this.k.body.visible && this.minion?.active === true;
+    return this.sink.targetable && this.minion?.active === true;
   }
 
   get hp(): number {
@@ -113,7 +149,12 @@ export class AlbionMinionTarget implements CombatTarget {
   }
 
   applyDamage(amount: number): boolean {
-    return this.k.swarm.hit(this.index, amount, 0);
+    return this.damageBy(amount, 0);
+  }
+
+  /** 攻撃した人の ID 付き（協力） */
+  damageBy(amount: number, attacker: number): boolean {
+    return this.sink.damageMinion(this.index, amount, attacker);
   }
 
   /** ステップの初めに前の位置を写す */
@@ -127,12 +168,12 @@ export class AlbionMinionTarget implements CombatTarget {
 }
 
 /** 撃てる物を全部作る（部位の球の後に子分） */
-export function createAlbionTargets(k: AlbionKaiju): {
+export function createAlbionTargets(sink: AlbionDamageSink): {
   parts: AlbionPartTarget[];
   minions: AlbionMinionTarget[];
 } {
   return {
-    parts: ALBION_TARGET_SPHERES.map((_, i) => new AlbionPartTarget(k, i)),
-    minions: k.swarm.minions.map((_, i) => new AlbionMinionTarget(k, i)),
+    parts: ALBION_TARGET_SPHERES.map((_, i) => new AlbionPartTarget(sink, i)),
+    minions: sink.kaiju.swarm.minions.map((_, i) => new AlbionMinionTarget(sink, i)),
   };
 }

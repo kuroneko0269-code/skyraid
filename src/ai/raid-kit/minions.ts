@@ -61,12 +61,15 @@ export class MinionSwarm {
   spawned = 0;
   expired = 0;
   readonly killsBy: number[] = Array.from({ length: ATTACKERS }, () => 0);
+  /** 10-3b: 同時に飛べる数（プールの大きさ spec.cap 以下。協力の人数で変える） */
+  limit: number;
 
   constructor(
     readonly spec: MinionSpec,
     readonly nests: readonly NestSpec[],
   ) {
     this.timer = spec.firstDelay;
+    this.limit = spec.cap;
     this.minions = Array.from({ length: spec.cap }, () => ({
       active: false,
       id: 0,
@@ -117,6 +120,7 @@ export class MinionSwarm {
       const nest = this.nests[n];
       if (!nest || (nest.part >= 0 && nestBroken(nest.part))) continue;
       for (let k = 0; k < this.spec.perNest; k++) {
+        if (this.activeCount >= this.limit) return;
         const m = this.minions.find((x) => !x.active);
         if (!m) return;
         bodyPoint(m.position, body, nest.offset);

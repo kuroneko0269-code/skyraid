@@ -4,7 +4,7 @@
 // （起動の量の上限 10-1 を上げない）
 import { raidMission } from '../data/missions-special';
 import type { RaidDifficulty } from '../data/raid';
-import { findRaidKaiju } from '../data/raid-kaiju';
+import { NEPHIRGA_ID, findRaidKaiju, raidKaijuOf } from '../data/raid-kaiju';
 import { findRaidVariant } from '../missions/raid-variants';
 import type { MissionDef } from '../missions/types';
 
@@ -40,6 +40,12 @@ export function loadRaidKaiju(kaiju: string | undefined): Promise<boolean> {
 export function prefetchRaidKaiju(kaiju: string | undefined): void {
   if (!needsRaidKaijuChunk(kaiju) || kaiju === undefined) return;
   chunks.get(kaiju)?.prefetch();
+}
+
+/** 10-3b: 協力のロビーで差し込み口の怪獣（アルビオン）の遅延チャンクを先読み（ネフィルガは今までどおり飛行の始めに読む） */
+export function prefetchCoopKaiju(index: number): void {
+  const kaiju = raidKaijuOf(index);
+  if (kaiju !== NEPHIRGA_ID) prefetchRaidKaiju(kaiju);
 }
 
 /** ソロのレイドのミッション（ヴォルガスは本体、ほかは登録されたレイドの怪獣。raid-variants.ts） */

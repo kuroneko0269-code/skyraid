@@ -78,8 +78,9 @@ describe('勲章の定義', () => {
 
   it('報酬: 9-10 からの勲章は 9-10 のまま（段階は 1 つずつに分けて合計 38,000 CR）・9-10b からは 1 つ 100 CR・収集 4 つで 15,000 CR', () => {
     const legacy = BADGES.filter((b) => !b.stat && !b.combo && b.collect === undefined);
-    expect(legacy.length).toBe(29);
-    expect(totalBadgeRewards(legacy)).toBe(38000);
+    // 10-3b: アルビオンの巣（albionNests 2,000 CR）を足した
+    expect(legacy.length).toBe(30);
+    expect(totalBadgeRewards(legacy)).toBe(40000);
     const collect = BADGES.filter((b) => b.collect !== undefined);
     expect(collect.map((b) => b.reward)).toEqual([1000, 2000, 4000, 8000]);
     for (const b of BADGES) if (b.stat || b.combo) expect(b.reward).toBe(BADGE_REWARDS.each);
