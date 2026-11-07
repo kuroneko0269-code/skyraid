@@ -17,6 +17,8 @@ export interface HudOrdnanceFrame {
   impactY: number;
   /** 対空砲が 1 秒以内に撃つ */
   aaaWarning: boolean;
+  /** 10-4b: ロケット・爆弾の撃ち方の小さな印（タッチは長押しの切り替え。'' は出さない） */
+  hint: string;
 }
 
 export function createOrdnanceFrame(): HudOrdnanceFrame {
@@ -28,6 +30,7 @@ export function createOrdnanceFrame(): HudOrdnanceFrame {
     impactX: 0,
     impactY: 0,
     aaaWarning: false,
+    hint: '',
   };
 }
 
@@ -37,6 +40,7 @@ export class HudOrdnance {
   private readonly bmbRow: HTMLDivElement;
   private readonly bmbText: HTMLSpanElement;
   private readonly impact: HTMLDivElement;
+  private readonly hint: HTMLDivElement;
   private last = {
     rkt: '',
     bmb: '',
@@ -45,6 +49,7 @@ export class HudOrdnance {
     x: NaN,
     y: NaN,
     aaa: false,
+    hint: '',
   };
 
   /**
@@ -62,6 +67,8 @@ export class HudOrdnance {
     this.bmbRow = el('div', 'hud-ammo-row', ammo);
     el('span', 'hud-ammo-label', this.bmbRow, 'BMB');
     this.bmbText = el('span', 'hud-ammo-value', this.bmbRow);
+    this.hint = el('div', 'hud-ammo-hint', ammo);
+    this.hint.hidden = true;
     this.impact = el('div', 'hud-bomb-impact', root);
     this.impact.hidden = true;
     el('div', 'hud-warn hud-aaa', root, 'AAA');
@@ -94,6 +101,11 @@ export class HudOrdnance {
       last.y = f.impactY;
       this.impact.style.transform = `translate(${f.impactX.toFixed(1)}px, ${f.impactY.toFixed(1)}px)`;
     }
+    if (f.hint !== last.hint) {
+      last.hint = f.hint;
+      this.hint.textContent = f.hint;
+      this.hint.hidden = f.hint === '';
+    }
     if (f.aaaWarning !== last.aaa) {
       last.aaa = f.aaaWarning;
       this.root.classList.toggle('is-aaa', f.aaaWarning);
@@ -102,7 +114,7 @@ export class HudOrdnance {
 
   invalidate(): void {
     const last = this.last;
-    last.rkt = last.bmb = last.secondary = '';
+    last.rkt = last.bmb = last.secondary = last.hint = '';
     last.x = last.y = NaN;
   }
 }

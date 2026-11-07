@@ -35,6 +35,7 @@ export const TUTORIAL_FIGURES = [
   'lead',
   'missile',
   'resupply',
+  'rocket',
   'flare',
   'loop',
   'reverse',
@@ -214,7 +215,13 @@ export const TUTORIAL_CHAPTER_DEFS: Readonly<Record<TutorialChapter, TutorialCha
     mission: mission(
       'missile',
       { x: 0, y: 900, z: 5600, headingDeg: 0 },
-      [task('lock', 'lock'), task('launch', 'launch'), task('resupply', 'resupply')],
+      [
+        task('lock', 'lock'),
+        task('launch', 'launch'),
+        task('resupply', 'resupply'),
+        // 10-4b: ロケットへの切り替え（タッチは MSL の長押し・キーボードは別のキー・パッドは X）を体験する
+        task('rocket', 'rocket'),
+      ],
       [{ kind: 'drones', count: 3, respawns: true, trigger: { type: 'start' } }],
       { missileResupplySeconds: TUTORIAL_CONFIG.missileResupplySeconds },
     ),
@@ -222,6 +229,7 @@ export const TUTORIAL_CHAPTER_DEFS: Readonly<Record<TutorialChapter, TutorialCha
       lock: view('missile', 'stick'),
       launch: view('missile', 'msl'),
       resupply: view('resupply', 'msl'),
+      rocket: view('rocket', 'msl'),
     },
   },
   flare: {

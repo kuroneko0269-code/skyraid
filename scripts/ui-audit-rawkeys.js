@@ -156,7 +156,7 @@ export async function auditRawKeys(browser, base, out) {
   });
 
   // レイド: 怪獣ごと
-  for (const kaiju of ['vorgas', 'nephirga', 'albion'])
+  for (const kaiju of ['vorgas', 'nephirga', 'albion', 'gourai'])
     await section(`raid-${kaiju}`, async () => {
       await page.click('.mode-card[data-mode="raid"]');
       await page.locator('.raid-select-wrap:not([hidden])').waitFor();

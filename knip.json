@@ -7,11 +7,7 @@
     "tests/state-dump.ts",
     "src/ui/card/og-image.ts"
   ],
-  "project": [
-    "src/**/*.ts",
-    "scripts/**/*.{ts,js}",
-    "tests/**/*.ts"
-  ],
+  "project": ["src/**/*.ts", "scripts/**/*.{ts,js}", "tests/**/*.ts"],
   "ignoreExportsUsedInFile": true,
   "ignoreUnresolved": [
     "/src/ui/toast.ts",
@@ -43,6 +39,7 @@
     "/src/ui/raid-briefing.ts",
     "/src/ui/kaiju2-briefing.ts",
     "/src/ui/albion-briefing.ts",
+    "/src/ui/gourai-briefing.ts",
     "/src/ui/ranking-screen.ts",
     "/src/ui/sync-dialog.ts",
     "/src/ui/lobby.ts",

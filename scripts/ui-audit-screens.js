@@ -287,6 +287,9 @@ export async function auditMoreScreens(page, base, size, shot, shown) {
   await page.click('.raid-select .raid-kaiju-seg .ui-seg-item[data-value="albion"]');
   await page.click('.raid-select .raid-diff-seg .ui-seg-item[data-value="normal"]');
   await shot('dialog-raid-albion', '.raid-select-wrap');
+  // 10-4b: メカ怪獣ゴウライ（通常）
+  await page.click('.raid-select .raid-kaiju-seg .ui-seg-item[data-value="gourai"]');
+  await shot('dialog-raid-gourai', '.raid-select-wrap');
 
   // 設定のデータ: オンライン連携中・メンバー管理の見本、セーブデータの削除の確認、取り消しの確認のダイアログ
   await toModeSelect();

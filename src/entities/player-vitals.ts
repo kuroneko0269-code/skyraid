@@ -7,6 +7,8 @@ import { vec3, type Vec3 } from '../flight/math';
 import type { Aircraft } from './aircraft';
 
 export class PlayerVitals implements CombatTarget {
+  /** 状態の走査（リプレイのハッシュ）に入れない（10-4b の警告の口。判定に効かない） */
+  static readonly transientKeys = ['extraIncoming'];
   readonly velocity: Vec3 = vec3();
   readonly team = TEAM_PLAYER;
   readonly hitRadius: number;
@@ -17,6 +19,8 @@ export class PlayerVitals implements CombatTarget {
   respawnTimer = 0;
   /** 撃墜された回数（地面への墜落も） */
   downCount = 0;
+  /** 10-4b: 自機を追っている怪獣の弾（ゴウライのミサイル）の数（ミサイルの警告に足す。遅延チャンクが付ける） */
+  extraIncoming: (() => number) | null = null;
   /** 受けたダメージの合計（ミッションの評価。2-4）。墜落は含めない */
   damageTaken = 0;
   /** 練習（4-11。チュートリアル）: HP は 1 で止まり、撃墜されない（被弾の赤い光とダメージの記録はする） */

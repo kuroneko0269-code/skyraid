@@ -222,8 +222,10 @@ export class GouraiObject {
       let want = t.yawCenterDeg * DEG;
       let pitch = 0;
       const slot = GUN_SLOT[i];
-      if (sweeping && slot !== undefined) want = (pose.spin + slot * 90) * DEG;
-      else if (aimAt) {
+      if (sweeping && slot !== undefined) {
+        want = (pose.spin + slot * 90) * DEG;
+        pitch = k.sweepPitch * DEG;
+      } else if (aimAt) {
         const o = k.body.point(origin, t.offset);
         if (inArc(t, k.body, o, aimAt)) {
           const a = relativeAim(k.body, o, aimAt);
@@ -249,6 +251,8 @@ export class GouraiObject {
     const t = k.action === 'windup' ? Math.min(1, k.actionTime / s.windup) : 1;
     const r = 120 + (s.range - 120) * t;
     this.sweepRing.position.copy(this.group.position);
+    // 10-4b: 掃射の面の傾きの分だけ、広がった半径での高さへ上下にずらす（危ない所は狙う人の高さ）
+    this.sweepRing.position.y += r * Math.tan(k.sweepPitch * DEG);
     this.sweepRing.scale.set(r, 1, r);
     const blink = k.action === 'windup' ? 0.6 + 0.4 * Math.sin(this.time * 14) : 1;
     this.ringMat.opacity = (k.action === 'windup' ? M.fx.sweepWarn : M.fx.sweepActive) * blink;

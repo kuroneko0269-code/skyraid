@@ -41,6 +41,7 @@ const INPUTS: Readonly<Record<TutorialFigure, Input>> = {
   lead: STEER(0.5, 0),
   missile: BUTTON('MSL', 'missile', 'A'),
   resupply: BUTTON('MSL', 'missile', 'A'),
+  rocket: BUTTON('MSL', 'rocket', 'X'),
   flare: BUTTON('FLR', 'flare', 'B'),
   loop: STEER(0, 1, true),
   reverse: STEER(0, 0),
@@ -140,7 +141,7 @@ function drawInput(
 }
 
 /** 右の「何が起きるか」の絵（x 64〜120） */
-function drawResult(g: Element, f: TutorialFigure): void {
+function drawResult(g: Element, f: TutorialFigure, v: TutorialVariant): void {
   const plane = (x: number, y: number, rot = 0): void => {
     node(g, 'path', {
       d: `M ${x} ${y - 7} L ${x + 2} ${y + 3} L ${x + 8} ${y + 5} L ${x - 8} ${y + 5} L ${x - 2} ${y + 3} Z`,
@@ -222,6 +223,13 @@ function drawResult(g: Element, f: TutorialFigure): void {
       node(g, 'text', { x: 92, y: 30, class: 'tf-label is-hud' }, '0 → 4');
       node(g, 'text', { x: 92, y: 48, class: 'tf-label is-small' }, 'MSL');
       return;
+    case 'rocket': {
+      // 10-4b: タッチは長押しで MSL → RKT（キーボード・パッドは別のボタン）
+      const touch = v !== 'keys' && v !== 'pad';
+      node(g, 'text', { x: 92, y: 30, class: 'tf-label is-hud' }, touch ? 'MSL → RKT' : 'RKT');
+      node(g, 'text', { x: 92, y: 48, class: 'tf-label is-small' }, touch ? 'HOLD' : '×4');
+      return;
+    }
     case 'flare':
       node(g, 'text', { x: 92, y: 22, class: 'tf-label is-warn' }, 'MISSILE');
       plane(92, 40);
@@ -280,6 +288,6 @@ export function createTutorialFigure(
   node(m, 'path', { d: 'M 0 0 L 8 4 L 0 8 Z', class: 'tf-head' });
   drawInput(node(svg, 'g', {}), INPUTS[f], v, keyName);
   node(svg, 'line', { x1: 60, y1: 10, x2: 60, y2: 54, class: 'tf-divider' });
-  drawResult(node(svg, 'g', {}), f);
+  drawResult(node(svg, 'g', {}), f, v);
   return svg;
 }

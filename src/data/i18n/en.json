@@ -294,7 +294,7 @@
       },
       "missile": {
         "name": "Missiles",
-        "goal": "Lock and fire, resupply when empty",
+        "goal": "Lock and fire, resupply when empty, switch to rockets",
         "steps": {
           "lock": {
             "text": {
@@ -325,6 +325,17 @@
             },
             "hint": {
               "all": "The countdown starts when the ammo count reaches 0. You can fire without a lock"
+            }
+          },
+          "rocket": {
+            "text": {
+              "direct": "Hold MSL to switch to rockets (RKT). Then tap MSL to fire a rocket (hold again to go back to missiles)",
+              "keys": "Rockets fire with {rocket} and bombs with {bomb} (no switching needed). Fire a rocket with {rocket}",
+              "pad": "Rockets fire with X and bombs by holding Y (no switching needed). Fire a rocket with X"
+            },
+            "hint": {
+              "direct": "Keep MSL pressed for about 0.4 s and the button changes to RKT. The ▸ in the ammo list at bottom left moves to RKT too",
+              "all": "Rockets fly straight (they don't chase). You can fire without a lock"
             }
           }
         }
@@ -425,6 +436,11 @@
         "practice": "Practice range",
         "done": "Got it (finish)"
       }
+    },
+    "weaponHint": {
+      "touch": "Hold MSL to switch missiles ⇄ rockets. Hold AB to drop a bomb (when the ○ is shown)",
+      "keys": "Rockets: {rocket}. Bombs: {bomb} (when the ○ is shown)",
+      "pad": "Rockets: X. Bombs: hold Y (when the ○ is shown)"
     }
   },
   "lobby": {
@@ -667,6 +683,13 @@
     "titleNormal": "Albion",
     "titleHard": "Albion (Hard)"
   },
+  "gourai": {
+    "name": "Gourai",
+    "missionTitle": "Raid: Gourai",
+    "objective": "Defeat Gourai",
+    "titleNormal": "Gourai",
+    "titleHard": "Gourai (Hard)"
+  },
   "maps": {
     "island": "Coast & Island",
     "harbor": "Harbor City"
@@ -710,6 +733,7 @@
       "lock": "Lock on",
       "launch": "Fire a missile",
       "resupply": "Missile resupply",
+      "rocket": "Fire a rocket",
       "flare": "Flares",
       "loopTop": "Top of the loop",
       "reverse": "Reverse and level",
@@ -832,7 +856,12 @@
     "lives": "Lives {lives}",
     "shotDown": "SHOT DOWN",
     "respawnIn": "Respawn in {seconds} s",
-    "outOfLives": "No lives left"
+    "outOfLives": "No lives left",
+    "weaponHint": {
+      "touch": "Hold MSL ⇄RKT / Hold AB BMB",
+      "keys": "{rocket} RKT / {bomb} BMB",
+      "pad": "X RKT / Hold Y BMB"
+    }
   },
   "title": {
     "prompt": "Tap / Enter to start",
@@ -1927,7 +1956,8 @@
       "lose": "Defeat",
       "over": "Match Over",
       "raid2Clear": "Nephirga Defeated",
-      "raid3Clear": "Albion Defeated"
+      "raid3Clear": "Albion Defeated",
+      "raid4Clear": "Gourai Defeated"
     },
     "result": {
       "protected": "Buildings saved {percent}%",
@@ -2429,6 +2459,18 @@
       "albionUntouched": {
         "name": "Defeated Albion without being hit by its water columns, song, roll, call or body",
         "note": "Solo raid"
+      },
+      "gouraiTurrets": {
+        "name": "Destroyed all of Gourai's turrets and defeated it",
+        "note": "6 turrets. Solo raid"
+      },
+      "gouraiVentCore": {
+        "name": "Destroyed Gourai's core while it was venting and defeated it",
+        "note": "While the armor is open. Solo raid"
+      },
+      "gouraiFlares": {
+        "name": "Defeated Gourai without being hit by its missiles",
+        "note": "Decoy 4 or more with flares. Solo raid"
       }
     },
     "collect": {
@@ -2800,6 +2842,37 @@
           "cloud": {
             "name": "Cloud",
             "note": "From phase 2. Shorter lock range inside"
+          }
+        }
+      },
+      "gourai": {
+        "tagline": "A floating ark of gun turrets over the bay",
+        "size": "Length 180 m",
+        "motion": "Hovers low on patrol over the bay and turns its body toward whoever it targets",
+        "parts": "Core, 4 shoulder and hip guns, 2 back missile pods, 2 exhausts (hull and front armor can't be broken)",
+        "opening": "You can't fly through its body (you bounce off). The front is heavy armor and dense fire. Read where the tracers come from and circle in from the thin sides and below the rear; every turret you break thins the barrage. When it overheats, the armor opens and the core glows (venting). Its guns lead their target, so keep turning to dodge. In co-op the barrage aims at whoever is nearest each turret.",
+        "normal": "Normal: 16 min overall",
+        "hard": "Hard: HP ×1.3, faster barrage and attacks, 13 min overall, reward ×1.8",
+        "attacks": {
+          "barrage": {
+            "name": "Barrage",
+            "note": "Guns lead you. Keep turning; below the rear is a blind spot"
+          },
+          "volley": {
+            "name": "Volley",
+            "note": "Missiles when the hatch opens. Decoy them with flares"
+          },
+          "sweep": {
+            "name": "Sweep",
+            "note": "Spins at the height of the red ring. Climb or dive out of it"
+          },
+          "vent": {
+            "name": "Venting",
+            "note": "When it overheats the armor opens. Shoot the core from the front"
+          },
+          "purge": {
+            "name": "Second half",
+            "note": "Sheds its armor and speeds up. The core stays exposed"
           }
         }
       }

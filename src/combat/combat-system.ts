@@ -308,9 +308,9 @@ export class CombatSystem {
     for (const fn of this.impactListeners) fn(x, y, z, onTarget);
   }
 
-  /** target を追っている別陣営のミサイルの数（警告用） */
+  /** target を追っている別陣営のミサイルの数（警告用。10-4b: 怪獣の弾 extraIncoming も足す） */
   incomingMissiles(target: CombatTarget): number {
-    return countIncoming(this.missiles.missiles, target);
+    return countIncoming(this.missiles.missiles, target) + (target.extraIncoming?.() ?? 0);
   }
 
   /** 爆心から半径 radius 以内（表面まで）の対象。spareTeam の陣営は除き、怪獣の部位は最も近い 1 つだけ（6-1） */

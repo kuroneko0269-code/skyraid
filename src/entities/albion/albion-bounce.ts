@@ -21,9 +21,19 @@ const up = vec3();
 const rot = quatIdentity();
 const out = quatIdentity();
 
-/** 弾く。contact は hullContact の結果（めり込んだ点・深さ・外向き） */
-export function bounceAircraft(a: Aircraft, contact: Readonly<HullContact>): void {
-  const B = C.collision;
+/** 弾き方の数値（10-4b: ゴウライも同じ形の数値で使う） */
+export interface BounceSpec {
+  readonly pushOut: number;
+  readonly speedKeep: number;
+  readonly minExit: number;
+}
+
+/** 弾く。contact は hullContact の結果（めり込んだ点・深さ・外向き）。B は弾き方（省略はアルビオンの数値） */
+export function bounceAircraft(
+  a: Aircraft,
+  contact: Readonly<HullContact>,
+  B: BounceSpec = C.collision,
+): void {
   const s = a.state;
   const n = contact.normal;
   rotateVec3(fwd, s.orientation, LOCAL_FORWARD);

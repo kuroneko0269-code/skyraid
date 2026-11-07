@@ -96,7 +96,7 @@ describe('勲章の番号と並び', () => {
     for (let i = 1; i < idx.length; i++)
       expect(idx[i] ?? 0).toBeGreaterThanOrEqual(idx[i - 1] ?? 0);
     expect(idx[0]).toBe(-1);
-    expect(raid.at(-1)?.id).toBe('albionMinions500');
+    expect(raid.at(-1)?.id).toBe('gouraiFlares');
   });
 
   it('9-10c で分けた id・消した id', () => {

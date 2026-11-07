@@ -131,6 +131,7 @@ export class RaidFlight {
       host,
       mirror,
       targeted: () => this.net.kaijuTarget === this.net.localId,
+      localId: () => this.net.localId,
       lockMarks: () => {
         marks.clear();
         for (const id of this.playerIds()) {

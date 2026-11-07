@@ -19,7 +19,7 @@ function mk(seed: number, broken: string[] = []): GouraiKaiju {
 }
 
 describe('メカ怪獣ゴウライの大きな攻撃（10-4a）', () => {
-  it('一斉発射: 8 発を扇に。フレアを撒けば外れ、撒かなければ当たる。砲台を壊すと数が減り、2 つとも壊すと使わない', () => {
+  it('一斉発射: 6 発を扇に（10-4b: 砲台 1 つに 3 発）。フレアを撒けば外れ、撒かなければ当たる。砲台を壊すと数が減り、2 つとも壊すと使わない', () => {
     const volleyRun = (
       withFlares: boolean,
       broken: string[] = [],
@@ -86,8 +86,11 @@ describe('メカ怪獣ゴウライの大きな攻撃（10-4a）', () => {
     expect(noPod.used).toBe(0);
   });
 
-  it('回転掃射: 危ない高さの輪にいると当たり、上へ外れると当たらない。予兆の間は撃たない', () => {
-    const sweepRun = (dy: number): { hits: number; inBand: boolean; windupShots: number } => {
+  it('回転掃射（10-4b）: 予兆の始めに狙う人の高さへ傾く。そのままだと当たり、予兆の 0.6 秒後に上へ 150m 動くと当たらない。予兆の間は撃たない', () => {
+    const sweepRun = (
+      dy: number,
+      dodge: number,
+    ): { hits: number; inBand: boolean; windupShots: number; pitch: number } => {
       const k = mk(12);
       k.immortal = true;
       for (let i = 0; i < k.barrage.cooldown.length; i++) k.barrage.cooldown[i] = 1e9;
@@ -97,14 +100,16 @@ describe('メカ怪獣ゴウライの大きな攻撃（10-4a）', () => {
       let hits = 0;
       let windupShots = 0;
       let inBand = false;
+      let lift = 0;
       for (let i = 0; i < 8 / DT; i++) {
         const b = k.body;
         // 横 600m を、体の周りをゆっくり回る（掃射の弾が通る）
         const a = i * DT * 0.15;
+        if (k.attack === 'sweep' && (k.action !== 'windup' || k.actionTime >= 0.6)) lift = dodge;
         pos.x = b.position.x + Math.cos(a) * 600;
         pos.z = b.position.z + Math.sin(a) * 600;
-        pos.y = b.position.y + dy;
-        inBand = inSweepBand(b, pos);
+        pos.y = b.position.y + dy + lift;
+        if (k.action === 'active') inBand = inSweepBand(b, pos, k.sweepPitch);
         const before = k.fired.gun;
         k.step(DT, me, null, (kind) => {
           if (kind === 'gun') hits++;
@@ -112,17 +117,21 @@ describe('メカ怪獣ゴウライの大きな攻撃（10-4a）', () => {
         if (k.action === 'windup') windupShots += k.fired.gun - before;
       }
       expect(k.attacksUsed.sweep).toBe(1);
-      return { hits, inBand, windupShots };
+      return { hits, inBand, windupShots, pitch: k.sweepPitch };
     };
-    const level = sweepRun(25);
-    const above = sweepRun(C.attacks.sweep.bandHigh + 40);
+    // 10-4a の水平の輪より上（+200m）にいても、輪がその高さへ傾く
+    const stay = sweepRun(200, 0);
+    const dodge = sweepRun(200, 150);
+    const level = sweepRun(25, 0);
     console.info(
-      `gourai sweep: level hits ${String(level.hits)}, above hits ${String(above.hits)}`,
+      `gourai sweep: stay hits ${String(stay.hits)} (pitch ${stay.pitch.toFixed(1)}), dodge hits ${String(dodge.hits)}, level hits ${String(level.hits)}`,
     );
-    expect(level.inBand).toBe(true);
+    expect(stay.pitch).toBeGreaterThan(10);
+    expect(stay.inBand).toBe(true);
+    expect(stay.hits).toBeGreaterThan(0);
     expect(level.hits).toBeGreaterThan(0);
-    expect(above.inBand).toBe(false);
-    expect(above.hits).toBe(0);
-    expect(level.windupShots).toBe(0);
+    expect(dodge.inBand).toBe(false);
+    expect(dodge.hits).toBe(0);
+    expect(stay.windupShots).toBe(0);
   });
 });

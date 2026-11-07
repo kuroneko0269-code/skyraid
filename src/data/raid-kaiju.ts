@@ -161,6 +161,37 @@ const DEFS = [
     city: false,
     coopClearKey: 'pvp.title.raid3Clear',
   },
+  {
+    id: 'gourai',
+    nameKey: 'gourai.name',
+    art: 'kaiju-art/gourai.webp',
+    latinName: 'GOURAI',
+    attacks: ['barrage', 'volley', 'sweep', 'vent', 'purge'],
+    focus: '50% 50%',
+    // 10-4b: 晴れた昼の湾: 海面の近くから、前の装甲と砲台を向けて浮く箱舟を斜め前から見上げる（弾幕の曳光）
+    scene: {
+      weather: 'day-clear',
+      camera: { forward: 230, right: -150, up: -20 },
+      look: { forward: 10, right: 0, up: 12 },
+      fov: 50,
+      waitSeconds: 8,
+    },
+    recordKey: 'kaiju',
+    // SQL 0006（キーの決まり）で受け付ける
+    ranked: false,
+    unlock: null,
+    // 報酬は 1 つ 300 CR（勲章の報酬の合計を 10 万 CR 以内に保つ。tests/badges.test.ts）
+    badges: [
+      { id: 'gouraiTurrets', reward: 300 },
+      { id: 'gouraiVentCore', reward: 300 },
+      { id: 'gouraiFlares', reward: 300 },
+    ],
+    lazy: true,
+    dev: null,
+    coop: true,
+    city: false,
+    coopClearKey: 'pvp.title.raid4Clear',
+  },
 ] as const satisfies readonly RaidKaijuDef[];
 
 export type RaidKaijuId = (typeof DEFS)[number]['id'];
@@ -174,6 +205,7 @@ export const RAID_KAIJU_IDS: readonly RaidKaijuId[] = RAID_KAIJU.map((k) => k.id
 export const VORGAS_ID: RaidKaijuId = 'vorgas';
 export const NEPHIRGA_ID: RaidKaijuId = 'nephirga';
 export const ALBION_RAID_ID: RaidKaijuId = 'albion';
+export const GOURAI_RAID_ID: RaidKaijuId = 'gourai';
 
 export function isRaidKaijuId(v: unknown): v is RaidKaijuId {
   return typeof v === 'string' && (RAID_KAIJU_IDS as readonly string[]).includes(v);

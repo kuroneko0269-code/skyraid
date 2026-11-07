@@ -2,7 +2,6 @@
 // ランナーが読む世界（自機・戦域は飛行の世界のまま、怪獣の体力と制限時間をアルビオンから）
 import type { TargetingSpec } from '../data/weapons';
 import { ALBION_CONFIG as C } from '../data/albion';
-import type { AlbionRaid } from './albion-raid';
 import type { GamePlay } from './game-play';
 import type { MissionWorld } from './world';
 
@@ -38,8 +37,14 @@ export class CloudLock {
   }
 }
 
-/** ランナーが読む世界: 自機・戦域は飛行の世界のまま、怪獣の体力と制限時間をアルビオンから */
-export function raidWorld(play: GamePlay, raid: AlbionRaid): MissionWorld {
+/** ランナーが読む世界の怪獣の側（10-4b: アルビオン・ゴウライ） */
+export interface RaidWorldKaiju {
+  readonly damageRatio: number;
+  readonly timeUp: boolean;
+}
+
+/** ランナーが読む世界: 自機・戦域は飛行の世界のまま、怪獣の体力と制限時間を怪獣（アルビオン・ゴウライ）から */
+export function raidWorld(play: GamePlay, raid: RaidWorldKaiju): MissionWorld {
   const s = play.session;
   return {
     get playerPosition() {

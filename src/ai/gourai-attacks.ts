@@ -16,6 +16,9 @@ export interface GouraiAttackHost {
   readonly body: BodyFrame;
   readonly lastAttack: GouraiAttack | null;
   readonly repeat: number;
+  /** 10-4b: 回転掃射の面の傾き（度）と、狙う人までの水平の距離（m）。予兆の始めに狙う人へ決める */
+  readonly sweepPitch: number;
+  readonly sweepRange: number;
   turretAlive(i: number): boolean;
 }
 
@@ -46,11 +49,12 @@ export function attackWeights(
   if (aliveCount(k, GOURAI_PODS) > 0 && dist <= C.attacks.volley.range && allow('volley'))
     out.push({ attack: 'volley', weight: 1 });
   const s = C.attacks.sweep;
-  if (aliveCount(k, GOURAI_GUNS) > 0 && dist <= s.range && allow('sweep'))
-    out.push({
-      attack: 'sweep',
-      weight: 1 + (Math.abs(p.y - b.y) < s.levelBand ? s.levelWeight : 0),
-    });
+  if (aliveCount(k, GOURAI_GUNS) > 0 && dist <= s.range && allow('sweep')) {
+    // 10-4b: 掃射の面を傾けて届く高さなら選びやすい
+    const raw = rawSweepPitch(k.body, p);
+    const reach = raw >= s.pitchMin && raw <= s.pitchMax;
+    out.push({ attack: 'sweep', weight: 1 + (reach ? s.levelWeight : 0) });
+  }
   return out;
 }
 
@@ -113,15 +117,61 @@ export function fireSweep(
     const t = GOURAI_TURRETS[turret];
     if (!t || !k.turretAlive(turret)) return;
     bodyPoint(origin, k.body, t.offset);
-    bodyDirection(dir, k.body, angleDeg + j * 90, (rnd() - 0.5) * 2 * s.spreadDeg);
+    // 10-4b: 機銃ごとに、狙う人の距離（sweepRange）の輪の上で輪の真ん中の高さに届く仰角へ（機銃の位置の違いで高さがずれない）
+    bodyDirection(dir, k.body, angleDeg + j * 90, 0);
+    const b = k.body.position;
+    const ox = origin.x - b.x;
+    const oz = origin.z - b.z;
+    const along = ox * dir.x + oz * dir.z;
+    const c = ox * ox + oz * oz - k.sweepRange * k.sweepRange;
+    const reach = Math.max(1, -along + Math.sqrt(Math.max(0, along * along - c)));
+    const wantY = b.y + BAND_MID + k.sweepRange * Math.tan(k.sweepPitch * DEG);
+    const pitch = Math.atan2(wantY - origin.y, reach) / DEG;
+    bodyDirection(dir, k.body, angleDeg + j * 90, pitch + (rnd() - 0.5) * 2 * s.spreadDeg);
     fire({ turret, weapon: 'gun', origin, direction: dir, targetId: -1 });
     n++;
   });
   return n;
 }
 
-/** 点が回転掃射の危ない高さ（体の中心から bandLow〜bandHigh）にあるか（テスト・値の表示） */
-export function inSweepBand(body: BodyFrame, p: Readonly<Vec3>): boolean {
-  const dy = p.y - body.position.y;
+const DEG = Math.PI / 180;
+const BAND_MID = (C.attacks.sweep.bandLow + C.attacks.sweep.bandHigh) / 2;
+
+/** 10-4b: 掃射の面を p の高さへ向ける傾き（度。範囲で切らない） */
+function rawSweepPitch(body: BodyFrame, p: Readonly<Vec3>): number {
+  const b = body.position;
+  const h = Math.hypot(p.x - b.x, p.z - b.z);
+  return Math.atan2(p.y - b.y - BAND_MID, Math.max(1, h)) / DEG;
+}
+
+/** 10-4b: 回転掃射の面の傾き（度。p の高さへ向け、下限・上限で切る） */
+export function sweepPitchFor(body: BodyFrame, p: Readonly<Vec3>): number {
+  const s = C.attacks.sweep;
+  return Math.max(s.pitchMin, Math.min(s.pitchMax, rawSweepPitch(body, p)));
+}
+
+/** 10-4b: 回転掃射を p（狙う人）へ向ける: 面の傾きと弾を揃える距離を決める */
+export function aimSweep(
+  k: { sweepPitch: number; sweepRange: number; readonly body: BodyFrame },
+  p: Readonly<Vec3>,
+): void {
+  k.sweepPitch = sweepPitchFor(k.body, p);
+  k.sweepRange = sweepRangeFor(k.body, p);
+}
+
+/** 10-4b: 回転掃射の弾を揃える水平の距離（m。p までの距離を 150〜射程で切る） */
+export function sweepRangeFor(body: BodyFrame, p: Readonly<Vec3>): number {
+  const b = body.position;
+  return Math.max(150, Math.min(C.attacks.sweep.range, Math.hypot(p.x - b.x, p.z - b.z)));
+}
+
+/**
+ * 点が回転掃射の危ない高さ（体の中心から bandLow〜bandHigh。10-4b: 面の傾き pitchDeg の分だけ、水平の距離に合わせて上下へずれる）に
+ * あるか（テスト・値の表示・ボット）
+ */
+export function inSweepBand(body: BodyFrame, p: Readonly<Vec3>, pitchDeg = 0): boolean {
+  const b = body.position;
+  const h = Math.hypot(p.x - b.x, p.z - b.z);
+  const dy = p.y - b.y - h * Math.tan(pitchDeg * DEG);
   return dy >= C.attacks.sweep.bandLow && dy <= C.attacks.sweep.bandHigh;
 }

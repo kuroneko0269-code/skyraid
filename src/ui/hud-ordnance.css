@@ -5,6 +5,19 @@
   content: '▸';
 }
 
+/* 10-4b: ロケット・爆弾の撃ち方の小さな印（残弾の列の下。タッチは「MSL長押し ⇄RKT」） */
+.hud-ammo-hint {
+  margin-top: 2px;
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--hud-dim);
+  white-space: nowrap;
+}
+
+.hud-ammo-hint[hidden] {
+  display: none;
+}
+
 /*
  * 爆弾の着弾予測点（9-5b: 機銃の印と間違えないよう、薄い破線の四角に「BMB」。地上の目標を爆撃するときに重ねる。
  * 機銃だけの練習場では出さない）

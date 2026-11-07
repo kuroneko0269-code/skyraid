@@ -182,6 +182,10 @@ export class PilotBot {
   }
 
   private lastHp = 0;
+  /** 10-4b: 被弾で逃げに入るか（false: 弾幕の小さな当たりでは攻めを止めない。人は撃たれても撃ち返す） */
+  damageSense = true;
+  /** 10-4b: 地面の回避に足す高さ（m。正で低く飛べる。海面すれすれの怪獣を撃つボット） */
+  aglBonus = 0;
 
   think(dt: number): void {
     const ff = this.ff;
@@ -190,14 +194,15 @@ export class PilotBot {
     self.speed = s.speed;
     self.afterburnerGauge = s.afterburnerGauge;
     self.hpRatio = ff.player.hp / ff.player.maxHp;
-    self.agl = s.position.y - Math.max(0, this.groundHeight(s.position.x, s.position.z));
+    self.agl =
+      s.position.y - Math.max(0, this.groundHeight(s.position.x, s.position.z)) + this.aglBonus;
     self.verticalSpeed = ff.player.velocity.y;
     const target = this.pick();
     // 選択中の対象を最も近い敵にそろえる（ロックはプレイヤーのロックの仕組みそのもの）
     if (target && ff.combat.targeting.selected !== target) ff.combat.targeting.select(target);
     this.senses.target = target;
     this.senses.threat = this.findThreat();
-    this.senses.damageTaken = Math.max(0, this.lastHp - ff.player.hp);
+    this.senses.damageTaken = this.damageSense ? Math.max(0, this.lastHp - ff.player.hp) : 0;
     this.lastHp = ff.player.hp;
     this.senses.locked = ff.combat.targeting.locked;
     this.senses.missileReady = ff.combat.missileAmmo.ready;

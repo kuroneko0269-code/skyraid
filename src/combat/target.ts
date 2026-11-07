@@ -26,6 +26,8 @@ export interface CombatTarget extends GunTarget, Damageable {
    * （部位の球が重なっているので、ミサイル 1 発が 3 部位に入らないように）。省略は単独
    */
   readonly blastGroup?: object;
+  /** 10-4b: この対象を追っている怪獣の弾（ゴウライのミサイル）の数。ミサイルの警告に足す（自機だけ。遅延チャンクが付ける） */
+  readonly extraIncoming?: (() => number) | null;
   /** 地上に据えた対象（地上目標・対空砲。9-8 の事前修正: 速度合わせは空の的だけに効かせる）。省略は空の的 */
   readonly surface?: boolean;
 }

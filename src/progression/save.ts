@@ -40,7 +40,8 @@ export type UpgradeLevels = Record<UpgradeKind, number>;
  * raidBriefing: 協力レイドのブリーフィングを一度見た（6-6。2 回目からスキップできる。版は上げない: 無い旗は false）/
  * steerNotice: 「操作方法が新しくなりました」（9-2）を出した、または出さなくてよい（初回起動の人）/
  * tutorialNotice: 「チュートリアルが新しくなりました」（9-5c）を出した、または出さなくてよい（初回起動の人）/
- * assistPreset: 「補助の組を選んでください」（9-5d。タッチの端末だけ）を出した（版は上げない: 無い旗は false = 今の利用者にも 1 回）
+ * assistPreset: 「補助の組を選んでください」（9-5d。タッチの端末だけ）を出した（版は上げない: 無い旗は false = 今の利用者にも 1 回）/
+ * weaponHint: ロケット・爆弾の撃ち方（タッチは MSL の長押しの切り替え）の案内（10-4b）を出した（版は上げない）
  */
 export const SAVE_FLAGS = [
   'tutorialOffered',
@@ -51,6 +52,7 @@ export const SAVE_FLAGS = [
   'steerNotice',
   'tutorialNotice',
   'assistPreset',
+  'weaponHint',
 ] as const;
 export type SaveFlag = (typeof SAVE_FLAGS)[number];
 export type SaveFlags = Record<SaveFlag, boolean>;
@@ -65,6 +67,7 @@ export function defaultFlags(): SaveFlags {
     steerNotice: false,
     tutorialNotice: false,
     assistPreset: false,
+    weaponHint: false,
   };
 }
 

@@ -98,7 +98,15 @@ describe('メカ怪獣ゴウライの確かめる場（10-4a）', () => {
     }
     const link = readFileSync(join('src', 'ui', 'gourai-link.ts'), 'utf8');
     expect(
-      [...link.matchAll(/^import[^;]*?from '([^']+)'/gms)]
+      // 型だけの import（import type）は消えるので数えない
+      [...link.matchAll(/^import(?! type)[^;]*?from '([^']+)'/gms)]
+        .map((m) => m[1])
+        .filter((i) => i?.includes('gourai')),
+      // 10-4b: 起動時に読むのはミッションの登録（名前と数値の参照だけ）
+    ).toEqual(['../missions/gourai-mission']);
+    const mission = readFileSync(join('src', 'missions', 'gourai-mission.ts'), 'utf8');
+    expect(
+      [...mission.matchAll(/^import[^;]*?from '([^']+)'/gms)]
         .map((m) => m[1])
         .filter((i) => i?.includes('gourai')),
     ).toEqual([]);

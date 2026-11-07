@@ -25,6 +25,8 @@ export class HudLink {
   gunOnly: () => boolean = () => false;
   /** 9-5b: 速度合わせでスロットルを下げている（HUD の THR に AUTO） */
   speedMatching: () => boolean = () => false;
+  /** 10-4b: ロケット・爆弾の撃ち方の小さな印（入力の方式ごとの文。'' は出さない） */
+  ordnanceHint: () => string = () => '';
   private lastShots = 0;
   private lastShotAt = -Infinity;
 
@@ -109,6 +111,7 @@ export class HudLink {
     const o = this.frame.ordnance;
     const bombs = this.ff.combat.bombs;
     o.secondary = this.weaponInput?.secondary ?? 'missile';
+    o.hint = this.frame.gunOnly ? '' : this.ordnanceHint();
     // 9-5b: 機銃だけの練習場では出さない（機銃で狙う印と間違える）
     o.impactShown =
       this.ff.player.active &&

@@ -141,7 +141,7 @@ CASES.push(
       difficulty: '.raid-select .raid-difficulty',
       actions: '.raid-select .raid-actions',
     },
-    tabs: ['nephirga', 'albion', 'hard'],
+    tabs: ['nephirga', 'albion', 'gourai', 'hard'],
   },
   {
     name: 'hangar',

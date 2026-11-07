@@ -58,6 +58,8 @@ export interface RaidPluginView {
   readonly mirror: RaidPluginMirror | null;
   /** 自分が攻撃の対象か（HUD の「TARGET」） */
   targeted(): boolean;
+  /** 10-4b: 自分のプレイヤー ID（追ってくる怪獣のミサイルの警告） */
+  localId(): number;
   /** 他の人がロックしている部位（ロックの番号 → 色。自分は入れない） */
   lockMarks(): ReadonlyMap<number, readonly string[]>;
   /** ロックの対象: 部位（入力の targetId は KAIJU_ID_BASE + kaijuIndex）と子分（DEFENSE_ID_BASE + 添字） */

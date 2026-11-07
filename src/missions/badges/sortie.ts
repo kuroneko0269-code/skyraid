@@ -4,7 +4,7 @@
 // 記録しない飛行（チュートリアル・PvP・協力）は見ない（協力・PvP は対戦の終わりの集計: judgeMatch）
 import { BADGE_CONFIG } from '../../data/badges';
 import { KAIJU2_PARTS } from '../../data/kaiju2';
-import { ALBION_RAID_ID, NEPHIRGA_ID } from '../../data/raid-kaiju';
+import { ALBION_RAID_ID, GOURAI_RAID_ID, NEPHIRGA_ID } from '../../data/raid-kaiju';
 import type { ReplayControls, ReplayStart } from '../../replay/types';
 import { freeExtrasOf } from '../free-extra';
 import type { GamePlay } from '../game-play';
@@ -148,9 +148,13 @@ function nephirgaBroken(play: GamePlay): number {
 
 /**
  * 10-3b: アルビオンの状態の根の印（遅延チャンクなので印の名前で見る）。albionNestsGone = 腹の巣が全部壊れている、
- * 10-3c: albionUntouched = 人を狙う攻撃と体に一度も当たっていない
+ * 10-3c: albionUntouched = 人を狙う攻撃と体に一度も当たっていない。10-4b: ゴウライの印（gourai-raid.ts）も同じ形で見る
  */
-function albionFlag(play: GamePlay, flag: 'albionNestsGone' | 'albionUntouched'): boolean {
+function albionFlag(
+  play: GamePlay,
+  flag:
+    'albionNestsGone' | 'albionUntouched' | 'gouraiTurretsGone' | 'gouraiVentCore' | 'gouraiFlared',
+): boolean {
   for (const extra of freeExtrasOf(play)) {
     if (!extra.active) continue;
     const root = extra.stateRoot;
@@ -193,6 +197,12 @@ export function judgeSortie(
   // 10-3c: アルビオン（ソロのレイド）の人を狙う攻撃（水柱・歌・横転・呼び声）と体に一度も当たらずに倒した
   if (success && start.raidKaiju === ALBION_RAID_ID && albionFlag(play, 'albionUntouched'))
     out.push('albionUntouched');
+  // 10-4b: ゴウライ（ソロのレイド）: 砲台をすべて壊して倒した・放熱の間に核を壊した・ミサイルに一度も当たらずに倒した
+  if (success && start.raidKaiju === GOURAI_RAID_ID) {
+    if (albionFlag(play, 'gouraiTurretsGone')) out.push('gouraiTurrets');
+    if (albionFlag(play, 'gouraiVentCore')) out.push('gouraiVentCore');
+    if (albionFlag(play, 'gouraiFlared')) out.push('gouraiFlares');
+  }
   const race = play.race?.result;
   if (start.mode === 'race' && race?.outcome === 'finished' && race.missed === 0)
     out.push('cleanRun');
