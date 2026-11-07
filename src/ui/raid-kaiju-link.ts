@@ -49,14 +49,15 @@ export function soloRaidMission(kaiju: string | undefined, difficulty: RaidDiffi
 
 /**
  * ソロのレイドのミッションを用意して go に渡す（モード選択から）。遅延チャンクの怪獣は読んでから（読めない・読む間に
- * stillHere が false になったら渡さない）
+ * モード選択を離れたら渡さない）
  */
 export function withSoloRaid(
   kaiju: string | undefined,
   difficulty: RaidDifficulty,
-  stillHere: () => boolean,
+  game: { readonly state: string },
   go: (def: MissionDef) => void,
 ): void {
+  const stillHere = (): boolean => game.state === 'mode_select';
   if (!needsRaidKaijuChunk(kaiju)) {
     go(soloRaidMission(kaiju, difficulty));
     return;

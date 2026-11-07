@@ -1,6 +1,5 @@
 import { withSoloRaid } from './raid-kaiju-link';
-import { raidUnlockState } from '../progression/raid-unlock';
-import { raidKaijuDef } from '../data/raid-kaiju';
+import { raidUnlockOfId } from '../progression/raid-unlock';
 import { t } from '../core/i18n';
 import type { Paint } from '../progression/paint';
 import { Paintshop } from '../progression/paintshop';
@@ -169,15 +168,10 @@ export class Screens {
         if (kind === 'coop') this.pvp?.onSelect(true, kaiju);
         // 9-6b: ヴォルガス以外の怪獣。9-6c: ネフィルガは遅延チャンクを読んでから（読めなければ今の画面のまま）
         else
-          withSoloRaid(
-            kaiju,
-            difficulty,
-            () => game.state === 'mode_select',
-            (def) => {
-              this.nextMission = def;
-              game.transition('flight');
-            },
-          );
+          withSoloRaid(kaiju, difficulty, game, (def) => {
+            this.nextMission = def;
+            game.transition('flight');
+          });
       },
       onBack: () => game.transition('title'),
     });
@@ -185,7 +179,7 @@ export class Screens {
     // 9-10d: レイドの怪獣選びの自己ベスト（怪獣・難易度ごと）
     this.modeSelect.raidBest = (kaiju, d) => raidBestText(save.snapshot, kaiju, d);
     // 10-2: 解放の条件（登録簿の unlock）
-    this.modeSelect.raidUnlock = (kaiju) => raidUnlockState(save.snapshot, raidKaijuDef(kaiju));
+    this.modeSelect.raidUnlock = (kaiju) => raidUnlockOfId(save.snapshot, kaiju);
     this.info = new InfoEntry(parent, this.modeSelect, game);
     this.missionSelect = new MissionSelectScreen(
       parent,

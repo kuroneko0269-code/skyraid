@@ -7,10 +7,12 @@ import { parseDevFlags } from '../core/debug-flags';
 import { RAID_DIFFICULTY_LABELS, type RaidDifficulty } from '../data/raid';
 import {
   isRaidKaijuId,
+  raidKaijuDef,
   raidKaijuName,
   raidRecordKey,
   VORGAS_ID,
   type RaidKaijuDef,
+  type RaidKaijuId,
   type RaidUnlock,
 } from '../data/raid-kaiju';
 import type { SaveData } from './save';
@@ -63,6 +65,11 @@ export function raidUnlockState(
   const have = unlock.kaiju.filter((k) => raidCleared(save, k, unlock.difficulty)).length;
   const need = Math.min(unlock.count, unlock.kaiju.length);
   return { unlocked: have >= need, have, need, unlock };
+}
+
+/** 登録簿の怪獣の解放の状態（怪獣選び） */
+export function raidUnlockOfId(save: Progress, id: RaidKaijuId): UnlockState {
+  return raidUnlockState(save, raidKaijuDef(id));
 }
 
 /** 条件の文（今の言語）。例「ヴォルガスを高難度でクリア」「ヴォルガス・ネフィルガのうち 1 体を通常でクリア（0 / 1）」 */
