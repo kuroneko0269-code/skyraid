@@ -42,6 +42,7 @@ import { linkTiltPause } from './ui/tilt-settings';
 import { screenRoll } from './render/screen-roll';
 import { linkKaiju2, linkKaijuArtDev } from './ui/kaiju2-link';
 import { linkAlbion } from './ui/albion-link';
+import { linkGouraiDev } from './ui/gourai-link';
 import type { AppShell } from './app';
 import { CityView } from './render/city/city-view';
 
@@ -321,6 +322,8 @@ export function startGame(shell: AppShell): GameApp {
   linkKaiju2({ ...kaiju2, ...runtime, weather: world.weather });
   // 10-3b: 白鯨アルビオン（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=albion は起動時に読む）
   linkAlbion({ ...kaiju2, ...runtime });
+  // 10-4a: メカ怪獣ゴウライ（作っている間。?dev=gourai のときだけ遅延チャンクを読む）
+  linkGouraiDev({ ...kaiju2, ...runtime });
 
   // 9-10d: ?dev=kaiju-art（レイドの怪獣選びの画像を描く。遊ぶ人は読まない）
   linkKaijuArtDev(search, { ...runtime, camera, pipeline, play, weather: world.weather, game });

@@ -64,6 +64,49 @@
   font-size: 14px;
 }
 
+/*
+ * 10-4a の事前修正: 怪獣の切り替えは 1 段のまま（5 体まで増えても折り返さない）。入りきらなければ横にスクロールし、
+ * 続きのある側の端をぼかして知らせる（is-more-start / is-more-end は raid-select.ts がスクロールに合わせて付ける）
+ */
+.raid-kaiju-seg {
+  flex-wrap: nowrap;
+}
+
+.raid-kaiju-seg .ui-seg-items {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.raid-kaiju-seg .ui-seg-items::-webkit-scrollbar {
+  display: none;
+}
+
+.raid-kaiju-seg .ui-seg-item {
+  flex: 0 0 auto;
+}
+
+.raid-kaiju-seg.is-more-end .ui-seg-items {
+  mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+}
+
+.raid-kaiju-seg.is-more-start .ui-seg-items {
+  mask-image: linear-gradient(90deg, transparent, #000 28px);
+}
+
+.raid-kaiju-seg.is-more-start.is-more-end .ui-seg-items {
+  mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+}
+
+/* 鍵の印は小さく（名前の幅を取らない） */
+.raid-kaiju-lock {
+  margin-right: 3px;
+  font-size: 0.8em;
+}
+
 .raid-art-band {
   position: absolute;
   inset: auto 0 0;
@@ -310,19 +353,16 @@
     grid-template-columns: minmax(0, 40fr) minmax(0, 60fr);
   }
 
+  /* 10-4a の事前修正: 戻ると切り替えを 1 段に（画像の上を隠さない） */
   .raid-art-top {
-    flex-direction: column;
+    align-items: center;
     padding: 6px;
     gap: 4px;
   }
 
   .raid-art-top .raid-back {
-    align-self: flex-start;
     min-height: 36px;
-  }
-
-  .raid-kaiju-slot {
-    width: 100%;
+    padding-inline: 8px;
   }
 
   .raid-kaiju-seg .ui-seg-item {

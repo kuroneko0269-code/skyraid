@@ -5,7 +5,7 @@
 // 怪獣はデータ（KAIJU_PROFILES）から並べる。ヴォルガスと、登録された別の怪獣（raid-variants）だけを出す
 // 10-2: 登録簿（src/data/raid-kaiju.ts）の未公開の怪獣は ?dev=<名前> のときだけ。解放の条件のある怪獣は、満たすまで鍵を付けて
 // 条件を出し、出撃のボタンを押せなくする（?dev=raid-lock で見た目を確かめられる）
-import { t } from '../core/i18n';
+import { hasMessage, t } from '../core/i18n';
 import { KAIJU_PROFILES, type KaijuProfile } from '../data/kaiju-profiles';
 import { RAID_DIFFICULTY_LABELS, RAID_RULES, type RaidDifficulty } from '../data/raid';
 import { raidKaijuName, raidKaijuShown, VORGAS_ID, type RaidKaijuId } from '../data/raid-kaiju';
@@ -33,6 +33,19 @@ export function availableKaiju(): readonly KaijuProfile[] {
   return KAIJU_PROFILES.filter(
     (p) => raidKaijuShown(p) && (p.id === VORGAS_ID || findRaidVariant(p.id) !== null),
   );
+}
+
+/** 10-4a の事前修正: 怪獣の切り替えに出す短い名前（raidSelect.tab.<id>。無ければ名前） */
+export function raidKaijuTabName(id: RaidKaijuId): string {
+  const key = `raidSelect.tab.${id}`;
+  return hasMessage(key) ? t(key) : raidKaijuName(id);
+}
+
+/** 横にスクロールする並びの、続きのある側の印（端のぼかし） */
+function syncScrollEdges(row: HTMLElement, items: HTMLElement): void {
+  const max = items.scrollWidth - items.clientWidth;
+  row.classList.toggle('is-more-start', max > 1 && items.scrollLeft > 1);
+  row.classList.toggle('is-more-end', max > 1 && items.scrollLeft < max - 1);
 }
 
 export class RaidSelect {
@@ -159,14 +172,8 @@ export class RaidSelect {
           ? new Segmented(
               this.kaijuSlot,
               '',
-              list.map((p) => ({
-                value: p.id,
-                // 10-2: 未解放は鍵の印
-                label:
-                  this.unlockState(p.id)?.unlocked === false
-                    ? `${t('raidSelect.lockedBadge')} ${raidKaijuName(p.id)}`
-                    : raidKaijuName(p.id),
-              })),
+              // 10-4a の事前修正: 切り替えには短い名前（1 段に収める）
+              list.map((p) => ({ value: p.id, label: raidKaijuTabName(p.id) })),
               this.kaiju,
               (v) => {
                 const p = list.find((x) => x.id === v);
@@ -174,14 +181,56 @@ export class RaidSelect {
                 this.kaiju = p.id;
                 this.render();
                 this.h.onPick(p.id);
+                this.revealKaijuTab();
               },
               'raid-kaiju-seg',
             )
           : null;
+      if (this.kaijuSeg) this.decorateKaijuTabs(this.kaijuSeg, list);
     }
     if (this.kaijuSeg) this.kaijuSeg.value = this.kaiju;
     this.diff.value = this.difficulty;
     this.render();
+    // 開いた後（大きさが決まってから）に合わせる
+    if (typeof requestAnimationFrame === 'function')
+      requestAnimationFrame(() => {
+        this.revealKaijuTab();
+      });
+  }
+
+  /** 10-2: 未解放は鍵の印（小さく前に）。10-4a: 横にスクロールする切り替えの端のぼかし */
+  private decorateKaijuTabs(seg: Segmented, list: readonly KaijuProfile[]): void {
+    const items = seg.root.querySelector<HTMLElement>('.ui-seg-items');
+    if (!items) return;
+    for (const b of items.querySelectorAll<HTMLButtonElement>('.ui-seg-item')) {
+      const p = list.find((x) => x.id === b.dataset.value);
+      if (!p) continue;
+      b.title = raidKaijuName(p.id);
+      if (this.unlockState(p.id)?.unlocked !== false) continue;
+      const lock = document.createElement('span');
+      lock.className = 'raid-kaiju-lock';
+      lock.textContent = t('raidSelect.lockedBadge');
+      lock.setAttribute('aria-label', t('raidSelect.locked'));
+      b.prepend(lock);
+    }
+    items.addEventListener('scroll', () => {
+      syncScrollEdges(seg.root, items);
+    });
+  }
+
+  /** 選んでいる怪獣の切り替えを見える所へ（横のスクロールだけ。ページは動かさない）。端のぼかしも合わせる */
+  private revealKaijuTab(): void {
+    const seg = this.kaijuSeg;
+    if (!seg) return;
+    const items = seg.root.querySelector<HTMLElement>('.ui-seg-items');
+    const b = items?.querySelector<HTMLElement>(`.ui-seg-item[data-value="${this.kaiju}"]`);
+    if (!items || !b) return;
+    const left = b.offsetLeft - items.offsetLeft;
+    const pad = 24;
+    if (left - pad < items.scrollLeft) items.scrollLeft = Math.max(0, left - pad);
+    else if (left + b.offsetWidth + pad > items.scrollLeft + items.clientWidth)
+      items.scrollLeft = left + b.offsetWidth + pad - items.clientWidth;
+    syncScrollEdges(seg.root, items);
   }
 
   private render(): void {
