@@ -55,6 +55,10 @@ export class AlbionBody implements BodyFrame {
   /** 出てからの秒数（高さのゆらぎ） */
   time = 0;
   visible = false;
+  /** 10-3c: 横転（攻撃）の傾き。rollOn の間は周回路の傾きの代わりに rollBank へ rollRate（ラジアン/秒）で寄せる */
+  rollOn = false;
+  rollBank = 0;
+  rollRate = 0;
   /** 戦域の中心（水平） */
   arenaX = 0;
   arenaZ = 0;
@@ -87,6 +91,9 @@ export class AlbionBody implements BodyFrame {
     this.turning = rp.turning;
     this.position.y = Math.max(C.altitude.cruise, this.wantedFloor() + C.floor.clearance);
     this.bank = 0;
+    this.rollOn = false;
+    this.rollBank = 0;
+    this.rollRate = 0;
     this.pitch = 0;
     this.speed = C.route.speed;
     this.velocity.x = 0;
@@ -164,12 +171,9 @@ export class AlbionBody implements BodyFrame {
     if (this.position.y < under) this.position.y = under;
     this.clampArena();
     // 傾き（半円で右へ）と上下の向き
-    const bankWant = this.turning ? C.route.bankDeg * DEG : 0;
-    this.bank += clamp(
-      bankWant - this.bank,
-      -C.route.bankRate * DEG * dt,
-      C.route.bankRate * DEG * dt,
-    );
+    const bankWant = this.rollOn ? this.rollBank : this.turning ? C.route.bankDeg * DEG : 0;
+    const rate = this.rollOn ? this.rollRate : C.route.bankRate * DEG;
+    this.bank += clamp(bankWant - this.bank, -rate * dt, rate * dt);
     if (dt > 0) {
       this.velocity.x = (this.position.x - this.prevPosition.x) / dt;
       this.velocity.y = (this.position.y - this.prevPosition.y) / dt;

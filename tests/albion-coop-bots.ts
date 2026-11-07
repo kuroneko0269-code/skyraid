@@ -1,7 +1,8 @@
 // 10-3b: 白鯨アルビオンの協力レイドの調整のボット（ネフィルガの kaiju2-coop-bots.ts と同じ形）。インメモリの通信（pvp-match.ts）で
 // 本物のホスト（HostGame + 差し込み口の AlbionCoopHost）とクライアント（ClientGame + 写し）を動かし、各プレイヤーを敵機と同じ AI に
 // 役の腕前を渡して操縦させる。狙うもの: 機首の前 20°・700m 以内に子分がいれば子分（DEFENSE_ID_BASE + 番号）、いなければ部位
-// （熟練は巣 → 尾 → 頭 → 背びれ → 胴、ほかは胴）。予兆への反応は狙われているとき（kaijuTarget）だけ。
+// （熟練は巣 → 尾 → 頭 → 背びれ → 胴、ほかは胴）。予兆への反応は狙われているとき（kaijuTarget）だけ（10-3c: 歌の輪は全員に
+// 当たるので全員が見る）。10-3c: 体へ入りそうなら外へ（ソロのボットと同じ見越し）
 // 役割が生まれるか: 人ごとの「子分へのダメージ ÷ 与えたダメージ」の差（成績の partDamage の最後の列が子分）
 import { EnemyFighterAI, createCommand, type AiSelf, type AiSenses } from '../src/ai/enemy-fighter';
 import { DEFENSE_ID_BASE, KAIJU_ID_BASE } from '../src/combat/pvp-arena';
@@ -20,7 +21,8 @@ import { AlbionCoopHost, albionRaidPlugin } from '../src/net/albion-coop';
 import { registerRaidPlugin } from '../src/net/raid-plugin';
 import { RAID_OUTCOME } from '../src/net/raid-host';
 import { createHeightField } from '../src/render/terrain-height';
-import { ALBION_FOCUS, albionThreat } from './albion-raid-bots';
+import { ALBION_FOCUS } from './albion-raid-bots';
+import { HULL_LOOKAHEAD, albionDodgePoint, albionHullAvoid } from './albion-bot-parts';
 import { KAIJU2_ROLES, type Kaiju2Role, type RoleSpec } from './kaiju2-bot-roles';
 import { pursue } from './pvp-bots';
 import { startMatch, type Match } from './pvp-match';
@@ -53,6 +55,9 @@ export interface AlbionCoopResult {
   /** 人ごとの子分へのダメージの割合（0〜1） */
   readonly minionShare: readonly number[];
   readonly rams: number;
+  /** 10-3c: 体への衝突（全員の合計） */
+  readonly bodyHits: number;
+  readonly taken: Readonly<Record<string, number>>;
   readonly match: Match;
 }
 
@@ -69,7 +74,10 @@ class CoopPilot {
   private readonly senses: { -readonly [K in keyof AiSenses]: AiSenses[K] };
   private lastHp = 0;
   private dodge = 0;
+  private avoid = 0;
+  private readonly avoidPoint = { position: vec3(), velocity: vec3() };
   private decided = -1;
+  private willDodge = false;
   private attacks = 0;
   private lastAction = '';
   private readonly dodgePoint = { position: vec3(), velocity: vec3() };
@@ -81,6 +89,7 @@ class CoopPilot {
     private readonly role: RoleSpec,
     private readonly rng: () => number,
     private readonly job: 'auto' | 'minion' | 'body' = 'auto',
+    private readonly lookahead = 1.2,
   ) {
     this.ai = new EnemyFighterAI(STARTER_AIRCRAFT, role.skill, [], rng, undefined, GUN_CONFIG);
     const a = this.aircraft.state;
@@ -124,34 +133,38 @@ class CoopPilot {
     const fwd = rotateVec3(this.fwd, s.orientation, LOCAL_FORWARD);
     if (k.action === 'windup' && this.lastAction !== 'windup') this.attacks++;
     this.lastAction = k.action;
-    // 予兆への反応（狙われているときだけ。1 回の攻撃に 1 度だけ決める）
+    const v = { x: fwd.x * s.speed, y: fwd.y * s.speed, z: fwd.z * s.speed };
+    // 体へ入りそうなら外へ（予兆を避けている途中でも先に）
     if (
-      m.host.kaijuTarget === this.id &&
+      this.avoid <= 0 &&
+      albionHullAvoid(k, s.position, v, this.lookahead, this.avoidPoint.position)
+    )
+      this.avoid = 1.5;
+    // 予兆への反応（狙われているとき・歌は全員。1 回の攻撃に 1 度だけ決める）
+    if (
+      (m.host.kaijuTarget === this.id || k.attack === 'sonar') &&
       k.action === 'windup' &&
       this.decided !== this.attacks &&
       k.actionTime >= this.role.react
     ) {
       this.decided = this.attacks;
-      if (this.rng() < this.role.dodgeChance) {
-        const v = { x: fwd.x * s.speed, y: fwd.y * s.speed, z: fwd.z * s.speed };
-        if (albionThreat(k, s.position, v)) {
-          this.dodge = 3;
-          const p = s.position;
-          const fx = -Math.sin(k.body.heading);
-          const fz = -Math.cos(k.body.heading);
-          const side =
-            (p.x - k.body.position.x) * -fz + (p.z - k.body.position.z) * fx >= 0 ? 1 : -1;
-          const d = this.dodgePoint.position;
-          d.x = p.x + -fz * side * 1400;
-          d.z = p.z + fx * side * 1400;
-          d.y = Math.max(250, k.body.position.y - 300);
-        }
-      }
+      this.willDodge = this.rng() < this.role.dodgeChance;
     }
-    if (this.dodge > 0) {
-      this.dodge -= dt;
-      pursue(ctl, a, this.dodgePoint);
+    if (
+      this.willDodge &&
+      this.decided === this.attacks &&
+      this.dodge <= 0 &&
+      albionDodgePoint(k, s.position, v, this.dodgePoint.position)
+    )
+      this.dodge = k.attack === 'sonar' || k.attack === 'call' ? 3 : 2.5;
+    if (this.avoid > 0 || this.dodge > 0) {
+      const p = this.avoid > 0 ? this.avoidPoint : this.dodgePoint;
+      if (this.avoid > 0) this.avoid -= dt;
+      if (this.dodge > 0) this.dodge -= dt;
+      pursue(ctl, a, p);
       ctl.throttleTarget = 1;
+      cmb.fire = false;
+      this.pullUp(s, fwd);
       return;
     }
     const pick = this.pick(h, s.position, fwd);
@@ -184,15 +197,30 @@ class CoopPilot {
     ctl.yaw = c.yaw;
     ctl.afterburner = c.afterburner;
     ctl.throttleTarget = c.throttle;
-    const floor = Math.max(0, harbor(s.position.x, s.position.z));
-    if (s.position.y - floor < 180 && fwd.y < 0.2) {
-      ctl.pitch = 1;
-      ctl.roll = 0;
-    }
+    this.pullUp(s, fwd);
     cmb.fire = c.trigger && game.briefingRemaining <= 0;
     cmb.locked = locked;
     cmb.targetId = pick.id;
     cmb.missile = c.missile && locked;
+  }
+
+  /**
+   * 低い（床から 180m 未満）か、10-3c: 床から 600m 未満で今の降り方のまま 3.5 秒で床から 200m を切るなら、上を向いていなければ引き起こす
+   * （低く飛ぶ子分を追って急降下し、海へ落ちていた）
+   */
+  private pullUp(
+    s: Readonly<{ position: Readonly<{ x: number; y: number; z: number }>; speed: number }>,
+    fwd: Readonly<{ y: number }>,
+  ): void {
+    const ctl = this.m.controls[this.id];
+    if (!ctl) return;
+    const floor = Math.max(0, harbor(s.position.x, s.position.z));
+    const ahead = s.position.y + Math.min(0, fwd.y * s.speed) * 3.5 - floor;
+    const agl = s.position.y - floor;
+    if ((agl < 180 || (agl < 600 && ahead < 200)) && fwd.y < 0.2) {
+      ctl.pitch = 1;
+      ctl.roll = 0;
+    }
   }
 
   private pick(
@@ -251,7 +279,14 @@ export async function runAlbionCoop(o: AlbionCoopOptions): Promise<AlbionCoopRes
   const pilots = Array.from(
     { length: o.players },
     (_, id) =>
-      new CoopPilot(m, id, role, createRandom(4300 + o.seed * 7 + id), o.jobs?.[id] ?? 'auto'),
+      new CoopPilot(
+        m,
+        id,
+        role,
+        createRandom(4300 + o.seed * 7 + id),
+        o.jobs?.[id] ?? 'auto',
+        HULL_LOOKAHEAD[o.role] ?? 1.2,
+      ),
   );
   const max = o.maxSeconds ?? ALBION_RAID_CONFIG.totalSeconds[difficulty] + 10;
   let t = 0;
@@ -278,6 +313,8 @@ export async function runAlbionCoop(o: AlbionCoopOptions): Promise<AlbionCoopRes
     downs,
     minionShare,
     rams: h?.raid.kaiju.rams ?? 0,
+    bodyHits: h?.bodyHits ?? 0,
+    taken: { ...(h?.taken ?? {}) },
     match: m,
   };
 }

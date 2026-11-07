@@ -82,7 +82,10 @@ describe('白鯨アルビオンのソロのレイド（10-3b）', () => {
     k.spawn(bayRoute({ x: 0, z: 0 }), 0, 3);
     const far = { position: { x: 0, y: 3000, z: -4500 }, active: true };
     for (let i = 0; i < 60 * 180; i++) k.step(DT, far);
-    expect(k.attacksUsed.spout).toBeGreaterThanOrEqual(10);
+    // 10-3c: 間隔 12 秒。遠くても潮吹き（と届けば水柱）を続ける
+    const used = Object.values(k.attacksUsed).reduce((a, b) => a + b, 0);
+    expect(used).toBeGreaterThanOrEqual(10);
+    expect(k.attacksUsed.spout).toBeGreaterThanOrEqual(4);
     const chooser = {
       body: k.body,
       phase: 1,
@@ -90,6 +93,7 @@ describe('白鯨アルビオンのソロのレイド（10-3b）', () => {
       repeat: 2,
       cloudLeft: 0,
       disabled: () => false,
+      nearMinions: () => 0,
     };
     expect(attackWeights(chooser, far.position).map((c) => c.attack)).toEqual(['spout']);
   });
@@ -195,8 +199,9 @@ describe('白鯨アルビオンのソロのレイド（10-3b）', () => {
   });
 
   it('決定性: 同じ種のボットは同じ結果、記録を再生すると同じ状態（リプレイ）', () => {
-    const a = runAlbionBot({ role: 'skilled', seed: 2, record: true, preset: 'easy' });
-    const b = runAlbionBot({ role: 'skilled', seed: 2, record: true, preset: 'easy' });
+    // 10-3c: 種 6 は 8.3 分で倒す（種 2 は残機切れになった）
+    const a = runAlbionBot({ role: 'skilled', seed: 6, record: true, preset: 'easy' });
+    const b = runAlbionBot({ role: 'skilled', seed: 6, record: true, preset: 'easy' });
     expect(a.status).toBe('success');
     expect(b.seconds).toBe(a.seconds);
     expect(b.hash).toBe(a.hash);

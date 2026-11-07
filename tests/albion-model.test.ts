@@ -77,4 +77,40 @@ describe('白鯨アルビオンのモデル（10-3a）', () => {
     expect(Number.isFinite(obj.group.quaternion.w)).toBe(true);
     expect(Number.isFinite(obj.group.position.y)).toBe(true);
   });
+
+  it('10-3c: 水柱・歌・横転の見た目は予兆と攻撃の間だけ出て、雲と重なっても描画は 4 回まで', () => {
+    const obj = new AlbionObject('high');
+    const k = new AlbionKaiju(() => 0);
+    k.spawn(
+      { x: 0, z: 0, axis: 0, halfLength: C.route.halfLength, turnRadius: C.route.turnRadius },
+      0,
+      12,
+    );
+    k.cooldown = 1e9;
+    k.cloudLeft = 10;
+    obj.setVisible(true);
+    const me = {
+      position: { x: 300, y: 800, z: 0 },
+      velocity: { x: 0, y: 0, z: -250 },
+      active: true,
+    };
+    const meshOf = { geyser: obj.fx.geyser, sonar: obj.fx.sonar, roll: obj.fx.roll } as const;
+    for (const a of ['geyser', 'sonar', 'roll'] as const) {
+      k.setAction('windup', a);
+      k.aimX = 300;
+      k.aimZ = -500;
+      let seen = false;
+      for (let i = 0; i < 6 / DT && k.action !== 'idle'; i++) {
+        k.step(DT, me);
+        obj.update(k, 0.5, DT, (j) => k.swarm.minions[j]?.position ?? k.body.position);
+        if (meshOf[a].visible) seen = true;
+        const fx = obj.fx.objects.filter((m) => m.visible).length;
+        expect(1 + (obj.minions.mesh.visible ? 1 : 0) + fx).toBeLessThanOrEqual(4);
+      }
+      expect(seen, a).toBe(true);
+      k.setAction('idle', null);
+      obj.update(k, 0.5, DT, (j) => k.swarm.minions[j]?.position ?? k.body.position);
+      expect(meshOf[a].visible).toBe(false);
+    }
+  });
 });

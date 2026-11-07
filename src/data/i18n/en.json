@@ -2425,6 +2425,10 @@
       "albionNests": {
         "name": "Broke all of Albion's belly nests and defeated it",
         "note": "All 3 nests. Solo raid"
+      },
+      "albionUntouched": {
+        "name": "Defeated Albion without being hit by its water columns, song, roll, call or body",
+        "note": "Solo raid"
       }
     },
     "collect": {
@@ -2769,21 +2773,29 @@
         "size": "640 m long",
         "motion": "Slowly circles an oval over the bay (a long fight)",
         "parts": "3 belly nests, dorsal fin, tail, head (body is unbreakable)",
-        "opening": "It banks in the turns and shows its belly nests. Break nests to stop the swarm. The head is a weak point. In co-op, each of the swarm chases the nearest pilot.",
-        "hard": "Hard: HP ×1.3, faster attacks and swarm, 12 min total, reward ×1.8",
-        "normal": "Normal: 15 min total",
+        "opening": "You can't fly through its body or fins (you bounce off). It banks in the turns and shows its belly nests. Break nests to stop the swarm; shooting the swarm down also damages Albion. The head is a weak point. In co-op, each of the swarm chases the nearest pilot and the song reaches everyone.",
+        "hard": "Hard: HP ×1.3, faster attacks and swarm, 16 min total, reward ×1.8",
+        "normal": "Normal: 20 min total",
         "attacks": {
           "minion": {
-            "name": "Swarm",
-            "note": "Fly out of the nests and ram you"
+            "name": "Swarm & call",
+            "note": "Rams you. On a roar they surround you and charge (turn hard when they brace)"
+          },
+          "geyser": {
+            "name": "Water columns",
+            "note": "Where you're heading plus 4 around it. Turn hard to the side"
+          },
+          "sonar": {
+            "name": "Song",
+            "note": "A ring spreading at its altitude. Go above or below"
+          },
+          "roll": {
+            "name": "Roll",
+            "note": "Fly past its side and a flipper swats you"
           },
           "spout": {
-            "name": "Spout",
-            "note": "A column above the back. Move aside"
-          },
-          "slam": {
-            "name": "Tail slam",
-            "note": "Smashes the area right behind"
+            "name": "Spout & tail",
+            "note": "A column above the back; smashes right behind"
           },
           "cloud": {
             "name": "Cloud",

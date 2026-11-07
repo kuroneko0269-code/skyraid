@@ -1,6 +1,8 @@
 // 10-3a: 白鯨アルビオンの攻撃の選び方と当たり（Three.js 非依存。決まった計算）。
-// 潮吹き（背の上の柱）・尾の叩きつけ（尾の後ろの扇）・雲（体の周りの球）。予兆の間は当たらない（呼ぶ側が攻撃の段だけで見る）
+// 潮吹き（背の上の柱）・尾の叩きつけ（尾の後ろの扇）・雲（体の周りの球）。予兆の間は当たらない（呼ぶ側が攻撃の段だけで見る）。
+// 10-3c: 人を狙う攻撃（水柱・歌・横転・呼び声。形と当たりは albion-aimed.ts）の選び方と秒数
 import { ALBION_CONFIG as C, type AlbionAttack } from '../data/albion';
+import { geyserPick, rollPick, sonarPick, sonarSeconds } from './albion-aimed';
 import { vec3, type Vec3 } from '../flight/math';
 import type { AlbionBody } from '../entities/albion/albion-body';
 
@@ -16,6 +18,8 @@ export interface AttackChooser {
   readonly repeat: number;
   readonly cloudLeft: number;
   disabled(action: string): boolean;
+  /** 10-3c: 狙う人の近く（呼び声の範囲）に飛んでいる子分の数 */
+  nearMinions(target: Readonly<Vec3>): number;
 }
 
 /** 噴気孔（潮吹きの柱の根元）の位置 */
@@ -122,6 +126,13 @@ function candidates(
   }
   if (allow('cloud') && k.phase >= A.cloud.fromPhase && k.cloudLeft <= 0)
     out.push({ attack: 'cloud', weight: A.cloud.weight });
+  if (target) {
+    if (geyserPick(k.body, target)) out.push({ attack: 'geyser', weight: A.geyser.weight });
+    if (sonarPick(k.body, target)) out.push({ attack: 'sonar', weight: A.sonar.weight });
+    if (rollPick(k.body, target)) out.push({ attack: 'roll', weight: A.roll.weight });
+    if (k.nearMinions(target) >= A.call.minMinions)
+      out.push({ attack: 'call', weight: A.call.weight });
+  }
   return out;
 }
 
@@ -143,8 +154,24 @@ export function chooseAttack(
 }
 
 /** 攻撃の段の秒数 */
+const SONAR_TIMES = { windup: A.sonar.windup, active: sonarSeconds(), recover: A.sonar.recover };
+const CLOUD_TIMES = { windup: A.cloud.windup, active: 0, recover: A.cloud.recover };
+
 export function attackTimes(a: AlbionAttack): { windup: number; active: number; recover: number } {
-  if (a === 'spout') return A.spout;
-  if (a === 'slam') return A.slam;
-  return { windup: A.cloud.windup, active: 0, recover: A.cloud.recover };
+  switch (a) {
+    case 'spout':
+      return A.spout;
+    case 'slam':
+      return A.slam;
+    case 'geyser':
+      return A.geyser;
+    case 'sonar':
+      return SONAR_TIMES;
+    case 'roll':
+      return A.roll;
+    case 'call':
+      return A.call;
+    case 'cloud':
+      return CLOUD_TIMES;
+  }
 }

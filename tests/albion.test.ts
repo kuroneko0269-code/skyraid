@@ -176,11 +176,14 @@ describe('白鯨アルビオン（10-3a）', () => {
     const hits: string[] = [];
     const t = makeTarget(k, 'above');
     let windupHit = false;
-    for (let i = 0; i < 90 / DT; i++) {
+    // 10-3c: 攻撃の間隔 12 秒・背の上の近くでは歌・横転・水柱とも競うので 3 分見る
+    for (let i = 0; i < 180 / DT; i++) {
       t.tick();
       const before = hits.length;
       k.step(DT, t, (kind) => hits.push(kind));
-      if (hits.length > before && k.action === 'windup') windupHit = true;
+      // 子分の体当たりは攻撃の段と関係なく起きるので除く
+      if (hits.length > before && k.action === 'windup' && hits[hits.length - 1] !== 'ram')
+        windupHit = true;
     }
     expect(windupHit).toBe(false);
     expect(hits).toContain('spout');

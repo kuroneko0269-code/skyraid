@@ -28,10 +28,13 @@ export interface AlbionCoopFrame {
   readonly targeted: boolean;
 }
 
-/** 予兆の警告の文（攻撃名・避け方・残り秒）。予兆でなければ '' */
+/** 予兆の警告の文（攻撃名・避け方・残り秒）。予兆でなければ ''。10-3c: 歌の輪・呼び声の突撃は攻撃の間も出す */
 export function albionWarning(raid: AlbionRaid): string {
   const k = raid.kaiju;
-  if (raid.dead || k.action !== 'windup' || k.attack === null) return '';
+  if (raid.dead || k.attack === null) return '';
+  if (k.action === 'active' && (k.attack === 'sonar' || k.attack === 'call'))
+    return `⚠ ${abt(`attack.${k.attack}`)}  ${abt(`active.${k.attack}`)}`;
+  if (k.action !== 'windup') return '';
   const left = Math.max(0, attackTimes(k.attack).windup - k.actionTime);
   return `⚠ ${abt(`attack.${k.attack}`)}  ${left.toFixed(1)}  ${abt(`warn.${k.attack}`)}`;
 }

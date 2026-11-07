@@ -3,11 +3,12 @@
 // 部位と子分は CombatSystem の撃てる対象の末尾に足す（機銃・ミサイルで減らせる。フリーフライトでは倒れない: 体力は 1% で止める）。
 // 10-3b: ソロのレイド（ミッション raidAlbion）も引き受ける（体力・制限時間・撃破は albion-raid.ts）。雲の中はロックの距離が縮む
 import { TEAM_ENEMY } from '../combat/target';
-import type { TargetingSpec } from '../data/weapons';
 import { ALBION_CONFIG as C, ALBION_PARTS } from '../data/albion';
 import type { MapDef } from '../data/maps';
 import type { AlbionKaiju } from '../ai/albion-ai';
 import { inCloud } from '../ai/albion-attacks';
+import { createHullContact, hullContact } from '../ai/albion-hull';
+import { bounceAircraft } from '../entities/albion/albion-bounce';
 import type { Vec3 } from '../flight/math';
 import type { AlbionGround } from '../entities/albion/albion-body';
 import { fitRoute, nearestOnRoute, type AlbionRoute } from '../entities/albion/albion-route';
@@ -18,7 +19,10 @@ import {
 } from '../entities/albion/albion-target';
 import { ALBION_ID } from './albion-mission';
 import { AlbionRaid } from './albion-raid';
+import { CloudLock, raidWorld } from './albion-world';
 import { attachFreeExtra, type FreeExtra } from './free-extra';
+
+export { CloudLock } from './albion-world';
 import type { GamePlay } from './game-play';
 import type { MissionDef } from './types';
 import type { MissionWorld } from './world';
@@ -75,8 +79,21 @@ export class AlbionDev implements FreeExtra {
   mode: AlbionMode = 'off';
   /** 飛行の途中から出した（読み込みが遅れた。リプレイの記録と合わない） */
   lateStart = false;
-  /** 自機が受けた当たりの数え（値の表示・ボット） */
-  readonly taken = { spout: 0, slam: 0, cloud: 0, ram: 0 };
+  /** 自機が受けた当たりの数え（値の表示・ボット）。10-3c: 人を狙う攻撃と体への衝突 body */
+  readonly taken = {
+    spout: 0,
+    slam: 0,
+    cloud: 0,
+    ram: 0,
+    geyser: 0,
+    sonar: 0,
+    roll: 0,
+    call: 0,
+    body: 0,
+  };
+  /** 10-3c: 体への衝突の後、続けて当たらない残り秒 */
+  bodyGrace = 0;
+  private readonly contact = createHullContact();
   /** 雲の外のロックの決まり（雲の中は距離を縮める。止めたら戻す） */
   private readonly cloud = new CloudLock();
   private readonly velocity = { x: 0, y: 0, z: 0 };
@@ -174,10 +191,8 @@ export class AlbionDev implements FreeExtra {
     this.raid.spawn(route, start, this.seed, this.env.map().center, hpRatio, broken);
     for (const t of this.partTargets) t.place(true);
     for (const t of this.minionTargets) t.beginStep();
-    this.taken.spout = 0;
-    this.taken.slam = 0;
-    this.taken.cloud = 0;
-    this.taken.ram = 0;
+    for (const key of Object.keys(this.taken) as (keyof typeof this.taken)[]) this.taken[key] = 0;
+    this.bodyGrace = 0;
   }
 
   /** 周回路: 自機の前方 ahead m を中心に、自機の向きに直角（?abroute=bay なら湾の周回路）。戦域の内側に寄せる */
@@ -221,93 +236,38 @@ export class AlbionDev implements FreeExtra {
     this.raid.step(dt, me, (kind, damage) => {
       if (!s.player.active) return;
       this.taken[kind]++;
+      if (kind === 'geyser' || kind === 'sonar' || kind === 'roll' || kind === 'call')
+        this.raid.aimedTaken++;
       s.combat.dealDamage(s.player, damage, TEAM_ENEMY);
     });
+    this.collide(dt);
     for (const t of this.partTargets) t.place();
     this.cloud.apply(s.combat.targeting, this.inCloud);
   }
-}
 
-/**
- * 雲の中はロックの距離 ×lockRange（霧の中で遠くの的を捕まえにくい）。ロックの決まり（targeting.spec）を雲の中だけ差し替え、
- * 止めたら戻す。ソロ（AlbionDev の固定ステップ）と協力の自機（表示のフレーム）で使う
- */
-export class CloudLock {
-  private base: TargetingSpec | null = null;
-  private inside: TargetingSpec | null = null;
-
-  /** 始め（今の決まりを覚える。前の雲の決まりが残っていれば戻してから） */
-  begin(tg: { spec: TargetingSpec }): void {
-    if (tg.spec === this.inside && this.base) tg.spec = this.base;
-    this.base = tg.spec;
-    this.inside = null;
+  /**
+   * 10-3c: 体への衝突（このステップの移動の線分が体にめり込んだら）: 弾く・ダメージ・短い操作不能。続けて当たらない間がある。
+   * 倒した後（海へ落ちる間）と撃墜されている間は無し
+   */
+  private collide(dt: number): void {
+    this.bodyGrace = Math.max(0, this.bodyGrace - dt);
+    const s = this.play.session;
+    const k = this.kaiju;
+    if (!s.player.active || this.raid.dead || !k.body.visible) return;
+    const a = s.aircraft;
+    const B = C.collision;
+    if (
+      !hullContact(k.body, a.prevPosition, a.state.position, B.margin, B.sampleStep, this.contact)
+    )
+      return;
+    bounceAircraft(a, this.contact);
+    if (this.bodyGrace > 0) return;
+    this.bodyGrace = B.invulnerable;
+    this.taken.body++;
+    this.raid.bodyTaken++;
+    s.kaijuExposure.applyStun(B.stun);
+    s.combat.dealDamage(s.player, B.damage * k.damageScale, TEAM_ENEMY);
   }
-
-  apply(tg: { spec: TargetingSpec }, inCloud: boolean): void {
-    if (!this.base) this.begin(tg);
-    const base = this.base;
-    if (!base) return;
-    if (inCloud) {
-      this.inside ??= { ...base, lockRange: base.lockRange * C.attacks.cloud.lockRange };
-      tg.spec = this.inside;
-    } else tg.spec = base;
-  }
-
-  restore(tg: { spec: TargetingSpec }): void {
-    if (this.base && tg.spec === this.inside) tg.spec = this.base;
-    this.base = null;
-    this.inside = null;
-  }
-}
-
-/** ランナーが読む世界: 自機・戦域は飛行の世界のまま、怪獣の体力と制限時間をアルビオンから */
-function raidWorld(play: GamePlay, raid: AlbionRaid): MissionWorld {
-  const s = play.session;
-  return {
-    get playerPosition() {
-      return s.playerPosition;
-    },
-    get playerPrevPosition() {
-      return s.playerPrevPosition;
-    },
-    get playerSpeed() {
-      return s.playerSpeed;
-    },
-    get playerActive() {
-      return s.playerActive;
-    },
-    get playerDowns() {
-      return s.playerDowns;
-    },
-    get playerDamageTaken() {
-      return s.playerDamageTaken;
-    },
-    get playerMaxHp() {
-      return s.playerMaxHp;
-    },
-    spawn: (def) => {
-      s.spawn(def);
-    },
-    destroyedCount: (kind, group) => s.destroyedCount(kind, group),
-    get escortLost() {
-      return s.escortLost;
-    },
-    escort: (group) => s.escort(group),
-    get kaijuDamageRatio() {
-      return raid.damageRatio;
-    },
-    get kaijuReachedCity() {
-      return false;
-    },
-    get kaijuStormTimeUp() {
-      return false;
-    },
-    get kaijuTotalTimeUp() {
-      return raid.timeUp;
-    },
-    // 空の怪獣は建物を壊さないので、守れた建物は出さない
-    protectedBuildings: null,
-  };
 }
 
 /** GamePlay に付ける（アルビオンの遅延チャンクから） */

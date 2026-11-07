@@ -7,29 +7,33 @@
 import { applyAimAssist, assistSpecFor } from '../src/combat/aim-assist';
 import { autoFireReady } from '../src/combat/auto-fire';
 import { createCombatInput } from '../src/combat/combat-input';
-import type { CombatTarget } from '../src/combat/target';
 import { createRandom } from '../src/core/random';
 import { attackTimes } from '../src/ai/albion-attacks';
-import type { RaidDifficulty } from '../src/data/raid';
-import type { AssistPreset } from '../src/data/assist';
 import { ALBION_RAID_CONFIG } from '../src/data/albion-raid';
 import type { AircraftControls } from '../src/entities/aircraft';
 import type { Vec3 } from '../src/flight/math';
 import { ReplayRecorder } from '../src/replay/recorder';
 import { applyFrame, captureFrame, simHash, startFromHeader, stepWorld } from '../src/replay/sim';
-import type { ReplayData } from '../src/replay/types';
 import { PilotBot } from './ai-sim';
 import {
-  ALBION_FOCUS,
+  HULL_LOOKAHEAD,
+  albionDodgePoint,
+  albionHullAvoid,
   albionStart,
-  albionThreat,
   createAlbionWorld,
   type AlbionBotWorld,
 } from './albion-bot-parts';
+import { bodyLocal } from '../src/ai/albion-aimed';
 import { assistFor } from './campaign-start';
-import { KAIJU2_ROLES, type Kaiju2Role } from './kaiju2-bot-roles';
+import { KAIJU2_ROLES } from './kaiju2-bot-roles';
 import { BoundsGuard, ISLAND_CENTER_SKY, WaypointBot } from './mission-bots';
 import { DirectStick } from '../scripts/replay-analysis/direct';
+import {
+  focusPicker,
+  gunOnBody,
+  type AlbionBotOptions,
+  type AlbionBotResult,
+} from './albion-bot-types';
 import { DEFAULT_HANDS, Hands } from '../scripts/replay-analysis/hands';
 
 const DT = 1 / 60;
@@ -37,49 +41,14 @@ const DT = 1 / 60;
 export {
   ALBION_FOCUS,
   albionStart,
-  albionThreat,
   createAlbionWorld,
   type AlbionBotWorld,
 } from './albion-bot-parts';
 
-export interface AlbionBotOptions {
-  readonly role: Kaiju2Role;
-  readonly seed: number;
-  readonly difficulty?: RaidDifficulty;
-  readonly maxSeconds?: number;
-  readonly record?: boolean;
-  readonly preset?: AssistPreset;
-  /** 予兆への反応を上書き（避ける確率・遅れ。「正しく避ければ当たらない」の確かめ） */
-  readonly dodge?: { readonly chance: number; readonly react: number };
-  /** 調べる用の記録 */
-  readonly debug?: (line: string) => void;
-}
+export type { AlbionBotOptions, AlbionBotResult } from './albion-bot-types';
 
-export interface AlbionBotResult {
-  readonly status: string;
-  readonly reason: string | null;
-  readonly seconds: number;
-  readonly playerDowns: number;
-  readonly partsBroken: number;
-  readonly nestsBroken: number;
-  readonly attacks: number;
-  readonly hitAttacks: number;
-  readonly rams: number;
-  /** 終わったときの体力の割合・部位に当てた回数 */
-  readonly kaijuHp: number;
-  readonly partHits: number;
-  readonly minionKills: number;
-  readonly hpLostAtClear: number | null;
-  readonly damageRatio: number;
-  /** 撃墜のうち攻撃（潮吹き・尾）・子分の体当たりによるもの（残りは墜落） */
-  readonly attackDowns: number;
-  readonly ramDowns: number;
-  readonly taken: Readonly<Record<string, number>>;
-  readonly attackKinds: Readonly<Record<string, number>>;
-  readonly maxHit: number;
-  readonly data: ReplayData | null;
-  readonly hash: string;
-}
+/** 攻撃の当たり（子分のふだんの体当たり・体への衝突を除く） */
+const ATTACK_KINDS = ['spout', 'slam', 'geyser', 'sonar', 'roll', 'call'] as const;
 
 export function runAlbionBot(o: AlbionBotOptions, world?: AlbionBotWorld): AlbionBotResult {
   const role = KAIJU2_ROLES[o.role];
@@ -108,30 +77,7 @@ export function runAlbionBot(o: AlbionBotOptions, world?: AlbionBotWorld): Albio
   const dodgeChance = o.dodge?.chance ?? role.dodgeChance;
   const parts = dev.partTargets;
   const minions = dev.minionTargets;
-  const pick = (): CombatTarget => {
-    const me = s.aircraft.state.position;
-    if (role.focus) {
-      // 熟練: 機首の前 15° 以内・500m 以内に来た子分は落とす（追い回さない）
-      const st = s.aircraft.state;
-      const q = st.orientation;
-      const fx = -2 * (q.x * q.z + q.w * q.y);
-      const fy = 2 * (q.w * q.x - q.y * q.z);
-      const fz = -(1 - 2 * (q.x * q.x + q.y * q.y));
-      for (const m of minions) {
-        if (!m.active) continue;
-        const p = m.position;
-        const d = Math.hypot(p.x - me.x, p.y - me.y, p.z - me.z);
-        const cos = ((p.x - me.x) * fx + (p.y - me.y) * fy + (p.z - me.z) * fz) / (d || 1);
-        if (d < 500 && cos > Math.cos((15 * Math.PI) / 180)) return m;
-      }
-      for (const id of ALBION_FOCUS) {
-        const t = parts.find((x) => x.id === id && !x.broken);
-        if (t) return t;
-      }
-    }
-    const sel = s.combat.targeting.selected;
-    return sel?.active ? sel : ((parts[1] ?? parts[0]) as CombatTarget);
-  };
+  const pick = focusPicker(s, role.focus, parts, minions);
   const pilot = new PilotBot(s, role.skill, createRandom(500 + o.seed), pick, w.map.ground);
   const wp = new WaypointBot(s);
   const guard = new BoundsGuard(s, runner.boundary);
@@ -143,17 +89,22 @@ export function runAlbionBot(o: AlbionBotOptions, world?: AlbionBotWorld): Albio
   const out: AircraftControls = { ...pilot.controls };
   const input = createCombatInput();
   const dodgePoint: Vec3 = { x: 0, y: 0, z: 0 };
+  const avoidPoint: Vec3 = { x: 0, y: 0, z: 0 };
+  let avoid = 0;
+  /** 時間の内訳（戦域の端から戻る / 体を避ける / 予兆を避ける / 戦う）のステップ数 */
+  const modes = [0, 0, 0, 0];
   let dodge = 0;
   let decided = -1;
   let willDodge = false;
   const vel: Vec3 = { x: 0, y: 0, z: 0 };
   let attacks = 0;
   let hitAttacks = 0;
-  let attackHitsAtStart = 0;
   let attackCounted = false;
   let lastAction = k.action;
   let attackDowns = 0;
   let ramDowns = 0;
+  let bodyDowns = 0;
+  let lastBody = 0;
   let lastDowns = s.playerDowns;
   let lastAttackHits = 0;
   let lastRams = 0;
@@ -161,6 +112,14 @@ export function runAlbionBot(o: AlbionBotOptions, world?: AlbionBotWorld): Albio
   let curHit = 0;
   let lastHp = s.player.hp;
   const attackKinds: Record<string, number> = {};
+  const hitKinds: Record<string, number> = {};
+  const taken = dev.taken as Record<string, number>;
+  let kindAtStart = 0;
+  let speedSum = 0;
+  let fireSteps = 0;
+  let closeSteps = 0;
+  let aliveSteps = 0;
+  const dists: number[] = [];
   let steps = 0;
   let lastSel = s.combat.targeting.selected;
   const max = o.maxSeconds ?? limit;
@@ -176,30 +135,39 @@ export function runAlbionBot(o: AlbionBotOptions, world?: AlbionBotWorld): Albio
       decided = attacks;
       willDodge = rng() < dodgeChance;
     }
-    if (willDodge && decided === attacks && albionThreat(k, me, vel)) {
-      // 攻撃が終わるまで外にいる（入り直さない）
+    if (
+      willDodge &&
+      decided === attacks &&
+      dodge <= 0 &&
+      albionDodgePoint(k, me, vel, dodgePoint)
+    ) {
+      // 攻撃が終わるまで外にいる（入り直さない。歌・突撃は通り過ぎるまで）
       const tm = k.attack ? attackTimes(k.attack) : { windup: 0, active: 0 };
       const left =
         (k.action === 'windup' ? tm.windup - k.actionTime + tm.active : tm.active - k.actionTime) +
         0.3;
-      dodge = Math.max(dodge, 1.2, left);
-      const b = k.body.position;
-      // 体の軸から横へ（背の上・真後ろから外へ）、体より下へ
-      const fx = -Math.sin(k.body.heading);
-      const fz = -Math.cos(k.body.heading);
-      const side = (me.x - b.x) * -fz + (me.z - b.z) * fx >= 0 ? 1 : -1;
-      dodgePoint.x = me.x + -fz * side * 1400 - fx * 300;
-      dodgePoint.z = me.z + fx * side * 1400 - fz * 300;
-      dodgePoint.y = Math.max(250, b.y - 300);
+      const cap = k.attack === 'sonar' || k.attack === 'call' ? 3 : 99;
+      dodge = Math.max(1.2, Math.min(cap, left));
     }
+    // 10-3c: 体へ入りそうなら外へ（短く。予兆を避けている途中でも先に）
+    if (avoid <= 0 && albionHullAvoid(k, me, vel, HULL_LOOKAHEAD[o.role] ?? 1.2, avoidPoint))
+      avoid = 1.5;
     let intent: Readonly<AircraftControls>;
     let goal: Readonly<Vec3> | null = null;
     let fight = false;
     pilot.think(DT);
     const guarding = guard.check();
+    const mode = guarding ? 0 : avoid > 0 ? 1 : dodge > 0 ? 2 : 3;
+    modes[mode] = (modes[mode] ?? 0) + 1;
     if (guarding) {
       intent = guard.controls;
       goal = ISLAND_CENTER_SKY;
+    } else if (avoid > 0) {
+      avoid -= DT;
+      if (dodge > 0) dodge -= DT;
+      wp.fly(avoidPoint);
+      intent = wp.controls;
+      goal = avoidPoint;
     } else if (dodge > 0) {
       dodge -= DT;
       wp.fly(dodgePoint);
@@ -211,7 +179,10 @@ export function runAlbionBot(o: AlbionBotOptions, world?: AlbionBotWorld): Albio
       const t = s.combat.targeting.selected;
       if (t?.active) goal = s.combat.leadValid ? s.combat.lead : t.position;
     }
-    if (direct) direct.apply(s, goal, intent, out);
+    // 10-3c: 体を避けるときは手の遅れ・方向へ倒す方式を通さず、そのまま引く（方向へ倒す方式は先に横へ傾けてから引くので、
+    // 体の背へ降りていく所から間に合わない。実機の人は大きな体が迫ればまっすぐ引く）
+    if (avoid > 0 && !guarding) Object.assign(out, intent);
+    else if (direct) direct.apply(s, goal, intent, out);
     else if (hands) hands.apply(intent, out);
     else Object.assign(out, intent);
     if (throttleMax) {
@@ -220,8 +191,17 @@ export function runAlbionBot(o: AlbionBotOptions, world?: AlbionBotWorld): Albio
       out.afterburner = false;
     }
     if (speedMatch) speedMatch.apply(out, s);
+    // 10-3c: 予兆・体を避けている間は全開で（人は危ないときに速くする。遅いと子分に追いつかれる）
+    if (!guarding && (avoid > 0 || dodge > 0)) {
+      out.throttleTarget = 1;
+      out.afterburner = avoid <= 0;
+    }
     Object.assign(input, fight ? pilot.input : createCombatInput());
     s.combat.gun.hitRadiusScale = assist.gunHitRadiusScale;
+    // 10-3c: 模擬の人（手で撃つ組）は、機首の線が怪獣の体（どの部位の球でも）に 900m 以内で当たるなら撃つ。実機の人は大きな体が
+    // 画面を埋めると撃つ（10-3b の模擬の人は小さな部位から 9° 以内でしか撃たず、ふつうで 0 / 20 だった）
+    if (role.touch && !autoFire && fight && s.player.active && gunOnBody(s.aircraft.state, parts))
+      input.trigger = true;
     if (autoFire && fight) {
       const c = s.combat;
       const st = s.aircraft.state;
@@ -256,11 +236,17 @@ export function runAlbionBot(o: AlbionBotOptions, world?: AlbionBotWorld): Albio
     stepWorld(play, w.buildings(), w.controls, input, DT);
     lastSel = s.combat.targeting.selected;
     // 当たりの数え
-    const attackHits = dev.taken.spout + dev.taken.slam;
-    if (o.debug && attackHits > lastAttackHits)
-      o.debug(
-        `hit ${k.attack ?? ''} t=${k.actionTime.toFixed(2)} dodge=${dodge.toFixed(2)} will=${String(willDodge)} guard=${String(guarding)} me=${me.x.toFixed(0)},${me.y.toFixed(0)},${me.z.toFixed(0)} kb=${k.body.position.y.toFixed(0)} active=${String(s.player.active)}`,
-      );
+    const attackHits = ATTACK_KINDS.reduce((n, kind) => n + dev.taken[kind], 0);
+    if (s.player.active) {
+      aliveSteps++;
+      speedSum += s.aircraft.state.speed;
+      if (input.trigger) fireSteps++;
+      const o = bodyLocal(k.body, me);
+      const along = Math.max(-320, Math.min(320, o.along));
+      const surf = Math.max(0, Math.hypot(o.side, o.above, o.along - along) - 50);
+      if (surf < 300) closeSteps++;
+      if (steps % 30 === 0) dists.push(surf);
+    }
     const hp = s.player.hp;
     if (attackHits > lastAttackHits || dev.taken.ram > lastRams) curHit += Math.max(0, lastHp - hp);
     else if (curHit > 0 && k.action !== lastAction) {
@@ -270,7 +256,9 @@ export function runAlbionBot(o: AlbionBotOptions, world?: AlbionBotWorld): Albio
     if (s.playerDowns > lastDowns) {
       if (attackHits > lastAttackHits) attackDowns++;
       else if (dev.taken.ram > lastRams) ramDowns++;
+      else if (dev.taken.body > lastBody) bodyDowns++;
     }
+    lastBody = dev.taken.body;
     lastDowns = s.playerDowns;
     lastAttackHits = attackHits;
     lastRams = dev.taken.ram;
@@ -278,11 +266,17 @@ export function runAlbionBot(o: AlbionBotOptions, world?: AlbionBotWorld): Albio
     if (k.action === 'windup' && lastAction !== 'windup') {
       attacks++;
       attackKinds[k.attack ?? ''] = (attackKinds[k.attack ?? ''] ?? 0) + 1;
-      attackHitsAtStart = attackHits;
+      kindAtStart = taken[k.attack ?? ''] ?? 0;
       attackCounted = false;
-    } else if (!attackCounted && attacks > 0 && attackHits > attackHitsAtStart) {
+    } else if (
+      !attackCounted &&
+      attacks > 0 &&
+      k.attack !== null &&
+      (taken[k.attack] ?? 0) > kindAtStart
+    ) {
       attackCounted = true;
       hitAttacks++;
+      hitKinds[k.attack] = (hitKinds[k.attack] ?? 0) + 1;
     }
     lastAction = k.action;
   }
@@ -308,8 +302,16 @@ export function runAlbionBot(o: AlbionBotOptions, world?: AlbionBotWorld): Albio
     damageRatio: s.player.damageTaken / s.player.maxHp,
     attackDowns,
     ramDowns,
+    bodyDowns,
     taken: { ...dev.taken },
     attackKinds,
     maxHit,
+    hitKinds,
+    bodyHits: dev.taken.body,
+    meanSpeed: speedSum / Math.max(1, aliveSteps),
+    medianDist: [...dists].sort((x, y) => x - y)[Math.floor(dists.length / 2)] ?? 0,
+    closeShare: closeSteps / Math.max(1, aliveSteps),
+    fireShare: fireSteps / Math.max(1, aliveSteps),
+    modes: modes.map((m) => m / Math.max(1, steps)),
   };
 }

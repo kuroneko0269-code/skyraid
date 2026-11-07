@@ -30,6 +30,7 @@ import { registerRaidPlugin, type RaidPluginView } from '../net/raid-plugin';
 import { AlbionObject } from '../render/albion-model/albion-object';
 import { AlbionBriefing } from './albion-briefing';
 import { AlbionHud, type AlbionCoopFrame } from './albion-hud';
+import { showToast } from './toast';
 
 export interface AlbionRuntimeParts {
   readonly play: GamePlay;
@@ -122,6 +123,8 @@ export function startAlbion(p: AlbionRuntimeParts): AlbionRuntime {
   let lastText = '';
   /** 今のレイドの経過（小さくなったら新しいレイド → ブリーフィング） */
   let lastElapsed = Infinity;
+  /** 10-3c: 体への衝突の数（増えたらお知らせ。ソロ） */
+  let lastBodyHits = 0;
   const marks = new Map<string, string[]>();
   const coopFrame: { marks: ReadonlyMap<string, readonly string[]>; targeted: boolean } = {
     marks,
@@ -158,6 +161,9 @@ export function startAlbion(p: AlbionRuntimeParts): AlbionRuntime {
         raid.flash / ALBION_RAID_CONFIG.flashSeconds,
       );
     const me = p.play.session.aircraft.state.position;
+    if (dev.taken.body > lastBodyHits && !coop && state === 'flight')
+      showToast(abt('bodyHit'), { seconds: 2 });
+    lastBodyHits = dev.taken.body;
     if ((coop || dev.raiding) && HUD_SHOWN.includes(state)) {
       const sel = p.play.session.combat.targeting.selected;
       const locked = sel instanceof AlbionPartTarget ? sel : null;
@@ -217,6 +223,7 @@ function panelText(dev: AlbionDev, obj: AlbionObject): string {
     `alt ${f0(b.position.y)}m  agl ${f0(b.position.y - floor)}m  spd ${f1(b.speed)}`,
     `broken ${broken}`,
     `hits on kaiju ${String(hits)}  taken s${String(dev.taken.spout)} t${String(dev.taken.slam)} r${String(dev.taken.ram)}`,
+    `       g${String(dev.taken.geyser)} so${String(dev.taken.sonar)} ro${String(dev.taken.roll)} c${String(dev.taken.call)} body${String(dev.taken.body)}`,
     `tris ${String(obj.triangles)} + minion ${String(obj.minions.triangles)}×n  draws ${String(draws)}`,
     dev.lateStart ? 'LATE START (replay differs)' : '',
   ]

@@ -32,6 +32,10 @@ export const ALBION_MODEL_CONFIG = {
     spout: 0xf4fbff,
     slam: 0xffe0c0,
     cloud: 0xc8ccd2,
+    /** 10-3c 効果: 水柱・歌の輪（淡い青）・横転の払う範囲 */
+    geyser: 0xe6f6ff,
+    sonar: 0x8fe0ff,
+    roll: 0xffe0c0,
   },
   /** 画質ごと（「高」「中」は high、「低」は low。機体と同じ aircraftDetail） */
   detail: {
@@ -55,6 +59,13 @@ export const ALBION_MODEL_CONFIG = {
     slamActive: 0.45,
     cloud: 0.38,
     mist: 0.35,
+    /** 10-3c: 水柱の予兆（海面の輪と薄い筒）・攻撃・歌の予兆（体の周りの脈打つ輪）・輪・横転の予兆・払い */
+    geyserWarn: 0.16,
+    geyserActive: 0.55,
+    sonarWarn: 0.3,
+    sonarActive: 0.42,
+    rollWarn: 0.12,
+    rollActive: 0.4,
   },
   /** 子分の大きさ（翼の端から端 m）と羽ばたきの速さ（回/秒） */
   minion: { span: 16, flapHz: 2.6 },

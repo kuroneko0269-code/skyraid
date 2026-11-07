@@ -35,6 +35,8 @@ describe.runIf(on)('10-3b: アルビオンの協力の表', () => {
           seconds: Math.round(r.seconds),
           downs: r.downs,
           rams: r.rams,
+          body: r.bodyHits,
+          taken: r.taken,
           share: r.minionShare.map((v) => Math.round(v * 100)),
         }),
       );

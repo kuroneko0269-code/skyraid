@@ -764,7 +764,7 @@
 - 怪獣選び・ロビー・勲章・ランキングは登録簿から並べる。未公開の怪獣は `?dev=<名前>` のときだけ。解放の条件（挙げた怪獣のうち N 体をその難易度以上でクリア。ソロの自己ベストか `win.of.raid-<怪獣>`）を満たすまで、怪獣選びは鍵の印・暗い画像・条件の札を出し、出撃のボタンを押せない（`src/progression/raid-unlock.ts`。`?dev=raid-lock` でネフィルガに仮の条件「ヴォルガスを高難度でクリア」）
 - 遅延読み込み: `src/ui/raid-kaiju-link.ts`（入口のモジュールが `registerRaidKaijuChunk` で読み方を登録。ソロのレイド・リプレイは怪獣の id だけで読む）。結果の表の部位の名前・画像の基準点は `src/missions/raid-kaiju-hooks.ts`
 - 共通の部品（`src/ai/raid-kit/`。新しい怪獣だけが使う）: 部位と破壊（`PartSet`）・子分（`MinionSwarm`）・弾幕（`Barrage`）と弾（`ShotPool`）・光線（`Beam`。なぎ払い / ロック警告の後の溜め撃ち）・バリアと瞬間移動（`Barrier`・`Warp`）。決まった計算（種の列・dt の足し算・状態は数と配列）
-- 協力の差し込み口: `src/net/raid-plugin.ts`（怪獣ごとのホストの本体と写しを登録）。state の末尾の欄 `raidExtra`（無しは 1 バイト）と確実な経路のメッセージ `kx`（`src/net/codec-extra.ts`）、中身の詰め方は `src/net/raid-kit-codec.ts`（部位・子分・撃った弾）。通信の版 12（10-3b でアルビオンを足して 13）
+- 協力の差し込み口: `src/net/raid-plugin.ts`（怪獣ごとのホストの本体と写しを登録）。state の末尾の欄 `raidExtra`（無しは 1 バイト）と確実な経路のメッセージ `kx`（`src/net/codec-extra.ts`）、中身の詰め方は `src/net/raid-kit-codec.ts`（部位・子分・撃った弾）。通信の版 12（10-3b でアルビオンを足して 13、10-3c でアルビオンの state を変えて 14）
 - 記録のキーの決まり: SQL 0006（`supabase/migrations/skyraid_0006_raid_key_rule.sql`）を流すとサーバーは「id:難易度」の形（`RAID_KEY_PATTERN`）を全部受け付ける。10-3a で流したので `RAID_KEY_RULE_ENABLED = true`（流す前は false で登録簿の `ranked` の怪獣だけ送っていた）
 - ヴォルガス・ネフィルガの挙動・数値・リプレイ・状態のハッシュは 10-2 の前と同じ（`tests/raid-golden.test.ts`）
 
@@ -776,11 +776,15 @@
 - 子分（10-2 の `MinionSwarm`）: 腹の巣ごとに 20 秒ごとに 2 匹・同時に 12 匹まで・体力 72・自機の周りを回って 14m 以内で体当たり 10（当たった子分は消える）・寿命 60 秒。撃墜は攻撃した人ごとに数える。InstancedMesh でまとめて描く
 - `?dev=albion` のときだけ遅延チャンク `albion-runtime`（プリキャッシュしない）を読み、フリーフライトに出す。値の表示（状態・段階・次の攻撃・子分の数など）。`&abhp=` `&abbreak=` `&abroute=bay`。付けないときは読み込み・挙動・リプレイのハッシュとも今までと同じ。フリーフライトの差し込み口（`src/missions/free-extra.ts`）は複数付けられるようにした（1 つなら今までと同じ）
 - 10-3b（レイド・協力・調整・公開。数値は `src/data/albion.ts`・`src/data/albion-raid.ts`、表は `docs/kaiju-roster.md` の「10-3b」、決定は `docs/decisions.md` の 10-3b）:
-  - ソロのレイド `raidAlbion`（`src/missions/albion-mission.ts`・`albion-raid.ts`。港湾都市の湾の周回路）: 体力 6,500（高難度 ×1.3）・制限時間 通常 15 分 / 高難度 12 分（時間切れで失敗）・残機 3。撃破で海へ落ちる。雲の中はロックの距離 ×0.6。HUD（体力・段階と残り時間・子分の数・部位 6 つ・予兆の警告・攻めどき）・ブリーフィング（`src/ui/albion-hud.ts`・`albion-briefing.ts`。文言は `src/data/i18n/albion/`）
+  - ソロのレイド `raidAlbion`（`src/missions/albion-mission.ts`・`albion-raid.ts`。港湾都市の湾の周回路）: 体力 7,000（高難度 ×1.3。10-3c で 8,000）・制限時間 通常 15 分 / 高難度 12 分（10-3c で 20 / 16 分。時間切れで失敗）・残機 3。撃破で海へ落ちる。雲の中はロックの距離 ×0.6。HUD（体力・段階と残り時間・子分の数・部位 6 つ・予兆の警告・攻めどき）・ブリーフィング（`src/ui/albion-hud.ts`・`albion-briefing.ts`。文言は `src/data/i18n/albion/`）
   - 子分の脅威（推奨案）: 180 m/s・110°/秒で人の進む先へ寄り、14m で体当たり 10。出す間隔 18 秒（段階・高難度で短く）
   - 協力（`src/net/albion-coop.ts`・`albion-codec.ts`）: 部位は怪獣の部位、子分は「ほかの対象」としてロック・当たり。潮吹き・尾はいちばん近い人だけ、子分は人ごとに追う。人数の補正 HP ×1 / ×1.6 / ×2.2 / ×2.8・子分の上限 12〜16。state は子分 16 匹でも約 230 バイト（15Hz で 3.4KB/s）。結果の表は 胴・巣・背びれ・尾・頭・子分
   - 登録簿 `albion`（協力の番号 2・記録のキー `albion:normal` / `albion:hard`・SQL 0006 の決まりで送る）。起動時に読むのは入口 `src/ui/albion-link.ts` とミッションの登録だけで、判定・形・HUD・協力は遅延チャンク `albion-runtime`（プリキャッシュする）
   - 勲章: 標準の 10 個 + 腹の巣をすべて壊して倒した・子分を累計 100 / 500 匹撃墜した（`kill.t.minion`）
+- 10-3c（手応え。数値は `src/data/albion.ts`・`src/data/albion-raid.ts`、表は `docs/kaiju-roster.md` の「10-3c」、決定は `docs/decisions.md` の 10-3c）:
+  - 体の当たり: 胴・頭・尾・胸びれ・尾びれ・背びれは通り抜けられない（`src/ai/albion-hull.ts`。尾の上下と胸びれのあおぎも形と同じ式）。ぶつかると 30（高難度 ×1.15）・機首を体の面で跳ね返して外へ・速さ ×0.7・0.5 秒の操作不能・1.5 秒は続けて当たらない（`src/entities/albion/albion-bounce.ts`）。協力はホストが参加者の機体を同じ判定で弾く。ヴォルガス・ネフィルガは今も体を通り抜けられる（変えない）
+  - 人を狙う攻撃（`src/ai/albion-aimed.ts`・`albion-actions.ts`・`albion-minions.ts`。予兆と HUD の警告を出し、正しく避ければ当たらない）: 水柱（進む先と斜め 4 か所の柱・25）・歌（体の高さを広がる衝撃の輪・25。協力は全員に）・横転（横を通る人を胸びれで払う・35）・呼び声（子分が囲んで構え、一斉にまっすぐ突撃・1 匹 7。突撃した子分は散る）。攻撃の間隔 12 秒
+  - 体力 8,000・制限時間 通常 20 分 / 高難度 16 分。子分の体当たり 7・子分を落とすと本体も全体 HP の 1% 減る。勲章「水柱・歌・横転・呼び声と体に一度も当たらずに倒した」。通信の版 14
 
 #### メカ怪獣ゴウライ（10-4a。`?dev=gourai` の裏だけ。設計は `docs/kaiju-roster.md` の「メカ怪獣」、値は `src/data/gourai.ts` / `src/data/gourai-model.ts`、体は `src/entities/gourai/`、本体と攻撃は `src/ai/gourai-ai.ts`・`gourai-attacks.ts`・`gourai-step.ts`、形は `src/render/gourai-model/`、確かめる場は `src/missions/gourai-dev.ts`・`src/ui/gourai-runtime.ts`。決定は `docs/decisions.md` の 10-4a）
 

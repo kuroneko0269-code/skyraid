@@ -133,7 +133,7 @@ const DEFS = [
     nameKey: 'albion.name',
     art: 'kaiju-art/albion.webp',
     latinName: 'ALBION',
-    attacks: ['minion', 'spout', 'slam', 'cloud'],
+    attacks: ['minion', 'geyser', 'sonar', 'roll', 'spout', 'cloud'],
     focus: '50% 50%',
     // 10-3b: 晴れた昼の湾: 腹の赤い巣と子分の群れを、斜め下から見上げる（白い巨体が青空に浮かぶ）
     scene: {
@@ -150,6 +150,8 @@ const DEFS = [
     unlock: null,
     badges: [
       { id: 'albionNests', reward: 2000 },
+      // 10-3c: 人を狙う攻撃（水柱・歌・横転・呼び声）と体に一度も当たらずに倒した
+      { id: 'albionUntouched', reward: 2000 },
       { id: 'albionMinions100', reward: 100, stat: { keys: ['kill.t.minion'], goal: 100 } },
       { id: 'albionMinions500', reward: 100, stat: { keys: ['kill.t.minion'], goal: 500 } },
     ],

@@ -5,7 +5,7 @@ import type { RaidDifficulty } from './raid';
 
 export const ALBION_RAID_CONFIG = {
   /** 制限時間（秒）。湾を渡り切って去る（失敗の理由は「時間切れ」） */
-  totalSeconds: { normal: 900, hard: 720 } satisfies Record<RaidDifficulty, number>,
+  totalSeconds: { normal: 1200, hard: 960 } satisfies Record<RaidDifficulty, number>,
   /** 高難度: 体力・攻撃の間隔・当たりのダメージ・子分の間隔の倍率 */
   hard: { hpScale: 1.3, intervalScale: 0.85, damageScale: 1.15, minionIntervalScale: 0.85 },
   /** 最初の攻撃（出撃してからの秒数。ブリーフィングを読む間） */
