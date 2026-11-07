@@ -17,8 +17,19 @@ export const ALBION_PARTS = [
 ] as const;
 export type AlbionPart = (typeof ALBION_PARTS)[number];
 
-/** 攻撃 3 種: 真上への潮吹き / 尾の叩きつけ / 雲を吐く */
-export const ALBION_ATTACKS = ['spout', 'slam', 'cloud'] as const;
+/**
+ * 攻撃: 真上への潮吹き / 尾の叩きつけ / 雲を吐く（10-3a）と、10-3c の人を狙う攻撃（水柱 / 歌（衝撃の輪）/ 横転（胸びれの払い）/
+ * 呼び声（子分が囲んで一斉に突っ込む））
+ */
+export const ALBION_ATTACKS = [
+  'spout',
+  'slam',
+  'cloud',
+  'geyser',
+  'sonar',
+  'roll',
+  'call',
+] as const;
 export type AlbionAttack = (typeof ALBION_ATTACKS)[number];
 
 /** 攻撃の段: 何もしていない / 予兆 / 攻撃 / 硬直 / 段階が変わって吠える */
@@ -57,8 +68,8 @@ export const ALBION_CONFIG = {
     /** 段階が変わったら吠えて攻撃しない秒数 */
     roarSeconds: 3,
   },
-  /** 攻撃の間隔（秒。段階の倍率を掛ける）。同じ攻撃は 3 回続けない */
-  attackInterval: 13,
+  /** 攻撃の間隔（秒。段階の倍率を掛ける）。同じ攻撃は 3 回続けない。10-3c: 13 → 12（人を狙う攻撃を足した） */
+  attackInterval: 12,
   attacks: {
     /**
      * 真上への潮吹き: 背の噴気孔から真上へ高さ height・半径 radius の柱。予兆は噴気孔が膨らんで白く光り、体が沈む（sink m）。
@@ -112,11 +123,112 @@ export const ALBION_CONFIG = {
       /** 雲が出ていない時間がこの秒数を超えたら選びやすくする */
       weight: 1.5,
     },
+    /**
+     * 10-3c 水柱: 狙う人の進む先（予兆の始めの位置 + 水平の速度 × lead 秒）に 1 本、その周りの斜め 4 か所（進む向きから ±45°・
+     * ±135°、半径 ring m）に 4 本。床から height m の柱（半径 radius）。予兆は海面の輪と薄い筒。まっすぐ進む・少し曲がるだけだと
+     * 当たり、大きく横へ（90°）曲がると柱の間を抜ける。狙う人が水平に range m 以内のとき選ぶ
+     */
+    geyser: {
+      windup: 1.8,
+      active: 1.2,
+      recover: 1,
+      lead: 2.1,
+      ring: 330,
+      radius: 70,
+      height: 2200,
+      damage: 25,
+      range: 3500,
+      weight: 2,
+      /** 柱が伸びきるまでの秒数（その前は伸びた所まで当たる） */
+      rise: 0.3,
+    },
+    /**
+     * 10-3c 歌（ソナー）: 体の中心の高さに、水平に広がる衝撃の輪（半径 start → 速さ speed m/s で maxRadius まで）。輪の厚さ
+     * ±width/2 m・上下 ±band m。輪が通る所にいると damage。高度を band より大きく変えれば越える / くぐれる。
+     * 体の中心から水平 range m 以内・上下 pickBand m 以内にいると選ぶ
+     */
+    sonar: {
+      windup: 2,
+      recover: 1,
+      start: 90,
+      speed: 330,
+      maxRadius: 2400,
+      width: 60,
+      band: 60,
+      damage: 25,
+      range: 1800,
+      pickBand: 260,
+      weight: 2.5,
+    },
+    /**
+     * 10-3c 横転（胸びれの払い）: 近くを横切る人の側へ体ごと傾く。予兆はその人の反対へ傾いて胸びれを持ち上げる（windupBankDeg）、
+     * 攻撃で人の側へ bankDeg まで横転し、胸びれで払う。払う範囲は体の軸の横 30〜reach m（人の側）・前後 back〜front m・上下 ±band m。
+     * 体の軸から横 minSide〜pickSide m・前後 −pickBack〜pickFront m・上下 ±pickBand m にいると選ぶ
+     */
+    roll: {
+      windup: 1.4,
+      active: 0.6,
+      recover: 1.6,
+      windupBankDeg: -22,
+      bankDeg: 68,
+      bankRate: 130,
+      reach: 270,
+      front: 260,
+      back: -170,
+      band: 200,
+      damage: 35,
+      pickSide: 380,
+      /** 背の上（体の軸から横 minSide m より内）にいる人には使わない（背の上は潮吹き） */
+      minSide: 70,
+      pickFront: 300,
+      pickBack: 220,
+      pickBand: 260,
+      weight: 4,
+    },
+    /**
+     * 10-3c 呼び声: 吠えて（口を開けて）合図すると、狙う人から range m 以内の子分が人の周り（半径 gatherRadius）を囲みに行く
+     * （予兆 windup の間、速さ gatherSpeed）。攻撃の始めの hold 秒は止まって構え（当たらない）、それから一斉に人の進む先
+     * （会う点を見越す。最大 maxLead 秒）へまっすぐ突っ込む（速さ chargeSpeed・攻撃の終わりまで曲がらない）。突撃の当たりは
+     * 半径 ramRadius。構えを見て大きく曲がると外れる。突撃した子分は通り過ぎて散る（攻撃の終わりに消える。撃墜に数えない）。
+     * 子分が minMinions 匹以上で選ぶ
+     */
+    call: {
+      windup: 2,
+      active: 2.4,
+      recover: 1,
+      range: 2200,
+      gatherRadius: 320,
+      gatherSpeed: 240,
+      gatherTurnDeg: 200,
+      hold: 0.35,
+      chargeSpeed: 310,
+      maxLead: 2.5,
+      ramRadius: 18,
+      minMinions: 3,
+      weight: 2,
+    },
   },
+  /**
+   * 10-3c: 体（胴・頭・尾・胸びれ・尾びれ・背びれ）への衝突。通り抜けられず、ぶつかると damage・外へ弾く（機首を体の面で
+   * 跳ね返し、面から外へ少なくとも minExit（向きの成分）・速さ ×speedKeep・面から pushOut m の所へ）・stun 秒の操作不能・
+   * invulnerable 秒は続けて当たらない。margin は機体の大きさ、sampleStep は移動の線分を調べる間隔（m）
+   */
+  collision: {
+    damage: 30,
+    margin: 6,
+    pushOut: 10,
+    speedKeep: 0.7,
+    minExit: 0.4,
+    stun: 0.5,
+    invulnerable: 1.5,
+    sampleStep: 4,
+  },
+  /** 10-3c: 子分を落とすと本体の体力も減る（全体 HP の割合。落とした人の胴へのダメージに数える）。子分係の得 */
+  minionReward: { hpRatio: 0.01 },
   /**
    * 体力（ソロ・通常。ヴォルガスの 13,000 の 2.5 倍）。10-3b でボットの表から決める
    */
-  hp: 7000,
+  hp: 8000,
   /** 子分（腹の巣 3 つから。10-2 の MinionSwarm）。体力は機銃 6 発（12 × 6）・ミサイル 1 発（150） */
   minions: {
     /** プールの大きさ（協力 4 人の上限。同時に飛べる数は ALBION_RAID_CONFIG.minionCap で人数ごとに） */
@@ -135,7 +247,7 @@ export const ALBION_CONFIG = {
   /** 10-3b: 子分が寄る点の見越し（人の進む先。届くまでの秒数 × scale、最大 maxSeconds 秒） */
   minionLead: { scale: 0.5, maxSeconds: 2 },
   /** 子分の体当たり: 自機から radius m 以内で damage（当たった子分は散って消える。撃墜に数えない） */
-  minionRam: { radius: 14, damage: 10 },
+  minionRam: { radius: 14, damage: 7 },
   /** 子分が床・海面から空ける高さ */
   minionFloor: 25,
 } as const;
@@ -184,3 +296,46 @@ export const ALBION_TARGET_SPHERES: readonly {
 
 /** 子分の当たりの半径（m） */
 export const ALBION_MINION_RADIUS = 9;
+
+/**
+ * 10-3c: 体の形（衝突。src/render/albion-model/parts.ts の形と同じ数）。前 forward（頭の先 +321・尾びれの付け根 −300）・右 right・
+ * 上 up（m）。胴は前 → 半径の折れ線。胸びれ・尾びれは右側の点の列（左は鏡）で、点ごとに [right, up, forward, 翼弦の半分, 厚さの半分]。
+ * 尾（尾びれの付け根から後ろ）と胸びれは泳ぎ・叩きつけの骨の動き（skeleton.ts）を同じ式でなぞる（src/ai/albion-hull.ts）
+ */
+export const ALBION_HULL = {
+  body: [
+    [321, 3],
+    [318, 15],
+    [308, 32],
+    [285, 46],
+    [250, 54],
+    [200, 58],
+    [140, 60],
+    [60, 58],
+    [-10, 54],
+    [-70, 46],
+    [-130, 36],
+    [-190, 25],
+    [-240, 17],
+    [-282, 10],
+    [-300, 5],
+  ] as readonly (readonly [number, number])[],
+  pectoral: [
+    [36, -32, 125, 36, 7],
+    [95, -46, 110, 30, 4.5],
+    [140, -54, 90, 19, 3],
+    [165, -58, 74, 5, 1.6],
+  ] as readonly (readonly [number, number, number, number, number])[],
+  /** 胸びれの骨の付け根（右・上） */
+  pectoralPivot: [40, -32] as readonly [number, number],
+  flukes: [
+    [4, 0, -286, 22, 5],
+    [40, 0, -297, 25, 4],
+    [80, 1, -311, 17, 2.6],
+    [105, 2, -328, 4, 1.4],
+  ] as readonly (readonly [number, number, number, number, number])[],
+  /** 背びれ（楕円体: 前・上の中心と半径 右 / 上 / 前） */
+  dorsal: { forward: -40, up: 52, rx: 5, ry: 18, rz: 46 },
+  /** 尾の骨（付け根から: 後ろへの位置 m）。tail0・tail1・tail2・flukes（skeleton.ts の BONE_DEFS） */
+  tailBones: [60, 150, 225, 280] as readonly number[],
+} as const;

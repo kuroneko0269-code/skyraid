@@ -7,7 +7,9 @@
 // Three.js 非依存
 import type { PvpArena } from '../combat/pvp-arena';
 import type { AlbionTarget } from '../ai/albion-ai';
-import { ALBION_PARTS } from '../data/albion';
+import { ALBION_CONFIG as C, ALBION_PARTS } from '../data/albion';
+import { createHullContact, hullContact } from '../ai/albion-hull';
+import { bounceAircraft } from '../entities/albion/albion-bounce';
 import { ALBION_RAID_CONFIG as R } from '../data/albion-raid';
 import { RAID_CONFIG } from '../data/kaiju';
 import { findMap } from '../data/maps';
@@ -41,6 +43,12 @@ export class AlbionCoopHost implements RaidPluginHost {
   focusId = -1;
   private focusTimer = 0;
   private readonly nobody: AlbionTarget = { position: { x: 0, y: -1e6, z: 0 }, active: false };
+  /** 10-3c: 人ごとの、体への衝突の後に続けて当たらない残り秒 */
+  private readonly bodyGrace = new Map<number, number>();
+  /** 10-3c: 体への衝突でダメージを受けた回数・攻撃の種類ごとの当たり（全員の合計。調整の表） */
+  bodyHits = 0;
+  readonly taken: Record<string, number> = {};
+  private readonly contact = createHullContact();
 
   constructor(
     private readonly arena: PvpArena,
@@ -71,12 +79,40 @@ export class AlbionCoopHost implements RaidPluginHost {
     this.raid.step(
       dt,
       focus ?? this.nobody,
-      (_kind, damage, who) => {
-        if (who.id !== undefined) this.arena.kaijuDamage(who.id, damage);
+      (kind, damage, who) => {
+        if (who.id === undefined) return;
+        this.taken[kind] = (this.taken[kind] ?? 0) + 1;
+        this.arena.kaijuDamage(who.id, damage);
       },
       this.arena.all,
     );
+    this.collide(dt);
     for (const p of this.parts) p.place();
+  }
+
+  /**
+   * 10-3c: 体への衝突（ソロの AlbionDev と同じ）。ホストが参加者の機体（入力から動かしている）を弾き、ダメージと操作不能を
+   * 配る。クライアントの自機は予測の補正でホストの位置へ戻る
+   */
+  private collide(dt: number): void {
+    const k = this.raid.kaiju;
+    const B = C.collision;
+    for (const [id, left] of this.bodyGrace) this.bodyGrace.set(id, Math.max(0, left - dt));
+    if (this.raid.dead || !k.body.visible) return;
+    for (const f of this.arena.all) {
+      if (!f.active) continue;
+      const a = f.aircraft;
+      if (
+        !hullContact(k.body, a.prevPosition, a.state.position, B.margin, B.sampleStep, this.contact)
+      )
+        continue;
+      bounceAircraft(a, this.contact);
+      if ((this.bodyGrace.get(f.id) ?? 0) > 0) continue;
+      this.bodyGrace.set(f.id, B.invulnerable);
+      this.bodyHits++;
+      this.arena.kaijuDamage(f.id, B.damage * k.damageScale);
+      this.arena.stun(f.id, B.stun);
+    }
   }
 
   /** 攻撃を向ける人を選び直す（攻撃の途中は変えない。狙っていた人が落ちた・抜けたらすぐ） */

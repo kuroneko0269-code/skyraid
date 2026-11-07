@@ -49,6 +49,12 @@ export interface Minion {
 /** 狙う人の位置（いなければ null） */
 export type MinionTarget = (minion: Readonly<Minion>) => Readonly<Vec3> | null;
 
+/**
+ * 10-3c: 子分の飛び方を怪獣ごとに差し替える（index はプールの番号）。速度を書き換えて true を返すと、いつもの曲がり方をせず
+ * その速度で進む（寿命・位置の進め方は同じ）
+ */
+export type MinionOverride = (minion: Minion, index: number, dt: number) => boolean;
+
 const ATTACKERS = 8;
 const DEG = Math.PI / 180;
 const at = vec3();
@@ -100,6 +106,7 @@ export class MinionSwarm {
     target: MinionTarget,
     rnd: () => number,
     spawning = true,
+    override?: MinionOverride,
   ): void {
     if (spawning) {
       this.timer -= dt;
@@ -108,7 +115,10 @@ export class MinionSwarm {
         this.spawnWave(body, nestBroken, rnd);
       }
     }
-    for (const m of this.minions) if (m.active) this.fly(m, dt, body, target);
+    for (let i = 0; i < this.minions.length; i++) {
+      const m = this.minions[i];
+      if (m?.active) this.fly(m, i, dt, body, target, override);
+    }
   }
 
   private spawnWave(
@@ -142,7 +152,14 @@ export class MinionSwarm {
     }
   }
 
-  private fly(m: Minion, dt: number, body: BodyFrame, target: MinionTarget): void {
+  private fly(
+    m: Minion,
+    index: number,
+    dt: number,
+    body: BodyFrame,
+    target: MinionTarget,
+    override: MinionOverride | undefined,
+  ): void {
     const s = this.spec;
     m.age += dt;
     if (m.age >= s.life) {
@@ -150,7 +167,9 @@ export class MinionSwarm {
       this.expired++;
       return;
     }
-    if (m.age > s.dropSeconds) {
+    if (m.age > s.dropSeconds && override?.(m, index, dt)) {
+      // 差し替えた速度で進む
+    } else if (m.age > s.dropSeconds) {
       const t = target(m);
       const center = t ?? body.position;
       const radius = t ? s.orbit : s.homeOrbit;

@@ -140,7 +140,12 @@ describe('10-2: レイドの怪獣の登録簿', () => {
     const nephirga = raid.filter((id) => id.includes('nephirga'));
     expect(nephirga.at(-1)).toBe('nephirgaParts');
     expect(raid.indexOf('nephirgaParts')).toBeLessThan(first('albion'));
-    expect(raid.slice(-3)).toEqual(['albionNests', 'albionMinions100', 'albionMinions500']);
+    expect(raid.slice(-4)).toEqual([
+      'albionNests',
+      'albionUntouched',
+      'albionMinions100',
+      'albionMinions500',
+    ]);
     // 収集はレイドの後（怪獣を足すと番号がずれるのは収集だけ）
     const collect = BADGE_LIST.findIndex((b) => b.group === 'collect');
     const lastRaid = BADGE_LIST.findLastIndex((b) => b.group === 'raid');

@@ -146,12 +146,15 @@ function nephirgaBroken(play: GamePlay): number {
   return 0;
 }
 
-/** 10-3b: アルビオンの腹の巣が全部壊れているか（遅延チャンクなので状態の根の印で見る） */
-function albionNestsGone(play: GamePlay): boolean {
+/**
+ * 10-3b: アルビオンの状態の根の印（遅延チャンクなので印の名前で見る）。albionNestsGone = 腹の巣が全部壊れている、
+ * 10-3c: albionUntouched = 人を狙う攻撃と体に一度も当たっていない
+ */
+function albionFlag(play: GamePlay, flag: 'albionNestsGone' | 'albionUntouched'): boolean {
   for (const extra of freeExtrasOf(play)) {
     if (!extra.active) continue;
     const root = extra.stateRoot;
-    if ('albionNestsGone' in root && root.albionNestsGone === true) return true;
+    if (flag in root && (root as Record<string, unknown>)[flag] === true) return true;
   }
   return false;
 }
@@ -185,8 +188,11 @@ export function judgeSortie(
   const nephirga = start.raidKaiju === NEPHIRGA_ID || start.missionId === 'finale';
   if (success && nephirga && nephirgaBroken(play) >= KAIJU2_PARTS.length) out.push('nephirgaParts');
   // 10-3b: アルビオン（ソロのレイド）の腹の巣を 3 つとも壊して倒した
-  if (success && start.raidKaiju === ALBION_RAID_ID && albionNestsGone(play))
+  if (success && start.raidKaiju === ALBION_RAID_ID && albionFlag(play, 'albionNestsGone'))
     out.push('albionNests');
+  // 10-3c: アルビオン（ソロのレイド）の人を狙う攻撃（水柱・歌・横転・呼び声）と体に一度も当たらずに倒した
+  if (success && start.raidKaiju === ALBION_RAID_ID && albionFlag(play, 'albionUntouched'))
+    out.push('albionUntouched');
   const race = play.race?.result;
   if (start.mode === 'race' && race?.outcome === 'finished' && race.missed === 0)
     out.push('cleanRun');

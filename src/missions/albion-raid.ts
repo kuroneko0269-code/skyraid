@@ -25,6 +25,9 @@ export class AlbionRaid {
   landedTime = -1;
   /** 被弾で白く光る残り秒数 */
   flash = 0;
+  /** 10-3c: ソロの自機が受けた人を狙う攻撃（水柱・歌・横転・呼び声）と体への衝突の数（勲章） */
+  aimedTaken = 0;
+  bodyTaken = 0;
   /** 攻撃した人（プレイヤー ID 0〜7）ごとの子分へのダメージ（協力の成績の「子分」の列） */
   readonly minionDamageBy: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -55,6 +58,11 @@ export class AlbionRaid {
     return this.kaiju.nestsGone;
   }
 
+  /** 10-3c: 人を狙う攻撃と体に一度も当たっていないか（勲章「当たらずに倒した」。sortie.ts が印で読む） */
+  get albionUntouched(): boolean {
+    return this.raid && this.aimedTaken === 0 && this.bodyTaken === 0;
+  }
+
   /** 壊れた部位の数 */
   get brokenCount(): number {
     return this.kaiju.parts.brokenOrder.length;
@@ -81,6 +89,8 @@ export class AlbionRaid {
     this.deadTime = 0;
     this.landedTime = -1;
     this.flash = 0;
+    this.aimedTaken = 0;
+    this.bodyTaken = 0;
     this.minionDamageBy.fill(0);
   }
 
@@ -121,7 +131,15 @@ export class AlbionRaid {
     if (!m?.active || amount <= 0) return false;
     const who = Math.max(0, Math.min(7, Math.floor(attacker)));
     this.minionDamageBy[who] = (this.minionDamageBy[who] ?? 0) + Math.min(amount, m.hp);
-    return this.kaiju.swarm.hit(index, amount, attacker);
+    const down = this.kaiju.swarm.hit(index, amount, attacker);
+    // 10-3c: 子分を落とすと本体の体力も減る（全体 HP の割合。落とした人の胴へのダメージ。胴の硬さ ×0.8 を戻して渡す）
+    if (down) {
+      const k = this.kaiju;
+      const body = k.parts.indexOf('body');
+      const factor = k.parts.specs[body]?.bodyFactor ?? 1;
+      this.damagePart(body, (k.parts.maxHp * C.minionReward.hpRatio) / factor, attacker);
+    }
+    return down;
   }
 
   /** 固定ステップ 1 回分。target は攻撃を向ける人、crowd は子分が追う人（ソロは自機だけ） */

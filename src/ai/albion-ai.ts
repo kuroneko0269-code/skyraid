@@ -16,14 +16,9 @@ import type { AlbionRoute } from '../entities/albion/albion-route';
 import { MinionSwarm } from './raid-kit/minions';
 import { stepAlbionMinions } from './albion-minions';
 import { PartSet } from './raid-kit/parts';
-import {
-  attackTimes,
-  chooseAttack,
-  inSlam,
-  inSpout,
-  slamRadius,
-  spoutRadius,
-} from './albion-attacks';
+import { attackTimes, slamRadius, spoutRadius } from './albion-attacks';
+import { applyRoll, resetAimed, stepAlbionAction, stepAlbionPose } from './albion-actions';
+import { countNearMinions } from './albion-minions';
 
 /** 狙う人（ソロは自機。10-3b: 協力は 1 人ずつ。id はプレイヤー ID） */
 export interface AlbionTarget {
@@ -59,7 +54,20 @@ export class AlbionKaiju {
   /** この攻撃で当てたか（1 回の攻撃で 1 回） */
   hitDone = false;
   /** 数え: 攻撃ごとの回数・自機に当てた回数・子分の体当たり */
-  readonly attacksUsed = { spout: 0, slam: 0, cloud: 0 };
+  readonly attacksUsed = { spout: 0, slam: 0, cloud: 0, geyser: 0, sonar: 0, roll: 0, call: 0 };
+  /** 10-3c 水柱の狙い（予兆の始めに決める進む先と進む向き） */
+  aimX = 0;
+  aimZ = 0;
+  aimAngle = 0;
+  /** 10-3c 歌の輪の中心と高さ（攻撃の始めの体の位置）・当てた人（crowd の番号のビット） */
+  sonarX = 0;
+  sonarY = 0;
+  sonarZ = 0;
+  hitMask = 0;
+  /** 10-3c 横転で払う側（1 = 右 / −1 = 左） */
+  rollSide = 1;
+  /** 10-3c 呼び声に応えた子分（プールの番号のビット） */
+  callMask = 0;
   hitsOnPlayer = 0;
   rams = 0;
   elapsed = 0;
@@ -112,9 +120,7 @@ export class AlbionKaiju {
     this.phase = this.phaseOf(p.ratio);
     this.cloudLeft = 0;
     this.hitDone = false;
-    this.attacksUsed.spout = 0;
-    this.attacksUsed.slam = 0;
-    this.attacksUsed.cloud = 0;
+    resetAimed(this);
     this.hitsOnPlayer = 0;
     this.rams = 0;
     this.elapsed = 0;
@@ -138,6 +144,11 @@ export class AlbionKaiju {
 
   disabled(action: string): boolean {
     return this.parts.disabled(action);
+  }
+
+  /** 10-3c: 狙う人の近く（呼び声の範囲）に飛んでいる子分の数 */
+  nearMinions(target: Readonly<Vec3>): number {
+    return countNearMinions(this, target);
   }
 
   mul(key: string): number {
@@ -172,21 +183,23 @@ export class AlbionKaiju {
       this.setAction('roar', null);
     }
     const slow = this.action === 'windup' && this.attack === 'spout' ? 0.6 : 1;
+    applyRoll(this);
     this.body.step(dt, (C.phases.speed[ph] ?? 1) * slow, this.mul('turnSpeed'));
-    this.stepAction(dt, target, onHit);
+    stepAlbionAction(this, dt, target, onHit, crowd);
     if (this.cloudLeft > 0) this.cloudLeft = Math.max(0, this.cloudLeft - dt);
-    this.stepPose(dt);
-    stepAlbionMinions(this, dt, crowd, onHit);
+    stepAlbionPose(this, dt);
+    stepAlbionMinions(this, dt, crowd, onHit, target);
   }
 
   /** 10-3b: 協力の写し: 体と姿勢と子分の飛び方だけ進める（攻撃の選び方・当たり・子分を出すのはホスト） */
   stepMirror(dt: number): void {
     if (!this.body.visible) return;
     const slow = this.action === 'windup' && this.attack === 'spout' ? 0.6 : 1;
+    applyRoll(this);
     this.body.step(dt, (C.phases.speed[this.phaseIndex] ?? 1) * slow, this.mul('turnSpeed'));
     this.actionTime += dt;
     if (this.cloudLeft > 0) this.cloudLeft = Math.max(0, this.cloudLeft - dt);
-    this.stepPose(dt);
+    stepAlbionPose(this, dt);
     for (const m of this.swarm.minions) {
       if (!m.active) continue;
       m.age += dt;
@@ -196,103 +209,13 @@ export class AlbionKaiju {
     }
   }
 
-  private setAction(a: AlbionAction, attack: AlbionAttack | null): void {
+  /** 攻撃の段を変える（経過・当てた印を戻す） */
+  setAction(a: AlbionAction, attack: AlbionAttack | null): void {
     this.action = a;
     this.attack = attack;
     this.actionTime = 0;
     this.hitDone = false;
-  }
-
-  private stepAction(dt: number, target: AlbionTarget, onHit: AlbionHit): void {
-    this.actionTime += dt;
-    const t = this.actionTime;
-    const a = this.attack;
-    const p = target.active ? target.position : null;
-    switch (this.action) {
-      case 'idle': {
-        this.cooldown -= dt;
-        if (this.cooldown > 0) return;
-        const pick = chooseAttack(this, p, this.random.next);
-        if (!pick) {
-          this.cooldown = 1;
-          return;
-        }
-        this.repeat = pick === this.lastAttack ? this.repeat + 1 : 1;
-        this.lastAttack = pick;
-        this.attacksUsed[pick]++;
-        this.setAction('windup', pick);
-        return;
-      }
-      case 'roar':
-        if (t >= C.phases.roarSeconds) {
-          this.setAction('idle', null);
-          this.cooldown = Math.min(this.cooldown, 2);
-        }
-        return;
-      case 'windup':
-        if (!a) return;
-        // 予兆の間に部位が壊れて使えなくなったら取り消す
-        if (this.disabled(a)) {
-          this.setAction('idle', null);
-          this.cooldown = 2;
-          return;
-        }
-        if (t >= attackTimes(a).windup) {
-          if (a === 'cloud') {
-            this.cloudLeft = C.attacks.cloud.seconds;
-            this.setAction('recover', a);
-          } else this.setAction('active', a);
-        }
-        return;
-      case 'active':
-        if (!a) return;
-        if (!this.hitDone && p) {
-          const hit =
-            a === 'spout'
-              ? inSpout(this.body, this.phase, p)
-              : a === 'slam' && inSlam(this.body, slamRadius(this), p);
-          if (hit) {
-            this.hitDone = true;
-            this.hitsOnPlayer++;
-            const base = a === 'spout' ? C.attacks.spout.damage : C.attacks.slam.damage;
-            onHit(a, base * this.damageScale, target);
-          }
-        }
-        if (t >= attackTimes(a).active) this.setAction('recover', a);
-        return;
-      case 'recover':
-        if (!a) return;
-        if (t >= attackTimes(a).recover) {
-          let cd =
-            C.attackInterval * (C.phases.interval[this.phaseIndex] ?? 1) * this.intervalScale;
-          if (a === 'spout' && this.nestsGone) cd *= C.attacks.spout.nestsGoneInterval;
-          this.setAction('idle', null);
-          this.cooldown = cd;
-        }
-        return;
-    }
-  }
-
-  /** 見た目の姿勢（予兆・攻撃の段から。固定ステップで寄せる） */
-  private stepPose(dt: number): void {
-    const pose = this.body.pose;
-    const a = this.attack;
-    const act = this.action;
-    const toward = (v: number, want: number, rate: number): number =>
-      v + Math.max(-rate * dt, Math.min(rate * dt, want - v));
-    const spoutOn = a === 'spout' && (act === 'windup' || act === 'active');
-    pose.spoutSwell = toward(pose.spoutSwell, spoutOn ? 1 : 0, 1.2);
-    pose.sink = toward(pose.sink, a === 'spout' && act === 'windup' ? C.attacks.spout.sink : 0, 12);
-    let lift = 0;
-    if (a === 'slam' && act === 'windup') lift = 1;
-    else if (a === 'slam' && act === 'active') lift = -1;
-    pose.tailLift = toward(pose.tailLift, lift, act === 'active' ? 6 : 0.9);
-    pose.mist = toward(pose.mist, a === 'cloud' && act === 'windup' ? 1 : 0, 0.6);
-    pose.mouth = toward(
-      pose.mouth,
-      act === 'roar' || (a === 'cloud' && act === 'windup') ? 1 : 0,
-      1.5,
-    );
+    this.hitMask = 0;
   }
 
   /** 今の攻撃の段の残り秒（値の表示） */

@@ -57,7 +57,7 @@ function host(arena: PvpArena, players: number, hard = false): AlbionCoopHost {
 }
 
 describe('アルビオンの協力の state（10-3b）', () => {
-  it('子分なし 約 70 バイト・1 匹 10 バイト（16 匹でも上限 1KB の内）。15Hz で 4KB/s 以下。往復で体・段階・部位・子分が戻る', () => {
+  it('子分なし 約 90 バイト・1 匹 11 バイト（16 匹でも上限 1KB の内）。15Hz で 4KB/s 以下。往復で体・段階・部位・子分が戻る', () => {
     const h = host(arenaWith(4), 4);
     const raid = h.raid;
     for (let i = 0; i < 60 * 40; i++) h.step(1 / 60);
@@ -82,9 +82,9 @@ describe('アルビオンの協力の state（10-3b）', () => {
       }).raid,
       null,
     ).length;
-    expect(empty).toBeLessThan(80);
+    expect(empty).toBeLessThan(100);
     const full = writeAlbionState(raid, 2);
-    expect(full.length).toBe(empty + C.minions.cap * 10);
+    expect(full.length).toBe(empty + C.minions.cap * 11);
     expect(full.length).toBeLessThanOrEqual(RAID_EXTRA_MAX_BYTES);
     // state 全体の他の欄（機体 4 機など）を足しても 4KB/s 以下（ネフィルガの協力は約 3.1KB/s）
     expect(full.length * NET_CONFIG.rates.stateHz).toBeLessThan(4000);
@@ -122,7 +122,11 @@ describe('アルビオンの協力のホスト（10-3b）', () => {
     const mi = h.raid.kaiju.swarm.minions.findIndex((m) => m.active);
     expect(mi).toBeGreaterThanOrEqual(0);
     h.minions[mi]?.damageBy(1000, 1);
-    expect(h.fields(1).partDamage).toEqual([0, 100, 0, 0, 0, C.minions.hp]);
+    // 10-3c: 子分を落とすと本体も全体 HP の 1% 減る（胴の硬さ ×0.8 を戻して渡すので、胴の列は 1% ÷ 0.8）
+    const reward = (h.raid.kaiju.parts.maxHp * C.minionReward.hpRatio) / 0.8;
+    const f1 = h.fields(1).partDamage;
+    expect(f1[0]).toBeCloseTo(reward, 0);
+    expect(f1.slice(1)).toEqual([100, 0, 0, 0, C.minions.hp]);
     expect(h.fields(0).partDamage).toEqual([0, 0, 0, 0, 50, 0]);
     expect(h.raid.kaiju.swarm.killsBy[1]).toBe(1);
   });
