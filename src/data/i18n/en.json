@@ -2679,6 +2679,14 @@
     "best": "Best {time}",
     "noBest": "Best —",
     "coopNote": "Create a room or join with a code (the host picks the difficulty)",
+    "locked": "Locked",
+    "lockedBadge": "🔒",
+    "unlock": {
+      "title": "To unlock",
+      "one": "Clear {kaiju} on {difficulty}",
+      "some": "Clear {count} of {kaiju} on {difficulty} ({have} / {count})",
+      "separator": ", "
+    },
     "kaiju": {
       "vorgas": {
         "tagline": "A two-legged titan rising from the sea",

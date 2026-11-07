@@ -43,11 +43,14 @@ export function installSwitchGuard(doc: Document): void {
     (e) => {
       if (!e.isTrusted) return;
       const now = performance.now();
+      const pressAt = pressTimeOf(touchAt, mouseAt, now);
       const stale = isStaleClick({
-        pressAt: pressTimeOf(touchAt, mouseAt, now),
+        pressAt,
         switchAt,
         now,
         fromPointer: e.detail > 0,
+        // 10-2: タッチのタップのクリックは、切り替えの処理が長くても捨てる（tap.ts の fromTouch）
+        fromTouch: pressAt === touchAt,
       });
       if (!stale) return;
       e.preventDefault();

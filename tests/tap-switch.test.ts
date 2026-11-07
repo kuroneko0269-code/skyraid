@@ -20,7 +20,18 @@ describe('isStaleClick', () => {
   it('キーボードのクリックは通す', () => {
     expect(isStaleClick({ pressAt: 0, switchAt: 80, now: 90, fromPointer: false })).toBe(false);
   });
-  it('見張りの時間を過ぎたら通す', () => {
+  it('10-2: タッチのタップのクリックは、切り替えの処理が長くて見張りの時間を過ぎても捨てる（ハンガーの「‹ 戻る」）', () => {
+    // ハンガーのカード: 押し始め 0ms → 自前の click() で切り替え 650ms → 機体の用意で 1.1 秒ふさがる → 互換のクリック 1740ms
+    const late = 650 + TAP_CONFIG.switchGuardMs + 90;
+    expect(
+      isStaleClick({ pressAt: 0, switchAt: 650, now: late, fromPointer: true, fromTouch: true }),
+    ).toBe(true);
+    // 切り替えの後に押し始めたタッチは通す
+    expect(
+      isStaleClick({ pressAt: 700, switchAt: 650, now: late, fromPointer: true, fromTouch: true }),
+    ).toBe(false);
+  });
+  it('見張りの時間を過ぎたら通す（マウス）', () => {
     const late = 80 + TAP_CONFIG.switchGuardMs + 1;
     expect(isStaleClick({ pressAt: 0, switchAt: 80, now: late, fromPointer: true })).toBe(false);
   });

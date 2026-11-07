@@ -16,7 +16,7 @@ import { COURSES } from './courses';
 import { DEFENSE_DIFFICULTIES, DEFENSE_MAPS } from './defense';
 import { MISSIONS } from './missions';
 import { RAID_DIFFICULTIES } from './raid';
-import { NEPHIRGA_ID, RAID_KAIJU_IDS } from './raid-kaiju';
+import { shownRaidKaiju } from './raid-kaiju';
 
 type Draft = Omit<BadgeDef, 'no'>;
 
@@ -226,7 +226,10 @@ function build(): Record<BadgeGroup, Draft[]> {
   ladder({ id: 'sortieRaid', keys: ['sortie.m.raid'], steps: [5, 25, 100] });
   ladder({ id: 'parts', keys: ['kill.t.part'], steps: [10, 50, 200] });
   item('raidNoLoss', 2000, { skill: true });
-  for (const kaiju of RAID_KAIJU_IDS) {
+  // 10-2: 怪獣のまとまりは登録簿の順（新しい怪獣はレイドのカテゴリの最後に足される。番号がずれるのは収集だけ）。
+  // 未公開の怪獣は ?dev=<名前> のときだけ
+  for (const def of shownRaidKaiju()) {
+    const kaiju = def.id;
     const each = (
       family: string,
       id: (k: string, d: string) => string,
@@ -250,7 +253,8 @@ function build(): Record<BadgeGroup, Draft[]> {
       ...(hard ? { hidden: true } : {}),
     }));
     each('raidAssistHard', comboId.raidAssistHard, (hard) => (hard ? { hidden: true } : {}));
-    if (kaiju === NEPHIRGA_ID) item('nephirgaParts', 2000);
+    // 怪獣ごとの勲章（登録簿の badges。ネフィルガは部位をすべて壊した）
+    for (const b of def.badges) item(b.id, b.reward);
   }
 
   group = 'collect';

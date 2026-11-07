@@ -1,6 +1,6 @@
 // PvP のリザルト（5-3）: 順位・名前・撃墜・被撃墜・命中率の表。ロビーの画面の中に出す。文字は textContent だけで入れる。
 // 5-4: ベストプレイヤー（最多撃墜）、最長連続撃墜、チーム戦の合計と勝ったチーム、「もう一度」を押した人の印
-import { NEPHIRGA_ID } from '../data/raid-kaiju';
+import { isRaidKaijuId, raidKaijuDef } from '../data/raid-kaiju';
 import { PVP_TEAM } from '../data/pvp';
 import type { PlayerInfo } from '../net/protocol';
 import type { RaidSummary } from '../net/raid-result';
@@ -86,7 +86,8 @@ const REASON_TEXT: Readonly<Record<ResultView['reason'], string>> = {
 
 function title(r: Readonly<ResultView>): string {
   if (r.reason === 'raidClear')
-    return r.raid?.kaiju === NEPHIRGA_ID ? t('pvp.title.raid2Clear') : t('pvp.title.raidClear');
+    // 10-2: 怪獣ごとの題（登録簿の coopClearKey）
+    return t(raidKaijuDef(isRaidKaijuId(r.raid?.kaiju) ? r.raid.kaiju : 'vorgas').coopClearKey);
   if (
     r.reason === 'raidFail' ||
     r.reason === 'raidStormFail' ||

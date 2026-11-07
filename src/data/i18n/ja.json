@@ -2659,6 +2659,14 @@
     "best": "自己ベスト {time}",
     "noBest": "自己ベスト —",
     "coopNote": "部屋を作るか、部屋コードで参加（難易度はホストが選ぶ）",
+    "locked": "未解放",
+    "lockedBadge": "🔒",
+    "unlock": {
+      "title": "解放の条件",
+      "one": "{kaiju}を{difficulty}でクリア",
+      "some": "{kaiju}のうち {count} 体を{difficulty}でクリア（{have} / {count}）",
+      "separator": "・"
+    },
     "kaiju": {
       "vorgas": {
         "tagline": "海から上陸する二足の巨獣",

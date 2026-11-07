@@ -23,8 +23,6 @@ export type { HostGameDeps } from './host-game-deps';
 import {
   allSkipped,
   coopOutcome,
-  createKaiju2Host,
-  createRaidHost,
   nephirgaScore,
   preStart,
   resendRuins,
@@ -33,6 +31,7 @@ import {
   vorgasScore,
 } from './host-raid';
 import type { Kaiju2Host } from './kaiju2-host';
+import { createRaidHosts, type PluginSlot } from './host-plugin';
 import type { Kaiju2StateMsg } from './codec-kaiju2';
 import { InputBuffer } from './input-buffer';
 import { RAID_OUTCOME, type RaidHost } from './raid-host';
@@ -81,6 +80,8 @@ export class HostGame extends NetGameEvents implements NetGame {
   readonly raid: RaidHost | null;
   /** 9-6c: 協力レイドのネフィルガ（ほかは null） */
   readonly raid2: Kaiju2Host | null;
+  /** 10-2: 怪獣ごとの差し込み口（net/raid-plugin.ts）の怪獣（登録された怪獣のレイドだけ。ほかは null） */
+  readonly raidX: PluginSlot | null;
   /** 防衛戦（7-2。ほかは null） */
   readonly defense: DefenseHost | null;
   missileVersion = 0;
@@ -121,8 +122,8 @@ export class HostGame extends NetGameEvents implements NetGame {
     this.own = this.arena.add(0, deps.own, fighterSpec(this.loadout(p.aircraftId, p.upgrades)));
     for (const pl of room.players) if (pl.id !== 0) this.addRemote(pl.id, pl.aircraftId, pl.paint);
     // 9-6c: レイドの怪獣はヴォルガスかネフィルガ（設定の raidKaiju）。ネフィルガの種はホストが決める（判定はホストだけ）
-    this.raid2 = raid ? createKaiju2Host(this.arena, room, deps, deps.rng ?? Math.random) : null;
-    this.raid = raid && !this.raid2 ? createRaidHost(this.arena, room, deps, this.sendEvent) : null;
+    // 10-2: 差し込み口に登録された怪獣も（host-plugin.ts。ヴォルガス・ネフィルガは登録しないので今までと同じ）
+    [this.raid2, this.raidX, this.raid] = createRaidHosts(this.arena, room, deps, this.sendEvent);
     this.defense = createDefenseHost(this.arena, room, deps, this.sendEvent);
     room.onPlayerLeave((id) => {
       this.remotes.delete(id);
@@ -203,7 +204,7 @@ export class HostGame extends NetGameEvents implements NetGame {
 
   /** 攻撃の対象のプレイヤー（6-6。攻撃中だけ） */
   get kaijuTarget(): number | null {
-    return this.raid?.targetId ?? this.raid2?.targetId ?? null;
+    return this.raid?.targetId ?? this.raid2?.targetId ?? this.raidX?.targetId ?? null;
   }
 
   /** その人がロックしている怪獣の部位（6-6。-1 はなし） */
@@ -254,14 +255,15 @@ export class HostGame extends NetGameEvents implements NetGame {
     arena.endTick(dt);
     this.raid?.step(dt);
     this.raid2?.step(dt);
+    this.raidX?.step(dt, this.tick);
     this.defense?.step(dt);
     collectAllMissiles(this.arena, this.defense, this.missiles, this.missilePool);
     this.missileVersion++;
     if (this.tick % this.stateEvery === 0) this.broadcastState();
     // レイドは怪獣を倒すか街に到達されたら終わり（撃墜数・制限時間は使わない）
-    const outcome = coopOutcome(this.raid ?? this.raid2, this.defense, arena);
+    const outcome = coopOutcome(this.raid ?? this.raid2 ?? this.raidX, this.defense, arena);
     const ended =
-      this.raid || this.raid2 || this.defense
+      this.raid || this.raid2 || this.raidX || this.defense
         ? outcome !== RAID_OUTCOME.none && outcome !== DEFENSE_OUTCOME.none
         : this.match.step(dt, arena.all) !== null;
     if (ended || this.scoreDirty || this.tick % this.scoreEvery === 0) this.sendScore(ended);
@@ -298,7 +300,7 @@ export class HostGame extends NetGameEvents implements NetGame {
 
   /** 成績（全員） */
   score(over: boolean): ScoreMsg {
-    const raid = vorgasScore(this.raid) ?? nephirgaScore(this.raid2);
+    const raid = vorgasScore(this.raid) ?? nephirgaScore(this.raid2) ?? this.raidX;
     return scoreMsg(this.arena.all, raid, this.match.remainingSeconds, over);
   }
 
@@ -338,6 +340,8 @@ export class HostGame extends NetGameEvents implements NetGame {
       defense,
       kaiju2,
     );
+    // 10-2: 差し込み口の怪獣の状態
+    if (this.raidX) msg.raidExtra = this.raidX.extra();
     this.room.broadcast(msg, 'unordered');
     this.sent.hit(this.now());
   }

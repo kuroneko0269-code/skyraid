@@ -54,6 +54,12 @@ export interface ClickTiming {
   readonly now: number;
   /** 指・マウスのクリックか（キーボードの Enter / Space のクリックは detail が 0 で、捨てない） */
   readonly fromPointer: boolean;
+  /**
+   * 10-2: 押し始めがまだタップの長さの内のタッチか（pressTimeOf がタッチの時刻を選んだ）。そのタップのクリックは、切り替えから
+   * 見張りの時間を過ぎていても捨てる（ハンガーの機体の用意など、切り替えの処理で主スレッドが 1 秒を超えてふさがると、
+   * 互換のクリックが見張りの時間の後に届いて、次の画面の同じ位置のボタン（ハンガーの「‹ 戻る」）が押されていた）
+   */
+  readonly fromTouch?: boolean;
 }
 
 /**
@@ -61,5 +67,6 @@ export interface ClickTiming {
  * 切り替わった後の画面には届けない（iOS はタップの後に互換のクリックを作り、その時点の画面で当たる要素を決める）
  */
 export function isStaleClick(c: ClickTiming, guardMs: number = TAP_CONFIG.switchGuardMs): boolean {
-  return c.fromPointer && c.pressAt < c.switchAt && c.now - c.switchAt <= guardMs;
+  if (!c.fromPointer || c.pressAt >= c.switchAt) return false;
+  return c.fromTouch === true || c.now - c.switchAt <= guardMs;
 }

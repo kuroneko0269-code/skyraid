@@ -1,7 +1,7 @@
 // オンライン連携（7-4）の決めた数値。仕組みは src/online/、SQL は supabase/migrations/skyraid_0001_init.sql、
 // 設計は docs/supabase-design.md。SQL と同じ値を使うものは tests/online-sql.test.ts で突き合わせる
 import { t } from '../core/i18n';
-import type { RaidKaijuId } from './raid-kaiju';
+import { RAID_KAIJU, type RaidKaijuDef, type RaidKaijuId } from './raid-kaiju';
 
 export const ONLINE_CONFIG = {
   /** Supabase のスキーマ（規約 1.1。アプリ名と同じ） */
@@ -40,11 +40,30 @@ export const ONLINE_CONFIG = {
 } as const;
 
 /**
- * 9-6c: オンラインのランキングに載せるレイドの怪獣。ネフィルガの記録のキー（nephirga:normal / nephirga:hard）は
- * supabase/migrations/skyraid_0003_raid_kaiju.sql を流してからサーバーが受け付ける（README の「ネフィルガのランキング」）。
- * 9-5d の事前修正: 0003 を流したので 'nephirga' を足した（送る・ランキングの選択に出す）
+ * 10-2: レイドの記録のキーの決まり（SQL 0006。supabase/migrations/skyraid_0006_raid_key_rule.sql）を流したか。流すとサーバーは
+ * 「怪獣の id:難易度」の形（src/data/raid-kaiju.ts の RAID_KEY_PATTERN）を全部受け付けるので、怪獣を足すたびに SQL を流さなくて
+ * 済む。流すまでは false（今までどおり、登録簿で ranked の怪獣のキーだけ送る。README の「レイドの記録のキーの決まり」）
  */
-export const RANKED_RAID_KAIJU: readonly RaidKaijuId[] = ['vorgas', 'nephirga'];
+export const RAID_KEY_RULE_ENABLED: boolean = false;
+
+/**
+ * 9-6c: オンラインのランキングに載せるレイドの怪獣（公開されている怪獣のうち、登録簿で ranked のもの。SQL 0006 の後は
+ * 「id:難易度」の形の怪獣も全部）。ヴォルガス・ネフィルガは 0003 を流したので ranked（9-5d の事前修正）
+ */
+export const RANKED_RAID_KAIJU: readonly RaidKaijuId[] = rankedOf(
+  RAID_KAIJU,
+  RAID_KEY_RULE_ENABLED,
+);
+
+/** 登録簿からランキングに送る怪獣を選ぶ（ruleEnabled: SQL 0006 を流したか） */
+export function rankedOf<T extends RaidKaijuDef>(
+  list: readonly T[],
+  ruleEnabled: boolean,
+): T['id'][] {
+  return list
+    .filter((k) => k.dev === null && (k.ranked || (ruleEnabled && k.recordKey === 'kaiju')))
+    .map((k) => k.id);
+}
 
 export function rankedRaidKaiju(id: RaidKaijuId): boolean {
   return RANKED_RAID_KAIJU.includes(id);

@@ -3,7 +3,7 @@
 // .skyreplay の書き出し・読み込み。再生中の操作は ui/replay-playback.ts。
 // 8-2: 一覧・再生の操作・書き出し / 読み込みは別のチャンク（replay-ui.ts）にし、一覧を開くときに読む（loadUi）。
 // 読めなければ（オフライン・古いチャンク）お知らせを出してモード選択へ戻る
-import { loadKaiju2, missionNeedsKaiju2, needsKaiju2 } from './kaiju2-link';
+import { loadRaidKaiju } from './raid-kaiju-link';
 import { APP_VERSION } from 'virtual:app-info';
 import { replayControlsOf } from '../core/control-settings';
 import type { GameState } from '../core/game-state';
@@ -170,10 +170,9 @@ export function createReplayLink(p: ReplayLinkParts): ReplayLink {
       return;
     }
     // 9-6c: ネフィルガのレイドは遅延チャンクを読んでから（読めなければ再生しない）
-    // 9-7: キャンペーンの M8（ネフィルガの決戦）も
-    const kaiju2 =
-      needsKaiju2(data.header.raidKaiju) || missionNeedsKaiju2(missionFor(data.header));
-    if (kaiju2 && !(await loadKaiju2())) return;
+    // 9-7: キャンペーンの M8（ネフィルガの決戦）も。10-2: 怪獣ごとの遅延チャンクの口（raid-kaiju-link.ts）で
+    const kaiju = data.header.raidKaiju ?? missionFor(data.header)?.skyKaiju;
+    if (!(await loadRaidKaiju(kaiju))) return;
     hub.pending = data;
     game.transition('flight');
   };

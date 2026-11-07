@@ -13,10 +13,12 @@ import type { PvpMirror } from '../net/pvp-mirror';
 import { RAID_OUTCOME } from '../net/raid-host';
 import { KAIJU2_OUTCOME } from '../net/kaiju2-host';
 import { Kaiju2Mirror } from '../net/kaiju2-mirror';
+import { ClientGame } from '../net/client-game';
+import { findRaidPlugin, type RaidPluginMirror } from '../net/raid-plugin';
 import { RAID_RULES } from '../data/raid';
 import { KAIJU2_TARGETS } from '../data/kaiju2-raid';
 import { k2list, k2t } from '../data/kaiju2-text';
-import { NEPHIRGA_ID, raidKaijuOf, type RaidKaijuId } from '../data/raid-kaiju';
+import { NEPHIRGA_ID, raidKaijuDef, raidKaijuOf, type RaidKaijuId } from '../data/raid-kaiju';
 import type { Kaiju2Raid } from '../missions/kaiju2-raid';
 import type { Kaiju2CoopFrame } from './kaiju2-hud';
 import { raidSummary, type RaidSummary } from '../net/raid-result';
@@ -63,6 +65,8 @@ export class RaidFlight {
   private kaijuMirror: KaijuMirror | null = null;
   /** 9-6c: ネフィルガの写し（クライアント） */
   private kaiju2Mirror: Kaiju2Mirror | null = null;
+  /** 10-2: 差し込み口（net/raid-plugin.ts）の怪獣の写し（クライアント。表示は怪獣の遅延チャンクが読む） */
+  pluginMirror: RaidPluginMirror | null = null;
   readonly kaiju: RaidKaijuId;
   private readonly marks2: string[][] = KAIJU2_TARGETS.map(() => []);
   private readonly coop2 = {
@@ -90,9 +94,14 @@ export class RaidFlight {
   ) {
     this.canSkip = deps.briefingSeen();
     this.kaiju = raidKaijuOf(deps.raidKaiju);
+    const plugin = findRaidPlugin(this.kaiju);
     if (this.kaiju === NEPHIRGA_ID) {
       deps.briefing.reset(deps.hard, { title: k2t('briefingTitle'), lines: k2list('briefing') });
       this.attachKaiju2();
+    } else if (plugin) {
+      // 10-2: 差し込み口の怪獣（ブリーフィングの文・表示元は怪獣のタスクで足す）。クライアントは写しを作る
+      deps.briefing.reset(deps.hard);
+      if (!(net instanceof HostGame)) this.pluginMirror = plugin.createMirror(deps.kaijuGround);
     } else {
       deps.briefing.reset(deps.hard);
       this.attachKaiju();
@@ -183,6 +192,18 @@ export class RaidFlight {
 
   /** 固定ステップ: クライアントの怪獣の写しを進める（新しい state が来たら写す） */
   step(dt: number): void {
+    const px = this.pluginMirror;
+    if (px && this.net instanceof ClientGame) {
+      // 10-2: できごと（届いた順）→ 新しい state → 進める
+      for (const e of this.net.raidEvents.splice(0)) px.receiveEvents(e.bytes, e.tick);
+      const x = this.net.raidExtra;
+      if (x && this.net.kaijuVersion !== this.kaijuVersion) {
+        this.kaijuVersion = this.net.kaijuVersion;
+        px.receiveState(x.bytes, x.tick);
+      }
+      px.step(dt);
+      return;
+    }
     const m2 = this.kaiju2Mirror;
     if (m2) {
       const k2 = this.net.kaiju2;
@@ -233,8 +254,8 @@ export class RaidFlight {
       cleared: this.cleared,
       difficulty: hard ? 'hard' : 'normal',
       seconds: this.ticks / 60,
-      // 9-6c: ネフィルガは建物を壊さない
-      protectedBuildings: this.kaiju === NEPHIRGA_ID ? null : this.deps.protectedBuildings(),
+      // 9-6c: ネフィルガは建物を壊さない（10-2: 登録簿の city）
+      protectedBuildings: raidKaijuDef(this.kaiju).city ? this.deps.protectedBuildings() : null,
       kaiju: this.kaiju,
     });
   }

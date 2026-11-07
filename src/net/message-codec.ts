@@ -33,6 +33,7 @@ import {
   type NetMessage,
   type PlayerInfo,
 } from './protocol';
+import { readExtra, readRaidEvent, writeExtra, writeRaidEvent } from './codec-extra';
 
 const TYPE_IDS = {
   join: 1,
@@ -45,6 +46,7 @@ const TYPE_IDS = {
   lobby: 8,
   chat: 9,
   ruin: 10,
+  kx: 11,
 } as const;
 /** 速度ベクトルの単位（1/16 m/s。int16 で ±2047 m/s） */
 const VELOCITY_SCALE = 16;
@@ -135,6 +137,11 @@ export function encodeMessage(msg: NetMessage): ArrayBuffer {
       writeKaiju(w, msg.kaiju);
       writeDefense(w, msg.defense);
       writeKaiju2(w, msg.kaiju2);
+      // 10-2: 怪獣ごとの差し込み口（無しは 1 バイト）
+      writeExtra(w, msg.raidExtra);
+      break;
+    case 'kx':
+      writeRaidEvent(w, msg);
       break;
     case 'event':
       w.u8(EVENT_KINDS.indexOf(msg.kind)).u8(msg.a).u8(msg.b).u32(msg.tick).u32(msg.n);
@@ -228,8 +235,11 @@ function decodeBody(r: ByteReader): NetMessage | null {
       for (let i = 0; i < m; i++) missiles.push(readMissile(r));
       const kaiju = readKaiju(r);
       const defense = readDefense(r);
-      return { type: 'state', tick, aircraft, missiles, kaiju, defense, kaiju2: readKaiju2(r) };
+      const state = { type: 'state', tick, aircraft, missiles, kaiju, defense } as const;
+      return readExtra(r, { ...state, kaiju2: readKaiju2(r) });
     }
+    case TYPE_IDS.kx:
+      return readRaidEvent(r);
     case TYPE_IDS.event: {
       const kind = EVENT_KINDS[r.u8()];
       if (!kind) return null;

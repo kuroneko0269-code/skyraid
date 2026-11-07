@@ -20,7 +20,7 @@ import { createWorldScene, type World } from './render/scene';
 import { installAppShell } from './ui/app-shell';
 import { syncHudScreen } from './ui/hud-screen';
 import { loadChunk, prefetchChunk } from './ui/lazy-load';
-import { installTouchGuards } from './ui/mobile';
+import { createRotateHint, installTouchGuards } from './ui/mobile';
 import { openBrowserSave } from './ui/save-link';
 import { FadeCurtain, LoadingScreen, applyScreenFade, type ShellScreens } from './ui/screen';
 import { TitleScreen } from './ui/title';
@@ -114,6 +114,8 @@ export function startApp(
   const quality = new QualityLink(renderer, pipeline, world, save.settingsStorage);
   installTouchGuards(document);
   installAppShell(document.body);
+  // 10-2: 縦向きの「画面を横にしてください」は殻で作る（本体を組み立てる前のタイトルから出す。1.1.3 までは本体の touch-link.ts）
+  createRotateHint(document.body);
   // 描画の大きさ（8-6）: canvas の実際の大きさに合わせる（iOS の起動直後・向きの変更の後の古い window の値を使わない）
   watchViewport(renderer.domElement, (w, h) => {
     pipeline.resize(w, h);
