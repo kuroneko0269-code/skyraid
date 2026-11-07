@@ -41,6 +41,7 @@ import { createLanguageSettings } from './ui/language-settings';
 import { linkTiltPause } from './ui/tilt-settings';
 import { screenRoll } from './render/screen-roll';
 import { linkKaiju2, linkKaijuArtDev } from './ui/kaiju2-link';
+import { linkAlbionDev } from './ui/albion-link';
 import type { AppShell } from './app';
 import { CityView } from './render/city/city-view';
 
@@ -318,6 +319,8 @@ export function startGame(shell: AppShell): GameApp {
   // 9-6c: ネフィルガ（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=kaiju2 は起動時に読む）
   const kaiju2 = { search, play, scene, activeMap, game, quality, pvp, hud, audio, camera };
   linkKaiju2({ ...kaiju2, ...runtime, weather: world.weather });
+  // 10-3a: 白鯨アルビオン（作っている間。?dev=albion のときだけ遅延チャンクを読む）
+  linkAlbionDev({ ...kaiju2, ...runtime });
 
   // 9-10d: ?dev=kaiju-art（レイドの怪獣選びの画像を描く。遊ぶ人は読まない）
   linkKaijuArtDev(search, { ...runtime, camera, pipeline, play, weather: world.weather, game });

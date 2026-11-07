@@ -126,7 +126,7 @@ export class GamePlay {
     this.setDefense(null);
     this.session.startMission(def.start, def.practice === true);
     // 9-6b: ネフィルガのレイドは差し込み口が引き受ける（付けていなければ今までと同じ）
-    const world = freeExtraOf(this)?.startMission?.(def) ?? this.session;
+    const world = freeExtraOf(this)?.startMission(def) ?? this.session;
     const runner = new MissionRunner(def, world);
     if (chapter) this.tutorial = new TutorialCoach(chapter, this.session, runner);
     this.setRunner(runner);

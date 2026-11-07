@@ -19,7 +19,7 @@ import type { FlightSession } from '../missions/flight-session';
 import type { GamePlay } from '../missions/game-play';
 import type { MissionDef } from '../missions/types';
 import { resolveLoadout, type Loadout } from '../progression/loadout';
-import { freeExtraOf } from '../missions/free-extra';
+import { freeExtrasOf } from '../missions/free-extra';
 import { findRaidVariant } from '../missions/raid-variants';
 import { dailyCourse, dailyPractice } from '../missions/daily/setup';
 import { hashState, hashStateRounded, type StateSnapshot, type WalkSkip } from './state-walk';
@@ -37,13 +37,12 @@ export interface SimWorld {
 
 /**
  * 状態の走査の根（ハッシュ・キーフレーム）: ゲームの進行と街の建物。9-6a: フリーフライトに開発中の物が付いていれば
- * それも（付いていなければ今までと同じ根）
+ * それも（付いていなければ今までと同じ根。10-3a: 複数なら付けた順）
  */
 export function simRoots(w: Pick<SimWorld, 'play' | 'buildings'>): object[] {
   const b = w.buildings();
   const roots: object[] = b ? [w.play, b] : [w.play];
-  const extra = freeExtraOf(w.play);
-  if (extra?.active === true) roots.push(extra.stateRoot);
+  for (const extra of freeExtrasOf(w.play)) if (extra.active) roots.push(extra.stateRoot);
   return roots;
 }
 
