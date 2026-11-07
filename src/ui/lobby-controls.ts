@@ -1,5 +1,11 @@
 // ロビーの部屋の画面の部品（6-6。lobby-room.ts から分けた）: 選択肢のセグメント・押すと切り替わるボタン・モードの表示名
-import { RAID_KAIJU, VORGAS_ID, raidKaijuName, raidKaijuOf, raidKaijuShown } from '../data/raid-kaiju';
+import {
+  RAID_KAIJU,
+  VORGAS_ID,
+  raidKaijuName,
+  raidKaijuOf,
+  raidKaijuShown,
+} from '../data/raid-kaiju';
 import { t, tn } from '../core/i18n';
 import type { PvpMode } from '../data/pvp';
 import { RAID_DIFFICULTIES, RAID_DIFFICULTY_LABELS } from '../data/raid';

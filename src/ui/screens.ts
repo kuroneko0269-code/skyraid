@@ -169,10 +169,15 @@ export class Screens {
         if (kind === 'coop') this.pvp?.onSelect(true, kaiju);
         // 9-6b: ヴォルガス以外の怪獣。9-6c: ネフィルガは遅延チャンクを読んでから（読めなければ今の画面のまま）
         else
-          withSoloRaid(kaiju, difficulty, () => game.state === 'mode_select', (def) => {
-            this.nextMission = def;
-            game.transition('flight');
-          });
+          withSoloRaid(
+            kaiju,
+            difficulty,
+            () => game.state === 'mode_select',
+            (def) => {
+              this.nextMission = def;
+              game.transition('flight');
+            },
+          );
       },
       onBack: () => game.transition('title'),
     });

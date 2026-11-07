@@ -50,7 +50,10 @@ export const RAID_KEY_RULE_ENABLED: boolean = false;
  * 9-6c: オンラインのランキングに載せるレイドの怪獣（公開されている怪獣のうち、登録簿で ranked のもの。SQL 0006 の後は
  * 「id:難易度」の形の怪獣も全部）。ヴォルガス・ネフィルガは 0003 を流したので ranked（9-5d の事前修正）
  */
-export const RANKED_RAID_KAIJU: readonly RaidKaijuId[] = rankedOf(RAID_KAIJU, RAID_KEY_RULE_ENABLED);
+export const RANKED_RAID_KAIJU: readonly RaidKaijuId[] = rankedOf(
+  RAID_KAIJU,
+  RAID_KEY_RULE_ENABLED,
+);
 
 /** 登録簿からランキングに送る怪獣を選ぶ（ruleEnabled: SQL 0006 を流したか） */
 export function rankedOf<T extends RaidKaijuDef>(
