@@ -85,7 +85,10 @@ function fillCover(c: HTMLElement): void {
     settled = true;
     window.clearTimeout(timer);
     if (loaded) img.classList.add('is-loaded');
-    else c.classList.add('is-text');
+    else {
+      c.classList.add('is-text');
+      motion?.refresh();
+    }
     noteStartup('cover', text);
   };
   const timer = window.setTimeout(() => {

@@ -84,6 +84,15 @@ export class CoverLogoMotion {
     this.frame = requestAnimationFrame(this.tick);
   }
 
+  /** 見せる要素が変わった（ロゴが読めず文字にした）: 次のフレームを待たずに文字を幕の中央へ置く */
+  refresh(): void {
+    const el = this.element();
+    if (!el || !this.started || this.landing) return;
+    this.state.box = this.coverTarget(el);
+    this.state.v = { cx: 0, cy: 0, w: 0 };
+    this.apply(el, this.state.box);
+  }
+
   stop(): void {
     cancelAnimationFrame(this.frame);
   }
