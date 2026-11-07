@@ -765,7 +765,7 @@
 - 遅延読み込み: `src/ui/raid-kaiju-link.ts`（入口のモジュールが `registerRaidKaijuChunk` で読み方を登録。ソロのレイド・リプレイは怪獣の id だけで読む）。結果の表の部位の名前・画像の基準点は `src/missions/raid-kaiju-hooks.ts`
 - 共通の部品（`src/ai/raid-kit/`。新しい怪獣だけが使う）: 部位と破壊（`PartSet`）・子分（`MinionSwarm`）・弾幕（`Barrage`）と弾（`ShotPool`）・光線（`Beam`。なぎ払い / ロック警告の後の溜め撃ち）・バリアと瞬間移動（`Barrier`・`Warp`）。決まった計算（種の列・dt の足し算・状態は数と配列）
 - 協力の差し込み口: `src/net/raid-plugin.ts`（怪獣ごとのホストの本体と写しを登録）。state の末尾の欄 `raidExtra`（無しは 1 バイト）と確実な経路のメッセージ `kx`（`src/net/codec-extra.ts`）、中身の詰め方は `src/net/raid-kit-codec.ts`（部位・子分・撃った弾）。通信の版 12
-- 記録のキーの決まり: SQL 0006（`supabase/migrations/skyraid_0006_raid_key_rule.sql`）を流すとサーバーは「id:難易度」の形（`RAID_KEY_PATTERN`）を全部受け付ける。流すまでは `RAID_KEY_RULE_ENABLED = false` で登録簿の `ranked` の怪獣だけ送る
+- 記録のキーの決まり: SQL 0006（`supabase/migrations/skyraid_0006_raid_key_rule.sql`）を流すとサーバーは「id:難易度」の形（`RAID_KEY_PATTERN`）を全部受け付ける。10-3a で流したので `RAID_KEY_RULE_ENABLED = true`（流す前は false で登録簿の `ranked` の怪獣だけ送っていた）
 - ヴォルガス・ネフィルガの挙動・数値・リプレイ・状態のハッシュは 10-2 の前と同じ（`tests/raid-golden.test.ts`）
 
 #### 港湾都市と破壊される建物（6-4。マップは `src/data/maps.ts`、地形は `src/data/terrain-harbor.ts` / `src/render/terrain-gen/harbor-shape.ts`、街は `src/data/city.ts` / `src/render/city/`、建物の判定は `src/combat/buildings.ts` / `city-damage.ts`、今のマップは `src/missions/active-map.ts`。決定は `docs/decisions.md` の 6-4）

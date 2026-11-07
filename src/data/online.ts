@@ -42,9 +42,10 @@ export const ONLINE_CONFIG = {
 /**
  * 10-2: レイドの記録のキーの決まり（SQL 0006。supabase/migrations/skyraid_0006_raid_key_rule.sql）を流したか。流すとサーバーは
  * 「怪獣の id:難易度」の形（src/data/raid-kaiju.ts の RAID_KEY_PATTERN）を全部受け付けるので、怪獣を足すたびに SQL を流さなくて
- * 済む。流すまでは false（今までどおり、登録簿で ranked の怪獣のキーだけ送る。README の「レイドの記録のキーの決まり」）
+ * 済む。流すまでは false（今までどおり、登録簿で ranked の怪獣のキーだけ送る。README の「レイドの記録のキーの決まり」）。
+ * 10-3a の事前修正: Supabase で 0006 を流したので true
  */
-export const RAID_KEY_RULE_ENABLED: boolean = false;
+export const RAID_KEY_RULE_ENABLED: boolean = true;
 
 /**
  * 9-6c: オンラインのランキングに載せるレイドの怪獣（公開されている怪獣のうち、登録簿で ranked のもの。SQL 0006 の後は
