@@ -2697,6 +2697,12 @@
     "coopNote": "Create a room or join with a code (the host picks the difficulty)",
     "locked": "Locked",
     "lockedBadge": "🔒",
+    "tab": {
+      "vorgas": "Vorgas",
+      "nephirga": "Nephirga",
+      "albion": "Albion",
+      "gourai": "Gourai"
+    },
     "unlock": {
       "title": "To unlock",
       "one": "Clear {kaiju} on {difficulty}",

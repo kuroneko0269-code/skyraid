@@ -2677,6 +2677,12 @@
     "coopNote": "部屋を作るか、部屋コードで参加（難易度はホストが選ぶ）",
     "locked": "未解放",
     "lockedBadge": "🔒",
+    "tab": {
+      "vorgas": "ヴォルガス",
+      "nephirga": "ネフィルガ",
+      "albion": "アルビオン",
+      "gourai": "ゴウライ"
+    },
     "unlock": {
       "title": "解放の条件",
       "one": "{kaiju}を{difficulty}でクリア",
