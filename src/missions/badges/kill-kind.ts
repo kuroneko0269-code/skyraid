@@ -9,14 +9,7 @@ import { TargetDrone } from '../../entities/target-drone';
 
 /** 敵機・爆撃機・巡航ミサイル・地上目標（対空砲も）・怪獣の部位・10-3b: レイドの怪獣の子分・的（風船・ドローン）・そのほか */
 export type KillKind =
-  | 'fighter'
-  | 'bomber'
-  | 'cruise'
-  | 'ground'
-  | 'part'
-  | 'minion'
-  | 'target'
-  | 'other';
+  'fighter' | 'bomber' | 'cruise' | 'ground' | 'part' | 'minion' | 'target' | 'other';
 
 export function killKindOf(t: CombatTarget): KillKind {
   if (t instanceof EnemyAircraft) return 'fighter';

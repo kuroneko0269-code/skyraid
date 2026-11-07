@@ -185,7 +185,8 @@ export function judgeSortie(
   const nephirga = start.raidKaiju === NEPHIRGA_ID || start.missionId === 'finale';
   if (success && nephirga && nephirgaBroken(play) >= KAIJU2_PARTS.length) out.push('nephirgaParts');
   // 10-3b: アルビオン（ソロのレイド）の腹の巣を 3 つとも壊して倒した
-  if (success && start.raidKaiju === ALBION_RAID_ID && albionNestsGone(play)) out.push('albionNests');
+  if (success && start.raidKaiju === ALBION_RAID_ID && albionNestsGone(play))
+    out.push('albionNests');
   const race = play.race?.result;
   if (start.mode === 'race' && race?.outcome === 'finished' && race.missed === 0)
     out.push('cleanRun');

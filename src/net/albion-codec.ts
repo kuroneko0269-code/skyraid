@@ -145,4 +145,3 @@ export function readAlbionState(
     if (!seen.has(i)) m.active = false;
   });
 }
-

@@ -32,9 +32,6 @@ import type {
 } from './raid-plugin';
 import type { ScoreEntry } from './protocol';
 
-/** 成績の部位の列（partDamage の順）: 胴・巣（3 つの合計）・背びれ・尾・頭・子分（子分へのダメージ） */
-export const ALBION_SCORE_COLUMNS = ['body', 'nests', 'dorsal', 'tail', 'head', 'minions'] as const;
-
 /** ホスト（判定の正） */
 export class AlbionCoopHost implements RaidPluginHost {
   readonly raid: AlbionRaid;

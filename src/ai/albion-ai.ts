@@ -15,7 +15,6 @@ import { AlbionBody, type AlbionGround } from '../entities/albion/albion-body';
 import type { AlbionRoute } from '../entities/albion/albion-route';
 import { MinionSwarm } from './raid-kit/minions';
 import { stepAlbionMinions } from './albion-minions';
-export { nearest } from './albion-minions';
 import { PartSet } from './raid-kit/parts';
 import {
   attackTimes,
