@@ -4,7 +4,7 @@ import './save.css';
 import { APP_VERSION } from 'virtual:app-info';
 import { APP_SHELL_CONFIG } from '../data/app';
 import { SCREEN_CONFIG } from '../data/screens';
-import { coverActive, onCoverGone } from '../core/viewport-cover';
+import { coverActive, onCoverGone, signal } from '../core/viewport-cover';
 import { visibleBox, type LogoBox } from '../core/cover-motion';
 import { logoUrl, probeImage, resolveLogo, type ImageProbe } from './brand';
 import { createGlyph } from './glyphs';
@@ -109,6 +109,11 @@ export class TitleScreen {
         : null;
     const main = this.logo.querySelector<HTMLElement>('.title-logo-main');
     return main ? visibleBox(main.getBoundingClientRect(), 0) : null;
+  }
+
+  /** 10-1c: 幕のロゴが重なって着いた: タイトルの文字にも短い乱れ（信号がつながった。幕のロゴと同時） */
+  signalLanded(): void {
+    signal(this.logo);
   }
 
   /** ロゴを画像に差し替える（読めると分かってから。テキストは読み上げ用に残す） */

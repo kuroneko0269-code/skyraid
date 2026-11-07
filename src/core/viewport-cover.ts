@@ -4,6 +4,7 @@
 // 時間切れで文字に切り替え）。出し入れとロゴの結果は viewport-log.ts に残す
 // 10-1b: 幕のロゴはばねで揺れながら幕の中央を追い、外すときはタイトルの文字の位置と大きさへ移って重なってから幕を明ける
 // （cover-logo.ts）。記録の「off」は今までどおり外すと決めた時刻（移る間は幕を残す）。動きを省く設定ではその場で外す
+// 10-1c: ロゴはグリッチで乱れる（試みのたびに強く）。重なったら幕のロゴとタイトルの文字に短い「信号」の乱れを走らせて明ける
 import { BRAND_ASSETS, VIEWPORT_CONFIG } from '../data/app';
 import { CoverLogoMotion, prefersReducedMotion, type LandingResult } from './cover-logo';
 import type { LogoBox } from './cover-motion';
@@ -17,6 +18,8 @@ let revealing = false;
 const goneListeners: (() => void)[] = [];
 /** 着く先（タイトルの文字の見えている箱。まだ出ていなければ null。app.ts がタイトルを作ったら入れる） */
 let landingTarget: (() => LogoBox | null) | null = null;
+/** 10-1c: 重なったときに呼ぶもの（タイトルの文字の短い乱れ） */
+let landedHook: (() => void) | null = null;
 
 /** 点検（ui-audit-device）: 最後に着いたときの結果（移らずに外したら null のまま） */
 export const coverLanding: { result: LandingResult | null } = { result: null };
@@ -33,14 +36,21 @@ export function onCoverGone(fn: () => void): void {
 }
 
 /** 着く先を入れる（タイトルの文字。app.ts） */
-export function setCoverLandingTarget(fn: () => LogoBox | null): void {
+export function setCoverLandingTarget(fn: () => LogoBox | null, onLanded?: () => void): void {
   landingTarget = fn;
+  landedHook = onLanded ?? null;
 }
 /** 幕の時間切れ（試みのたびに延ばす。起動が重くて試みが遅れても、途中で外さない） */
 let coverTimer = 0;
 
 export function extendCover(): void {
   if (!cover) return;
+  // 10-1c: 測り直しを試みるたびに強く乱す（飾り。例外で試みを止めない）
+  try {
+    motion?.pulse();
+  } catch {
+    /* 飾り */
+  }
   window.clearTimeout(coverTimer);
   coverTimer = window.setTimeout(() => {
     hideCover('timeout');
@@ -138,10 +148,33 @@ export function hideCover(reason: string): void {
     if (target()) {
       m.land(target, (r) => {
         coverLanding.result = r;
+        // 10-1c: 重なった: 幕のロゴにも、タイトルの文字（title.ts）と同じ短い乱れ
+        if (r) {
+          try {
+            signal(c);
+            landedHook?.();
+          } catch {
+            /* 飾り */
+          }
+        }
         fade();
       });
     } else if (performance.now() - waitStart > VIEWPORT_CONFIG.coverLogo.landWaitMs) fade();
     else requestAnimationFrame(wait);
   };
   wait();
+}
+
+/** 10-1c: 重なったときの短い乱れ（index.html の skyraid-signal。タイトルの文字は title.ts が同じものを走らせる） */
+export function signal(target: HTMLElement): void {
+  const g = VIEWPORT_CONFIG.coverLogo.glitch;
+  target.style.setProperty('--signal-ms', `${g.signalMs}ms`);
+  target.style.setProperty('--signal-px', `${g.signalPx}px`);
+  target.style.setProperty('--signal-red', g.red);
+  target.style.setProperty('--signal-cyan', g.cyan);
+  target.classList.remove('is-signal');
+  target.classList.add('is-signal');
+  window.setTimeout(() => {
+    target.classList.remove('is-signal');
+  }, g.signalMs + 50);
 }

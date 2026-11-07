@@ -98,6 +98,38 @@
       .viewport-cover.is-hiding {
         opacity: 0;
       }
+      /* 10-1c: グリッチの走査線（::after）とノイズの帯（::before）。濃さ・位置は src/core/cover-glitch-view.ts が CSS 変数で（無ければ見えない） */
+      .viewport-cover::before,
+      .viewport-cover::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        z-index: 1;
+        pointer-events: none;
+      }
+      .viewport-cover::after {
+        top: 0;
+        bottom: 0;
+        opacity: var(--glitch-scan, 0);
+        background: repeating-linear-gradient(
+          180deg,
+          rgba(170, 230, 255, 0.22) 0 1px,
+          transparent 1px 3px
+        );
+      }
+      .viewport-cover::before {
+        top: var(--glitch-noise-y, 0);
+        height: var(--glitch-noise-h, 0);
+        opacity: var(--glitch-noise, 0);
+        background: repeating-linear-gradient(
+          90deg,
+          #fff 0 2px,
+          transparent 2px 7px,
+          rgba(120, 220, 255, 0.7) 7px 9px,
+          transparent 9px 16px
+        );
+      }
       .viewport-cover-logo {
         display: block;
         width: min(46vw, 760px);
@@ -148,6 +180,60 @@
       .viewport-cover.is-moving .viewport-cover-logo {
         width: 400px;
         max-height: none;
+      }
+      /* 10-1c: 色ずれ（赤と青緑の影）とちらつき。値は cover-glitch-view.ts（無ければ 10-1b の影だけ） */
+      .viewport-cover.is-moving .viewport-cover-logo,
+      .viewport-cover.is-moving .viewport-cover-text {
+        filter: drop-shadow(var(--glitch-split, 0px) 0 0 var(--glitch-red, transparent))
+          drop-shadow(calc(var(--glitch-split, 0px) * -1) 0 0 var(--glitch-cyan, transparent))
+          drop-shadow(0 2px 6px rgba(0, 20, 50, 0.55)) opacity(var(--glitch-alpha, 1));
+      }
+      /* 10-1c: 重なった瞬間の短い乱れ（幕のロゴとタイトルの文字。src/core/viewport-cover.ts の signal）。段で跳ぶ（デジタルの乱れ） */
+      .viewport-cover.is-signal .viewport-cover-logo,
+      .viewport-cover.is-signal .viewport-cover-text {
+        animation: skyraid-signal var(--signal-ms, 200ms) both;
+      }
+      @keyframes skyraid-signal {
+        0% {
+          translate: var(--signal-px) 0;
+          filter: drop-shadow(var(--signal-px) 0 0 var(--signal-red))
+            drop-shadow(calc(var(--signal-px) * -1) 0 0 var(--signal-cyan))
+            drop-shadow(0 2px 6px rgba(0, 20, 50, 0.55));
+          animation-timing-function: steps(1, end);
+        }
+        25% {
+          translate: calc(var(--signal-px) * -1) 1px;
+          filter: drop-shadow(calc(var(--signal-px) * -1) 0 0 var(--signal-red))
+            drop-shadow(var(--signal-px) 0 0 var(--signal-cyan))
+            drop-shadow(0 2px 6px rgba(0, 20, 50, 0.55));
+          animation-timing-function: steps(1, end);
+        }
+        50% {
+          translate: calc(var(--signal-px) * 0.5) -1px;
+          filter: drop-shadow(calc(var(--signal-px) * 0.5) 0 0 var(--signal-red))
+            drop-shadow(calc(var(--signal-px) * -0.5) 0 0 var(--signal-cyan))
+            drop-shadow(0 2px 6px rgba(0, 20, 50, 0.55));
+          animation-timing-function: steps(1, end);
+        }
+        75% {
+          translate: calc(var(--signal-px) * -0.25) 0;
+          filter: drop-shadow(calc(var(--signal-px) * -0.25) 0 0 var(--signal-red))
+            drop-shadow(calc(var(--signal-px) * 0.25) 0 0 var(--signal-cyan))
+            drop-shadow(0 2px 6px rgba(0, 20, 50, 0.55));
+          animation-timing-function: steps(1, end);
+        }
+        100% {
+          translate: 0 0;
+          filter: drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent)
+            drop-shadow(0 2px 6px rgba(0, 20, 50, 0.55));
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .viewport-cover.is-signal .viewport-cover-logo,
+        .viewport-cover.is-signal .viewport-cover-text,
+        .title-logo.is-signal > * {
+          animation: none;
+        }
       }
       .viewport-cover.is-text .viewport-cover-logo {
         display: none;
