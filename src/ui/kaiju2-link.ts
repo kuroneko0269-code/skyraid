@@ -9,13 +9,13 @@ import type { GameState } from '../core/game-state';
 import type { ActiveMap } from '../missions/active-map';
 import type { GamePlay } from '../missions/game-play';
 import { NEPHIRGA_VARIANT } from '../missions/kaiju2-mission';
-import { findRaidVariant, registerRaidVariant } from '../missions/raid-variants';
+import { registerRaidVariant } from '../missions/raid-variants';
 import type { MissionDef } from '../missions/types';
-import { raidMission } from '../data/missions-special';
-import type { RaidDifficulty } from '../data/raid';
 import type { QualityLink } from '../render/quality-link';
 import type { GameAudio } from '../audio/game-audio';
 import { loadChunk, prefetchChunk } from './lazy-load';
+import { registerRaidKaijuChunk } from './raid-kaiju-link';
+import { registerRaidKaijuHooks } from '../missions/raid-kaiju-hooks';
 import type { Kaiju2Runtime } from './kaiju2-runtime';
 import type { KaijuArtParts } from './kaiju-art';
 
@@ -83,6 +83,20 @@ function startRuntime(m: typeof import('./kaiju2-runtime'), p: Kaiju2LinkParts):
 export function linkKaiju2(p: Kaiju2LinkParts): void {
   parts = p;
   registerRaidVariant(NEPHIRGA_VARIANT);
+  // 10-2: 怪獣ごとの遅延チャンクの口（raid-kaiju-link.ts）に読み方を登録する
+  registerRaidKaijuChunk(NEPHIRGA_VARIANT.id, {
+    load: () => loadKaiju2().then((rt) => rt !== null),
+    prefetch: prefetchKaiju2,
+  });
+  // 10-2: 画像を撮るときの基準点（体の中心と水平の向き。9-10d の kaiju-art.ts から）
+  registerRaidKaijuHooks(NEPHIRGA_VARIANT.id, {
+    artAnchor: () => {
+      const body = runtime?.dev.body;
+      if (!body) return null;
+      const len = Math.hypot(body.forward.x, body.forward.z) || 1;
+      return { ...body.position, fx: body.forward.x / len, fz: body.forward.z / len };
+    },
+  });
   if (parseDevFlags(p.search).has('kaiju2'))
     chunk().catch((e: unknown) => {
       console.error('kaiju2 failed to load', e);
@@ -102,26 +116,6 @@ export function loadedKaiju2(): Kaiju2Runtime | null {
 /** 先読み（モード選択でネフィルガを選んだとき。表示なし） */
 export function prefetchKaiju2(): void {
   if (parts) prefetchChunk(chunk);
-}
-
-/**
- * ソロのレイドのミッションを用意して go に渡す（モード選択から）。ヴォルガスはすぐ、ネフィルガは遅延チャンクを読んでから
- * （読めない・読む間にモード選択を離れたら渡さない）
- */
-export function withSoloRaid(
-  kaiju: string | undefined,
-  difficulty: RaidDifficulty,
-  go: (def: MissionDef) => void,
-): void {
-  const def = (): MissionDef =>
-    findRaidVariant(kaiju)?.mission(difficulty) ?? raidMission(difficulty);
-  if (!needsKaiju2(kaiju)) {
-    go(def());
-    return;
-  }
-  void loadKaiju2().then((rt) => {
-    if (rt && parts?.game.state === 'mode_select') go(def());
-  });
 }
 
 /** ネフィルガの怪獣の id か（読む必要があるか） */

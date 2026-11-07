@@ -758,6 +758,16 @@
 - 9-6c: 公開（`?dev=kaiju2` を外した。`?dev=kaiju2` はフリーフライトの確かめる場だけ）。モード選択のレイドのダイアログで怪獣（ヴォルガス / ネフィルガ）を選ぶ。ネフィルガは起動時に登録だけ（`src/ui/kaiju2-link.ts`）、判定・形・HUD・音は遅延チャンク（`kaiju2-runtime`・`kaiju2-text`）を出撃・再生・協力の前に読む。2〜4 人の協力（ホストが判定: `src/net/kaiju2-host.ts`、写し: `src/net/kaiju2-mirror.ts`、state の欄: `src/net/codec-kaiju2.ts`。ロビーの設定「怪獣」。攻撃は狙う人 = いちばん近い人にだけ当たる。全体 HP は 1〜4 人で ×1 / ×1.85 / ×2.65 / ×3.5。通信の版 10）。急降下は段階 2 から 20 秒ごとに「出番」。負けの理由は嵐の時間切れ・全体の時間切れ・戦域離脱。ソロのクリアは自己ベスト（`nephirga:難易度`）に残し、オンラインのランキングは SQL（`supabase/migrations/skyraid_0003_raid_kaiju.sql`）を流した後に `RANKED_RAID_KAIJU` で有効にする（9-5d の事前修正で有効にした: ネフィルガのソロのクリアを送り、ランキングのレイドに怪獣の選択が出る）。詳しくは `docs/kaiju2.md` の 9-6c
 - 9-6d: 手応え。攻撃の間隔 3.5 / 3 / 2.5 秒と攻撃の重ね（段階 1・2 は 1 回、3 は 2 回。間 1.2 秒）、雷球 210 m/s・45°/秒・見越しと扇（40。1 回の扇で 2 個まで）、突風 850m・36°（30 と押し流し 150 m/s・1 秒）、急降下は届くまでの秒数から見越し・始めの 1.2 秒は進路へ直す（11°/秒）、尾 50、体力 4,600（高難度 ×1.3 だけ）、スタミナ 75 秒。部位を壊すと 3 秒怯む（攻撃しない・ダメージ ×1.25）、巡航中に機首から 10°・1500m に 0.8 秒入ると 2.4 秒避ける、タッチの狙いの補助は部位だけ ×0.6（`assistScale`）。止まり木へは遠い間は巡航のまま寄り、近づく → 旋回しながら降りる → 羽ばたいて寄せる → 着地して翼をたたむ、飛び立ちは真上へ 1.2 秒。通信の版 11（state に怯み・31 バイト）。詳しくは `docs/kaiju2.md` の 9-6d
 
+#### レイドの怪獣の共通の土台（10-2。3 体の設計と怪獣を足す手順は `docs/kaiju-roster.md`。決定は `docs/decisions.md` の 10-2）
+
+- 登録簿: `src/data/raid-kaiju.ts` の `RAID_KAIJU`（並び = 協力の設定 `raidKaiju` の番号。ヴォルガス 0・ネフィルガ 1。足すのは最後だけ）。1 件に紹介（画像・英字の名前・攻撃・画像の場面）・名前の文言のキー・記録のキーの形（`difficulty` = 難易度だけ / `kaiju` = 「id:難易度」）・ランキング（`ranked`）・解放の条件（`unlock`）・怪獣ごとの勲章（`badges`）・遅延チャンク（`lazy`）・未公開の `?dev=` の名前（`dev`）・協力（`coop`）・街を壊すか（`city`）・協力の結果の題（`coopClearKey`）
+- 怪獣選び・ロビー・勲章・ランキングは登録簿から並べる。未公開の怪獣は `?dev=<名前>` のときだけ。解放の条件（挙げた怪獣のうち N 体をその難易度以上でクリア。ソロの自己ベストか `win.of.raid-<怪獣>`）を満たすまで、怪獣選びは鍵の印・暗い画像・条件の札を出し、出撃のボタンを押せない（`src/progression/raid-unlock.ts`。`?dev=raid-lock` でネフィルガに仮の条件「ヴォルガスを高難度でクリア」）
+- 遅延読み込み: `src/ui/raid-kaiju-link.ts`（入口のモジュールが `registerRaidKaijuChunk` で読み方を登録。ソロのレイド・リプレイは怪獣の id だけで読む）。結果の表の部位の名前・画像の基準点は `src/missions/raid-kaiju-hooks.ts`
+- 共通の部品（`src/ai/raid-kit/`。新しい怪獣だけが使う）: 部位と破壊（`PartSet`）・子分（`MinionSwarm`）・弾幕（`Barrage`）と弾（`ShotPool`）・光線（`Beam`。なぎ払い / ロック警告の後の溜め撃ち）・バリアと瞬間移動（`Barrier`・`Warp`）。決まった計算（種の列・dt の足し算・状態は数と配列）
+- 協力の差し込み口: `src/net/raid-plugin.ts`（怪獣ごとのホストの本体と写しを登録）。state の末尾の欄 `raidExtra`（無しは 1 バイト）と確実な経路のメッセージ `kx`（`src/net/codec-extra.ts`）、中身の詰め方は `src/net/raid-kit-codec.ts`（部位・子分・撃った弾）。通信の版 12
+- 記録のキーの決まり: SQL 0006（`supabase/migrations/skyraid_0006_raid_key_rule.sql`）を流すとサーバーは「id:難易度」の形（`RAID_KEY_PATTERN`）を全部受け付ける。流すまでは `RAID_KEY_RULE_ENABLED = false` で登録簿の `ranked` の怪獣だけ送る
+- ヴォルガス・ネフィルガの挙動・数値・リプレイ・状態のハッシュは 10-2 の前と同じ（`tests/raid-golden.test.ts`）
+
 #### 港湾都市と破壊される建物（6-4。マップは `src/data/maps.ts`、地形は `src/data/terrain-harbor.ts` / `src/render/terrain-gen/harbor-shape.ts`、街は `src/data/city.ts` / `src/render/city/`、建物の判定は `src/combat/buildings.ts` / `city-damage.ts`、今のマップは `src/missions/active-map.ts`。決定は `docs/decisions.md` の 6-4）
 
 - マップ: 「海岸と島」（island）と「港湾都市」（harbor）。マップごとに地形のパラメータ（シード・大きさ・形）・街の有無・フリーフライトの開始位置・怪獣の上陸地点と向かう先・レイドの開始位置・木の撒き方を持つ。フリーフライト（モード選択の「フリーフライト」→ マップを選ぶ。開発用 `?map=harbor`）と PvP（ロビーのホストの設定「マップ」）は選べる。キャンペーン M1〜M5 は島、レイド（ソロ・協力）は港湾都市に固定。タイトル画面に戻ると島に戻す

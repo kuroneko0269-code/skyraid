@@ -1,5 +1,6 @@
 import { t } from '../core/i18n';
 import type { RaidDifficulty } from '../data/raid';
+import type { UnlockState } from '../progression/raid-unlock';
 import type { RaidKaijuId } from '../data/raid-kaiju';
 import type { DefenseDifficulty } from '../data/defense';
 import './mode-select.css';
@@ -214,6 +215,10 @@ export class ModeSelectScreen {
   /** 9-10d: レイドの怪獣選びの自己ベスト（撃破までの最短の表示。Screens が差し込む） */
   set raidBest(fn: (kaiju: RaidKaijuId, difficulty: RaidDifficulty) => string | null) {
     this.dialogs.raidBest = fn;
+  }
+  /** 10-2: レイドの怪獣の解放の状態（Screens が差し込む） */
+  set raidUnlock(fn: (kaiju: RaidKaijuId) => UnlockState) {
+    this.dialogs.raidUnlock = fn;
   }
   /** 防衛戦（7-2）のマップと難易度（選ぶたびに変わる） */
   get defenseMapId(): string {

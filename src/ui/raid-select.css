@@ -218,6 +218,21 @@
   flex: 1.4 1 0;
 }
 
+/* 10-2: 未解放の怪獣（画像を暗く・条件の札） */
+.raid-select.is-locked .raid-art-img {
+  filter: grayscale(0.85) brightness(0.55);
+}
+
+.raid-lock-note {
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--ui-line);
+  border-radius: 6px;
+  color: var(--ui-warn-text);
+  font: 600 12px/1.35 var(--ui-font-body);
+  background: rgba(0, 0, 0, 0.35);
+}
+
 /* ---- 背の低い横画面（844×390 が基準: 左 約 440px） ---- */
 @container app (max-height: 480px) {
   .mode-prompt-box.raid-select {

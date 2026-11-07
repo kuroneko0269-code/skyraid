@@ -6,7 +6,7 @@ import { findKaijuProfile, KAIJU_ART, type KaijuArtScene } from '../data/kaiju-p
 import type { GamePlay } from '../missions/game-play';
 import type { FlightFrame } from '../render/flight-frame';
 import type { RenderPipeline } from '../render/pipeline';
-import { loadedKaiju2 } from './kaiju2-link';
+import { raidKaijuHooks, type ArtAnchor } from '../missions/raid-kaiju-hooks';
 
 export interface KaijuArtParts {
   readonly frame: FlightFrame;
@@ -17,25 +17,18 @@ export interface KaijuArtParts {
   readonly game: { transition(to: 'pause'): boolean };
 }
 
-interface Anchor {
-  x: number;
-  y: number;
-  z: number;
-  /** 向き（水平の単位ベクトル） */
-  fx: number;
-  fz: number;
-}
+type Anchor = ArtAnchor;
 
-/** 今の怪獣の基準点と向き（ヴォルガスは足元・ネフィルガは体の中心）。いなければ null */
+/**
+ * 今の怪獣の基準点と向き（ヴォルガスは足元。ほかの怪獣は登録した基準点: ネフィルガは体の中心。10-2 で
+ * src/missions/raid-kaiju-hooks.ts の artAnchor に）。いなければ null
+ */
 function anchorOf(id: string, play: GamePlay): Anchor | null {
   if (id === 'vorgas') {
     const k = play.session.props.kaiju;
     return { ...k.feet, fx: -Math.sin(k.heading), fz: -Math.cos(k.heading) };
   }
-  const body = loadedKaiju2()?.dev.body;
-  if (!body) return null;
-  const len = Math.hypot(body.forward.x, body.forward.z) || 1;
-  return { ...body.position, fx: body.forward.x / len, fz: body.forward.z / len };
+  return raidKaijuHooks(id)?.artAnchor?.() ?? null;
 }
 
 function place(camera: PerspectiveCamera, a: Anchor, s: KaijuArtScene): void {

@@ -204,8 +204,8 @@ describe('protocol: 直列化の往復', () => {
     };
     const data = encodeMessage(msg);
     // 1 機 37 バイト + 見出し 7 バイト + 怪獣の有無 1 バイト（6-2）+ 防衛戦の有無 1 バイト（7-2）
-    // + ネフィルガの有無 1 バイト（9-6c）（4 機で 158 バイト。15Hz で約 2.4KB/s）
-    expect(data.byteLength).toBe(10 + 37 * 4);
+    // + ネフィルガの有無 1 バイト（9-6c）+ 怪獣ごとの差し込み口の有無 1 バイト（10-2）（4 機で 159 バイト。15Hz で約 2.4KB/s）
+    expect(data.byteLength).toBe(11 + 37 * 4);
     const back = decodeMessage(data);
     expect(back?.type).toBe('state');
     if (back?.type !== 'state') return;
@@ -267,7 +267,7 @@ describe('protocol: 直列化の往復', () => {
       defense: null,
       kaiju2: null,
     });
-    expect(data.byteLength).toBe(10 + 37 * 4 + 14 * 16);
+    expect(data.byteLength).toBe(11 + 37 * 4 + 14 * 16);
     // 15Hz で 6KB/s 以下
     expect(data.byteLength * 15).toBeLessThanOrEqual(6000);
     const back = decodeMessage(data);

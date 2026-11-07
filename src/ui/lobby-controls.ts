@@ -1,5 +1,5 @@
 // ロビーの部屋の画面の部品（6-6。lobby-room.ts から分けた）: 選択肢のセグメント・押すと切り替わるボタン・モードの表示名
-import { RAID_KAIJU_IDS, VORGAS_ID, raidKaijuName, raidKaijuOf } from '../data/raid-kaiju';
+import { RAID_KAIJU, VORGAS_ID, raidKaijuName, raidKaijuOf, raidKaijuShown } from '../data/raid-kaiju';
 import { t, tn } from '../core/i18n';
 import type { PvpMode } from '../data/pvp';
 import { RAID_DIFFICULTIES, RAID_DIFFICULTY_LABELS } from '../data/raid';
@@ -60,7 +60,8 @@ export function raidRuleSegments(
   const kaiju = ruleSegment(
     parent,
     t('lobby.rule.kaiju'),
-    RAID_KAIJU_IDS.map((_, i) => i),
+    // 10-2: 登録簿の順の番号のうち、公開されていて協力できる怪獣だけ（未公開は ?dev=<名前> のときだけ）
+    RAID_KAIJU.flatMap((k, i) => (k.coop && raidKaijuShown(k) ? [i] : [])),
     (v) => raidKaijuName(raidKaijuOf(Number(v))),
     onChange,
   );

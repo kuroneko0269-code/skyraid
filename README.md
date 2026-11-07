@@ -113,9 +113,9 @@ OGP の `og:image` は、Cloudflare Pages ではビルドに渡される `CF_PAG
 - 大きさと形式: **正方形 960×960px の WebP**（画質 80〜90。300KB 以下を目安）。名前は同じにする。ビルドでプリキャッシュに入り、オフラインでも出ます
 - 構図: **怪獣を真ん中に**置く。画面の枠は 844×390 で横長（約 440×374）、568×320 で縦長（約 220×304）なので、正方形の中央から切り取られます。下の 3 割には名前の帯（暗いグラデーション）が重なり、左上には「‹ 戻る」と怪獣の切り替えが重なります
 - フォトモードの写真から作るとき: フォトモード（ポーズ →「フォトモード」）で撮った PNG を、怪獣が中央に来るように正方形に切り抜き、960×960 に縮めて WebP に書き出す（例 `cwebp -q 90 -resize 960 960 photo.png -o public/kaiju-art/vorgas.webp`、Pillow なら `Image.open(p).crop(box).resize((960, 960)).save(out, 'WEBP', quality=90)`）
-- 切り取る中心を変えたいとき: `src/data/kaiju-profiles.ts` の `focus`（CSS の object-position。例 `'50% 40%'`）
-- ゲームの描画で作り直す: `npm run render-kaiju-art`（両方）・`npm run render-kaiju-art -- nephirga`（1 体だけ）。開発サーバーを立て、画質「高」でソロのレイドに出て撮ります（クラウドの GPU の無い環境で 1 体 1 分ほど）。構図（天候・カメラの位置・画角・待つ秒数）は `src/data/kaiju-profiles.ts` の `scene`
-- 怪獣を足すとき: `src/data/kaiju-profiles.ts` に 1 件、文を `src/data/i18n/ja.json` / `en.json` の `raidSelect.kaiju.<id>` に、画像を `public/kaiju-art/<id>.webp` に足す（レイドの怪獣として登録されたものだけが並びます）
+- 切り取る中心を変えたいとき: `src/data/raid-kaiju.ts`（10-2 からの怪獣の登録簿）の `focus`（CSS の object-position。例 `'50% 40%'`）
+- ゲームの描画で作り直す: `npm run render-kaiju-art`（登録簿の全部）・`npm run render-kaiju-art -- nephirga`（1 体だけ）。開発サーバーを立て、画質「高」でソロのレイドに出て撮ります（クラウドの GPU の無い環境で 1 体 1 分ほど）。構図（天候・カメラの位置・画角・待つ秒数）は `src/data/raid-kaiju.ts` の `scene`。未公開の怪獣はその `?dev=` を付けて開き、解放の条件は見ません
+- 怪獣を足すとき: `docs/kaiju-roster.md` の「怪獣を 1 体足す手順」（登録簿 `src/data/raid-kaiju.ts` に 1 件、文を `src/data/i18n/ja.json` / `en.json` の `raidSelect.kaiju.<id>` に、画像を `public/kaiju-art/<id>.webp` に）
 
 ## BGM の差し替え
 
@@ -305,6 +305,28 @@ URL に `?net=local` を付けると、PeerJS の代わりに**同じブラウ�
 2. **確かめる**: `select version from skyraid.schema_migrations order by version;` に `skyraid_0005_daily` がある。`select relname, relrowsecurity, relforcerowsecurity from pg_class where relname = 'daily_scores';` が `t, t`。Advisors（Security）に新しい警告が出ていない（ビューは security invoker）
 3. **ゲームで有効にする**: `src/data/online.ts` の `DAILY_RANKING_ENABLED` を `true` にして公開する（`tests/daily-online.test.ts` の「サーバーの準備（SQL 0005）ができるまでは」の期待値も直す）。日替わりの画面の右にその日のランキングが出て、挑戦の後・起動・ログインのときにまだ送っていない最高が送られる
 4. 手元の Postgres で SQL の挙動を確かめるときは `supabase/tests/run.sh`（`daily-scores.sql` が権限・値の範囲・間引き・順位を確かめる）
+
+### レイドの記録のキーの決まり（10-2。0006 は未実行）
+
+新しいレイドの怪獣（10-3〜10-5）を足すたびに SQL を流さなくて済むように、レイドの記録の key を「決まり」で受け付ける SQL です。**流すまでは今までどおり、ゲームはヴォルガス（`normal`・`hard`）とネフィルガ（`nephirga:normal`・`nephirga:hard`）の記録だけを送ります**（新しい怪獣の記録はローカルの自己ベストに残ります）。
+
+1. **SQL を流す**: SQL エディタに `supabase/migrations/skyraid_0006_raid_key_rule.sql` の全文を貼り付けて実行。もう一度そのまま実行してもエラーにならないことも確かめる（冪等）。変えるのは `skyraid.records` の key の check だけ: レイドの key は `normal`・`hard`、または「怪獣の id:難易度」の形（id は英小文字で始まる英小文字・数字・`-` の 2〜24 文字、難易度は `normal` / `hard`）。今の記録はそのまま通る（レース・防衛戦の key は 0004 のまま）
+
+   ```sql
+   begin;
+   alter table skyraid.records drop constraint if exists records_key;
+   alter table skyraid.records add constraint records_key check (
+     (kind = 'race' and key in ('coast', 'canyon', 'harbor-speed', 'acro', 'night-harbor', 'peak-spiral'))
+     or (kind = 'raid' and (key in ('normal', 'hard') or key ~ '^[a-z][a-z0-9-]{1,23}:(normal|hard)$'))
+     or (kind = 'defense' and key in ('island:normal', 'island:hard', 'harbor:normal', 'harbor:hard'))
+   );
+   insert into skyraid.schema_migrations (version) values ('skyraid_0006_raid_key_rule') on conflict do nothing;
+   commit;
+   ```
+
+2. **確かめる**: `select version from skyraid.schema_migrations order by version;` に `skyraid_0006_raid_key_rule` がある。`select pg_get_constraintdef(oid) from pg_constraint where conname = 'records_key';` に `[a-z][a-z0-9-]{1,23}` が入っている
+3. **ゲームで有効にする**: 流したことを知らせてもらえれば、`src/data/online.ts` の `RAID_KEY_RULE_ENABLED` を `true` にします（`tests/raid-kaiju-registry.test.ts` の期待値も直す）。以後は、公開した怪獣の記録は SQL なしで送られ、ランキングの「レイド」の怪獣の選択に並ぶ（未公開の `?dev=` の怪獣は送らない）
+4. 手元の Postgres で SQL の挙動を確かめるときは `supabase/tests/run.sh`（`raid-key-rule.sql` が通る key・拒否する key を確かめる）
 
 ### 確かめること（連携中になった後）
 

@@ -1,7 +1,6 @@
 // モード選択の上に重ねるダイアログ（7-C で mode-select.ts から分けた）: チュートリアルの案内（4-11）・
 // フリーフライトのマップと天候（6-4・7-5）・レイドの怪獣選び（9-10d。raid-select.ts）・防衛戦の人数・マップ・難易度（7-2）。
 // 選択はセグメント（ui/segmented.ts。高さ 48px 以上・選択中は塗りつぶし）、決定は下のボタン
-import { prefetchKaiju2 } from './kaiju2-link';
 import { t } from '../core/i18n';
 import { DEFENSE_MAPS, type DefenseDifficulty } from '../data/defense';
 import { ISLAND_MAP, SELECTABLE_MAPS } from '../data/maps';
@@ -11,6 +10,8 @@ import { DEFAULT_WEATHER_ID, WEATHER_PRESETS, weatherLabel } from '../data/weath
 import { el } from './hud-dom';
 import { createButton } from './screen';
 import { RaidSelect } from './raid-select';
+import { prefetchRaidKaiju } from './raid-kaiju-link';
+import type { UnlockState } from '../progression/raid-unlock';
 import { noteScreenSwitch } from './screen-switch';
 import { Segmented } from './segmented';
 import type { TutorialStrings } from './tutorial-text';
@@ -56,6 +57,13 @@ export class ModeDialogs {
   defenseDifficulty: DefenseDifficulty = 'normal';
   /** 9-10d: レイドの自己ベスト（撃破までの最短の表示。Screens が差し込む） */
   raidBest: (kaiju: RaidKaijuId, difficulty: RaidDifficulty) => string | null = () => null;
+  /** 10-2: レイドの怪獣の解放の状態（Screens が差し込む。差し込むまでは全部解放） */
+  raidUnlock: (kaiju: RaidKaijuId) => UnlockState = () => ({
+    unlocked: true,
+    have: 0,
+    need: 0,
+    unlock: null,
+  });
 
   private readonly all: HTMLDivElement[] = [];
   private readonly tutorialWrap: HTMLDivElement;
@@ -145,9 +153,11 @@ export class ModeDialogs {
         else h.onRaid('solo', difficulty, kaiju);
       },
       best: (kaiju, difficulty) => this.raidBest(kaiju, difficulty),
+      // 10-2: 遅延チャンクの怪獣は選んだときに先読み（raid-kaiju-link.ts）
       onPick: (kaiju) => {
-        if (kaiju !== VORGAS) prefetchKaiju2();
+        prefetchRaidKaiju(kaiju);
       },
+      unlock: (kaiju) => this.raidUnlock(kaiju),
     });
     this.all.push(this.raid.wrap);
 

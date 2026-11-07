@@ -9,7 +9,7 @@ import { BADGE_REWARDS, comboId, SPLIT_BADGES } from '../data/badges-catalog';
 import { statShown } from '../data/badges-text';
 import { DEFENSE_DIFFICULTIES, DEFENSE_MAPS } from '../data/defense';
 import { RAID_DIFFICULTIES, RAID_RULES } from '../data/raid';
-import { RAID_KAIJU_IDS, raidRecordKey } from '../data/raid-kaiju';
+import { raidRecordKey, shownRaidKaiju } from '../data/raid-kaiju';
 import { statSum } from './stats';
 import { COURSES } from '../data/courses';
 import { DAILY_KINDS } from '../data/daily';
@@ -184,7 +184,7 @@ function extraRecordBadges(data: Readonly<SaveData>): Record<string, RecordBadge
   }
   // 速攻: 報酬の時間ボーナスの最も速い段（7 分未満）と同じ
   const fast = RAID_RULES.reward.timeBonus[0].underSeconds * 1000;
-  for (const kaiju of RAID_KAIJU_IDS) {
+  for (const { id: kaiju } of shownRaidKaiju()) {
     for (const diff of RAID_DIFFICULTIES) {
       const best = r.raidBestMs[raidRecordKey(kaiju, diff)];
       out[comboId.raidClear(kaiju, diff)] = yes(best !== undefined);

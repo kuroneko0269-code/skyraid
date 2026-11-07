@@ -57,15 +57,18 @@ export async function auditCards({ browser, base, touchContext, toTitle }) {
       continue;
     }
     await iosTap(page, cdp, sel);
-    // 開くのに時間がかかる画面（ハンガーの機体の用意など）を待つ（最大 5 秒）。押し抜けはこの間に起きている
+    // 開くのに時間がかかる画面（ハンガーの機体の用意など）を待つ。押し抜けはこの間に起きている。
+    // 10-2: 「何か変わるまで（最大 5 秒）」では、点検を通しで回すと（先の組で CPU が混む）ハンガーの開く途中（モード選択の
+    // フェードの間）で止まって NG になっていた。開くはずの画面・ダイアログが出るまで（最大 10 秒）待つ
     await page
       .waitForFunction(
-        () =>
-          document.querySelectorAll('.screen.is-shown').length !== 1 ||
-          !document.querySelector('.mode-select-screen.is-shown') ||
-          document.querySelector('.mode-prompt:not([hidden])') !== null,
-        null,
-        { timeout: 5000 },
+        (exp) =>
+          exp.startsWith('dialog:')
+            ? document.querySelector('.mode-prompt:not([hidden])') !== null
+            : document.querySelector(`.screen.is-shown.${exp}`) !== null &&
+              !document.querySelector('.mode-select-screen.is-shown'),
+        expect,
+        { timeout: 10000 },
       )
       .catch(() => undefined);
     await page.waitForTimeout(900);

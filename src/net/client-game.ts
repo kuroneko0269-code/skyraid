@@ -5,6 +5,7 @@
 // 5-4: 開始前のカウントダウン（止まって操作を無視し、入力も送らない）、つなぎ直している間と、戻ってからホストの
 // 位置合わせの復帰が届くまでは止まる。初心者保護つきの復帰は最大 HP を増やす。Three.js 非依存
 import type { Kaiju2StateMsg } from './codec-kaiju2';
+import type { RaidEventMsg, RaidExtraMsg } from './protocol';
 import { NET_CONFIG } from '../data/net';
 import { PVP_CONFIG } from '../data/pvp';
 import { PVP_SPAWN_POINTS } from '../data/pvp';
@@ -80,6 +81,9 @@ export class ClientGame extends NetGameEvents implements NetGame {
   kaijuVersion = 0;
   /** 9-6c: ネフィルガ */
   kaiju2: Kaiju2StateMsg | null = null;
+  /** 10-2: 怪獣ごとの差し込み口の最新の状態（kaijuVersion が変わったら新しい）と、まだ渡していないできごと（届いた順） */
+  raidExtra: (RaidExtraMsg & { readonly tick: number }) | null = null;
+  readonly raidEvents: RaidEventMsg[] = [];
   /** 防衛戦（7-2。最新の state） */
   defenseState: DefenseStateMsg | null = null;
   defenseVersion = 0;
@@ -146,6 +150,8 @@ export class ClientGame extends NetGameEvents implements NetGame {
       if (msg.type === 'state') this.onState(msg);
       else if (msg.type === 'event') this.handleEvent(msg);
       else if (msg.type === 'score') this.emitScore(msg);
+      // 10-2: 怪獣ごとの差し込み口のできごと（写しが takeRaidEvents で取り出す）
+      else if (msg.type === 'kx') this.raidEvents.push(msg);
       else if (msg.type === 'ruin') {
         // 6-6: 建物はホストの知らせだけで壊す（自分では判定しない）
         const field = this.deps.buildings;
@@ -308,6 +314,7 @@ export class ClientGame extends NetGameEvents implements NetGame {
       this.missileVersion++;
       this.kaiju = msg.kaiju;
       this.kaiju2 = msg.kaiju2;
+      if (msg.raidExtra) this.raidExtra = { ...msg.raidExtra, tick: msg.tick };
       this.kaijuVersion++;
       if (msg.defense) {
         this.defenseState = msg.defense;

@@ -2,20 +2,26 @@
 // 9-10d: レイドの怪獣選びの画像を、ゲームの描画で作る（`npm run render-kaiju-art [-- <怪獣の id>...]`）。
 // 開発サーバーを立て、画質「高」・?dev=kaiju-art でソロのレイドに出て、場面の秒数（src/data/kaiju-profiles.ts の
 // scene.waitSeconds）を待ってから、怪獣ごとの構図（天候・カメラ）で 1 枚撮る（src/ui/kaiju-art.ts）。
-// 出力は public/kaiju-art/<id>.webp（960 × 960）。フォトモードで撮った写真に差し替えるときは README の「怪獣の画像」
+// 出力は public/kaiju-art/<id>.webp（960 × 960）。フォトモードで撮った写真に差し替えるときは README の「怪獣の画像」。
+// 10-2: 怪獣の一覧は登録簿（src/data/raid-kaiju.ts の RAID_KAIJU）から読む（新しい怪獣も同じ手順で描ける）。未公開の怪獣は
+// その ?dev=<名前> を付けて開き、解放の条件は ?dev=kaiju-art のときは見ない。新しい怪獣は遅延チャンクで基準点を登録する
+// （src/missions/raid-kaiju-hooks.ts の artAnchor）
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'vite';
 import { pickBrowsers } from './audit-browsers.js';
 import { pickAssistPreset, seed, shown } from './audit-helpers.js';
 
 const OUT = new URL('../public/kaiju-art/', import.meta.url).pathname;
-const ALL = ['vorgas', 'nephirga'];
-const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));
-const ids = only.length > 0 ? ALL.filter((id) => only.includes(id)) : ALL;
 mkdirSync(OUT, { recursive: true });
 
 const server = await createServer({ server: { port: 0, strictPort: false }, logLevel: 'warn' });
 await server.listen();
+// 登録簿の怪獣（id と未公開の ?dev= の名前）
+const registry = await server.ssrLoadModule('/src/data/raid-kaiju.ts');
+const ALL = registry.RAID_KAIJU.map((k) => k.id);
+const devOf = new Map(registry.RAID_KAIJU.map((k) => [k.id, k.dev]));
+const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const ids = only.length > 0 ? ALL.filter((id) => only.includes(id)) : ALL;
 const base = server.resolvedUrls?.local[0] ?? 'http://localhost:5173/';
 // 描画はブラウザに任せる（クラウドの GPU の無い環境ではソフトウェアの描画。遅いが同じ絵になる）
 const browser = await pickBrowsers('chromium')[0].launch();
@@ -33,7 +39,8 @@ try {
     await seed(page);
     // 画質は「高」（手動の設定として。自動で下げない）
     await page.evaluate(() => localStorage.setItem('skyraid.quality', 'high'));
-    await page.goto(`${base}?dev=kaiju-art`);
+    const dev = devOf.get(id);
+    await page.goto(`${base}?dev=kaiju-art${dev ? `,${dev}` : ''}`);
     await shown(page, '.title-screen');
     await page.locator('.title-screen').click({ position: { x: 40, y: 360 } });
     await shown(page, '.mode-select-screen');

@@ -3,7 +3,7 @@
 import type { Input } from '../core/input';
 import type { StorageLike } from '../core/settings';
 import { loadTouchMode, saveTouchMode, shouldShowTouchControls } from '../core/touch-settings';
-import { createRotateHint, createTouchModeSelect } from './mobile';
+import { createTouchModeSelect } from './mobile';
 import { TouchControls } from './touch-controls';
 import { TiltSource } from './tilt-source';
 
@@ -24,7 +24,6 @@ export function createTouchLink(
 ): TouchLink {
   const controls = new TouchControls(parent, input);
   const tilt = new TiltSource(input);
-  createRotateHint(parent);
   let mode = loadTouchMode(storage);
   const coarsePointer =
     typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)') : null;

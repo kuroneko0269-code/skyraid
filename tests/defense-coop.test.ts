@@ -149,13 +149,14 @@ describe('4 人協力をインメモリで通す', () => {
     expect(mirror.base.hq.hp).toBe(client.defenseState?.hqHp);
     expect(mirror.base.aliveBits).toBe(client.defenseState?.aliveBits);
     // 帯域: ホスト → 各クライアントは協力レイドの実測（約 3.1KB/s）以下、クライアント → ホストは入力だけ
+    // （10-2: state に怪獣ごとの差し込み口の有無 1 バイトが増えた分 15Hz × 1 バイト = 15 B/s を足した）
     const net = m.lobby.net;
     const hostId = m.lobby.host.transportId;
     const time = seconds + 1;
     for (const c of m.lobby.clients) {
       const down = (net.bytes.get(`${hostId}>${c.transportId}`) ?? 0) / time;
       const up = (net.bytes.get(`${c.transportId}>${hostId}`) ?? 0) / time;
-      expect(down).toBeLessThanOrEqual(3150);
+      expect(down).toBeLessThanOrEqual(3165);
       expect(up).toBeLessThanOrEqual(1700);
     }
   }, 300_000);

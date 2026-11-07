@@ -243,6 +243,22 @@ export interface StateMsg {
   defense: DefenseStateMsg | null;
   /** 9-6c: 協力レイドのネフィルガ（ネフィルガのレイドでなければ null） */
   kaiju2: Kaiju2StateMsg | null;
+  /** 10-2: 怪獣ごとの差し込み口（net/raid-plugin.ts）の状態。ヴォルガス・ネフィルガ・PvP・防衛戦は無し */
+  raidExtra?: RaidExtraMsg;
+}
+
+/** 10-2: 怪獣ごとの差し込み口の中身（kaiju は RAID_KAIJU_IDS の番号。bytes の形は怪獣ごと） */
+export interface RaidExtraMsg {
+  kaiju: number;
+  bytes: Uint8Array;
+}
+
+/** 10-2: 怪獣ごとの差し込み口のできごと（確実に届く経路。tick はホストの tick） */
+export interface RaidEventMsg {
+  type: 'kx';
+  kaiju: number;
+  tick: number;
+  bytes: Uint8Array;
 }
 
 export const EVENT_KINDS = [
@@ -350,7 +366,8 @@ export type NetMessage =
   | ScoreMsg
   | LobbyMsg
   | ChatMsg
-  | RuinMsg;
+  | RuinMsg
+  | RaidEventMsg;
 
 /** 防衛戦（7-2）の敵の種類（dspawn・dkill の a / b） */
 export const DEFENSE_KIND = { fighter: 0, bomber: 1, cruise: 2 } as const;
