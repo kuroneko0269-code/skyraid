@@ -1,11 +1,20 @@
-// 10-3a: 白鯨アルビオンの入口（作っている間）。?dev=albion のときだけ、判定・形・値の表示の遅延チャンク（albion-runtime.ts）を
-// 起動時に読む。付けないときは何も読まず、何も変えない（遊ぶ人には見えない）。10-3b でレイドの登録と読み方をここに足す
+// 10-3b: 白鯨アルビオンの入口。起動時に読むのはここだけ（小さく保つ）: レイドの別の怪獣として登録し（怪獣選び・リプレイ・
+// 記録カードの題）、判定・形・HUD・文言・協力の遅延チャンク（albion-runtime.ts）を、アルビオンのレイドを始める前・リプレイを
+// 再生する前・協力の飛行の前（ホストは開始の前、クライアントはロビーで先読み）に読む（読み込み中・失敗の表示付き）。
+// 怪獣選びで選んだときは先読みする。?dev=albion（10-3a の確かめる場）のときは起動時に読み、フリーフライトにも出す
 import type { Scene } from 'three';
+import { lazyChunk } from '../core/lazy-chunk';
 import { parseDevFlags } from '../core/debug-flags';
 import type { GameState } from '../core/game-state';
 import type { ActiveMap } from '../missions/active-map';
+import { ALBION_VARIANT } from '../missions/albion-mission';
 import type { GamePlay } from '../missions/game-play';
+import { registerRaidKaijuHooks } from '../missions/raid-kaiju-hooks';
+import { registerRaidVariant } from '../missions/raid-variants';
 import type { QualityLink } from '../render/quality-link';
+import type { AlbionRuntime } from './albion-runtime';
+import { loadChunk, prefetchChunk } from './lazy-load';
+import { registerRaidKaijuChunk } from './raid-kaiju-link';
 
 export interface AlbionLinkParts {
   readonly search: string;
@@ -16,36 +25,62 @@ export interface AlbionLinkParts {
   readonly quality: QualityLink;
   readonly pvp: { readonly flying: boolean };
   readonly onRender: (fn: (alpha: number) => void) => void;
+  /** レイドの HUD を出しているか（H キー） */
+  readonly hud: { readonly visible: boolean };
 }
 
-/** 起動時: ?dev=albion なら遅延チャンクを読んでつなぐ */
-export function linkAlbionDev(p: AlbionLinkParts): void {
-  if (!parseDevFlags(p.search).has('albion')) return;
-  void import('./albion-runtime')
-    .then((m) => {
-      const { play, activeMap, game } = p;
-      m.startAlbion({
-        play,
-        scene: p.scene,
-        search: p.search,
-        ground: activeMap.ordnanceGround,
-        map: () => activeMap.def,
-        state: () => game.state,
-        inFreeFlight: () =>
-          play.runner === null &&
-          play.race === null &&
-          play.defense === null &&
-          play.practice === null &&
-          !p.pvp.flying,
-        onDetail: (fn) => {
-          p.quality.onPreset((preset) => {
-            fn(preset.aircraftDetail);
-          });
-        },
-        onRender: p.onRender,
+let parts: AlbionLinkParts | null = null;
+let runtime: AlbionRuntime | null = null;
+
+const chunk = lazyChunk(async (): Promise<AlbionRuntime> => {
+  const p = parts;
+  if (!p) throw new Error('albion: not linked');
+  const m = await import('./albion-runtime');
+  runtime ??= m.startAlbion({
+    play: p.play,
+    scene: p.scene,
+    search: p.search,
+    ground: p.activeMap.ordnanceGround,
+    map: () => p.activeMap.def,
+    state: () => p.game.state,
+    inFreeFlight: () =>
+      p.play.runner === null &&
+      p.play.race === null &&
+      p.play.defense === null &&
+      p.play.practice === null &&
+      !p.pvp.flying,
+    onDetail: (fn) => {
+      p.quality.onPreset((preset) => {
+        fn(preset.aircraftDetail);
       });
-    })
-    .catch((e: unknown) => {
+    },
+    onRender: p.onRender,
+    hudVisible: () => p.hud.visible,
+    devFree: parseDevFlags(p.search).has('albion'),
+  });
+  return runtime;
+});
+
+/** 起動時: 登録して部品をつなぐ（?dev=albion ならすぐ読む） */
+export function linkAlbion(p: AlbionLinkParts): void {
+  parts = p;
+  registerRaidVariant(ALBION_VARIANT);
+  registerRaidKaijuChunk(ALBION_VARIANT.id, {
+    load: () => loadChunk(chunk).then((rt) => rt !== null),
+    prefetch: () => {
+      prefetchChunk(chunk);
+    },
+  });
+  // 画像を撮るときの基準点（体の中心と水平の向き）
+  registerRaidKaijuHooks(ALBION_VARIANT.id, {
+    artAnchor: () => {
+      const b = runtime?.dev.kaiju.body;
+      if (!b?.visible) return null;
+      return { ...b.position, fx: -Math.sin(b.heading), fz: -Math.cos(b.heading) };
+    },
+  });
+  if (parseDevFlags(p.search).has('albion'))
+    chunk().catch((e: unknown) => {
       console.error('albion failed to load', e);
     });
 }

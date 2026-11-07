@@ -95,7 +95,15 @@ describe('白鯨アルビオンの確かめる場（10-3a）', () => {
     }
     const link = readFileSync(join('src', 'ui', 'albion-link.ts'), 'utf8');
     expect(
-      [...link.matchAll(/^import[^;]*?from '([^']+)'/gms)]
+      // 型だけの import（import type）は消えるので数えない
+      [...link.matchAll(/^import(?! type)[^;]*?from '([^']+)'/gms)]
+        .map((m) => m[1])
+        .filter((i) => i?.includes('albion')),
+      // 10-3b: 起動時に読むのはミッションの登録（名前と数値の参照だけ）
+    ).toEqual(['../missions/albion-mission']);
+    const mission = readFileSync(join('src', 'missions', 'albion-mission.ts'), 'utf8');
+    expect(
+      [...mission.matchAll(/^import[^;]*?from '([^']+)'/gms)]
         .map((m) => m[1])
         .filter((i) => i?.includes('albion')),
     ).toEqual([]);

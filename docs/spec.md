@@ -764,17 +764,23 @@
 - 怪獣選び・ロビー・勲章・ランキングは登録簿から並べる。未公開の怪獣は `?dev=<名前>` のときだけ。解放の条件（挙げた怪獣のうち N 体をその難易度以上でクリア。ソロの自己ベストか `win.of.raid-<怪獣>`）を満たすまで、怪獣選びは鍵の印・暗い画像・条件の札を出し、出撃のボタンを押せない（`src/progression/raid-unlock.ts`。`?dev=raid-lock` でネフィルガに仮の条件「ヴォルガスを高難度でクリア」）
 - 遅延読み込み: `src/ui/raid-kaiju-link.ts`（入口のモジュールが `registerRaidKaijuChunk` で読み方を登録。ソロのレイド・リプレイは怪獣の id だけで読む）。結果の表の部位の名前・画像の基準点は `src/missions/raid-kaiju-hooks.ts`
 - 共通の部品（`src/ai/raid-kit/`。新しい怪獣だけが使う）: 部位と破壊（`PartSet`）・子分（`MinionSwarm`）・弾幕（`Barrage`）と弾（`ShotPool`）・光線（`Beam`。なぎ払い / ロック警告の後の溜め撃ち）・バリアと瞬間移動（`Barrier`・`Warp`）。決まった計算（種の列・dt の足し算・状態は数と配列）
-- 協力の差し込み口: `src/net/raid-plugin.ts`（怪獣ごとのホストの本体と写しを登録）。state の末尾の欄 `raidExtra`（無しは 1 バイト）と確実な経路のメッセージ `kx`（`src/net/codec-extra.ts`）、中身の詰め方は `src/net/raid-kit-codec.ts`（部位・子分・撃った弾）。通信の版 12
+- 協力の差し込み口: `src/net/raid-plugin.ts`（怪獣ごとのホストの本体と写しを登録）。state の末尾の欄 `raidExtra`（無しは 1 バイト）と確実な経路のメッセージ `kx`（`src/net/codec-extra.ts`）、中身の詰め方は `src/net/raid-kit-codec.ts`（部位・子分・撃った弾）。通信の版 12（10-3b でアルビオンを足して 13）
 - 記録のキーの決まり: SQL 0006（`supabase/migrations/skyraid_0006_raid_key_rule.sql`）を流すとサーバーは「id:難易度」の形（`RAID_KEY_PATTERN`）を全部受け付ける。10-3a で流したので `RAID_KEY_RULE_ENABLED = true`（流す前は false で登録簿の `ranked` の怪獣だけ送っていた）
 - ヴォルガス・ネフィルガの挙動・数値・リプレイ・状態のハッシュは 10-2 の前と同じ（`tests/raid-golden.test.ts`）
 
-#### 白鯨アルビオン（10-3a。`?dev=albion` の裏だけ。設計は `docs/kaiju-roster.md` の「白鯨」、値は `src/data/albion.ts` / `src/data/albion-model.ts`、体は `src/entities/albion/`、本体と攻撃は `src/ai/albion-ai.ts`・`albion-attacks.ts`、形は `src/render/albion-model/`、確かめる場は `src/missions/albion-dev.ts`・`src/ui/albion-runtime.ts`。決定は `docs/decisions.md` の 10-3a）
+#### 白鯨アルビオン（10-3b で公開。10-3a は `?dev=albion` の裏だけ。設計は `docs/kaiju-roster.md` の「白鯨」、値は `src/data/albion.ts` / `src/data/albion-model.ts`、体は `src/entities/albion/`、本体と攻撃は `src/ai/albion-ai.ts`・`albion-attacks.ts`、形は `src/render/albion-model/`、確かめる場は `src/missions/albion-dev.ts`・`src/ui/albion-runtime.ts`。決定は `docs/decisions.md` の 10-3a）
 
 - 全長 640m の白い鯨。湾の上空の楕円の周回路（直線 2,000m × 2・右回りの半円 半径 420m。24 / 20 m/s・1 周 約 4.6 分）を、周回路の上の距離から式で進む。高さは海面から 800m ± 90m、床（地面・屋根・海面）から体の中心を 170m 以上（下限 90m）。戦域 4,300m の内側に周回路を置く
 - 部位（10-2 の `PartSet`）: 胴（壊れない・×0.8）・腹の巣 3（子分が出なくなる）・背びれ（叩きつけの扇 ×0.7）・尾（叩きつけなし・回り返し ×0.75）・頭（雲なし・弱点 ×1.5）。体力 32,500（仮）・段階 1〜3（60% / 30%。段階が変わると 3 秒吠える）
 - 攻撃（予兆と見た目まで。数値は仮）: 真上への潮吹き（背の上の柱 半径 120m・高さ 600m・40）・尾の叩きつけ（尾の後ろの扇 300m・左右 50°・50）・雲（段階 2 から。体の周り 800m に 20 秒）
 - 子分（10-2 の `MinionSwarm`）: 腹の巣ごとに 20 秒ごとに 2 匹・同時に 12 匹まで・体力 72・自機の周りを回って 14m 以内で体当たり 10（当たった子分は消える）・寿命 60 秒。撃墜は攻撃した人ごとに数える。InstancedMesh でまとめて描く
 - `?dev=albion` のときだけ遅延チャンク `albion-runtime`（プリキャッシュしない）を読み、フリーフライトに出す。値の表示（状態・段階・次の攻撃・子分の数など）。`&abhp=` `&abbreak=` `&abroute=bay`。付けないときは読み込み・挙動・リプレイのハッシュとも今までと同じ。フリーフライトの差し込み口（`src/missions/free-extra.ts`）は複数付けられるようにした（1 つなら今までと同じ）
+- 10-3b（レイド・協力・調整・公開。数値は `src/data/albion.ts`・`src/data/albion-raid.ts`、表は `docs/kaiju-roster.md` の「10-3b」、決定は `docs/decisions.md` の 10-3b）:
+  - ソロのレイド `raidAlbion`（`src/missions/albion-mission.ts`・`albion-raid.ts`。港湾都市の湾の周回路）: 体力 6,500（高難度 ×1.3）・制限時間 通常 15 分 / 高難度 12 分（時間切れで失敗）・残機 3。撃破で海へ落ちる。雲の中はロックの距離 ×0.6。HUD（体力・段階と残り時間・子分の数・部位 6 つ・予兆の警告・攻めどき）・ブリーフィング（`src/ui/albion-hud.ts`・`albion-briefing.ts`。文言は `src/data/i18n/albion/`）
+  - 子分の脅威（推奨案）: 180 m/s・110°/秒で人の進む先へ寄り、14m で体当たり 10。出す間隔 18 秒（段階・高難度で短く）
+  - 協力（`src/net/albion-coop.ts`・`albion-codec.ts`）: 部位は怪獣の部位、子分は「ほかの対象」としてロック・当たり。潮吹き・尾はいちばん近い人だけ、子分は人ごとに追う。人数の補正 HP ×1 / ×1.6 / ×2.2 / ×2.8・子分の上限 12〜16。state は子分 16 匹でも約 230 バイト（15Hz で 3.4KB/s）。結果の表は 胴・巣・背びれ・尾・頭・子分
+  - 登録簿 `albion`（協力の番号 2・記録のキー `albion:normal` / `albion:hard`・SQL 0006 の決まりで送る）。起動時に読むのは入口 `src/ui/albion-link.ts` とミッションの登録だけで、判定・形・HUD・協力は遅延チャンク `albion-runtime`（プリキャッシュする）
+  - 勲章: 標準の 10 個 + 腹の巣をすべて壊して倒した・子分を累計 100 / 500 匹撃墜した（`kill.t.minion`）
 
 #### 港湾都市と破壊される建物（6-4。マップは `src/data/maps.ts`、地形は `src/data/terrain-harbor.ts` / `src/render/terrain-gen/harbor-shape.ts`、街は `src/data/city.ts` / `src/render/city/`、建物の判定は `src/combat/buildings.ts` / `city-damage.ts`、今のマップは `src/missions/active-map.ts`。決定は `docs/decisions.md` の 6-4）
 

@@ -86,14 +86,26 @@ export function inCloud(body: AlbionBody, p: Readonly<Vec3>): boolean {
   return d <= A.cloud.radius;
 }
 
-/** 使える攻撃と重み（値の表示・選び方）。target は狙う人（いなければ null: 潮吹きと雲だけ） */
+/**
+ * 使える攻撃と重み（値の表示・選び方）。target は狙う人（いなければ null: 潮吹きと雲だけ）。
+ * 同じ攻撃は 3 回続けない（10-3b: ほかに候補が無いときは続けてよい。段階 1 で背の上・真後ろに誰もいないと潮吹きしか無く、
+ * 2 回の後に攻撃しなくなっていた）
+ */
 export function attackWeights(
   k: AttackChooser,
   target: Readonly<Vec3> | null,
 ): { attack: AlbionAttack; weight: number }[] {
+  const all = candidates(k, target);
+  const fresh = all.filter((c) => !(k.lastAttack === c.attack && k.repeat >= 2));
+  return fresh.length > 0 ? fresh : all;
+}
+
+function candidates(
+  k: AttackChooser,
+  target: Readonly<Vec3> | null,
+): { attack: AlbionAttack; weight: number }[] {
   const out: { attack: AlbionAttack; weight: number }[] = [];
-  const allow = (a: AlbionAttack): boolean =>
-    !(k.lastAttack === a && k.repeat >= 2) && !k.disabled(a);
+  const allow = (a: AlbionAttack): boolean => !k.disabled(a);
   if (allow('spout')) {
     let w = 1;
     if (target) {

@@ -89,13 +89,14 @@ describe('勲章の番号と並び', () => {
     const raid = BADGES.filter((b) => b.group === 'raid');
     const kaijuOf = (id: string): number =>
       RAID_KAIJU_IDS.findIndex(
-        (k) => id.includes(`.${k}.`) || (k === 'nephirga' && id === 'nephirgaParts'),
+        // 怪獣ごとの勲章（nephirgaParts・10-3b の albionNests など）は id が怪獣の名前で始まる
+        (k) => id.includes(`.${k}.`) || id.startsWith(k),
       );
     const idx = raid.map((b) => kaijuOf(b.id));
     for (let i = 1; i < idx.length; i++)
       expect(idx[i] ?? 0).toBeGreaterThanOrEqual(idx[i - 1] ?? 0);
     expect(idx[0]).toBe(-1);
-    expect(raid.at(-1)?.id).toBe('nephirgaParts');
+    expect(raid.at(-1)?.id).toBe('albionMinions500');
   });
 
   it('9-10c で分けた id・消した id', () => {

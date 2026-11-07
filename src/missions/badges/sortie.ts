@@ -4,7 +4,7 @@
 // 記録しない飛行（チュートリアル・PvP・協力）は見ない（協力・PvP は対戦の終わりの集計: judgeMatch）
 import { BADGE_CONFIG } from '../../data/badges';
 import { KAIJU2_PARTS } from '../../data/kaiju2';
-import { NEPHIRGA_ID } from '../../data/raid-kaiju';
+import { ALBION_RAID_ID, NEPHIRGA_ID } from '../../data/raid-kaiju';
 import type { ReplayControls, ReplayStart } from '../../replay/types';
 import { freeExtrasOf } from '../free-extra';
 import type { GamePlay } from '../game-play';
@@ -146,6 +146,16 @@ function nephirgaBroken(play: GamePlay): number {
   return 0;
 }
 
+/** 10-3b: アルビオンの腹の巣が全部壊れているか（遅延チャンクなので状態の根の印で見る） */
+function albionNestsGone(play: GamePlay): boolean {
+  for (const extra of freeExtrasOf(play)) {
+    if (!extra.active) continue;
+    const root = extra.stateRoot;
+    if ('albionNestsGone' in root && root.albionNestsGone === true) return true;
+  }
+  return false;
+}
+
 /**
  * 飛行の終わりに取った勲章（段階なし）を決める。start は初期状態、assist は補助の組「ふつう」以上だったか
  * （始めた時点の設定・自動射撃を使っていない・本番は終わりの設定も）。記録から取れるもの（クリア・ランク）は progression/badges.ts
@@ -174,6 +184,8 @@ export function judgeSortie(
   // ネフィルガ（ソロのレイド・キャンペーンの決戦）の部位をすべて壊して倒した
   const nephirga = start.raidKaiju === NEPHIRGA_ID || start.missionId === 'finale';
   if (success && nephirga && nephirgaBroken(play) >= KAIJU2_PARTS.length) out.push('nephirgaParts');
+  // 10-3b: アルビオン（ソロのレイド）の腹の巣を 3 つとも壊して倒した
+  if (success && start.raidKaiju === ALBION_RAID_ID && albionNestsGone(play)) out.push('albionNests');
   const race = play.race?.result;
   if (start.mode === 'race' && race?.outcome === 'finished' && race.missed === 0)
     out.push('cleanRun');

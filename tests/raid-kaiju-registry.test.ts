@@ -23,7 +23,10 @@ import { useLocale } from './i18n-helpers';
 
 describe('10-2: レイドの怪獣の登録簿', () => {
   it('9-6c までの id・協力の番号・記録のキーのまま', () => {
-    expect(RAID_KAIJU_IDS).toEqual(['vorgas', 'nephirga']);
+    // 10-3b: アルビオンは最後に足した（協力の番号 2）
+    expect(RAID_KAIJU_IDS).toEqual(['vorgas', 'nephirga', 'albion']);
+    expect(raidKaijuIndex('albion')).toBe(2);
+    expect(raidRecordKey('albion', 'hard')).toBe('albion:hard');
     expect(raidKaijuOf(0)).toBe('vorgas');
     expect(raidKaijuOf(1)).toBe('nephirga');
     expect(raidKaijuOf(9)).toBe('vorgas');
@@ -52,20 +55,37 @@ describe('10-2: レイドの怪獣の登録簿', () => {
 
   it('ランキング: SQL 0006 を流した（10-3a）。流す前は ranked の怪獣だけ、流した後は「id:難易度」の怪獣も。未公開は送らない', () => {
     expect(RAID_KEY_RULE_ENABLED).toBe(true);
-    expect(RANKED_RAID_KAIJU).toEqual(['vorgas', 'nephirga']);
-    expect(validKeys('raid')).toEqual(['normal', 'hard', 'nephirga:normal', 'nephirga:hard']);
+    expect(RANKED_RAID_KAIJU).toEqual(['vorgas', 'nephirga', 'albion']);
+    expect(validKeys('raid')).toEqual([
+      'normal',
+      'hard',
+      'nephirga:normal',
+      'nephirga:hard',
+      'albion:normal',
+      'albion:hard',
+    ]);
     const base = RAID_KAIJU[1] as RaidKaijuDef;
     const list: RaidKaijuDef[] = [
       ...RAID_KAIJU,
-      { ...base, id: 'albion', ranked: false },
+      { ...base, id: 'gourai', ranked: false },
       { ...base, id: 'xenolith', ranked: false, dev: 'kaiju5' },
     ];
     expect(rankedOf(list, false)).toEqual(['vorgas', 'nephirga']);
-    expect(rankedOf(list, true)).toEqual(['vorgas', 'nephirga', 'albion']);
+    expect(rankedOf(list, true)).toEqual(['vorgas', 'nephirga', 'albion', 'gourai']);
     expect(
       checkRecord({
         kind: 'raid',
         key: 'albion:normal',
+        aircraftId: 'kestrel',
+        valueMs: 300000,
+        detail: {},
+        clientVersion: 'v',
+      }),
+    ).toBeNull();
+    expect(
+      checkRecord({
+        kind: 'raid',
+        key: 'gourai:normal',
         aircraftId: 'kestrel',
         valueMs: 300000,
         detail: {},
@@ -112,13 +132,15 @@ describe('10-2: レイドの怪獣の登録簿', () => {
     );
   });
 
-  it('勲章: 怪獣のまとまりはレイドのカテゴリの中で登録簿の順・怪獣ごとの勲章はまとまりの最後（ネフィルガの部位）', () => {
+  it('勲章: 怪獣のまとまりはレイドのカテゴリの中で登録簿の順・怪獣ごとの勲章はまとまりの最後（ネフィルガの部位・アルビオンの巣と子分）', () => {
     const raid = BADGE_LIST.filter((b) => b.group === 'raid').map((b) => b.id);
     const first = (s: string): number => raid.findIndex((id) => id.includes(s));
     expect(first('vorgas')).toBeLessThan(first('nephirga'));
-    const nephirga = raid.filter((id) => id.includes('nephirga') || id === 'nephirgaParts');
+    expect(first('nephirga')).toBeLessThan(first('albion'));
+    const nephirga = raid.filter((id) => id.includes('nephirga'));
     expect(nephirga.at(-1)).toBe('nephirgaParts');
-    expect(raid.at(-1)).toBe('nephirgaParts');
+    expect(raid.indexOf('nephirgaParts')).toBeLessThan(first('albion'));
+    expect(raid.slice(-3)).toEqual(['albionNests', 'albionMinions100', 'albionMinions500']);
     // 収集はレイドの後（怪獣を足すと番号がずれるのは収集だけ）
     const collect = BADGE_LIST.findIndex((b) => b.group === 'collect');
     const lastRaid = BADGE_LIST.findLastIndex((b) => b.group === 'raid');

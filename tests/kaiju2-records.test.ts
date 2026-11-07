@@ -36,9 +36,17 @@ describe('ネフィルガの記録のキー', () => {
   });
 
   it('オンライン: 0003 を流した後（9-5d の事前修正）はネフィルガも送る・受け付ける', () => {
-    expect(RANKED_RAID_KAIJU).toEqual(['vorgas', 'nephirga']);
+    // 10-3b: アルビオンは SQL 0006（キーの決まり）で受け付ける
+    expect(RANKED_RAID_KAIJU).toEqual(['vorgas', 'nephirga', 'albion']);
     expect(rankedRaidKaiju('nephirga')).toBe(true);
-    expect(validKeys('raid')).toEqual(['normal', 'hard', 'nephirga:normal', 'nephirga:hard']);
+    expect(validKeys('raid')).toEqual([
+      'normal',
+      'hard',
+      'nephirga:normal',
+      'nephirga:hard',
+      'albion:normal',
+      'albion:hard',
+    ]);
     expect(checkRecord(raidRecord('nephirga:normal', 180, 'kestrel', 'A'))).toBeNull();
     expect(checkRecord(raidRecord('normal', 180, 'kestrel', 'A'))).toBeNull();
   });
@@ -62,7 +70,10 @@ describe('マイグレーション 0003（ネフィルガのランキング）',
   });
 
   it('レイドの key はすべての怪獣 × 難易度（クライアントのキーと同じ）', () => {
-    const keys = RAID_KAIJU_IDS.flatMap((k) => RAID_DIFFICULTIES.map((d) => raidRecordKey(k, d)));
+    // 10-3b: 0003 の時点の怪獣（アルビオンからは 0006 のキーの決まりで受け付ける）
+    const keys = RAID_KAIJU_IDS.filter((k) => k === 'vorgas' || k === 'nephirga').flatMap((k) =>
+      RAID_DIFFICULTIES.map((d) => raidRecordKey(k, d)),
+    );
     expect(sql).toContain(`kind = 'raid' and key in (${keys.map((k) => `'${k}'`).join(', ')})`);
     for (const kind of ['race', 'defense'] as const)
       expect(sql).toContain(

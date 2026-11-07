@@ -567,6 +567,10 @@ bandit: 変更後（速度合わせ ON）（シード 1）
 - 変えない。すぐ揃いすぎることは無い。9-10b で勲章を大きく増やすので、そのときにこの表で報酬の合計を決め直す
 - 9-10b: 勲章の報酬の合計は 99,700 CR（9-10 の 46,500 + 9-10b の 53,200）= 使い道の 32%。9-10b の分は通算の記録（その日から 0 で数える）と組み合わせで、遊んだ量に応じて少しずつ入る。入れた直後に増えるのは記録からさかのぼれる組み合わせ（レイドのクリアと 7 分未満・防衛戦の 10 波。最大 12 個 = 1,200 CR）と、それで越えた節目だけ
 
+## 10-3b 白鯨アルビオンの手応え
+
+ソロ（役 4 つ × 補助の組 かんたん / ふつう × 通常 / 高難度・各 20 シード）と協力（1〜4 人 × 役 4 つ・各 10 シード）の表、手応えの指標（1 分あたりの攻撃・体当たり・攻撃 1 回あたりの被弾率・クリア時の体力の減り・撃墜の内訳）と目安の根拠は `docs/kaiju-roster.md` の「10-3b」。使い方: `VITE_TUNE=1 VITE_TUNE_ROLE=skilled VITE_TUNE_DIFF=normal VITE_TUNE_PRESET=easy VITE_TUNE_SEEDS=20 npx vitest run tests/albion-tune.test.ts --silent=false`（協力は `tests/albion-coop-tune.test.ts`。`VITE_TUNE_PLAYERS`・`VITE_TUNE_LIVES=0`・`VITE_TUNE_JOBS=minion,body`）
+
 ## ツール（`npm run analyze-replay`）
 
 ```

@@ -14,7 +14,8 @@ import { RAID_OUTCOME } from '../net/raid-host';
 import { KAIJU2_OUTCOME } from '../net/kaiju2-host';
 import { Kaiju2Mirror } from '../net/kaiju2-mirror';
 import { ClientGame } from '../net/client-game';
-import { findRaidPlugin, type RaidPluginMirror } from '../net/raid-plugin';
+import { findRaidPlugin, type RaidPlugin, type RaidPluginMirror } from '../net/raid-plugin';
+import { loadRaidKaiju } from './raid-kaiju-link';
 import { RAID_RULES } from '../data/raid';
 import { KAIJU2_TARGETS } from '../data/kaiju2-raid';
 import { k2list, k2t } from '../data/kaiju2-text';
@@ -67,6 +68,8 @@ export class RaidFlight {
   private kaiju2Mirror: Kaiju2Mirror | null = null;
   /** 10-2: 差し込み口（net/raid-plugin.ts）の怪獣の写し（クライアント。表示は怪獣の遅延チャンクが読む） */
   pluginMirror: RaidPluginMirror | null = null;
+  private plugin: RaidPlugin | null = null;
+  private disposed = false;
   readonly kaiju: RaidKaijuId;
   private readonly marks2: string[][] = KAIJU2_TARGETS.map(() => []);
   private readonly coop2 = {
@@ -99,13 +102,52 @@ export class RaidFlight {
       deps.briefing.reset(deps.hard, { title: k2t('briefingTitle'), lines: k2list('briefing') });
       this.attachKaiju2();
     } else if (plugin) {
-      // 10-2: 差し込み口の怪獣（ブリーフィングの文・表示元は怪獣のタスクで足す）。クライアントは写しを作る
+      // 10-2: 差し込み口の怪獣。クライアントは写しを作る。10-3b: 表示（形・HUD）とロックの対象をつなぐ
       deps.briefing.reset(deps.hard);
-      if (!(net instanceof HostGame)) this.pluginMirror = plugin.createMirror(deps.kaijuGround);
+      this.attachPlugin(plugin);
+    } else if (raidKaijuDef(this.kaiju).lazy && this.kaiju !== NEPHIRGA_ID) {
+      // 10-3b: 差し込み口の怪獣の遅延チャンクがまだ（クライアントがロビーで読み終える前に始まった）: 読んでからつなぐ
+      deps.briefing.reset(deps.hard);
+      void loadRaidKaiju(this.kaiju).then((ok) => {
+        const p = ok && !this.disposed ? findRaidPlugin(this.kaiju) : null;
+        if (p) this.attachPlugin(p);
+      });
     } else {
       deps.briefing.reset(deps.hard);
       this.attachKaiju();
     }
+  }
+
+  /** 10-3b: 差し込み口の怪獣: クライアントは写しを作り、表示（怪獣の遅延チャンク）とロックの対象をつなぐ */
+  private attachPlugin(plugin: RaidPlugin): void {
+    const host = this.net instanceof HostGame ? (this.net.raidX?.host ?? null) : null;
+    const mirror = host ? null : plugin.createMirror(this.deps.kaijuGround);
+    this.pluginMirror = mirror;
+    this.plugin = plugin;
+    const text = plugin.briefing?.();
+    if (text) this.deps.briefing.reset(this.deps.hard, text);
+    const marks = new Map<number, string[]>();
+    plugin.attachView?.({
+      host,
+      mirror,
+      targeted: () => this.net.kaijuTarget === this.net.localId,
+      lockMarks: () => {
+        marks.clear();
+        for (const id of this.playerIds()) {
+          if (id === this.net.localId) continue;
+          const part = this.net.lockPartOf(id);
+          if (part < 0) continue;
+          const list = marks.get(part) ?? [];
+          list.push(playerColorCss(id));
+          marks.set(part, list);
+        }
+        return marks;
+      },
+      setLockTargets: (parts, minions) => {
+        this.mirror.setKaijuTargets(parts);
+        this.mirror.setDefenseTargets(minions);
+      },
+    });
   }
 
   /** 9-6c: ネフィルガ: ホストは本体、クライアントは写しを表示元にし、部位をロックの対象にする */
@@ -261,6 +303,8 @@ export class RaidFlight {
   }
 
   dispose(): void {
+    this.disposed = true;
+    this.plugin?.attachView?.(null);
     if (this.kaiju === NEPHIRGA_ID) this.deps.kaiju2Source(null);
     this.deps.kaijuSource(null);
     this.deps.briefing.hide();

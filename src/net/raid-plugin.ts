@@ -7,6 +7,7 @@
 // 生まれた時刻・場所・種だけをできごとで送ってクライアントで同じ計算をする。位置を送る物は数を絞り、怪獣の位置からの相対で
 // int16 に詰める（net/raid-kit-codec.ts）。判定（当たり・撃墜・部位の破壊）はホストだけ。Three.js・DOM 非依存
 import type { PvpArena } from '../combat/pvp-arena';
+import type { CombatTarget } from '../combat/target';
 import type { GroundHeightFn } from '../entities/aircraft';
 import type { GameSettings, ScoreEntry } from './protocol';
 
@@ -46,11 +47,37 @@ export interface RaidPluginHostContext {
   readonly seed: number;
 }
 
+/**
+ * 10-3b: 協力の飛行の表示の口（ui/raid-flight.ts が作って渡す）: ホストは本体、クライアントは写しを怪獣の遅延チャンクの表示
+ * （形・HUD）に出し、部位と子分をロックの対象にする
+ */
+export interface RaidPluginView {
+  /** ホストの本体（クライアントは null） */
+  readonly host: RaidPluginHost | null;
+  /** クライアントの写し（ホストは null） */
+  readonly mirror: RaidPluginMirror | null;
+  /** 自分が攻撃の対象か（HUD の「TARGET」） */
+  targeted(): boolean;
+  /** 他の人がロックしている部位（ロックの番号 → 色。自分は入れない） */
+  lockMarks(): ReadonlyMap<number, readonly string[]>;
+  /** ロックの対象: 部位（入力の targetId は KAIJU_ID_BASE + kaijuIndex）と子分（DEFENSE_ID_BASE + 添字） */
+  setLockTargets(parts: readonly LockablePart[], minions: readonly CombatTarget[]): void;
+}
+
+/** ロックできる部位（PvpMirror の KaijuLockable と同じ形） */
+export interface LockablePart extends CombatTarget {
+  readonly kaijuIndex: number;
+}
+
 export interface RaidPlugin {
   /** 登録簿（src/data/raid-kaiju.ts）の id */
   readonly kaiju: string;
   createHost(ctx: RaidPluginHostContext): RaidPluginHost;
   createMirror(ground: (x: number, z: number) => number): RaidPluginMirror;
+  /** 10-3b: 協力の飛行の表示（null で外す） */
+  attachView?(view: RaidPluginView | null): void;
+  /** 10-3b: 協力の開始前のブリーフィングの題と文（今の言語。無ければヴォルガスの文） */
+  briefing?(): { readonly title: string; readonly lines: readonly string[] };
 }
 
 /** state の怪獣ごとの欄の上限（バイト。state 全体を 1 つの送り先に収める） */

@@ -1,4 +1,4 @@
-/* 10-3a: ?dev=albion の値の表示（開発用。遊ぶ人には出ない） */
+/* 10-3a: ?dev=albion の値の表示（開発用。遊ぶ人には出ない）。10-3b: レイドのブリーフィングと HUD の部位の枠 */
 .albion-dev {
   position: fixed;
   left: calc(8px + env(safe-area-inset-left, 0px));
@@ -26,4 +26,41 @@
 
 .albion-dev.is-collapsed {
   opacity: 0.6;
+}
+
+/* 10-3b: レイドのブリーフィング（出撃の直後に画面の下。タップで閉じる。ネフィルガと同じ形） */
+.albion-briefing {
+  position: fixed;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(640px, calc(100cqw - 32px));
+  max-height: 46cqh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  pointer-events: auto;
+}
+
+.albion-briefing[hidden] {
+  display: none;
+}
+
+.albion-briefing-lines {
+  margin: 6px 0 4px;
+  padding-left: 1.2em;
+}
+
+.albion-briefing-tap {
+  font-size: 11px;
+  opacity: 0.7;
+  text-align: right;
+}
+
+/* レイドの HUD の部位の一覧（ロック中は枠） */
+.albion-hud .kaiju-coop-part.is-own {
+  border-color: rgba(110, 240, 255, 0.85);
 }

@@ -9,10 +9,13 @@ import {
   type AlbionAction,
   type AlbionAttack,
 } from '../data/albion';
+import { ALBION_RAID_CONFIG } from '../data/albion-raid';
 import type { Vec3 } from '../flight/math';
 import { AlbionBody, type AlbionGround } from '../entities/albion/albion-body';
 import type { AlbionRoute } from '../entities/albion/albion-route';
-import { MinionSwarm, type Minion } from './raid-kit/minions';
+import { MinionSwarm } from './raid-kit/minions';
+import { stepAlbionMinions } from './albion-minions';
+export { nearest } from './albion-minions';
 import { PartSet } from './raid-kit/parts';
 import {
   attackTimes,
@@ -23,14 +26,17 @@ import {
   spoutRadius,
 } from './albion-attacks';
 
-/** 狙う人（ソロは自機） */
+/** 狙う人（ソロは自機。10-3b: 協力は 1 人ずつ。id はプレイヤー ID） */
 export interface AlbionTarget {
   readonly position: Readonly<Vec3>;
   readonly active: boolean;
+  readonly id?: number;
+  /** 10-3b: 速度（子分が進む先を見越して寄る。無ければ今の位置へ） */
+  readonly velocity?: Readonly<Vec3>;
 }
 
-/** 当たり（自機へのダメージ。kind は攻撃か子分の体当たり） */
-export type AlbionHit = (kind: AlbionAttack | 'ram', damage: number) => void;
+/** 当たり（ダメージ。kind は攻撃か子分の体当たり、who は当たった人） */
+export type AlbionHit = (kind: AlbionAttack | 'ram', damage: number, who: AlbionTarget) => void;
 
 const NO_HIT: AlbionHit = () => undefined;
 
@@ -60,9 +66,14 @@ export class AlbionKaiju {
   elapsed = 0;
   /** 倒れない（確かめる場。体力は 1% で止まる） */
   immortal = false;
+  /** 10-3b: 難易度の倍率（攻撃の間隔・当たりのダメージ・子分の間隔） */
+  intervalScale = 1;
+  damageScale = 1;
+  minionIntervalScale = 1;
 
   constructor(ground: AlbionGround) {
     this.body = new AlbionBody(ground);
+    this.swarm.limit = ALBION_RAID_CONFIG.minionCap[0] ?? C.minions.cap;
   }
 
   /** 出す（種・周回路・周回路の上の位置・体力の割合・壊れた部位で始める） */
@@ -139,12 +150,19 @@ export class AlbionKaiju {
     return ALBION_NESTS.every((n) => this.parts.isBroken(n.part));
   }
 
-  private get phaseIndex(): number {
+  get phaseIndex(): number {
     return Math.min(2, this.phase - 1);
   }
 
-  /** 1 ステップ */
-  step(dt: number, target: AlbionTarget, onHit: AlbionHit = NO_HIT): void {
+  /**
+   * 1 ステップ。target は攻撃を向ける人（ソロは自機）、crowd は子分が追う・体当たりする人の一覧（協力。省略はソロの target だけ）
+   */
+  step(
+    dt: number,
+    target: AlbionTarget,
+    onHit: AlbionHit = NO_HIT,
+    crowd: readonly AlbionTarget[] = [target],
+  ): void {
     if (!this.body.visible) return;
     this.elapsed += dt;
     const ph = this.phaseIndex;
@@ -159,7 +177,24 @@ export class AlbionKaiju {
     this.stepAction(dt, target, onHit);
     if (this.cloudLeft > 0) this.cloudLeft = Math.max(0, this.cloudLeft - dt);
     this.stepPose(dt);
-    this.stepMinions(dt, target, onHit);
+    stepAlbionMinions(this, dt, crowd, onHit);
+  }
+
+  /** 10-3b: 協力の写し: 体と姿勢と子分の飛び方だけ進める（攻撃の選び方・当たり・子分を出すのはホスト） */
+  stepMirror(dt: number): void {
+    if (!this.body.visible) return;
+    const slow = this.action === 'windup' && this.attack === 'spout' ? 0.6 : 1;
+    this.body.step(dt, (C.phases.speed[this.phaseIndex] ?? 1) * slow, this.mul('turnSpeed'));
+    this.actionTime += dt;
+    if (this.cloudLeft > 0) this.cloudLeft = Math.max(0, this.cloudLeft - dt);
+    this.stepPose(dt);
+    for (const m of this.swarm.minions) {
+      if (!m.active) continue;
+      m.age += dt;
+      m.position.x += m.velocity.x * dt;
+      m.position.y += m.velocity.y * dt;
+      m.position.z += m.velocity.z * dt;
+    }
   }
 
   private setAction(a: AlbionAction, attack: AlbionAttack | null): void {
@@ -220,7 +255,8 @@ export class AlbionKaiju {
           if (hit) {
             this.hitDone = true;
             this.hitsOnPlayer++;
-            onHit(a, a === 'spout' ? C.attacks.spout.damage : C.attacks.slam.damage);
+            const base = a === 'spout' ? C.attacks.spout.damage : C.attacks.slam.damage;
+            onHit(a, base * this.damageScale, target);
           }
         }
         if (t >= attackTimes(a).active) this.setAction('recover', a);
@@ -228,7 +264,8 @@ export class AlbionKaiju {
       case 'recover':
         if (!a) return;
         if (t >= attackTimes(a).recover) {
-          let cd = C.attackInterval * (C.phases.interval[this.phaseIndex] ?? 1);
+          let cd =
+            C.attackInterval * (C.phases.interval[this.phaseIndex] ?? 1) * this.intervalScale;
           if (a === 'spout' && this.nestsGone) cd *= C.attacks.spout.nestsGoneInterval;
           this.setAction('idle', null);
           this.cooldown = cd;
@@ -257,53 +294,6 @@ export class AlbionKaiju {
       act === 'roar' || (a === 'cloud' && act === 'windup') ? 1 : 0,
       1.5,
     );
-  }
-
-  private stepMinions(dt: number, target: AlbionTarget, onHit: AlbionHit): void {
-    const sw = this.swarm;
-    const before = sw.spawned;
-    const p = target.active ? target.position : null;
-    sw.step(
-      dt,
-      this.body,
-      (part) => this.parts.isBroken(part),
-      () => p,
-      this.random.next,
-      this.action !== 'roar',
-    );
-    // 段階の間隔の倍率（出した直後に次までの秒数を縮める）
-    if (sw.spawned !== before)
-      sw.timer -= C.minions.interval * (1 - (C.phases.minionInterval[this.phaseIndex] ?? 1));
-    const floorPad = C.minionFloor;
-    for (const m of sw.minions) {
-      if (!m.active) continue;
-      this.keepMinionInside(m, floorPad);
-      if (p && m.age > C.minions.dropSeconds) {
-        const d = Math.hypot(m.position.x - p.x, m.position.y - p.y, m.position.z - p.z);
-        if (d <= C.minionRam.radius) {
-          // 体当たり: 当たった子分は散って消える（撃墜に数えない）
-          m.active = false;
-          this.rams++;
-          onHit('ram', C.minionRam.damage);
-        }
-      }
-    }
-  }
-
-  /** 子分を床・海面の上と戦域の中に保つ */
-  private keepMinionInside(m: Minion, pad: number): void {
-    const floor = this.body.floorAt(m.position.x, m.position.z) + pad;
-    if (m.position.y < floor) {
-      m.position.y = floor;
-      if (m.velocity.y < 0) m.velocity.y = 0;
-    }
-    const dx = m.position.x - this.body.arenaX;
-    const dz = m.position.z - this.body.arenaZ;
-    const r = Math.hypot(dx, dz);
-    if (r > C.arena.hard) {
-      m.position.x = this.body.arenaX + (dx * C.arena.hard) / r;
-      m.position.z = this.body.arenaZ + (dz * C.arena.hard) / r;
-    }
   }
 
   /** 今の攻撃の段の残り秒（値の表示） */
