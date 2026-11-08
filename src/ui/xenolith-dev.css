@@ -1,0 +1,64 @@
+/* 10-5a: ?dev=xenolith の値の表示と、見失ったときの画面の端の印（開発用。遊ぶ人には出ない） */
+.xenolith-dev {
+  position: fixed;
+  left: calc(8px + env(safe-area-inset-left, 0px));
+  top: 30%;
+  z-index: 10;
+  padding: 6px 8px;
+  font:
+    11px/1.35 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: pre;
+  color: #e6fbff;
+  background: rgba(8, 22, 32, 0.62);
+  border-left: 3px solid #5ff2ff;
+  border-radius: 4px;
+  user-select: none;
+  cursor: pointer;
+}
+
+.xenolith-dev[hidden],
+.xenolith-edge[hidden] {
+  display: none;
+}
+
+.xenolith-dev.is-collapsed {
+  opacity: 0.6;
+}
+
+/* 画面の外にいるゼノリス（水色）と、画面の外の瞬間移動の移る先（白く点滅）の向きを画面の端に出す */
+.xenolith-edge {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 9;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  border-top: 11px solid transparent;
+  border-bottom: 11px solid transparent;
+  border-left: 20px solid #5ff2ff;
+  filter: drop-shadow(0 0 4px rgba(95, 242, 255, 0.9));
+  transform-origin: 0 50%;
+}
+
+.xenolith-edge.is-warp {
+  border-left-color: #ffffff;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 1));
+  animation: xenolith-edge-blink 0.2s steps(2, jump-none) infinite;
+}
+
+@keyframes xenolith-edge-blink {
+  to {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xenolith-edge.is-warp {
+    animation: none;
+  }
+}

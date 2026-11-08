@@ -43,6 +43,7 @@ import { screenRoll } from './render/screen-roll';
 import { linkKaiju2, linkKaijuArtDev } from './ui/kaiju2-link';
 import { linkAlbion } from './ui/albion-link';
 import { linkGourai } from './ui/gourai-link';
+import { linkXenolithDev } from './ui/xenolith-link';
 import type { AppShell } from './app';
 import { CityView } from './render/city/city-view';
 
@@ -326,6 +327,8 @@ export function startGame(shell: AppShell): GameApp {
   linkAlbion({ ...kaiju2, ...runtime });
   // 10-4b: メカ怪獣ゴウライ（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=gourai は起動時に読む）
   linkGourai({ ...kaiju2, ...runtime });
+  // 10-5a: UFO ゼノリス（作っている間。?dev=xenolith のときだけ遅延チャンクを読む）
+  linkXenolithDev({ ...kaiju2, ...runtime });
 
   // 9-10d: ?dev=kaiju-art（レイドの怪獣選びの画像を描く。遊ぶ人は読まない）
   linkKaijuArtDev(search, { ...runtime, camera, pipeline, play, weather: world.weather, game });

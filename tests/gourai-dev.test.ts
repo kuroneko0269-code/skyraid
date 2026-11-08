@@ -86,7 +86,8 @@ describe('メカ怪獣ゴウライの確かめる場（10-4a）', () => {
       }
     };
     walk('src');
-    const isGourai = (f: string): boolean => /gourai/.test(f.replace(/\\/g, '/'));
+    // 10-5a: ゼノリス（遅延チャンク）もゴウライの形の部品（primitives）を使う
+    const isGourai = (f: string): boolean => /gourai|xenolith/.test(f.replace(/\\/g, '/'));
     for (const f of files) {
       if (isGourai(f)) continue;
       const src = readFileSync(f, 'utf8');

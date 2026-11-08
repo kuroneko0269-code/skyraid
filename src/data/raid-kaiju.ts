@@ -196,6 +196,16 @@ const DEFS = [
 
 export type RaidKaijuId = (typeof DEFS)[number]['id'];
 
+/**
+ * 10-5a: UFO ゼノリス（10-5b で登録簿の最後に足す）の解放の条件: ほかの 4 体のうち 2 体を通常でクリア（高難度のクリアも数える。
+ * docs/kaiju-roster.md の「解放の条件」）。登録するまで、ここから読む所は無い
+ */
+export const XENOLITH_UNLOCK: RaidUnlock = {
+  kaiju: ['vorgas', 'nephirga', 'albion', 'gourai'],
+  count: 2,
+  difficulty: 'normal',
+};
+
 /** 登録簿（並びは協力の設定の番号。型は広げて持つ: 条件の分岐を怪獣の値に縛らない） */
 export const RAID_KAIJU: readonly (RaidKaijuDef & { readonly id: RaidKaijuId })[] = DEFS;
 
