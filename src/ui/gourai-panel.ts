@@ -1,6 +1,6 @@
 // 10-4a: ?dev=gourai の値の表示の文（gourai-runtime.ts から分けた。開発用なので英語だけ）: 状態・段階・熱・次の攻撃・生きている砲台・
 // 飛んでいる弾・体力・距離・高さ・壊れた部位・当たり・三角形と描画の回数。10-4b: レイドの経過・回転掃射の傾き・体への衝突
-import { attackWeights, inSweepBand } from '../ai/gourai-attacks';
+import { attackWeights, inSweepBand, inSweepGap } from '../ai/gourai-attacks';
 import { relativeAim } from '../ai/raid-kit/frame';
 import { GOURAI_CONFIG as C, GOURAI_PARTS, GOURAI_TURRETS } from '../data/gourai';
 import type { GouraiDev } from '../missions/gourai-dev';
@@ -42,7 +42,7 @@ export function gouraiPanelText(dev: GouraiDev, obj: GouraiObject): string {
   const phase = k.phase === 1 ? '1 armored' : '2 purged (fast)';
   const sweep =
     k.attack === 'sweep'
-      ? `  pitch ${f1(k.sweepPitch)}°${inSweepBand(b, pl, k.sweepPitch) ? ' IN BAND' : ''}`
+      ? `  pitch ${f1(k.sweepPitch)}° gap ${k.sweepSide > 0 ? 'up' : 'down'}${inSweepBand(k, pl) ? ' IN BAND' : inSweepGap(k, pl) ? ' IN GAP' : ''}`
       : '';
   const t = dev.taken;
   return [

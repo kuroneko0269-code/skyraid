@@ -227,24 +227,16 @@ export const XENOLITH_CONFIG = {
     afterWarp: 1,
   },
   /**
-   * 体の当たり（通り抜けられない）: 円盤の楕円体（水平 discA・上下 discB）とドームの球（中心 domeUp・半径 domeR）。
-   * 10-5b: 10-4c の扱い: めり込んだら最大 HP の hpShare（約 8 割）のダメージ（残りが足りなければ撃墜）。弾かない（跳ねない）・操作不能も無し。
-   * invulnerable 秒は続けて当たらない（通り抜ける間に何度も当たらない）。体も速く動くので、体から見た自機の動き（相対）で調べる。
-   * damage・pushOut・speedKeep・minExit・stun は 10-5a の弾く扱いの値（今は使わない。比べのために残す）
+   * 体の当たり（通り抜けられない）: 円盤の楕円体（水平 discA・上下 discB）とドームの球（中心 domeUp・半径 domeR）。体も速く動くので、
+   * 体から見た自機の動き（相対）で調べる。ぶつかったときの扱いは 10-4c の共通の KAIJU_RAM（src/data/kaiju-ram.ts。最大 HP の約 8 割・
+   * 跳ねない・1.5 秒は続けて当たらない。10-5b で先に入れた扱いを共通にした）
    */
   collision: {
     discA: 80,
     discB: 15,
     domeUp: 12,
     domeR: 26,
-    damage: 30,
-    hpShare: 0.8,
     margin: 6,
-    pushOut: 10,
-    speedKeep: 0.7,
-    minExit: 0.4,
-    stun: 0.5,
-    invulnerable: 1.5,
     sampleStep: 4,
   },
   /**

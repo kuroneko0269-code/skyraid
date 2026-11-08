@@ -49,6 +49,11 @@ export interface ShotOrder {
   readonly direction: Readonly<Vec3>;
   /** 狙った人（ミサイルの追う先。NO_TARGET は無し） */
   readonly targetId: number;
+  /** 10-4c: この弾だけの寿命（秒。省略は種類の寿命。ゴウライの回転掃射は予兆の輪の端で消える） */
+  readonly life?: number;
+  /** 10-4c: bendAge 秒たったら上下の速さを bendVy m/s に変える（ゴウライの回転掃射: 機銃から段の高さへ寄せてから水平に） */
+  readonly bendAge?: number;
+  readonly bendVy?: number;
 }
 
 export interface BarrageTarget {

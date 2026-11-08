@@ -15,6 +15,7 @@ import {
   type BufferGeometry,
   type InstancedMesh,
 } from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { AircraftDetail } from '../../data/aircraft-model';
 import { GOURAI_CONFIG, GOURAI_PARTS, GOURAI_TURRETS } from '../../data/gourai';
 import { GOURAI_MODEL_CONFIG } from '../../data/gourai-model';
@@ -62,7 +63,7 @@ export class GouraiObject {
   private readonly skin: SkinnedMesh;
   private readonly material: GouraiMaterial;
   readonly shots: ShotMesh;
-  /** 回転掃射の危ない高さの輪（体の中心から bandLow〜bandHigh の薄い筒） */
+  /** 回転掃射の危ない高さの輪（10-4c: 上下 2 つの薄い筒。間がすき間。狙う人の高さ = 0 の上下の幅で、すき間が下なら上下を返す） */
   readonly sweepRing: Mesh;
   private readonly ringMat: MeshBasicMaterial;
   /** 砲台の今の向き（ラジアン。体の向きからの方位。左が正） */
@@ -84,8 +85,16 @@ export class GouraiObject {
     this.group.add(this.skin);
     this.shots = new ShotMesh(G.shotCap);
     const s = G.attacks.sweep;
-    const ring = new CylinderGeometry(1, 1, s.bandHigh - s.bandLow, 48, 1, true);
-    ring.translate(0, (s.bandHigh + s.bandLow) / 2, 0);
+    const tube = (r: readonly [number, number]): CylinderGeometry => {
+      const g = new CylinderGeometry(1, 1, r[1] - r[0], 48, 1, true);
+      g.translate(0, (r[0] + r[1]) / 2, 0);
+      return g;
+    };
+    const near = tube(s.near);
+    const far = tube(s.far);
+    const ring = mergeGeometries([near, far]);
+    near.dispose();
+    far.dispose();
     this.ringMat = new MeshBasicMaterial({
       color: M.colors.sweepWarn,
       transparent: true,
@@ -249,11 +258,13 @@ export class GouraiObject {
     this.sweepRing.visible = on && this.group.visible;
     if (!on) return;
     const t = k.action === 'windup' ? Math.min(1, k.actionTime / s.windup) : 1;
-    const r = 120 + (s.range - 120) * t;
+    // 10-4c: 狙う人の距離 + beyond（弾が消える所）まで広がる（輪の高さは狙う人の距離で決めた高さ）
+    const r = 120 + (k.sweepRange + s.beyond - 120) * t;
     this.sweepRing.position.copy(this.group.position);
     // 10-4b: 掃射の面の傾きの分だけ、広がった半径での高さへ上下にずらす（危ない所は狙う人の高さ）
     this.sweepRing.position.y += r * Math.tan(k.sweepPitch * DEG);
-    this.sweepRing.scale.set(r, 1, r);
+    // 10-4c: すき間が下なら上下を返す（両面の加算なので向きは見た目に出ない）
+    this.sweepRing.scale.set(r, k.sweepSide >= 0 ? 1 : -1, r);
     const blink = k.action === 'windup' ? 0.6 + 0.4 * Math.sin(this.time * 14) : 1;
     this.ringMat.opacity = (k.action === 'windup' ? M.fx.sweepWarn : M.fx.sweepActive) * blink;
   }

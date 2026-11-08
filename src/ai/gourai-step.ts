@@ -107,6 +107,8 @@ export function resetGourai(k: GouraiKaiju, hpRatio: number, broken: readonly st
   k.sweepGap = 0;
   k.sweepPitch = 0;
   k.sweepRange = 700;
+  k.sweepSide = 1;
+  k.sweepShot = 0;
   k.attacksUsed.volley = 0;
   k.attacksUsed.sweep = 0;
   k.vents = 0;

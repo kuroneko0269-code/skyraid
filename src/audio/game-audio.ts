@@ -89,6 +89,11 @@ export class GameAudio {
       playerHit: () => {
         s.hit();
       },
+      // 10-4c: 怪獣の体にぶつかった: 被弾の音と小さな爆発の音を重ねる（金属がこすれてぶつかる手応え）
+      kaijuRam: () => {
+        s.hit();
+        s.explosion('small', null);
+      },
       missileLaunch: (x, y, z, _dx, _dy, _dz, byPlayer) => {
         s.missileLaunch(byPlayer ? null : { x, y, z });
       },

@@ -30,9 +30,13 @@ export function createControlsLink(
   },
 ): { apply: () => void; sync: () => void; onPresetPick: (fn: () => void) => void } {
   const vibrator = new Vibrator(typeof navigator === 'undefined' ? undefined : navigator);
-  // 振動: 被弾・自機のミサイル発射・撃墜
+  // 振動: 被弾・怪獣の体への衝突・自機のミサイル発射・撃墜
   fxEvents.add({
     playerHit: () => {
+      vibrator.pulse('hit');
+    },
+    // 10-4c: 怪獣の体にぶつかった
+    kaijuRam: () => {
       vibrator.pulse('hit');
     },
     missileLaunch: (_x, _y, _z, _dx, _dy, _dz, byPlayer) => {

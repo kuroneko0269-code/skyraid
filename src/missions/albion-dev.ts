@@ -2,13 +2,13 @@
 // GamePlay の差し込み口（free-extra.ts）に付け、飛行の始めのシードから怪獣の種を作るので、リプレイでも同じに動く。
 // 部位と子分は CombatSystem の撃てる対象の末尾に足す（機銃・ミサイルで減らせる。フリーフライトでは倒れない: 体力は 1% で止める）。
 // 10-3b: ソロのレイド（ミッション raidAlbion）も引き受ける（体力・制限時間・撃破は albion-raid.ts）。雲の中はロックの距離が縮む
+import { RamGrace, ramDamage } from '../combat/kaiju-ram';
 import { TEAM_ENEMY } from '../combat/target';
 import { ALBION_CONFIG as C, ALBION_PARTS } from '../data/albion';
 import type { MapDef } from '../data/maps';
 import type { AlbionKaiju } from '../ai/albion-ai';
 import { inCloud } from '../ai/albion-attacks';
 import { createHullContact, hullContact } from '../ai/albion-hull';
-import { bounceAircraft } from '../entities/albion/albion-bounce';
 import type { Vec3 } from '../flight/math';
 import type { AlbionGround } from '../entities/albion/albion-body';
 import { fitRoute, nearestOnRoute, type AlbionRoute } from '../entities/albion/albion-route';
@@ -92,7 +92,8 @@ export class AlbionDev implements FreeExtra {
     body: 0,
   };
   /** 10-3c: 体への衝突の後、続けて当たらない残り秒 */
-  bodyGrace = 0;
+  /** 10-4c: 体への衝突の「続けて当たらない」間（共通の部品） */
+  readonly ram = new RamGrace();
   private readonly contact = createHullContact();
   /** 雲の外のロックの決まり（雲の中は距離を縮める。止めたら戻す） */
   private readonly cloud = new CloudLock();
@@ -192,7 +193,7 @@ export class AlbionDev implements FreeExtra {
     for (const t of this.partTargets) t.place(true);
     for (const t of this.minionTargets) t.beginStep();
     for (const key of Object.keys(this.taken) as (keyof typeof this.taken)[]) this.taken[key] = 0;
-    this.bodyGrace = 0;
+    this.ram.clear();
   }
 
   /** 周回路: 自機の前方 ahead m を中心に、自機の向きに直角（?abroute=bay なら湾の周回路）。戦域の内側に寄せる */
@@ -246,11 +247,11 @@ export class AlbionDev implements FreeExtra {
   }
 
   /**
-   * 10-3c: 体への衝突（このステップの移動の線分が体にめり込んだら）: 弾く・ダメージ・短い操作不能。続けて当たらない間がある。
-   * 倒した後（海へ落ちる間）と撃墜されている間は無し
+   * 10-4c: 体への衝突（このステップの移動の線分が体にめり込んだら）: 最大 HP の約 8 割のダメージ（足りなければ撃墜）。跳ねない（10-3c は弾いて 30 と操作不能）。続けて当たらない間がある。
+   * 倒した後と撃墜されている間は無し
    */
   private collide(dt: number): void {
-    this.bodyGrace = Math.max(0, this.bodyGrace - dt);
+    this.ram.tick(dt);
     const s = this.play.session;
     const k = this.kaiju;
     if (!s.player.active || this.raid.dead || !k.body.visible) return;
@@ -260,13 +261,12 @@ export class AlbionDev implements FreeExtra {
       !hullContact(k.body, a.prevPosition, a.state.position, B.margin, B.sampleStep, this.contact)
     )
       return;
-    bounceAircraft(a, this.contact);
-    if (this.bodyGrace > 0) return;
-    this.bodyGrace = B.invulnerable;
+    if (!this.ram.hit(0)) return;
     this.taken.body++;
     this.raid.bodyTaken++;
-    s.kaijuExposure.applyStun(B.stun);
-    s.combat.dealDamage(s.player, B.damage * k.damageScale, TEAM_ENEMY);
+    const p = a.state.position;
+    s.combat.ramListeners.report(p.x, p.y, p.z);
+    s.combat.dealDamage(s.player, ramDamage(s.player.maxHp), TEAM_ENEMY);
   }
 }
 

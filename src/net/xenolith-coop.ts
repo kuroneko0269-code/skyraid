@@ -6,6 +6,7 @@
 //   進める（位置は速度で、時計は dt で）。光の弾はできごと（扇の番号と向き）で写しの口から撃つ（見た目だけ。当たりはホストが決める）
 // - 通信: state 約 110 バイト（15Hz で 1.7KB/s）。光の弾は 1 発 4 バイト（1 回 5〜7 発）
 // Three.js 非依存
+import { RamGrace, ramDamage } from '../combat/kaiju-ram';
 import type { PvpArena } from '../combat/pvp-arena';
 import type { XenolithTarget } from '../ai/xenolith-ai';
 import { orbMouth } from '../ai/xenolith-attacks';
@@ -56,7 +57,8 @@ export class XenolithCoopHost implements RaidPluginHost {
   private readonly nobody: XenolithTarget = { position: { x: 0, y: -1e6, z: 0 }, active: false };
   private readonly crowd: XenolithTarget[] = [];
   /** 人ごとの、体への衝突の後に続けて当たらない残り秒 */
-  private readonly bodyGrace = new Map<number, number>();
+  /** 10-4c: 体への衝突の「続けて当たらない」間（人ごと。共通の部品） */
+  private readonly ram = new RamGrace();
   /** 体への衝突でダメージを受けた回数・当たりの種類ごとの数（全員の合計。調整の表） */
   bodyHits = 0;
   readonly taken: Record<string, number> = {};
@@ -110,11 +112,11 @@ export class XenolithCoopHost implements RaidPluginHost {
     this.collide(dt);
   }
 
-  /** 体への衝突（ソロの XenolithDev と同じ 10-4c の扱い）。ホストが参加者に最大 HP の約 8 割のダメージを配る（弾かない） */
+  /** 体への衝突（ソロの XenolithDev と同じ 10-4c の共通の扱い）。ホストが参加者に最大 HP の約 8 割のダメージを配る（跳ねない） */
   private collide(dt: number): void {
     const k = this.raid.kaiju;
     const B = C.collision;
-    for (const [id, left] of this.bodyGrace) this.bodyGrace.set(id, Math.max(0, left - dt));
+    this.ram.tick(dt);
     if (this.raid.dead || !k.body.visible) return;
     for (const f of this.arena.all) {
       if (!f.active) continue;
@@ -131,10 +133,9 @@ export class XenolithCoopHost implements RaidPluginHost {
         )
       )
         continue;
-      if ((this.bodyGrace.get(f.id) ?? 0) > 0) continue;
-      this.bodyGrace.set(f.id, B.invulnerable);
+      if (!this.ram.hit(f.id)) continue;
       this.bodyHits++;
-      this.arena.kaijuDamage(f.id, f.maxHp * B.hpShare);
+      this.arena.kaijuDamage(f.id, ramDamage(f.maxHp));
     }
   }
 

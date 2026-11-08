@@ -209,18 +209,12 @@ export const ALBION_CONFIG = {
     },
   },
   /**
-   * 10-3c: 体（胴・頭・尾・胸びれ・尾びれ・背びれ）への衝突。通り抜けられず、ぶつかると damage・外へ弾く（機首を体の面で
-   * 跳ね返し、面から外へ少なくとも minExit（向きの成分）・速さ ×speedKeep・面から pushOut m の所へ）・stun 秒の操作不能・
-   * invulnerable 秒は続けて当たらない。margin は機体の大きさ、sampleStep は移動の線分を調べる間隔（m）
+   * 10-3c: 体（胴・頭・尾・胸びれ・尾びれ・背びれ）への衝突。通り抜けられない。margin は機体の大きさ、sampleStep は移動の線分を調べる
+   * 間隔（m）。10-4c: ぶつかったときの扱いは共通の KAIJU_RAM（src/data/kaiju-ram.ts。最大 HP の約 8 割・跳ねない・1.5 秒は続けて
+   * 当たらない）。10-3c の弾く扱い（30・弾く・0.5 秒の操作不能）はやめた
    */
   collision: {
-    damage: 30,
     margin: 6,
-    pushOut: 10,
-    speedKeep: 0.7,
-    minExit: 0.4,
-    stun: 0.5,
-    invulnerable: 1.5,
     sampleStep: 4,
   },
   /** 10-3c: 子分を落とすと本体の体力も減る（全体 HP の割合。落とした人の胴へのダメージに数える）。子分係の得 */

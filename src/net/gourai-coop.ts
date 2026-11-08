@@ -19,7 +19,7 @@ import { GOURAI_CONFIG as C, GOURAI_PARTS, GOURAI_TURRETS } from '../data/gourai
 import { GOURAI_RAID_CONFIG as R } from '../data/gourai-raid';
 import { RAID_CONFIG } from '../data/kaiju';
 import { findMap } from '../data/maps';
-import { bounceAircraft } from '../entities/albion/albion-bounce';
+import { RamGrace, ramDamage } from '../combat/kaiju-ram';
 import { createGouraiTargets, type GouraiPartTarget } from '../entities/gourai/gourai-target';
 import { bayPatrol, spawnOnPatrol } from '../missions/gourai-dev';
 import { GOURAI_ID } from '../missions/gourai-mission';
@@ -57,7 +57,8 @@ export class GouraiCoopHost implements RaidPluginHost {
   private readonly nobody: GouraiTarget = { position: { x: 0, y: -1e6, z: 0 }, active: false };
   private readonly crowd: GouraiTarget[] = [];
   /** 人ごとの、体への衝突の後に続けて当たらない残り秒 */
-  private readonly bodyGrace = new Map<number, number>();
+  /** 10-4c: 体への衝突の「続けて当たらない」間（人ごと。共通の部品） */
+  private readonly ram = new RamGrace();
   /** 体への衝突でダメージを受けた回数・弾の種類ごとの当たり（全員の合計。調整の表） */
   bodyHits = 0;
   readonly taken: Record<string, number> = {};
@@ -117,20 +118,19 @@ export class GouraiCoopHost implements RaidPluginHost {
     this.eventSteps++;
   }
 
-  /** 体への衝突（ソロの GouraiDev と同じ）。ホストが参加者の機体を弾き、ダメージと操作不能を配る */
+  /** 10-4c: 体への衝突（ソロの GouraiDev と同じ共通の扱い）。ホストが参加者に最大 HP の約 8 割のダメージを配る（跳ねない） */
   private collide(dt: number): void {
     const k = this.raid.kaiju;
     const B = C.collision;
-    for (const [id, left] of this.bodyGrace) this.bodyGrace.set(id, Math.max(0, left - dt));
+    this.ram.tick(dt);
     if (this.raid.dead || !k.body.visible) return;
     for (const f of this.arena.all) {
       if (!f.active) continue;
       const a = f.aircraft;
-      const armored = k.phase === 1;
       if (
         !gouraiContact(
           k.body,
-          armored,
+          k.phase === 1,
           a.prevPosition,
           a.state.position,
           B.margin,
@@ -139,12 +139,9 @@ export class GouraiCoopHost implements RaidPluginHost {
         )
       )
         continue;
-      bounceAircraft(a, this.contact, B);
-      if ((this.bodyGrace.get(f.id) ?? 0) > 0) continue;
-      this.bodyGrace.set(f.id, B.invulnerable);
+      if (!this.ram.hit(f.id)) continue;
       this.bodyHits++;
-      this.arena.kaijuDamage(f.id, B.damage * k.damageScale);
-      this.arena.stun(f.id, B.stun);
+      this.arena.kaijuDamage(f.id, ramDamage(f.maxHp));
     }
   }
 

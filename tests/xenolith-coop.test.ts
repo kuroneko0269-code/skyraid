@@ -181,7 +181,7 @@ describe('ゼノリスの協力のホスト（10-5b）', () => {
     expect(h.targetId === null || h.targetId === 0).toBe(true);
   });
 
-  it('体の当たり: ホストが参加者を弾き、ダメージを配る（続けて当たらない間がある）', () => {
+  it('体の当たり（10-4c の共通の扱い）: ホストが参加者に最大 HP の約 8 割を配る（続けて当たらない間がある）', () => {
     const arena = arenaWith(1);
     const h = host(arena, 1);
     const f0 = arena.fighters.get(0);

@@ -173,7 +173,7 @@ describe('ゴウライの協力のホスト（10-4b）', () => {
     }
   });
 
-  it('体の当たり: ホストが参加者を弾き、ダメージを配る（続けて当たらない間がある）', () => {
+  it('体の当たり（10-4c）: ホストが参加者に最大 HP の約 8 割を配る（跳ねない・続けて当たらない間がある）', () => {
     const arena = arenaWith(1);
     const h = host(arena, 1);
     const f0 = arena.fighters.get(0);
@@ -188,8 +188,12 @@ describe('ゴウライの協力のホスト（10-4b）', () => {
     Object.assign(a.state.position, { x: b.x + 20, y: b.y, z: b.z });
     h.step(1 / 60);
     expect(h.bodyHits).toBe(1);
-    expect(f0.hp).toBeLessThan(hp);
-    expect(Math.abs(a.state.position.x - b.x)).toBeGreaterThan(50);
+    expect(hp - f0.hp).toBeCloseTo(f0.maxHp * 0.8, 0);
+    // 跳ねない（体の外へ置き直さない）
+    expect(Math.abs(a.state.position.x - b.x)).toBeLessThan(50);
+    // 続けて当たらない
+    h.step(1 / 60);
+    expect(h.bodyHits).toBe(1);
   });
 
   it('終わり: 倒した → 成功・時間切れ → 失敗（全体の時間切れと同じ理由）', () => {

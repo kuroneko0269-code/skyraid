@@ -1,6 +1,7 @@
 // フリーフライトの戦闘（2-1 / 2-2 / 2-3）: 機銃・ロックオン・ミサイル・フレア・的・ドローン・撃墜数を
 // 固定ステップで進める（Three.js 非依存）。ミサイルとフレアは敵機と共有し、陣営（team）で信管・ダメージを分ける。
 // 無誘導ロケット・爆弾（2-6）はプレイヤーだけが持つ。壊れると範囲ダメージを出す対象（燃料タンク）の誘爆もここ
+import { RamEvents } from './kaiju-ram';
 import type { BlastSpec } from '../data/ground-targets';
 import { HUD_CONFIG } from '../data/hud';
 import { BOMB_CONFIG, ROCKET_CONFIG } from '../data/ordnance';
@@ -27,6 +28,7 @@ import { PlayerKillFeed } from './kill-feed';
 // 入力の型は combat-input.ts（300 行の目安で分けた）。既存の import 先を変えないよう再エクスポートする
 export { createCombatInput, type CombatInput } from './combat-input';
 
+type OrdnanceListener = (x: number, y: number, z: number, radius: number) => void;
 export type ImpactListener = (x: number, y: number, z: number, onTarget: boolean) => void;
 export type DestroyedListener = (target: CombatTarget) => void;
 
@@ -67,16 +69,13 @@ export class CombatSystem {
   /** ヒットマーカーの残り表示時間（秒） */
   hitMarkerTimer = 0;
   private readonly impactListeners: ImpactListener[] = [];
+  /** 10-4c: 自機がレイドの怪獣の体にぶつかった知らせ（演出用。kaiju-ram.ts。名前が listeners で終わるので状態の走査に入らない） */
+  readonly ramListeners = new RamEvents();
   private readonly destroyedListeners: DestroyedListener[] = [];
   /** プレイヤーが落とした対象と武器（9-10b。勲章の観測役が受ける） */
   readonly killFeed = new PlayerKillFeed();
   private readonly explosionListeners: ExplosionListener[] = [];
-  private readonly ordnanceListeners: ((
-    x: number,
-    y: number,
-    z: number,
-    radius: number,
-  ) => void)[] = [];
+  private readonly ordnanceListeners: OrdnanceListener[] = [];
   /**
    * 爆弾・ロケットの着弾の高さ（6-4。街では立っている建物の屋根・壁でも起爆する）。null なら地表（groundHeight）。
    * 着弾の予測点も同じ関数
@@ -146,7 +145,7 @@ export class CombatSystem {
   }
 
   /** 爆弾・ロケットが着弾したとき（6-4。建物を壊す）。radius は爆風の半径 */
-  onOrdnance(fn: (x: number, y: number, z: number, radius: number) => void): void {
+  onOrdnance(fn: OrdnanceListener): void {
     this.ordnanceListeners.push(fn);
   }
 

@@ -12,7 +12,7 @@ import { buildKaiju2Geometries } from '../src/render/kaiju2-model/kaiju2-object'
 const DT = 1 / 60;
 
 describe('メカ怪獣ゴウライのモデル（10-4a）', () => {
-  it('三角形: 「高」はネフィルガ・アルビオンの「高」以下、「低」は 1,500 以下。弾 1 発は 8（上限の数でも 4,000 以下）', () => {
+  it('三角形: 「高」はネフィルガ・アルビオンの「高」以下、「低」は 1,500 以下。弾 1 発は 8（上限の数でも 20,000 以下）', () => {
     const hi = buildGouraiGeometry('high').triangles;
     const lo = buildGouraiGeometry('low').triangles;
     const nHi = buildKaiju2Geometries('high').triangles;
@@ -27,8 +27,9 @@ describe('メカ怪獣ゴウライのモデル（10-4a）', () => {
     expect(lo).toBeLessThanOrEqual(1500);
     expect(lo).toBeLessThan(hi);
     expect(shot).toBe(8);
-    // 10-4b: プール 480 発（回転掃射の弾の筋を詰めた）。上限の数で 4,000 以下
-    expect(shot * C.shotCap).toBeLessThanOrEqual(4000);
+    // 10-4b: プール 480 発（回転掃射の弾の筋を詰めた）。10-4c: 2,400 発（回転掃射の弾を 2 つの輪の縦の幅に散らした）。
+    // 上限の数で 20,000 以下（1 フレームの三角形の予算 100 万の 2%。描画は弾の種類ごとに 1 回のまま）
+    expect(shot * C.shotCap).toBeLessThanOrEqual(20000);
   });
 
   it('頂点の値に NaN が無く、骨の重みの合計は 1', () => {
