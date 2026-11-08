@@ -4,7 +4,11 @@
 // ?dev=kaiju2 のときだけ（9-6a）: フリーフライトにネフィルガを出し、左に値の表示（状態・段階・次の攻撃・スタミナ・距離・部位・
 // 当てた回数・三角形。タップ / クリックで畳む）。URL: ?k2hp=<1〜100>（体力の割合 → 段階）・?k2break=wingL,wingR,head,tail
 import './kaiju2-dev.css';
-import type { Scene } from 'three';
+import type { PerspectiveCamera, Scene } from 'three';
+import type { FlightFrame } from '../render/flight-frame';
+import type { RenderPipeline } from '../render/pipeline';
+import type { Kaiju2LinkParts } from './kaiju2-link';
+import { parseDevFlags } from '../core/debug-flags';
 import { attackCandidates, geometryTo } from '../ai/kaiju2-attacks';
 import type { GameAudio } from '../audio/game-audio';
 import { Kaiju2SoundWatch } from '../audio/kaiju2-watch';
@@ -61,6 +65,13 @@ export interface Kaiju2RuntimeParts {
   readonly devFree: boolean;
   /** 9-7: 天候を移す（M8 の決戦の演出。3 秒で補間） */
   readonly setWeather: (id: string) => void;
+  /** 10-7a: 天候（雨の強さ）・カメラ・演出のカメラの口・描画（撮影）・画面の揺れ・画面の状態の移り */
+  readonly weather: Kaiju2LinkParts['weather'];
+  readonly camera: PerspectiveCamera;
+  readonly frame: FlightFrame;
+  readonly pipeline: RenderPipeline;
+  readonly shake: (strength: number) => void;
+  readonly game: { transition(to: 'pause' | 'flight'): boolean };
 }
 
 /** 怪獣を出している画面（ポーズ・フォトモード・結果の画面の後ろも見える） */
@@ -105,20 +116,51 @@ export function startKaiju2(p: Kaiju2RuntimeParts): Kaiju2Runtime {
     panel.classList.toggle('is-collapsed', collapsed);
   });
   document.body.append(panel);
+  // 10-7a: 撮影（?dev=k2shot）: 止めている間も演出を進める秒数・怪獣を描くか・形を動かす時間
+  let shotDt: number | null = null;
+  let kaijuShown = true;
+  const updateTimes: number[] = [];
+  if (parseDevFlags(p.search).has('k2shot'))
+    void import('./kaiju2-shot').then((m) => {
+      m.linkKaiju2Shot({
+        raid: () => coop?.raid ?? dev.raid,
+        camera: p.camera,
+        pipeline: p.pipeline,
+        weather: p.weather,
+        game: p.game,
+        setFxClock: (d) => {
+          shotDt = d;
+        },
+        setKaijuShown: (v) => {
+          kaijuShown = v;
+          obj.setVisible(v);
+          if (v) obj.update((coop?.raid ?? dev.raid).body, 1, 0);
+        },
+        updateMs: () => {
+          const t = [...updateTimes].sort((a, b) => a - b);
+          return t[t.length >> 1] ?? 0;
+        },
+      });
+    });
   let last = performance.now();
   let lastText = '';
   /** 今のレイドの経過（小さくなったら新しいレイド → ブリーフィング） */
   let lastElapsed = Infinity;
   p.onRender((alpha) => {
     const now = performance.now();
-    const dt = Math.min(0.1, (now - last) / 1000);
+    const dt = shotDt ?? Math.min(0.1, (now - last) / 1000);
     last = now;
     const state = p.state();
     const raid = coop?.raid ?? dev.raid;
     const active = coop !== null || dev.freeFlying || dev.raiding;
-    const shown = active && SHOWN.includes(state) && raid.body.visible;
+    const shown = active && SHOWN.includes(state) && raid.body.visible && kaijuShown;
     obj.setVisible(shown);
-    if (shown) obj.update(raid.body, alpha, dt, raid.flash / KAIJU2_RAID_CONFIG.flashSeconds);
+    if (shown) {
+      const t0 = performance.now();
+      obj.update(raid.body, alpha, dt, raid.flash / KAIJU2_RAID_CONFIG.flashSeconds);
+      updateTimes.push(performance.now() - t0);
+      if (updateTimes.length > 120) updateTimes.shift();
+    }
     // レイドの HUD・ブリーフィング（協力のブリーフィングは開始前に協力の画面が出す）
     if ((coop || dev.raiding) && HUD_SHOWN.includes(state)) {
       const sel = p.play.session.combat.targeting.selected;

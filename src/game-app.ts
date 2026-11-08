@@ -322,7 +322,15 @@ export function startGame(shell: AppShell): GameApp {
 
   // 9-6c: ネフィルガ（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=kaiju2 は起動時に読む）
   const kaiju2 = { search, play, scene, activeMap, game, quality, pvp, hud, audio, camera };
-  linkKaiju2({ ...kaiju2, ...runtime, weather: world.weather });
+  linkKaiju2({
+    ...kaiju2,
+    ...runtime,
+    weather: world.weather,
+    pipeline,
+    shake: (k) => {
+      chaseCamera.addImpact(k);
+    },
+  });
   // 10-3b: 白鯨アルビオン（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=albion は起動時に読む）
   linkAlbion({ ...kaiju2, ...runtime });
   // 10-4b: メカ怪獣ゴウライ（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=gourai は起動時に読む）
