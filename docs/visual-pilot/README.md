@@ -1,13 +1,69 @@
-# 怪獣の見た目の前後（10-7a・10-7b・10-7c・10-7d）
+# 怪獣の見た目の前後（10-7a・10-7b・10-7c・10-7d・10-7e）
 
-撮り方: `node scripts/kaiju-visual-pilot.js <nephirga|albion|gourai|xenolith> <before|after> [--measure] [--quality low|medium|high]`（10-7b で怪獣ごとの共通の仕組みにした。`?dev=kshot`・`src/ui/kaiju-shot.ts`。場面は `src/data/<怪獣>-shots.ts`）。見た目だけの乱数（`Math.random`）は決まった種にして撮る。
+撮り方: `node scripts/kaiju-visual-pilot.js <nephirga|albion|gourai|xenolith|vorgas> <before|after> [--measure] [--quality low|medium|high]`（10-7b で怪獣ごとの共通の仕組みにした。`?dev=kshot`・`src/ui/kaiju-shot.ts`。場面は `src/data/<怪獣>-shots.ts`）。見た目だけの乱数（`Math.random`）は決まった種にして撮る。
 クラウドには GPU が無く、ソフトウェアの描画で撮った絵（ブルーム・影は本物と同じ式だが、色の細かい違い・ちらつきは実機で確かめる）。
 
+- [ヴォルガス（10-7e）](#ヴォルガス10-7e)
 - [UFO ゼノリス（10-7d）](#ufo-ゼノリス10-7d)
 - [メカ怪獣ゴウライ（10-7c）](#メカ怪獣ゴウライ10-7c)
 - [白鯨アルビオン（10-7b）](#白鯨アルビオン10-7b)
 - [ネフィルガ: 共通の部品へ移した前後（10-7b）](#ネフィルガ-共通の部品へ移した前後10-7b)
 - [ネフィルガの見た目の試作（10-7a）](#ネフィルガの見た目の試作10-7a)
+
+## ヴォルガス（10-7e）
+
+画質「高」・同じ構図。左が変更前（6-1b の見た目）、右が変更後。推奨案は、6-1 の溶岩の亀裂（形と結びついた「ヴォルガスらしさ」）を位置はそのまま皮膚に合わせ込むこと（溝に沈めてまわりに熱がにじむ・熱線の溜めで尾から頭へ脈打って白熱）と、起動時に作る絵の厚い鱗の板・しわ・爪の古傷・背と尾の骨板・重い足取り（足が着くたびの土煙と揺れ）・上陸の水・溜めの光の粒・撃破で崩れ落ちること。部位の皮膚 5 つと骨板は 1 つのメッシュにまとめた（体の描く回数 6 → 2）。足した骨板は 6-1b の体の面 + 6m の中（体は通り抜けられるまま。頂点ごとにテスト。docs/decisions.md の 10-7e）。
+変更前の撮影は 10-7e の撮る仕組みだけを足した 6-1b の見た目（場面の置き方・カメラは同じ）。陸の場面は港の岸壁の上（海から 70m）、登場は湾の沖（岸から約 2km）の海。
+
+### 昼・快晴
+
+| 場面 | 変更前 | 変更後 |
+| --- | --- | --- |
+| 登場（海から上陸する途中。水面の近くから見上げる。演出の場面の後半の構図・水面のしぶきと落ちる水・濡れた皮膚） | ![変更前](vorgas/before/day-entrance.webp) | ![変更後](vorgas/after/day-entrance.webp) |
+| 周回（斜め前の上から。鱗の板の皮膚・溝に沈んだ亀裂・背と尾の骨板） | ![変更前](vorgas/before/day-orbit.webp) | ![変更後](vorgas/after/day-orbit.webp) |
+| 足元から見上げる（大きさ・目・亀裂・爪） | ![変更前](vorgas/before/day-low.webp) | ![変更後](vorgas/after/day-low.webp) |
+| 歩く（足が着いた瞬間を横から。土煙） | ![変更前](vorgas/before/day-walk.webp) | ![変更後](vorgas/after/day-walk.webp) |
+| 熱線の溜め（亀裂が尾から頭へ脈打って白熱・結晶が瞬く・光の粒を口へ吸い込む・喉の奥） | ![変更前](vorgas/before/day-charge.webp) | ![変更後](vorgas/after/day-charge.webp) |
+| 熱線を撃つ途中（白い芯と青い外側・口の光と湯気） | ![変更前](vorgas/before/day-beam.webp) | ![変更後](vorgas/after/day-beam.webp) |
+| 咆哮（頭を上げて口を開ける。足元の砂ぼこりの輪） | ![変更前](vorgas/before/day-roar.webp) | ![変更後](vorgas/after/day-roar.webp) |
+| 薙ぎ払いの予兆（尾が上がる。斜め後ろから） | ![変更前](vorgas/before/day-sweep.webp) | ![変更後](vorgas/after/day-sweep.webp) |
+| 部位の破壊（結晶を壊した直後。破片） | ![変更前](vorgas/before/day-break.webp) | ![変更後](vorgas/after/day-break.webp) |
+| ダウン（左脚を壊して膝をつく。土煙） | ![変更前](vorgas/before/day-down.webp) | ![変更後](vorgas/after/day-down.webp) |
+| 撃破（膝から崩れて左へ倒れ込んだ後。土煙・光が消える） | ![変更前](vorgas/before/day-defeat.webp) | ![変更後](vorgas/after/day-defeat.webp) |
+
+### 夕方・快晴
+
+| 場面 | 変更前 | 変更後 |
+| --- | --- | --- |
+| 登場（海から上陸する途中。水面の近くから見上げる。演出の場面の後半の構図・水面のしぶきと落ちる水・濡れた皮膚） | ![変更前](vorgas/before/evening-entrance.webp) | ![変更後](vorgas/after/evening-entrance.webp) |
+| 周回（斜め前の上から。鱗の板の皮膚・溝に沈んだ亀裂・背と尾の骨板） | ![変更前](vorgas/before/evening-orbit.webp) | ![変更後](vorgas/after/evening-orbit.webp) |
+| 足元から見上げる（大きさ・目・亀裂・爪） | ![変更前](vorgas/before/evening-low.webp) | ![変更後](vorgas/after/evening-low.webp) |
+| 歩く（足が着いた瞬間を横から。土煙） | ![変更前](vorgas/before/evening-walk.webp) | ![変更後](vorgas/after/evening-walk.webp) |
+| 熱線の溜め（亀裂が尾から頭へ脈打って白熱・結晶が瞬く・光の粒を口へ吸い込む・喉の奥） | ![変更前](vorgas/before/evening-charge.webp) | ![変更後](vorgas/after/evening-charge.webp) |
+| 熱線を撃つ途中（白い芯と青い外側・口の光と湯気） | ![変更前](vorgas/before/evening-beam.webp) | ![変更後](vorgas/after/evening-beam.webp) |
+| 咆哮（頭を上げて口を開ける。足元の砂ぼこりの輪） | ![変更前](vorgas/before/evening-roar.webp) | ![変更後](vorgas/after/evening-roar.webp) |
+| 薙ぎ払いの予兆（尾が上がる。斜め後ろから） | ![変更前](vorgas/before/evening-sweep.webp) | ![変更後](vorgas/after/evening-sweep.webp) |
+| 部位の破壊（結晶を壊した直後。破片） | ![変更前](vorgas/before/evening-break.webp) | ![変更後](vorgas/after/evening-break.webp) |
+| ダウン（左脚を壊して膝をつく。土煙） | ![変更前](vorgas/before/evening-down.webp) | ![変更後](vorgas/after/evening-down.webp) |
+| 撃破（膝から崩れて左へ倒れ込んだ後。土煙・光が消える） | ![変更前](vorgas/before/evening-defeat.webp) | ![変更後](vorgas/after/evening-defeat.webp) |
+
+### 重さ（怪獣だけ。怪獣を出して / 隠して描いた差）
+
+場面ごとの値は `vorgas/before-<画質>.json` / `after-<画質>.json`（夕方の空・周回 / 熱線 / 撃破の 3 場面で測った。クラウドの描画が遅いので 3 場面にした）。draw call・三角形はシャドウの分を含む（「中」「高」はシャドウあり、「低」はなし）。
+
+| | 低 変更前 | 低 変更後 | 中 変更前 | 中 変更後 | 高 変更前 | 高 変更後 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 体の三角形（モデル） | 3,934 | 3,934（変わらない） | 18,532 | 18,702（骨板 +170） | 18,532 | 18,702（+170） |
+| 描いた三角形（3 場面の最小〜最大） | 3,934〜3,958 | 3,934〜4,214 | 36,290〜36,314 | 36,634〜37,094 | 36,290〜36,314 | 36,638〜37,362 |
+| draw call（3 場面の最小〜最大） | 6〜7 | 2〜5 | 11〜12 | 5〜8 | 11〜12 | 5〜8 |
+| 作る絵（縮めた絵を含む） | 0 | 0 | 0 | 0.35MB（256 × 1 枚） | 0 | 1.4MB（512 × 1 枚） |
+| 形を動かす時間（JS・中央値） | 0.1ms | 0.2ms | 0.1ms | 0.2ms | 0.1ms | 0.2ms |
+| 描く時間の差（ソフトウェアの描画・目安） | 約 59〜76ms | 約 23〜33ms | 約 92〜219ms | 約 32〜142ms | 約 15〜347ms | 約 76〜205ms |
+
+- draw call の内訳（「高」）: 体 2（部位をまとめた皮膚 + 結晶）+ シャドウ 1（皮膚。変更前は部位 5）+ 熱線 0〜1 + 岩 0〜1（+ シャドウ）+ 柔らかい粒（土煙・水・湯気）0〜1 + 光る粒（火の粉・溜めの粒）0〜1 + 破片と煙 0〜2（出ているときだけ）。変更前は体 6 + シャドウ 5 + 熱線・岩。「低」はシャドウなしで体 2 + 粒（出たときだけ）
+- 描く時間はクラウドのソフトウェアの描画（GPU なし）で、ほかの撮影・テストと同時に動かしたのでばらつきが大きい。実機の GPU での重さは実機で確かめる（設定の「デバッグ表示」の fps・draw call）
+- 起動の量（タイトルまでに読む JS・CSS。`scripts/startup-breakdown.js`）: gzip 288.2KB → 288.2KB（変わらない。上限 320KB。入口 `vorgas-link.ts` は flight-runtime の中で小さい）。遅延チャンク: 怪獣のモデル `kaiju-object` JS gzip 7.4KB → 13.8KB、新しく演出 `vorgas-runtime` 1.7KB（どちらもモード選択を開いたときに先に読む）
+- 「中」「高」は 6-1b の式の鱗（画素ごとに 27 個の点を探す）を絵に置き換えたので、皮膚の画素の計算はむしろ軽い
 
 ## UFO ゼノリス（10-7d）
 
