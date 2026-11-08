@@ -806,6 +806,12 @@
   - 協力（`src/net/gourai-coop.ts`・`gourai-codec.ts`）: 部位は怪獣の部位としてロック・当たり。弾幕はそれぞれ近い人へ、一斉発射・回転掃射はいちばん近い人だけ。人数の補正 HP ×1 / ×1.6 / ×2.2 / ×2.8。state はミサイルを 1 発 10 バイト（なしで約 100 バイト）、機銃の弾はできごと（1 発 4 バイト）。結果の表は 胴・核・砲台・排気口
   - 登録簿 `gourai`（協力の番号 3・記録のキー `gourai:normal` / `gourai:hard`・SQL 0006 の決まりで送る）。起動時に読むのは入口 `src/ui/gourai-link.ts` とミッションの登録だけで、判定・形・HUD・協力は遅延チャンク `gourai-runtime`（プリキャッシュする）
   - 勲章: 標準の 10 個 + 砲台をすべて壊して倒した・放熱の間に核を壊して倒した・ミサイルに一度も当たらずに倒した（フレアで 4 発以上外す）
+- 10-7c（見た目。v1.1.13。数値は `src/data/gourai-visual.ts`、描画は `src/render/gourai-model/`（共通の部品 `src/render/kaiju-look/`）、演出は `src/ui/gourai-cinema.ts`（共通の `kaiju-cinema.ts`）、前後の画像と重さの表は `docs/visual-pilot/README.md`、決定は `docs/decisions.md` の 10-7c。判定・数値・リプレイは変えない）:
+  - 形: 前の装甲の楔を顔に（光る大きな目・熾火の口・牙。放熱で開くと大あごの内側の牙と喉の核）・頭とあご・腕と爪・背の放熱板・背のとげ・尾・甲羅の形のハッチ。足した形は体の当たりの箱 + 衝突の余裕の中（当たりは変えない）
+  - 質感: 起動時に作る金属の板の絵（継ぎ目・リベット・傷・焦げ・汚れの垂れ）・後ろの煤・排気口の筒の焼け・継ぎ目から漏れる熱の光（熱が高いとき・放熱）
+  - 動き: 油圧のサーボで頭が自機を追う・あご・腕を構えて爪を鳴らす（攻撃の予兆）・背の放熱板が順に開く（放熱）・尾・浮いた体の重い揺れ
+  - 演出: 登場の場面（ソロのレイドだけ・4.4 秒・湾から浮かび上がって目が光る・タップ / キーで飛ばす）・放熱の蒸気・熱のゆらぎ・海面の吹きおろし・被弾の火花・部位の破壊の爆発と煙・撃破の爆発の連鎖と水柱と沈む蒸気
+  - 画質: 低 = 絵・筋・影・熱のゆらぎなし（今に近い軽さ）、中 = 絵 256・粒少なめ、高 = 絵 512・粒多め
 
 #### UFO ゼノリス（10-5b で公開。10-5a は `?dev=xenolith` の裏だけ。設計は `docs/kaiju-roster.md` の「UFO」、値は `src/data/xenolith.ts` / `src/data/xenolith-model.ts`、体は `src/entities/xenolith/`、本体と攻撃は `src/ai/xenolith-ai.ts`・`xenolith-attacks.ts`・`xenolith-hull.ts`、形は `src/render/xenolith-model/`、確かめる場は `src/missions/xenolith-dev.ts`・`src/ui/xenolith-runtime.ts`。決定は `docs/decisions.md` の 10-5a）
 

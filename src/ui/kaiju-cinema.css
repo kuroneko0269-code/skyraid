@@ -99,7 +99,7 @@
   visibility: hidden;
 }
 
-/* ネフィルガ（紫の稲光）・アルビオン（雲の白と海の青） */
+/* ネフィルガ（紫の稲光）・アルビオン（雲の白と海の青）・ゴウライ（目の黄と熱の橙。10-7c） */
 .kaiju-cinema.is-nephirga {
   --kc-text: #f1ecff;
   --kc-glow: rgba(185, 166, 255, 0.95);
@@ -110,4 +110,10 @@
   --kc-text: #f4fbff;
   --kc-glow: rgba(170, 220, 255, 0.95);
   --kc-glow2: rgba(60, 140, 220, 0.7);
+}
+
+.kaiju-cinema.is-gourai {
+  --kc-text: #fff6e4;
+  --kc-glow: rgba(255, 204, 80, 0.95);
+  --kc-glow2: rgba(255, 96, 30, 0.7);
 }

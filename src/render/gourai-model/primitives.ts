@@ -161,4 +161,50 @@ export function cylinder(
   face(b, r1s, ref, tipColor, bone, tipGlow);
 }
 
-/** 胴（動かない所。骨は root） */
+const bAxis = new Vector3();
+const bSide = new Vector3();
+const bUp = new Vector3();
+
+/**
+ * 10-7c: 2 点の間の角ばった梁（腕・尾の節・あご）。a の断面 w0 × h0 から c の断面 w1 × h1 へ細る。断面の横は水平に近い向き
+ * （軸が上下に近いときは X）。面ごとに法線を分ける
+ */
+export function beam(
+  b: KaijuMeshBuilder,
+  a: Readonly<Vector3>,
+  c: Readonly<Vector3>,
+  w0: number,
+  h0: number,
+  w1: number,
+  h1: number,
+  color: Rgb,
+  bone: BoneBind,
+  glow = 0,
+): void {
+  bAxis.subVectors(c, a).normalize();
+  bUp.set(0, 1, 0);
+  if (Math.abs(bAxis.dot(bUp)) > 0.85) bUp.set(0, 0, -1);
+  bSide.crossVectors(bUp, bAxis).normalize();
+  bUp.crossVectors(bAxis, bSide).normalize();
+  const corner = (p: Readonly<Vector3>, w: number, h: number, sx: number, sy: number): Vector3 =>
+    new Vector3()
+      .copy(p)
+      .addScaledVector(bSide, (sx * w) / 2)
+      .addScaledVector(bUp, (sy * h) / 2);
+  hexa(
+    b,
+    [
+      corner(a, w0, h0, -1, -1),
+      corner(a, w0, h0, 1, -1),
+      corner(c, w1, h1, 1, -1),
+      corner(c, w1, h1, -1, -1),
+      corner(a, w0, h0, -1, 1),
+      corner(a, w0, h0, 1, 1),
+      corner(c, w1, h1, 1, 1),
+      corner(c, w1, h1, -1, 1),
+    ],
+    color,
+    bone,
+    glow,
+  );
+}

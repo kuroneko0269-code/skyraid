@@ -46,7 +46,7 @@ describe('メカ怪獣ゴウライのモデル（10-4a）', () => {
     }
   });
 
-  it('描画の回数: 体 1（SkinnedMesh）+ 弾 2（InstancedMesh）+ 輪は出ているときだけ = 4 以下。動かしても例外・NaN が出ない', () => {
+  it('描画の回数: 体 1（SkinnedMesh）+ 弾 2（InstancedMesh）+ 輪は出ているときだけ = 4 以下（10-7c の粒・影は別に 6 まで）。動かしても例外・NaN が出ない', () => {
     const obj = new GouraiObject('high');
     let skinned = 0;
     obj.group.traverse((o) => {
@@ -64,6 +64,7 @@ describe('メカ怪獣ゴウライのモデル（10-4a）', () => {
     obj.setVisible(true);
     const player = { position: { x: 0, y: 0, z: 0 }, active: true, id: 0 };
     let maxDraws = 0;
+    let maxFx = 0;
     let ringSeen = false;
     let maxShots = 0;
     for (let i = 0; i < 180 / DT; i++) {
@@ -79,15 +80,20 @@ describe('メカ怪獣ゴウライのモデル（10-4a）', () => {
         maxShots,
         obj.shots.meshes.reduce((s, m) => s + m.count, 0),
       );
-      maxDraws = Math.max(maxDraws, obj.draws);
+      const fx = obj.effectObjects.filter((m) => m.visible).length;
+      maxFx = Math.max(maxFx, fx);
+      maxDraws = Math.max(maxDraws, obj.draws - fx);
     }
     expect(k.vents).toBeGreaterThan(0);
     expect(k.phase).toBe(2);
     expect(ringSeen).toBe(true);
     expect(maxShots).toBeGreaterThan(50);
     expect(maxDraws).toBeLessThanOrEqual(4);
+    expect(maxFx).toBeLessThanOrEqual(6);
     expect(Number.isFinite(obj.group.quaternion.w)).toBe(true);
     expect(Number.isFinite(obj.group.position.y)).toBe(true);
-    console.info(`gourai draws max ${String(maxDraws)}, shots drawn max ${String(maxShots)}`);
+    console.info(
+      `gourai draws max ${String(maxDraws)} + fx ${String(maxFx)}, shots drawn max ${String(maxShots)}`,
+    );
   });
 });

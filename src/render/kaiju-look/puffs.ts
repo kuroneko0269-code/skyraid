@@ -8,6 +8,7 @@ import {
   InstancedMesh,
   Matrix4,
   MeshBasicMaterial,
+  AdditiveBlending,
   NormalBlending,
   PlaneGeometry,
   Vector3,
@@ -56,13 +57,14 @@ const up = new Vector3();
 const nrm = new Vector3();
 const worldUp = new Vector3(0, 1, 0);
 
-/** 丸くぼやけた板のマテリアル（uv の中心からの距離で薄く。インスタンスごとの濃さ aAlpha を掛ける） */
-function softMaterial(): MeshBasicMaterial {
+/** 丸くぼやけた板のマテリアル（uv の中心からの距離で薄く。インスタンスごとの濃さ aAlpha を掛ける）。additive は光る粒（10-7c の炎） */
+function softMaterial(additive: boolean): MeshBasicMaterial {
   const m = new MeshBasicMaterial({
     transparent: true,
     depthWrite: false,
     side: DoubleSide,
-    blending: NormalBlending,
+    blending: additive ? AdditiveBlending : NormalBlending,
+    toneMapped: !additive,
   });
   m.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader
@@ -88,7 +90,7 @@ function softMaterial(): MeshBasicMaterial {
         diffuseColor.a *= vInstanceAlpha * pow(saturate(1.0 - kr / kn), 1.6);`,
       );
   };
-  m.customProgramCacheKey = () => 'kaiju-soft-puff';
+  m.customProgramCacheKey = () => (additive ? 'kaiju-soft-puff-add' : 'kaiju-soft-puff');
   return m;
 }
 
@@ -97,9 +99,14 @@ export class KaijuPuffs {
   private readonly alphaAttr: InstancedBufferAttribute;
   private readonly puffs: Puff[];
   private next = 0;
-  private readonly material = softMaterial();
+  private readonly material: MeshBasicMaterial;
 
-  constructor(readonly capacity: number) {
+  /** additive: 足し合わせて光る粒（10-7c のゴウライの炎・熱。ほかの怪獣は今までどおり false） */
+  constructor(
+    readonly capacity: number,
+    additive = false,
+  ) {
+    this.material = softMaterial(additive);
     const n = Math.max(1, capacity);
     this.mesh = new InstancedMesh(new PlaneGeometry(1, 1), this.material, n);
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);

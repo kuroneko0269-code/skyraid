@@ -2,7 +2,7 @@
 // 記録カードの題）、判定・形・HUD・文言・協力の遅延チャンク（gourai-runtime.ts）を、ゴウライのレイドを始める前・リプレイを
 // 再生する前・協力の飛行の前（ホストは開始の前、クライアントはロビーで先読み）に読む（読み込み中・失敗の表示付き）。
 // 怪獣選びで選んだときは先読みする。?dev=gourai（10-4a の確かめる場）のときは起動時に読み、フリーフライトにも出す
-import type { Scene } from 'three';
+import type { PerspectiveCamera, Scene } from 'three';
 import { lazyChunk } from '../core/lazy-chunk';
 import { parseDevFlags } from '../core/debug-flags';
 import type { GameState } from '../core/game-state';
@@ -12,6 +12,8 @@ import { GOURAI_VARIANT } from '../missions/gourai-mission';
 import { registerRaidKaijuHooks } from '../missions/raid-kaiju-hooks';
 import { registerRaidVariant } from '../missions/raid-variants';
 import type { QualityLink } from '../render/quality-link';
+import type { FlightFrame } from '../render/flight-frame';
+import type { RenderPipeline } from '../render/pipeline';
 import type { GouraiRuntime } from './gourai-runtime';
 import { loadChunk, prefetchChunk } from './lazy-load';
 import { registerRaidKaijuChunk } from './raid-kaiju-link';
@@ -27,6 +29,15 @@ export interface GouraiLinkParts {
   readonly onRender: (fn: (alpha: number) => void) => void;
   /** レイドの HUD を出しているか（H キー） */
   readonly hud: { readonly visible: boolean };
+  /** 10-7c: 天候（雨の強さ）・カメラ・演出のカメラの口（登場の場面）・撮影（?dev=kshot）・画面の揺れ */
+  readonly camera: PerspectiveCamera;
+  readonly weather: {
+    set(id: string, instant?: boolean): void;
+    readonly params: Readonly<{ rain: number }>;
+  };
+  readonly frame: FlightFrame;
+  readonly pipeline: RenderPipeline;
+  readonly shake: (strength: number) => void;
 }
 
 let parts: GouraiLinkParts | null = null;
@@ -51,12 +62,18 @@ const chunk = lazyChunk(async (): Promise<GouraiRuntime> => {
       !p.pvp.flying,
     onDetail: (fn) => {
       p.quality.onPreset((preset) => {
-        fn(preset.aircraftDetail);
+        fn(preset);
       });
     },
     onRender: p.onRender,
     hudVisible: () => p.hud.visible,
     devFree: parseDevFlags(p.search).has('gourai'),
+    weather: p.weather,
+    camera: p.camera,
+    frame: p.frame,
+    pipeline: p.pipeline,
+    shake: p.shake,
+    game: p.game,
   });
   return runtime;
 });

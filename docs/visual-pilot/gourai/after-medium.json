@@ -1,0 +1,72 @@
+{
+  "entrance": {
+    "calls": 8,
+    "triangles": 5932,
+    "renderMs": 109.69999999925494,
+    "frameMs": 1116.699999999255,
+    "updateMs": 0.2999999998137355
+  },
+  "orbit": {
+    "calls": 8,
+    "triangles": 5380,
+    "renderMs": 74.8999999994412,
+    "frameMs": 1237,
+    "updateMs": 0.20000000018626451
+  },
+  "front": {
+    "calls": 8,
+    "triangles": 5372,
+    "renderMs": 112.3999999994412,
+    "frameMs": 1138.7999999998137,
+    "updateMs": 0.20000000018626451
+  },
+  "rear": {
+    "calls": 8,
+    "triangles": 5344,
+    "renderMs": 116.79999999981374,
+    "frameMs": 1219,
+    "updateMs": 0.10000000055879354
+  },
+  "volley": {
+    "calls": 8,
+    "triangles": 5372,
+    "renderMs": 78.19999999925494,
+    "frameMs": 1283.5999999996275,
+    "updateMs": 0.10000000055879354
+  },
+  "sweep": {
+    "calls": 10,
+    "triangles": 5760,
+    "renderMs": 3.699999999254942,
+    "frameMs": 1125.3999999994412,
+    "updateMs": 0.10000000055879354
+  },
+  "vent": {
+    "calls": 8,
+    "triangles": 5532,
+    "renderMs": 126.70000000018626,
+    "frameMs": 1199.4000000003725,
+    "updateMs": 0.19999999925494194
+  },
+  "purge": {
+    "calls": 10,
+    "triangles": 5764,
+    "renderMs": 74.90000000037253,
+    "frameMs": 1174.7999999998137,
+    "updateMs": 0.19999999925494194
+  },
+  "break": {
+    "calls": 11,
+    "triangles": 5382,
+    "renderMs": 113.20000000018626,
+    "frameMs": 1213.7000000001863,
+    "updateMs": 0.19999999925494194
+  },
+  "defeat": {
+    "calls": 11,
+    "triangles": 5720,
+    "renderMs": 50.89999999944121,
+    "frameMs": 1148.5,
+    "updateMs": 0.19999999925494194
+  }
+}
