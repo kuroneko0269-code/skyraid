@@ -137,9 +137,9 @@ export function createVorgasSkin(tex: DataTexture | null): VorgasSkin {
       // 目（溜めと喉の光で強く）
       totalEmissiveRadiance += ${vec(M.colors.eye)} * vGlow * ${f(M.eyeIntensity)} * (1.0 + 1.2 * uHeat) * kLive;
       // 喉の奥（口のまわりと首の下側）
-      float kTh = smoothstep(20.0, 5.0, length(vRestPos - vec3(0.0, 92.0, -66.0)))
+      float kTh = smoothstep(11.0, 3.0, length(vRestPos - vec3(0.0, 91.0, -68.0))) * smoothstep(0.35, -0.3, vRestNrm.y)
         + 0.6 * smoothstep(9.0, 0.0, abs(vRestPos.x)) * smoothstep(0.2, -0.5, vRestNrm.y) * smoothstep(-20.0, -40.0, vRestPos.z);
-      totalEmissiveRadiance += ${vec(V.colors.throat)} * uThroat * kTh * 2.2 * kLive * kBody;
+      totalEmissiveRadiance += ${vec(V.colors.throat)} * uThroat * kTh * 1.6 * kLive * kBody;
       totalEmissiveRadiance += vec3(uFlash);`,
       )
       .replace('#include <aomap_fragment>', `${RIM}\n#include <aomap_fragment>`);
