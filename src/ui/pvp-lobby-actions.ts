@@ -2,6 +2,7 @@
 // ホストなら部屋を直接、クライアントならホストへのメッセージで変える。名簿の変化のお知らせ（切断・再接続・離脱）の文も作る
 import { NET_CONFIG } from '../data/net';
 import { NEPHIRGA_ID, raidKaijuOf } from '../data/raid-kaiju';
+import { raidUnlockOfId } from '../progression/raid-unlock';
 import { loadRaidKaiju, needsRaidKaijuChunk, prefetchCoopKaiju } from './raid-kaiju-link';
 import { t } from '../core/i18n';
 import { AIRCRAFT_MODELS } from '../data/aircraft';
@@ -57,6 +58,7 @@ export function lobbyActions(ctx: LobbyActionContext): Actions {
     return room?.players.find((p) => p.id === room.localPlayerId);
   };
   return {
+    raidKaijuLocked: (index) => !raidUnlockOfId(ctx.hangar.snapshot, raidKaijuOf(index)).unlocked,
     onStart: () => {
       const room = ctx.room();
       if (!(room instanceof HostRoom) || startBlock(room.players, room.settings.mode) !== null)

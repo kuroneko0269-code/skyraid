@@ -47,5 +47,10 @@ export function resetXenolith(
   k.rippleSphere = -1;
   k.rippleAge = 99;
   k.elapsed = 0;
+  k.clearOrbs();
+  k.orbTimer = C.orbs.first;
+  k.orbVolleys = 0;
+  k.orbHits = 0;
+  k.orbs.dropped = 0;
   k.updateStage();
 }

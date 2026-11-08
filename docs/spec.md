@@ -764,7 +764,7 @@
 - 怪獣選び・ロビー・勲章・ランキングは登録簿から並べる。未公開の怪獣は `?dev=<名前>` のときだけ。解放の条件（挙げた怪獣のうち N 体をその難易度以上でクリア。ソロの自己ベストか `win.of.raid-<怪獣>`）を満たすまで、怪獣選びは鍵の印・暗い画像・条件の札を出し、出撃のボタンを押せない（`src/progression/raid-unlock.ts`。`?dev=raid-lock` でネフィルガに仮の条件「ヴォルガスを高難度でクリア」）
 - 遅延読み込み: `src/ui/raid-kaiju-link.ts`（入口のモジュールが `registerRaidKaijuChunk` で読み方を登録。ソロのレイド・リプレイは怪獣の id だけで読む）。結果の表の部位の名前・画像の基準点は `src/missions/raid-kaiju-hooks.ts`
 - 共通の部品（`src/ai/raid-kit/`。新しい怪獣だけが使う）: 部位と破壊（`PartSet`）・子分（`MinionSwarm`）・弾幕（`Barrage`）と弾（`ShotPool`）・光線（`Beam`。なぎ払い / ロック警告の後の溜め撃ち）・バリアと瞬間移動（`Barrier`・`Warp`）。決まった計算（種の列・dt の足し算・状態は数と配列）
-- 協力の差し込み口: `src/net/raid-plugin.ts`（怪獣ごとのホストの本体と写しを登録）。state の末尾の欄 `raidExtra`（無しは 1 バイト）と確実な経路のメッセージ `kx`（`src/net/codec-extra.ts`）、中身の詰め方は `src/net/raid-kit-codec.ts`（部位・子分・撃った弾）。通信の版 12（10-3b でアルビオンを足して 13、10-3c でアルビオンの state を変えて 14、10-4b でゴウライを足して 15）
+- 協力の差し込み口: `src/net/raid-plugin.ts`（怪獣ごとのホストの本体と写しを登録）。state の末尾の欄 `raidExtra`（無しは 1 バイト）と確実な経路のメッセージ `kx`（`src/net/codec-extra.ts`）、中身の詰め方は `src/net/raid-kit-codec.ts`（部位・子分・撃った弾）。通信の版 12（10-3b でアルビオンを足して 13、10-3c でアルビオンの state を変えて 14、10-4b でゴウライを足して 15、10-5b でゼノリスを足して 16）
 - 記録のキーの決まり: SQL 0006（`supabase/migrations/skyraid_0006_raid_key_rule.sql`）を流すとサーバーは「id:難易度」の形（`RAID_KEY_PATTERN`）を全部受け付ける。10-3a で流したので `RAID_KEY_RULE_ENABLED = true`（流す前は false で登録簿の `ranked` の怪獣だけ送っていた）
 - ヴォルガス・ネフィルガの挙動・数値・リプレイ・状態のハッシュは 10-2 の前と同じ（`tests/raid-golden.test.ts`）
 
@@ -801,13 +801,22 @@
   - 登録簿 `gourai`（協力の番号 3・記録のキー `gourai:normal` / `gourai:hard`・SQL 0006 の決まりで送る）。起動時に読むのは入口 `src/ui/gourai-link.ts` とミッションの登録だけで、判定・形・HUD・協力は遅延チャンク `gourai-runtime`（プリキャッシュする）
   - 勲章: 標準の 10 個 + 砲台をすべて壊して倒した・放熱の間に核を壊して倒した・ミサイルに一度も当たらずに倒した（フレアで 4 発以上外す）
 
-#### UFO ゼノリス（10-5a。`?dev=xenolith` の裏だけ。設計は `docs/kaiju-roster.md` の「UFO」、値は `src/data/xenolith.ts` / `src/data/xenolith-model.ts`、体は `src/entities/xenolith/`、本体と攻撃は `src/ai/xenolith-ai.ts`・`xenolith-attacks.ts`・`xenolith-hull.ts`、形は `src/render/xenolith-model/`、確かめる場は `src/missions/xenolith-dev.ts`・`src/ui/xenolith-runtime.ts`。決定は `docs/decisions.md` の 10-5a）
+#### UFO ゼノリス（10-5b で公開。10-5a は `?dev=xenolith` の裏だけ。設計は `docs/kaiju-roster.md` の「UFO」、値は `src/data/xenolith.ts` / `src/data/xenolith-model.ts`、体は `src/entities/xenolith/`、本体と攻撃は `src/ai/xenolith-ai.ts`・`xenolith-attacks.ts`・`xenolith-hull.ts`、形は `src/render/xenolith-model/`、確かめる場は `src/missions/xenolith-dev.ts`・`src/ui/xenolith-runtime.ts`。決定は `docs/decisions.md` の 10-5a）
 
 - 直径 160m の銀の円盤。狙う人の周りを 150 m/s で回り、4.5〜7.5 秒ごとに急停止 → 急加速（320 m/s）。床（地面・屋根・海面）+ 90m より下へ行かない・戦域 4,300m の内へ寄せる。体は通り抜けられない（円盤の楕円体とドーム。体から見た相対の動きで調べる）
-- 部位（10-2 の `PartSet`）: 胴（壊れない）・ドーム（弱点 ×1.8）・砲口（壊すと溜め撃ちなし）・縁の発光体 4（瞬間移動の間隔 +3 秒ずつ・4 つで無し）・下の発生器 3（殻の外。バリアの外れる時間 ×1.5 ずつ）。体力 6,000（仮）
-- バリア（10-2 の `Barrier`）: ふだんは殻の中に効かない（波紋）。光線の 0.6 秒前に揺らいで外れ、撃つ間と硬直の間 + 4 秒は外れたまま。瞬間移動（`Warp`）: 13 秒ごと、移る先の柱と輪が 1.2 秒光ってから移る（画面の外なら端に印）。光線（`Beam`）: なぎ払い（予兆の線 2 本 → ±60°）・溜め撃ち（ロック 1.5 秒追う → 溜め 0.8 秒止まる → 撃つ。60）
+- 部位（10-2 の `PartSet`）: 胴（壊れない）・ドーム（弱点 ×1.8）・砲口（壊すと溜め撃ちなし）・縁の発光体 4（瞬間移動の間隔 +3 秒ずつ・4 つで無し）・下の発生器 3（殻の外。バリアの外れる時間 ×1.5 ずつ）。体力 6,000（仮。10-5b で 13,000）
+- バリア（10-2 の `Barrier`）: ふだんは殻の中に効かない（波紋）。光線の 0.6 秒前に揺らいで外れ、撃つ間と硬直の間 + 4 秒は外れたまま。瞬間移動（`Warp`）: 13 秒ごと、移る先の柱と輪が 1.2 秒光ってから移る（画面の外なら端に印）。光線（`Beam`）: なぎ払い（予兆の線 2 本 → ±60°）・溜め撃ち（ロック 1.5 秒追う → 溜め 0.8 秒止まる → 撃つ。60。10-5b で溜め 1.5 秒・40）
 - 段階: 60% 未満で瞬間移動が多く速い、30% 未満で溜め撃ちの後に続けてなぎ払う
-- `?dev=xenolith` のときだけ遅延チャンク `xenolith-runtime`（プリキャッシュしない）を読み、フリーフライトに出す。値の表示（状態・段階・バリア・次の光線・瞬間移動までの時間・速さなど）。`&xnhp=` `&xnbreak=`。付けないときは読み込み・挙動・リプレイのハッシュとも今までと同じ。解放の条件の定数 `XENOLITH_UNLOCK`（登録は 10-5b）
+- `?dev=xenolith` のときだけフリーフライトに出す確かめる場（値の表示: 状態・段階・バリア・次の光線・瞬間移動までの時間・光の弾・速さなど。`&xnhp=` `&xnbreak=`）。10-5b からは確かめる場だけに残す
+- 10-5b（レイド・協力・調整・公開。数値は `src/data/xenolith.ts`・`src/data/xenolith-raid.ts`、表は `docs/kaiju-roster.md` の「10-5b」、決定は `docs/decisions.md` の 10-5b）:
+  - ソロのレイド `raidXenolith`（`src/missions/xenolith-mission.ts`・`xenolith-raid.ts`。港湾都市の開始位置の前方 2.2km に出る）: 体力 13,000（高難度 ×1.3・光線の間隔 ×0.85・当たり ×1.15）・制限時間 通常 20 分 / 高難度 18 分（時間切れで失敗）・残機 3。撃破で傾いて落ちる。HUD（体力と段階 2・3 の目盛り・段階と残り時間・バリア・次の光線・部位 9 つ・予兆の警告（LOCK は自分が狙われている間は赤く点滅・対空砲のロックの警告音）・攻めどき・画面の端の印）・ブリーフィング（`src/ui/xenolith-hud.ts`・`xenolith-briefing.ts`・`xenolith-edge.ts`。文言は `src/data/i18n/xenolith/`）
+  - 解放の条件: ほかの 4 体のうち 2 体を通常でクリア（`XENOLITH_UNLOCK`）。協力はホストが解放していればロビーで選べる（`Segmented.setLocked`・`LobbyRoomHandlers.raidKaijuLocked`）
+  - 光の弾のばらまき（光線の間）: 5.5 秒ごと・予兆 0.7 秒（縁が白く光る）・前の縁から進む先へ 3 × 3 の格子（段階 3 は 5 × 3・3.5° 間隔）・360 m/s・1 発 10（`src/ai/xenolith-orbs.ts`・描画は InstancedMesh 1 つ `src/render/xenolith-model/orb-mesh.ts`）
+  - 光線: 溜め撃ちのロックは進む先 1.9 秒を追い、溜め 1.5 秒で止まる（40）。なぎ払いの線の高さは上下の動きの 1.5 秒先（45）。予兆を見て正しく避ければ当たらない
+  - 体の当たり: 10-4c の扱い（最大 HP の 8 割・残りが足りなければ撃墜・弾かない・1.5 秒は続けて当たらない）。人（協力は全員）がぶつかる進路なら、ゼノリスが上か下へ退く（急停止でぶつけさせない）
+  - 協力（`src/net/xenolith-coop.ts`・`xenolith-codec.ts`）: 回る中心・光線・瞬間移動・光の弾はいちばん近い 1 人（4 秒ごとに選び直す）。人数の補正 HP ×1 / ×1.4 / ×1.8 / ×2.2。state 約 120 バイト、光の弾はできごと（1 発 4 バイト）。通信の版 16。結果の表は 胴・ドーム・砲口・発光体・発生器
+  - 登録簿 `xenolith`（協力の番号 4・記録のキー `xenolith:normal` / `xenolith:hard`・SQL 0006 の決まりで送る）。起動時に読むのは入口 `src/ui/xenolith-link.ts` とミッションの登録だけで、判定・形・HUD・協力は遅延チャンク `xenolith-runtime`（プリキャッシュする）
+  - 勲章: 標準の 10 個 + 発生器をすべて壊して倒した・縁の発光体をすべて壊して倒した・溜め撃ちに一度も当たらずに倒した（3 回以上撃たせて）。合計を 10 万 CR 以内に保つため収集 100% を 8,000 → 5,000 CR
 
 #### 港湾都市と破壊される建物（6-4。マップは `src/data/maps.ts`、地形は `src/data/terrain-harbor.ts` / `src/render/terrain-gen/harbor-shape.ts`、街は `src/data/city.ts` / `src/render/city/`、建物の判定は `src/combat/buildings.ts` / `city-damage.ts`、今のマップは `src/missions/active-map.ts`。決定は `docs/decisions.md` の 6-4）
 

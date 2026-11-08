@@ -1,22 +1,35 @@
-// 10-5a: UFO ゼノリスの遅延チャンク（?dev=xenolith のときだけ読む。読むのは src/ui/xenolith-link.ts）:
-// フリーフライトにゼノリスだけを出し（判定は missions/xenolith-dev.ts）、形（render/xenolith-model/）と左の値の表示
-// （状態・段階・バリア・次の光線・瞬間移動までの時間・速さ・体力・距離・高さ・壊れた部位・当たり・三角形と描画の回数。タップ / クリックで畳む）、
-// 見失ったときの画面の端の印（画面の外のゼノリス = 水色、画面の外の瞬間移動の移る先 = 白く点滅）。URL: ?xnhp=<1〜100>・?xnbreak=gen0,emitter1,...
+// 10-5b: UFO ゼノリスの遅延チャンク（読むのは src/ui/xenolith-link.ts）: ソロのレイド（判定は missions/xenolith-dev.ts）と協力の
+// レイドの表示元（ホストの本体・クライアントの写し。差し込み口 net/xenolith-coop.ts の attachView）を、形（render/xenolith-model/）・
+// HUD・ブリーフィング・見失ったときの画面の端の印（画面の外のゼノリス = 水色、画面の外の瞬間移動の移る先 = 白く点滅）で出す。
+// 溜め撃ちのロックは HUD の LOCK と警告音（PlayerVitals.extraLock）。協力の差し込み口もここで登録する（ホストは開始の前にこのチャンクを読む）。
+// ?dev=xenolith のときだけ（10-5a）: フリーフライトにゼノリスを出し、左に値の表示（タップ / クリックで畳む）。
+// URL: ?xnhp=<1〜100>・?xnbreak=gen0,emitter1,...
 import './xenolith-dev.css';
-import { Vector3, type Camera, type Scene } from 'three';
-import { attackWeights } from '../ai/xenolith-attacks';
+import type { Camera, Scene } from 'three';
 import type { ScreenState } from '../core/game-state';
 import type { AircraftDetail } from '../data/aircraft-model';
-import { XENOLITH_CONFIG as C, XENOLITH_PARTS } from '../data/xenolith';
 import type { MapDef } from '../data/maps';
+import { XENOLITH_TARGET_SPHERES } from '../data/xenolith';
+import { xnlist, xnt } from '../data/xenolith-text';
 import type { XenolithGround } from '../entities/xenolith/xenolith-body';
+import { XenolithPartTarget } from '../entities/xenolith/xenolith-target';
 import type { GamePlay } from '../missions/game-play';
+import { registerRaidKaijuHooks } from '../missions/raid-kaiju-hooks';
 import {
   attachXenolithDev,
   parseXenolithOptions,
   type XenolithDev,
 } from '../missions/xenolith-dev';
+import { setXenolithBriefing } from '../missions/xenolith-mission';
+import type { XenolithRaid } from '../missions/xenolith-raid';
+import { registerRaidPlugin, type RaidPluginView } from '../net/raid-plugin';
+import { XenolithCoopHost, XenolithCoopMirror, xenolithRaidPlugin } from '../net/xenolith-coop';
 import { XenolithObject } from '../render/xenolith-model/xenolith-object';
+import { showToast } from './toast';
+import { XenolithBriefing } from './xenolith-briefing';
+import { XenolithEdges } from './xenolith-edge';
+import { XenolithHud, xenolithLockedOn, type XenolithCoopFrame } from './xenolith-hud';
+import { xenolithPanelText } from './xenolith-panel';
 
 export interface XenolithRuntimeParts {
   readonly play: GamePlay;
@@ -29,51 +42,81 @@ export interface XenolithRuntimeParts {
   readonly inFreeFlight: () => boolean;
   readonly onDetail: (fn: (d: AircraftDetail) => void) => void;
   readonly onRender: (fn: (alpha: number) => void) => void;
+  readonly hudVisible: () => boolean;
+  /** ?dev=xenolith: フリーフライトに出す・値の表示 */
+  readonly devFree: boolean;
+}
+
+export interface XenolithRuntime {
+  readonly dev: XenolithDev;
+}
+
+/** 協力の表示元（ホストの本体・クライアントの写し） */
+interface CoopSource {
+  readonly raid: XenolithRaid;
+  readonly view: RaidPluginView;
 }
 
 /** 怪獣を出している画面（ポーズ・フォトモード・結果の画面の後ろも見える） */
 const SHOWN: readonly ScreenState[] = ['flight', 'pause', 'photo', 'result'];
-const ndc = new Vector3();
-const view = new Vector3();
+/** レイドの HUD を出す画面 */
+const HUD_SHOWN: readonly ScreenState[] = ['flight', 'pause'];
 
-/** 画面の端の印（画面の外の点の向き）。画面の中なら隠す */
-function placeEdge(el: HTMLElement, camera: Camera, x: number, y: number, z: number): void {
-  camera.updateMatrixWorld();
-  view.set(x, y, z).applyMatrix4(camera.matrixWorldInverse);
-  ndc.set(x, y, z).project(camera);
-  const behind = view.z > 0;
-  let nx = ndc.x;
-  let ny = ndc.y;
-  if (behind) {
-    nx = -nx;
-    ny = -ny;
-  }
-  const inside = !behind && Math.abs(nx) <= 1 && Math.abs(ny) <= 1;
-  el.hidden = inside;
-  if (inside) return;
-  if (behind && Math.abs(nx) < 1e-3 && Math.abs(ny) < 1e-3) ny = -1;
-  const m = Math.max(Math.abs(nx), Math.abs(ny)) || 1;
-  const k = 0.9 / m;
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  const px = (nx * k * 0.5 + 0.5) * w;
-  const py = (-ny * k * 0.5 + 0.5) * h;
-  const angle = Math.atan2(-ny, nx);
-  el.style.transform = `translate(${px.toFixed(1)}px, ${(py - 11).toFixed(1)}px) rotate(${angle.toFixed(3)}rad)`;
-}
-
-export function startXenolith(p: XenolithRuntimeParts): XenolithDev {
+export function startXenolith(p: XenolithRuntimeParts): XenolithRuntime {
+  setXenolithBriefing(() => xnlist('briefing'));
+  // 結果の表の部位の列（協力の成績の partDamage の順: 胴・ドーム・砲口・発光体・発生器）
+  registerRaidKaijuHooks('xenolith', {
+    partLabels: () => [
+      xnt('part.hull'),
+      xnt('result.dome'),
+      xnt('result.cannon'),
+      xnt('result.emitters'),
+      xnt('result.gens'),
+    ],
+  });
   const dev = attachXenolithDev(p.play, parseXenolithOptions(p.search), {
     ground: p.ground,
     map: p.map,
+    freeFlight: p.devFree,
   });
   // 読み込みが遅れてフリーフライトがもう始まっていたら、その場で出す（この飛行のリプレイは怪獣なしの記録と合わない）
-  if (p.state() === 'flight' && p.inFreeFlight()) dev.startLate();
+  if (p.devFree && p.state() === 'flight' && p.inFreeFlight()) dev.startLate();
+  let coop: CoopSource | null = null;
+  const session = p.play.session;
+  /** 自分のプレイヤー ID（ソロは 0） */
+  const me = (): number => coop?.view.localId() ?? 0;
+  const lockOn = (): boolean => {
+    const raid = coop?.raid ?? (dev.active ? dev.raid : null);
+    return raid !== null && p.state() === 'flight' && xenolithLockedOn(raid, me());
+  };
+  session.player.extraLock = lockOn;
+  registerRaidPlugin(
+    xenolithRaidPlugin(
+      (view) => {
+        if (!view) {
+          coop = null;
+          hud.hide();
+          return;
+        }
+        const src = view.host instanceof XenolithCoopHost ? view.host : null;
+        const mir = view.mirror instanceof XenolithCoopMirror ? view.mirror : null;
+        const owner = src ?? mir;
+        if (!owner) return;
+        coop = { raid: owner.raid, view };
+        view.setLockTargets(owner.parts, []);
+        session.player.extraLock = lockOn;
+      },
+      () => ({ title: xnt('briefingTitle'), lines: xnlist('briefing') }),
+    ),
+  );
   const obj = new XenolithObject('high');
   p.scene.add(...obj.objects);
   p.onDetail((d) => {
     obj.setDetail(d);
   });
+  const hud = new XenolithHud(document.body);
+  const briefing = new XenolithBriefing(document.body);
+  const edges = new XenolithEdges(document.body);
   const panel = document.createElement('div');
   panel.className = 'xenolith-dev';
   panel.hidden = true;
@@ -82,100 +125,74 @@ export function startXenolith(p: XenolithRuntimeParts): XenolithDev {
     collapsed = !collapsed;
     panel.classList.toggle('is-collapsed', collapsed);
   });
-  const edgeBody = document.createElement('div');
-  edgeBody.className = 'xenolith-edge';
-  edgeBody.hidden = true;
-  const edgeWarp = document.createElement('div');
-  edgeWarp.className = 'xenolith-edge is-warp';
-  edgeWarp.hidden = true;
-  document.body.append(panel, edgeBody, edgeWarp);
+  document.body.append(panel);
   let last = performance.now();
   let lastText = '';
+  /** 今のレイドの経過（小さくなったら新しいレイド → ブリーフィング） */
+  let lastElapsed = Infinity;
+  /** 体への衝突の数（増えたらお知らせ。ソロ） */
+  let lastBodyHits = 0;
   let lastHp = dev.kaiju.parts.hp;
   let flash = 0;
+  const marks = new Map<string, string[]>();
+  const coopFrame: { marks: ReadonlyMap<string, readonly string[]>; targeted: boolean } = {
+    marks,
+    targeted: false,
+  };
+  const frameOf = (src: CoopSource): XenolithCoopFrame => {
+    marks.clear();
+    for (const [index, colors] of src.view.lockMarks()) {
+      const part = XENOLITH_TARGET_SPHERES[index]?.part;
+      if (!part) continue;
+      marks.set(part, [...(marks.get(part) ?? []), ...colors]);
+    }
+    coopFrame.targeted = src.view.targeted();
+    return coopFrame;
+  };
   p.onRender((alpha) => {
     const now = performance.now();
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     const state = p.state();
-    const k = dev.kaiju;
-    const shown = dev.flying && SHOWN.includes(state) && k.body.visible;
+    const raid = coop?.raid ?? dev.raid;
+    const k = raid.kaiju;
+    const active = coop !== null || dev.flying || dev.raiding;
+    const shown = active && SHOWN.includes(state) && k.body.visible;
     obj.setVisible(shown);
+    // 被弾の光（レイドは本体の flash、確かめる場は体力の減り）
     const hp = k.parts.hp;
-    flash = hp < lastHp ? 1 : Math.max(0, flash - dt * 12);
+    flash = raid.flash > 0 ? 1 : hp < lastHp ? 1 : Math.max(0, flash - dt * 12);
     lastHp = hp;
     if (shown) obj.update(k, alpha, dt, flash);
-    const flying = dev.flying && state === 'flight';
-    // 見失ったときの手がかり: 画面の外の本体と、画面の外の瞬間移動の移る先
-    if (flying) {
-      const b = obj.group.position;
-      placeEdge(edgeBody, p.camera, b.x, b.y, b.z);
-      const d = k.warp.destination;
-      if (k.warp.phase === 'telegraph') placeEdge(edgeWarp, p.camera, d.x, d.y, d.z);
-      else edgeWarp.hidden = true;
+    if (dev.taken.body > lastBodyHits && !coop && state === 'flight')
+      showToast(xnt('bodyHit'), { seconds: 2 });
+    lastBodyHits = dev.taken.body;
+    // 見失ったときの手がかり: 画面の外の本体と、画面の外の瞬間移動の移る先（飛行中だけ）
+    if (shown && state === 'flight' && !raid.dead && p.hudVisible())
+      edges.update(
+        p.camera,
+        obj.group.position,
+        k.warp.phase === 'telegraph' ? k.warp.destination : null,
+      );
+    else edges.hide();
+    if ((coop || dev.raiding) && HUD_SHOWN.includes(state)) {
+      const sel = session.combat.targeting.selected;
+      const locked = sel instanceof XenolithPartTarget ? sel : null;
+      hud.update(raid, p.hudVisible(), locked, coop ? frameOf(coop) : null, me());
+      if (!coop && raid.elapsed < lastElapsed) briefing.show(raid.difficulty);
+      lastElapsed = coop ? Infinity : raid.elapsed;
     } else {
-      edgeBody.hidden = true;
-      edgeWarp.hidden = true;
+      hud.hide();
+      if (!dev.raiding) lastElapsed = Infinity;
     }
-    panel.hidden = !flying;
+    briefing.update(dt, dev.raiding && state === 'flight');
+    panel.hidden = !(p.devFree && !coop && active && state === 'flight');
     if (panel.hidden) return;
-    const text = collapsed ? 'XENOLITH (dev) ▸' : panelText(dev, obj);
+    const text = collapsed ? 'XENOLITH (dev) ▸' : xenolithPanelText(dev, obj);
     if (text !== lastText) {
       panel.textContent = text;
       lastText = text;
     }
   });
-  return dev;
-}
-
-const f0 = (n: number): string => n.toFixed(0);
-const f1 = (n: number): string => n.toFixed(1);
-
-/** 値の表示の文（開発用なので英語だけ。遊ぶ人に出すときに i18n の表へ） */
-function panelText(dev: XenolithDev, obj: XenolithObject): string {
-  const k = dev.kaiju;
-  const b = k.body;
-  const pl = dev.playerPosition;
-  const beam = k.beam;
-  const cands = attackWeights(k, pl).map((c) => `${c.attack}×${f1(c.weight)}`);
-  const next = beam.busy
-    ? `${beam.kind} ${beam.phase} ${f1(beam.time)}s${beam.untilFire > 0 ? `  fire in ${f1(beam.untilFire)}s` : ''}`
-    : `in ${f1(Math.max(0, k.cooldown))}s [${cands.join(',') || 'none'}]`;
-  const bar = k.barrier;
-  const barLeft =
-    bar.phase === 'flicker'
-      ? `${f1(Math.max(0, bar.spec.flicker - bar.time))}s`
-      : bar.phase === 'down'
-        ? beam.busy && beam.phase !== 'warn'
-          ? 'held'
-          : `${f1(Math.max(0, bar.spec.down - bar.time))}s`
-        : '';
-  const warp = k.warp;
-  const warpText = !k.warpEnabled
-    ? 'disabled (emitters)'
-    : warp.phase === 'telegraph'
-      ? `TELEGRAPH ${f1(k.untilWarp)}s`
-      : `in ${f1(k.untilWarp)}s (every ${f1(k.warpInterval)}s)`;
-  const broken = XENOLITH_PARTS.filter((_, i) => k.parts.isBroken(i)).join(',') || 'none';
-  const floor = b.floorAt(b.position.x, b.position.z);
-  const dist = Math.hypot(pl.x - b.position.x, pl.y - b.position.y, pl.z - b.position.z);
-  const hits = dev.partTargets.reduce((s, t) => s + t.hits, 0);
-  return [
-    `XENOLITH (dev)  ${f0(k.elapsed)}s`,
-    `state  ${b.move} ${f1(b.moveTime)}s  orbit ${b.orbitDir > 0 ? 'L' : 'R'} r${f0(b.orbitRadius)} alt+${f0(b.altOffset)}`,
-    `stage  ${String(k.stage)}  hp ${f0(k.parts.hp)}/${f0(k.parts.maxHp)} (${f0(k.parts.ratio * 100)}%)`,
-    `barrier ${bar.phase.toUpperCase()} ${barLeft}  down ${f1(bar.spec.down)}s  drops ${String(bar.drops)}  blocked ${String(k.absorbed)}`,
-    `next   ${next}`,
-    `warp   ${warpText}  warps ${String(warp.warps)}`,
-    `speed  ${f0(b.speed)} m/s  (cruise ${f0(C.move.cruise * b.speedMul)} / dash ${f0(C.move.dash * b.speedMul)})`,
-    `you    dist ${f0(dist)}m  dy ${f0(pl.y - b.position.y)}m`,
-    `alt ${f0(b.position.y)}m  agl ${f0(b.position.y - floor)}m`,
-    `used   sweep ${String(k.attacksUsed.sweep)} charged ${String(k.attacksUsed.charged)} combo ${String(k.combos)}`,
-    `broken ${broken}`,
-    `hits on kaiju ${String(hits)}  taken sw${String(dev.taken.sweep)} ch${String(dev.taken.charged)} body${String(dev.taken.body)}`,
-    `tris ${String(obj.triangles)}  draws ${String(obj.draws)}`,
-    dev.lateStart ? 'LATE START (replay differs)' : '',
-  ]
-    .filter((s) => s !== '')
-    .join('\n');
+  return { dev };
 }

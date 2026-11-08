@@ -49,8 +49,8 @@ export const screenIs = (page, name, timeout = 60000) =>
     );
 
 /** 名前入力済み・チュートリアルの案内済み（9-5c の「新しくなりました」も）のセーブ（各モードの起動用） */
-export async function seed(page) {
-  await page.evaluate(() => {
+export async function seed(page, raidBestMs = null) {
+  await page.evaluate((best) => {
     localStorage.setItem(
       'skyraid.save',
       JSON.stringify({
@@ -64,10 +64,14 @@ export async function seed(page) {
         },
         settings: {},
         flags: { tutorialOffered: true, tutorialNotice: true, assistPreset: true },
+        ...(best ? { records: { raidBestMs: best } } : {}),
       }),
     );
-  });
+  }, raidBestMs);
 }
+
+/** 10-5b: ゼノリスの解放の条件（ほかの 4 体のうち 2 体を通常でクリア）を満たす自己ベスト（seed の 2 つ目に渡す） */
+export const XENOLITH_UNLOCKED = { normal: 600000, 'nephirga:normal': 600000 };
 
 /** 9-11a: 初回の補助の組（9-5d）を「かんたん」で決める（出ていなければ何もしない）。true = 出ていた */
 export async function pickAssistPreset(page) {

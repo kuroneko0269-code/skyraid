@@ -4,7 +4,12 @@
 // 記録しない飛行（チュートリアル・PvP・協力）は見ない（協力・PvP は対戦の終わりの集計: judgeMatch）
 import { BADGE_CONFIG } from '../../data/badges';
 import { KAIJU2_PARTS } from '../../data/kaiju2';
-import { ALBION_RAID_ID, GOURAI_RAID_ID, NEPHIRGA_ID } from '../../data/raid-kaiju';
+import {
+  ALBION_RAID_ID,
+  GOURAI_RAID_ID,
+  NEPHIRGA_ID,
+  XENOLITH_RAID_ID,
+} from '../../data/raid-kaiju';
 import type { ReplayControls, ReplayStart } from '../../replay/types';
 import { freeExtrasOf } from '../free-extra';
 import type { GamePlay } from '../game-play';
@@ -148,12 +153,19 @@ function nephirgaBroken(play: GamePlay): number {
 
 /**
  * 10-3b: アルビオンの状態の根の印（遅延チャンクなので印の名前で見る）。albionNestsGone = 腹の巣が全部壊れている、
- * 10-3c: albionUntouched = 人を狙う攻撃と体に一度も当たっていない。10-4b: ゴウライの印（gourai-raid.ts）も同じ形で見る
+ * 10-3c: albionUntouched = 人を狙う攻撃と体に一度も当たっていない。10-4b: ゴウライの印（gourai-raid.ts）・10-5b: ゼノリスの印（xenolith-raid.ts）も同じ形で見る
  */
 function albionFlag(
   play: GamePlay,
   flag:
-    'albionNestsGone' | 'albionUntouched' | 'gouraiTurretsGone' | 'gouraiVentCore' | 'gouraiFlared',
+    | 'albionNestsGone'
+    | 'albionUntouched'
+    | 'gouraiTurretsGone'
+    | 'gouraiVentCore'
+    | 'gouraiFlared'
+    | 'xenolithGensGone'
+    | 'xenolithWarpStopped'
+    | 'xenolithChargedDodged',
 ): boolean {
   for (const extra of freeExtrasOf(play)) {
     if (!extra.active) continue;
@@ -202,6 +214,12 @@ export function judgeSortie(
     if (albionFlag(play, 'gouraiTurretsGone')) out.push('gouraiTurrets');
     if (albionFlag(play, 'gouraiVentCore')) out.push('gouraiVentCore');
     if (albionFlag(play, 'gouraiFlared')) out.push('gouraiFlares');
+  }
+  // 10-5b: ゼノリス（ソロのレイド）: 発生器をすべて壊して・縁の発光体をすべて壊して・溜め撃ちに一度も当たらずに倒した
+  if (success && start.raidKaiju === XENOLITH_RAID_ID) {
+    if (albionFlag(play, 'xenolithGensGone')) out.push('xenolithGens');
+    if (albionFlag(play, 'xenolithWarpStopped')) out.push('xenolithWarp');
+    if (albionFlag(play, 'xenolithChargedDodged')) out.push('xenolithCharged');
   }
   const race = play.race?.result;
   if (start.mode === 'race' && race?.outcome === 'finished' && race.missed === 0)

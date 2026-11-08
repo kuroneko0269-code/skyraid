@@ -2,7 +2,7 @@
 import {
   RAID_KAIJU,
   VORGAS_ID,
-  raidKaijuName,
+  raidKaijuShortName,
   raidKaijuOf,
   raidKaijuShown,
 } from '../data/raid-kaiju';
@@ -68,8 +68,10 @@ export function raidRuleSegments(
     t('lobby.rule.kaiju'),
     // 10-2: 登録簿の順の番号のうち、公開されていて協力できる怪獣だけ（未公開は ?dev=<名前> のときだけ）
     RAID_KAIJU.flatMap((k, i) => (k.coop && raidKaijuShown(k) ? [i] : [])),
-    (v) => raidKaijuName(raidKaijuOf(Number(v))),
+    // 10-5b: 5 体になったので短い名前（アルビオン・ゴウライ・ゼノリス）を 3 個ずつ 2 段に（狭い画面で右へはみ出さない）
+    (v) => raidKaijuShortName(raidKaijuOf(Number(v))),
     onChange,
+    'lobby-seg-kaiju',
   );
   const difficulty = ruleSegment(
     parent,

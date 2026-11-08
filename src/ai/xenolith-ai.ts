@@ -1,26 +1,32 @@
 // 10-5a: UFO ゼノリスの本体（状態の根。Three.js 非依存）: 体（狙う人の周りを回る円盤）・部位（10-2 の PartSet）・バリア（Barrier）・
 // 瞬間移動（Warp）・光線（Beam のなぎ払いと溜め撃ち）・段階（1 / 2: 瞬間移動が多く速い / 3: 溜め撃ちの後に続けてなぎ払う）。
 // 乱数は種の列（SeededRandom）だけ、時刻は dt の足し算だけ、状態は数・文字列・配列・数のオブジェクトのプロパティだけ
-// （リプレイのキーフレームと状態のハッシュにそのまま入る）。攻撃の選び方と始め方は xenolith-attacks.ts
+// （リプレイのキーフレームと状態のハッシュにそのまま入る）。攻撃の選び方と始め方は xenolith-attacks.ts。
+// 10-5b: 光の弾のばらまき（ShotPool。xenolith-orbs.ts）・溜め撃ちのロックは進む先を追う・人がぶつかる進路なら体が上下へ退く
 import { SeededRandom } from '../core/random';
 import {
   XENOLITH_CHARGED,
   XENOLITH_CONFIG as C,
   XENOLITH_EMITTERS,
+  XENOLITH_ORB_SHOT,
   XENOLITH_GENS,
   XENOLITH_PARTS,
   XENOLITH_PART_SPECS,
   XENOLITH_SWEEP,
   XENOLITH_TARGET_SPHERES,
   type XenolithAttack,
+  type XenolithHitKind,
   type XenolithPart,
 } from '../data/xenolith';
 import { vec3, type Vec3 } from '../flight/math';
 import { XenolithBody, type XenolithGround } from '../entities/xenolith/xenolith-body';
 import { Beam } from './raid-kit/beam';
+import type { ShotOrder } from './raid-kit/barrage';
 import { PartSet } from './raid-kit/parts';
+import { ShotPool } from './raid-kit/shots';
 import { Barrier, Warp, type WarpSpec } from './raid-kit/shield';
 import { beamMouth, beginWarp, chooseAttack, startAttack } from './xenolith-attacks';
+import { stepOrbs } from './xenolith-orbs';
 import { resetXenolith } from './xenolith-reset';
 
 /** 狙う人（ソロは自機。id はプレイヤー ID、radius は当たりの球） */
@@ -29,10 +35,12 @@ export interface XenolithTarget {
   readonly active: boolean;
   readonly id?: number;
   readonly radius?: number;
+  /** 10-5b: 速度（光の弾の見越し。無ければ見越さない） */
+  readonly velocity?: Readonly<Vec3>;
 }
 
-/** 光線の当たり（攻撃・ダメージ・当たった人） */
-export type XenolithHit = (attack: XenolithAttack, damage: number, who: XenolithTarget) => void;
+/** 光線・光の弾の当たり（種類・ダメージ・当たった人） */
+export type XenolithHit = (attack: XenolithHitKind, damage: number, who: XenolithTarget) => void;
 
 const NO_HIT: XenolithHit = () => undefined;
 const PART = (id: XenolithPart): number => XENOLITH_PARTS.indexOf(id);
@@ -42,6 +50,7 @@ const EMITTERS = XENOLITH_EMITTERS.map(PART);
 const GENS = XENOLITH_GENS.map(PART);
 const DEFAULT_RADIUS = 8;
 const mouth = vec3();
+const lead = vec3();
 
 /** 判定の球 i の世界の位置（縁の発光体は輪の回った角度で回す） */
 export function xenolithSpherePoint(out: Vec3, body: XenolithBody, i: number): Vec3 {
@@ -57,6 +66,8 @@ export function xenolithSpherePoint(out: Vec3, body: XenolithBody, i: number): V
 }
 
 export class XenolithKaiju {
+  /** 状態の走査（リプレイのハッシュ・キーフレーム）に入れない: 毎ステップ作り直す入れ物と、協力の知らせの口 */
+  static readonly transientKeys = ['orbVictims', 'onOrb'];
   readonly body: XenolithBody;
   readonly parts = new PartSet(XENOLITH_PART_SPECS, C.hp);
   /** バリア・瞬間移動の数値（壊れた部位で変える。部品が読む） */
@@ -103,6 +114,17 @@ export class XenolithKaiju {
   /** 難易度の倍率（10-5b）: 光線の間隔・当たりのダメージ */
   intervalScale = 1;
   damageScale = 1;
+  /** 10-5b: 光の弾（光線の間のばらまき）。orbPhase は 'idle' / 'warn'（予兆）、orbTimer は次のばらまきまでの秒数 */
+  readonly orbs = new ShotPool({ gun: XENOLITH_ORB_SHOT, missile: XENOLITH_ORB_SHOT }, C.orbs.cap);
+  orbsEnabled = true;
+  orbPhase: 'idle' | 'warn' = 'idle';
+  orbTime = 0;
+  orbTimer: number = C.orbs.first;
+  orbVolleys = 0;
+  orbHits = 0;
+  readonly orbVictims: { id: number; position: Readonly<Vec3>; radius: number }[] = [];
+  /** 協力のホスト: 撃った光の弾を写しへ知らせる（状態ではない） */
+  onOrb: ((o: ShotOrder) => void) | null = null;
 
   constructor(ground: XenolithGround) {
     this.body = new XenolithBody(ground);
@@ -210,7 +232,7 @@ export class XenolithKaiju {
     // 体の向き: ふだんと溜め撃ちのロック警告・硬直の間は狙う人へ。なぎ払いの予兆と撃つ間・溜めと撃つ間は止める
     const turn =
       !beam.busy || beam.phase === 'recover' || (beam.kind === 'charged' && beam.phase === 'warn');
-    b.step(dt, focus, this.holding, turn, this.random.next);
+    b.step(dt, focus, this.holding, turn, this.random.next, crowd);
     this.stepWarp(dt, target, focus);
     const wasBusy = beam.busy;
     // 光線を始める（瞬間移動の予兆の間と、移った直後は始めない）
@@ -226,7 +248,7 @@ export class XenolithKaiju {
       }
     }
     beamMouth(mouth, this);
-    beam.step(dt, b, mouth, target.active ? target.position : null);
+    beam.step(dt, b, mouth, target.active ? this.aimPoint(target) : null);
     // 段階 3: 溜め撃ちを撃ち終えたら、すぐになぎ払う（バリアは外れたまま）
     if (
       beam.kind === 'charged' &&
@@ -250,6 +272,7 @@ export class XenolithKaiju {
         C.attackInterval * (this.stage >= 3 ? C.stages.intervalMul3 : 1) * this.intervalScale;
     }
     this.stepBarrier(dt);
+    stepOrbs(this, dt, target, onHit, crowd);
     // 光線の当たり（撃つ間だけ。1 回の撃ちで 1 人に 1 回）
     if (beam.phase === 'fire' && this.attack) {
       const attack = this.attack;
@@ -261,6 +284,13 @@ export class XenolithKaiju {
         onHit(attack, spec.damage * this.damageScale, c);
       });
     }
+  }
+
+  /** 飛んでいる光の弾を消す（倒した・止めた） */
+  clearOrbs(): void {
+    this.orbs.clear();
+    this.orbPhase = 'idle';
+    this.orbTime = 0;
   }
 
   /** バリア: 光線を撃つ flicker 秒前に揺らぎ始め、撃つ間と硬直の間は外れたまま、その後 down 秒で張り直す */
@@ -292,6 +322,18 @@ export class XenolithKaiju {
     this.cooldown = Math.max(this.cooldown, C.warp.afterWarp);
     // 発生器を 3 つ壊すと、瞬間移動の後にもバリアが外れる
     if (this.brokenGens >= GENS.length) this.barrier.drop();
+  }
+
+  /** 光線を向ける点: 溜め撃ちのロックは狙う人の進む先（charged.lead 秒先）を追う。ほかは今の位置 */
+  private aimPoint(target: XenolithTarget): Readonly<Vec3> {
+    const v = target.velocity;
+    if (!v || this.beam.kind !== 'charged' || this.beam.phase !== 'warn') return target.position;
+    const p = target.position;
+    const t = C.charged.lead;
+    lead.x = p.x + v.x * t;
+    lead.y = p.y + v.y * t;
+    lead.z = p.z + v.z * t;
+    return lead;
   }
 
   /** 次の瞬間移動までの秒数（予兆の間は移るまで。使わないときは Infinity） */

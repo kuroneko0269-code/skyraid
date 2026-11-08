@@ -80,12 +80,15 @@ export const BADGE_REWARDS = {
   /** 勲章（収集も含む）を milestoneEvery 個取るごと */
   milestoneEvery: 10,
   milestone: 500,
-  /** 収集の割合ごと */
+  /**
+   * 収集の割合ごと。10-5b: ゼノリスの勲章 13 個（標準 10・まとまり 3）と節目 1 つを足すと合計が 10 万 CR を超えるので、
+   * 100% を 8,000 → 5,000 CR にした（合計 99,700 CR。tests/badges.test.ts）
+   */
   collect: [
     { fraction: 0.25, credits: 1000 },
     { fraction: 0.5, credits: 2000 },
     { fraction: 0.75, credits: 4000 },
-    { fraction: 1, credits: 8000 },
+    { fraction: 1, credits: 5000 },
   ],
 } as const;
 

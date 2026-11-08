@@ -15,6 +15,7 @@ import {
   dialogButton,
   screenIs,
   seed,
+  XENOLITH_UNLOCKED,
   shown,
   toModeSelect,
   watch,
@@ -98,7 +99,8 @@ export async function auditRawKeys(browser, base, out) {
   };
 
   await page.goto(base);
-  await seed(page);
+  // 10-5b: ゼノリスのレイドも飛べるように、解放の条件を満たす自己ベストを入れる
+  await seed(page, XENOLITH_UNLOCKED);
   await home();
   await scan('mode-select');
 
@@ -156,7 +158,7 @@ export async function auditRawKeys(browser, base, out) {
   });
 
   // レイド: 怪獣ごと
-  for (const kaiju of ['vorgas', 'nephirga', 'albion', 'gourai'])
+  for (const kaiju of ['vorgas', 'nephirga', 'albion', 'gourai', 'xenolith'])
     await section(`raid-${kaiju}`, async () => {
       await page.click('.mode-card[data-mode="raid"]');
       await page.locator('.raid-select-wrap:not([hidden])').waitFor();

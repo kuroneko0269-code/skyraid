@@ -690,6 +690,13 @@
     "titleNormal": "Gourai",
     "titleHard": "Gourai (Hard)"
   },
+  "xenolith": {
+    "name": "UFO Xenolith",
+    "missionTitle": "Raid: UFO Xenolith",
+    "objective": "Destroy Xenolith",
+    "titleNormal": "Xenolith",
+    "titleHard": "Xenolith (Hard)"
+  },
   "maps": {
     "island": "Coast & Island",
     "harbor": "Harbor City"
@@ -1957,7 +1964,8 @@
       "over": "Match Over",
       "raid2Clear": "Nephirga Defeated",
       "raid3Clear": "Albion Defeated",
-      "raid4Clear": "Gourai Defeated"
+      "raid4Clear": "Gourai Defeated",
+      "raid5Clear": "Xenolith Defeated"
     },
     "result": {
       "protected": "Buildings saved {percent}%",
@@ -2471,6 +2479,18 @@
       "gouraiFlares": {
         "name": "Defeated Gourai without being hit by its missiles",
         "note": "Decoy 4 or more with flares. Solo raid"
+      },
+      "xenolithGens": {
+        "name": "Destroyed all of Xenolith's generators and defeated it",
+        "note": "3 generators. Solo raid"
+      },
+      "xenolithWarp": {
+        "name": "Destroyed all of Xenolith's rim emitters and defeated it",
+        "note": "Stops the warps. Solo raid"
+      },
+      "xenolithCharged": {
+        "name": "Defeated Xenolith without being hit by a charged shot",
+        "note": "After at least 3 charged shots. Solo raid"
       }
     },
     "collect": {
@@ -2747,7 +2767,8 @@
       "vorgas": "Vorgas",
       "nephirga": "Nephirga",
       "albion": "Albion",
-      "gourai": "Gourai"
+      "gourai": "Gourai",
+      "xenolith": "Xenolith"
     },
     "unlock": {
       "title": "To unlock",
@@ -2873,6 +2894,37 @@
           "purge": {
             "name": "Second half",
             "note": "Sheds its armor and speeds up. The core stays exposed"
+          }
+        }
+      },
+      "xenolith": {
+        "tagline": "A silver disc wrapped in a barrier",
+        "size": "160 m across",
+        "motion": "Circles you fast, stopping, dashing and warping around you",
+        "parts": "Dome (weak point), cannon, 4 rim emitters, 3 generators below (the hull is indestructible)",
+        "opening": "A barrier usually blocks your fire. It drops for a few seconds from just before each beam (while the rim band is dark). The generators below can always be hit, and each one keeps the barrier down longer. Read the warnings, dodge, and strike while it's open. You can't fly through the hull.",
+        "normal": "Normal: 20 min total",
+        "hard": "Hard: HP ×1.3, faster and stronger beams, 18 min total, reward ×1.8",
+        "attacks": {
+          "warp": {
+            "name": "Warp",
+            "note": "Jumps to the pillar of light. Edge marker if off screen"
+          },
+          "barrier": {
+            "name": "Barrier",
+            "note": "Blocks fire. Drops before each beam"
+          },
+          "sweep": {
+            "name": "Sweep",
+            "note": "Climb or dive away from the two glowing lines"
+          },
+          "charged": {
+            "name": "Charged shot",
+            "note": "When the LOCK line stops, turn hard"
+          },
+          "orbs": {
+            "name": "Light orbs",
+            "note": "Scattered between beams. Turn to dodge"
           }
         }
       }

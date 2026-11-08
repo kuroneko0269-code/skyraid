@@ -216,7 +216,8 @@ export class GameAudio {
     const p = a.state.position;
     w.missile = s.incomingMissiles > 0;
     w.pullUp = p.y - this.groundHeight(p.x, p.z) < HUD_CONFIG.groundWarningAgl;
-    w.aaa = s.props.aaa.warning;
+    // 10-5b: ゼノリスの溜め撃ちのロック（LOCK）も対空砲のロックと同じ警告音
+    w.aaa = s.props.aaa.warning || (s.player.extraLock?.() ?? false);
     w.stall = a.state.stall > HUD_CONFIG.stallThreshold;
     const kind = pickWarning(w);
     loops.updateTones(lock, kind ? warningTone(kind, t) : null);

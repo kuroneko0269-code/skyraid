@@ -204,8 +204,8 @@ describe('ネフィルガの協力のホストの判定（9-6c）', () => {
 });
 
 describe('ロビーと通信の版（9-6c）', () => {
-  it('協力のネフィルガの部屋の初期設定・設定の往復・通信の版 15（10-2 で 11 → 12、10-3b でアルビオンを足して 13、10-3c でアルビオンの state を変えて 14、10-4b でゴウライを足して 15）', () => {
-    expect(NET_CONFIG.protocolVersion).toBe(15);
+  it('協力のネフィルガの部屋の初期設定・設定の往復・通信の版 15（10-2 で 11 → 12、10-3b でアルビオンを足して 13、10-3c でアルビオンの state を変えて 14、10-4b でゴウライを足して 15、10-5b でゼノリスを足して 16）', () => {
+    expect(NET_CONFIG.protocolVersion).toBe(16);
     const s = initialSettings(true, null, 1);
     expect(s?.raidKaiju).toBe(1);
     expect(s?.mode).toBe('raid');

@@ -128,6 +128,12 @@ export async function auditCards({ browser, base, touchContext, toTitle }) {
       'dialog',
     ],
     [
+      'レイド → 怪獣の切り替え（ゼノリス。鍵の付いた見た目）',
+      '.mode-card[data-mode="raid"]',
+      '.raid-kaiju-seg .ui-seg-item[data-value="xenolith"]',
+      'dialog',
+    ],
+    [
       'レイド → 難易度の切り替え（高難度）',
       '.mode-card[data-mode="raid"]',
       '.raid-diff-seg .ui-seg-item[data-value="hard"]',

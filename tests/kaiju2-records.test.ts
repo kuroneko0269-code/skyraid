@@ -37,7 +37,7 @@ describe('ネフィルガの記録のキー', () => {
 
   it('オンライン: 0003 を流した後（9-5d の事前修正）はネフィルガも送る・受け付ける', () => {
     // 10-3b: アルビオンは SQL 0006（キーの決まり）で受け付ける
-    expect(RANKED_RAID_KAIJU).toEqual(['vorgas', 'nephirga', 'albion', 'gourai']);
+    expect(RANKED_RAID_KAIJU).toEqual(['vorgas', 'nephirga', 'albion', 'gourai', 'xenolith']);
     expect(rankedRaidKaiju('nephirga')).toBe(true);
     expect(validKeys('raid')).toEqual([
       'normal',
@@ -48,6 +48,8 @@ describe('ネフィルガの記録のキー', () => {
       'albion:hard',
       'gourai:normal',
       'gourai:hard',
+      'xenolith:normal',
+      'xenolith:hard',
     ]);
     expect(checkRecord(raidRecord('nephirga:normal', 180, 'kestrel', 'A'))).toBeNull();
     expect(checkRecord(raidRecord('normal', 180, 'kestrel', 'A'))).toBeNull();

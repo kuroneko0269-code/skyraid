@@ -72,10 +72,11 @@ export function inspect(rootSelector) {
       if (!card) {
         const range = document.createRange();
         range.selectNodeContents(b);
-        const tops = new Set(
-          [...range.getClientRects()].filter((x) => x.width > 1).map((x) => Math.round(x.top)),
-        );
-        if (tops.size > 1) issues.push({ kind: 'wrap', target: label(b) });
+        // 10-5b: 同じ行の小さな文字（鍵の印 0.8em など）は上端が数 px ずれるだけなので、文字の大きさより離れた行だけを数える
+        const tops = [...range.getClientRects()].filter((x) => x.width > 1).map((x) => x.top);
+        const size = parseFloat(getComputedStyle(b).fontSize) || 12;
+        if (tops.length > 1 && Math.max(...tops) - Math.min(...tops) > size * 0.8)
+          issues.push({ kind: 'wrap', target: label(b) });
         if (b.scrollWidth > b.clientWidth + 1) issues.push({ kind: 'clip', target: label(b) });
       } else {
         for (const c of b.children)

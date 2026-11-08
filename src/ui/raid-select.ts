@@ -5,10 +5,16 @@
 // 怪獣はデータ（KAIJU_PROFILES）から並べる。ヴォルガスと、登録された別の怪獣（raid-variants）だけを出す
 // 10-2: 登録簿（src/data/raid-kaiju.ts）の未公開の怪獣は ?dev=<名前> のときだけ。解放の条件のある怪獣は、満たすまで鍵を付けて
 // 条件を出し、出撃のボタンを押せなくする（?dev=raid-lock で見た目を確かめられる）
-import { hasMessage, t } from '../core/i18n';
+import { t } from '../core/i18n';
 import { KAIJU_PROFILES, type KaijuProfile } from '../data/kaiju-profiles';
 import { RAID_DIFFICULTY_LABELS, RAID_RULES, type RaidDifficulty } from '../data/raid';
-import { raidKaijuName, raidKaijuShown, VORGAS_ID, type RaidKaijuId } from '../data/raid-kaiju';
+import {
+  raidKaijuName,
+  raidKaijuShortName,
+  raidKaijuShown,
+  VORGAS_ID,
+  type RaidKaijuId,
+} from '../data/raid-kaiju';
 import { findRaidVariant } from '../missions/raid-variants';
 import { raidUnlockText, type UnlockState } from '../progression/raid-unlock';
 import { el } from './hud-dom';
@@ -37,8 +43,7 @@ export function availableKaiju(): readonly KaijuProfile[] {
 
 /** 10-4a の事前修正: 怪獣の切り替えに出す短い名前（raidSelect.tab.<id>。無ければ名前） */
 export function raidKaijuTabName(id: RaidKaijuId): string {
-  const key = `raidSelect.tab.${id}`;
-  return hasMessage(key) ? t(key) : raidKaijuName(id);
+  return raidKaijuShortName(id);
 }
 
 /** 横にスクロールする並びの、続きのある側の印（端のぼかし） */

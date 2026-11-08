@@ -1,6 +1,6 @@
 // 10-5a: UFO ゼノリスの確かめる場（?dev=xenolith）: URL の値・フリーフライトで出てリプレイで同じ・付けないときは今までと同じ・
 // 撃てる（バリアの間は殻の中に効かない・発生器は効く）・体を通り抜けられない・遅延読み込み（起動と本体の量を増やさない。量そのものは
-// npm run perf と ui-audit --release の起動の量の上限 320KB）・解放の条件の準備（登録は 10-5b）
+// npm run perf と ui-audit --release の起動の量の上限 320KB）・解放の条件（10-5b で登録簿に入れた）
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -78,7 +78,7 @@ describe('UFO ゼノリスの確かめる場（10-5a）', () => {
     expect(dev.kaiju.parts.hp).toBeGreaterThan(0);
   });
 
-  it('体は通り抜けられない: 自機をゼノリスの真ん中へ向けて飛ばすと弾かれ、ダメージと短い操作不能を受ける', () => {
+  it('体は通り抜けられない（10-5b: 10-4c の扱い）: 自機をゼノリスの真ん中へ向けて飛ばすと、最大 HP の約 8 割のダメージ（弾かない・続けて当たらない）', () => {
     const { w, dev } = mk();
     record(w, BASE_START, { seconds: 1 });
     const k = dev.kaiju;
@@ -95,7 +95,7 @@ describe('UFO ゼノリスの確かめる場（10-5a）', () => {
     const before = s.player.hp;
     k.cooldown = 1e9;
     k.warpTimer = 1e9;
-    let inside = 0;
+    k.orbsEnabled = false;
     for (let i = 0; i < 600 && dev.taken.body === 0; i++) {
       // 機首（−Z）を体へ向け直す（体も動く）
       const dx = k.body.position.x - a.state.position.x;
@@ -114,13 +114,13 @@ describe('UFO ゼノリスの確かめる場（10-5a）', () => {
       a.state.orientation.z = -sy * sp;
       a.state.speed = 250;
       stepWorld(w.play, w.buildings(), w.controls, createCombatInput(), 1 / 60);
-      const p = a.state.position;
-      const q = k.body.position;
-      if (Math.hypot(p.x - q.x, p.z - q.z) < 60 && Math.abs(p.y - q.y) < 8) inside++;
     }
     expect(dev.taken.body).toBe(1);
-    expect(inside).toBe(0);
-    expect(s.player.hp).toBeLessThan(before);
+    expect(before - s.player.hp).toBeCloseTo(s.player.maxHp * 0.8, 0);
+    // 通り抜ける間（続けて当たらない 1.5 秒）はもう当たらない
+    for (let i = 0; i < 30; i++)
+      stepWorld(w.play, w.buildings(), w.controls, createCombatInput(), 1 / 60);
+    expect(dev.taken.body).toBe(1);
   });
 
   it('遅延読み込み: ゼノリスの判定・形・表示は入口（xenolith-link.ts）の import() からだけ読む（起動・本体の量を増やさない）', () => {
@@ -145,17 +145,26 @@ describe('UFO ゼノリスの確かめる場（10-5a）', () => {
     }
     const link = readFileSync(join('src', 'ui', 'xenolith-link.ts'), 'utf8');
     expect(
-      [...link.matchAll(/^import[^;]*?from '([^']+)'/gms)]
+      // 型だけの import（import type）は消えるので数えない
+      [...link.matchAll(/^import(?! type)[^;]*?from '([^']+)'/gms)]
+        .map((m) => m[1])
+        .filter((i) => i?.includes('xenolith')),
+      // 10-5b: 起動時に読むのはミッションの登録（名前と数値の参照だけ）
+    ).toEqual(['../missions/xenolith-mission']);
+    const mission = readFileSync(join('src', 'missions', 'xenolith-mission.ts'), 'utf8');
+    expect(
+      [...mission.matchAll(/^import[^;]*?from '([^']+)'/gms)]
         .map((m) => m[1])
         .filter((i) => i?.includes('xenolith')),
     ).toEqual([]);
     expect(link).toContain("import('./xenolith-runtime')");
-    // プリキャッシュしない（遊ぶ人は読まない）
-    expect(readFileSync('vite.config.ts', 'utf8')).toContain("'**/assets/xenolith-runtime-*'");
+    // 10-5b で公開: プリキャッシュする（オフラインでも遊べる）
+    expect(readFileSync('vite.config.ts', 'utf8')).not.toContain('xenolith-runtime');
   });
 
-  it('解放の条件の準備: ほかの 4 体のうち 2 体を通常でクリア（高難度は通常にも数える）。登録簿にはまだ無い（10-5b）', () => {
-    expect(RAID_KAIJU.some((k) => k.id === ('xenolith' as string))).toBe(false);
+  it('解放の条件: ほかの 4 体のうち 2 体を通常でクリア（高難度は通常にも数える）。10-5b で登録簿の最後に入れた', () => {
+    expect(RAID_KAIJU.at(-1)?.id).toBe('xenolith');
+    expect(RAID_KAIJU.at(-1)?.unlock).toBe(XENOLITH_UNLOCK);
     expect(XENOLITH_UNLOCK).toEqual({
       kaiju: ['vorgas', 'nephirga', 'albion', 'gourai'],
       count: 2,
