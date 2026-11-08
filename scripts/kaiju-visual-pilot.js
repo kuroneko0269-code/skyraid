@@ -1,6 +1,6 @@
 /* global console, process, window, document, localStorage, Buffer, URL */
 // 10-7b: 怪獣の見た目の前後の記録（10-7a の kaiju2-visual-pilot.js を怪獣ごとに使えるようにした）。
-// `node scripts/kaiju-visual-pilot.js <nephirga|albion|gourai> <before|after> [--measure] [--quality high|medium|low] [--out <dir>]
+// `node scripts/kaiju-visual-pilot.js <nephirga|albion|gourai|xenolith> <before|after> [--measure] [--quality high|medium|low] [--out <dir>]
 //  [--scenes a,b] [--weathers day] [--no-shots]`
 // 開発サーバーを立て、?dev=kshot でその怪獣のソロのレイドに出て、決まった場面（src/data/<怪獣>-shots.ts）を決まった天候で撮る
 // （src/ui/kaiju-shot.ts）。見た目だけの乱数（Math.random）は決まった種にする（前後で粒の出方をそろえる）。
@@ -9,7 +9,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'vite';
 import { pickBrowsers } from './audit-browsers.js';
-import { pickAssistPreset, seed, shown } from './audit-helpers.js';
+import { pickAssistPreset, seed, shown, XENOLITH_UNLOCKED } from './audit-helpers.js';
 
 const args = process.argv.slice(2);
 const free = args.filter((a, i) => !a.startsWith('--') && !(args[i - 1] ?? '').startsWith('--'));
@@ -58,7 +58,8 @@ try {
     if (m.type() === 'error') console.error(`console: ${m.text().slice(0, 300)}`);
   });
   await page.goto(base);
-  await seed(page);
+  // ゼノリスは解放の条件（ほかの 2 体を通常でクリア）を満たした自己ベストで
+  await seed(page, kaiju === 'xenolith' ? XENOLITH_UNLOCKED : null);
   // 画質は手動の設定として（自動で下げない）。セーブがあるとセーブの設定を読むのでそこへ書く
   await page.evaluate((q) => {
     const save = JSON.parse(localStorage.getItem('skyraid.save') ?? '{}');

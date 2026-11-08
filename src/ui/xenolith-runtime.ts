@@ -5,7 +5,10 @@
 // ?dev=xenolith のときだけ（10-5a）: フリーフライトにゼノリスを出し、左に値の表示（タップ / クリックで畳む）。
 // URL: ?xnhp=<1〜100>・?xnbreak=gen0,emitter1,...
 import './xenolith-dev.css';
-import type { Camera, Scene } from 'three';
+import type { PerspectiveCamera, Scene } from 'three';
+import { parseDevFlags } from '../core/debug-flags';
+import type { FlightFrame } from '../render/flight-frame';
+import type { RenderPipeline } from '../render/pipeline';
 import type { ScreenState } from '../core/game-state';
 import type { AircraftDetail } from '../data/aircraft-model';
 import type { MapDef } from '../data/maps';
@@ -34,17 +37,27 @@ import { xenolithPanelText } from './xenolith-panel';
 export interface XenolithRuntimeParts {
   readonly play: GamePlay;
   readonly scene: Scene;
-  readonly camera: Camera;
+  readonly camera: PerspectiveCamera;
   readonly search: string;
   readonly ground: XenolithGround;
   readonly map: () => Pick<MapDef, 'center' | 'id'>;
   readonly state: () => ScreenState;
   readonly inFreeFlight: () => boolean;
-  readonly onDetail: (fn: (d: AircraftDetail) => void) => void;
+  /** 画質の機体の細かさとブルーム（今の値をすぐと、変わるたび。10-7d の見た目の段） */
+  readonly onDetail: (fn: (d: { aircraftDetail: AircraftDetail; bloom: boolean }) => void) => void;
   readonly onRender: (fn: (alpha: number) => void) => void;
   readonly hudVisible: () => boolean;
   /** ?dev=xenolith: フリーフライトに出す・値の表示 */
   readonly devFree: boolean;
+  /** 10-7d: 天候（雨の強さ）・演出のカメラの口・描画（撮影）・画面の揺れ・画面の状態の移り */
+  readonly weather: {
+    set(id: string, instant?: boolean): void;
+    readonly params: Readonly<{ rain: number }>;
+  };
+  readonly frame: FlightFrame;
+  readonly pipeline: RenderPipeline;
+  readonly shake: (strength: number) => void;
+  readonly game: { transition(to: 'pause' | 'flight'): boolean };
 }
 
 export interface XenolithRuntime {
@@ -112,8 +125,35 @@ export function startXenolith(p: XenolithRuntimeParts): XenolithRuntime {
   const obj = new XenolithObject('high');
   p.scene.add(...obj.objects);
   p.onDetail((d) => {
-    obj.setDetail(d);
+    obj.setDetail(d.aircraftDetail);
   });
+  // 10-7d: 撮影（?dev=kshot）: 止めている間も演出を進める秒数・怪獣を描くか・形を動かす時間
+  let shotDt: number | null = null;
+  let kaijuShown = true;
+  const updateTimes: number[] = [];
+  if (parseDevFlags(p.search).has('kshot'))
+    void import('./xenolith-shot').then((m) => {
+      m.linkXenolithShot({
+        raid: () => coop?.raid ?? dev.raid,
+        camera: p.camera,
+        pipeline: p.pipeline,
+        weather: p.weather,
+        game: p.game,
+        setFxClock: (d) => {
+          shotDt = d;
+        },
+        setKaijuShown: (v) => {
+          kaijuShown = v;
+          obj.setVisible(v);
+          const raid = coop?.raid ?? dev.raid;
+          if (v) obj.update(raid.kaiju, 1, 0, 0);
+        },
+        updateMs: () => {
+          const t = [...updateTimes].sort((a, b) => a - b);
+          return t[t.length >> 1] ?? 0;
+        },
+      });
+    });
   const hud = new XenolithHud(document.body);
   const briefing = new XenolithBriefing(document.body);
   const edges = new XenolithEdges(document.body);
@@ -151,19 +191,24 @@ export function startXenolith(p: XenolithRuntimeParts): XenolithRuntime {
   };
   p.onRender((alpha) => {
     const now = performance.now();
-    const dt = Math.min(0.1, (now - last) / 1000);
+    const dt = shotDt ?? Math.min(0.1, (now - last) / 1000);
     last = now;
     const state = p.state();
     const raid = coop?.raid ?? dev.raid;
     const k = raid.kaiju;
     const active = coop !== null || dev.flying || dev.raiding;
-    const shown = active && SHOWN.includes(state) && k.body.visible;
+    const shown = active && SHOWN.includes(state) && k.body.visible && kaijuShown;
     obj.setVisible(shown);
     // 被弾の光（レイドは本体の flash、確かめる場は体力の減り）
     const hp = k.parts.hp;
     flash = raid.flash > 0 ? 1 : hp < lastHp ? 1 : Math.max(0, flash - dt * 12);
     lastHp = hp;
-    if (shown) obj.update(k, alpha, dt, flash);
+    if (shown) {
+      const t0 = performance.now();
+      obj.update(k, alpha, dt, flash);
+      updateTimes.push(performance.now() - t0);
+      if (updateTimes.length > 120) updateTimes.shift();
+    }
     if (dev.taken.body > lastBodyHits && !coop && state === 'flight')
       showToast(xnt('bodyHit'), { seconds: 2 });
     lastBodyHits = dev.taken.body;
