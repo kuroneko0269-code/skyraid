@@ -1,6 +1,6 @@
 /* global console, process, window, document, localStorage, Buffer, URL */
 // 10-7b: 怪獣の見た目の前後の記録（10-7a の kaiju2-visual-pilot.js を怪獣ごとに使えるようにした）。
-// `node scripts/kaiju-visual-pilot.js <nephirga|albion|gourai|xenolith> <before|after> [--measure] [--quality high|medium|low] [--out <dir>]
+// `node scripts/kaiju-visual-pilot.js <nephirga|albion|gourai|xenolith|vorgas> <before|after> [--measure] [--quality high|medium|low] [--out <dir>]
 //  [--scenes a,b] [--weathers day] [--no-shots]`
 // 開発サーバーを立て、?dev=kshot でその怪獣のソロのレイドに出て、決まった場面（src/data/<怪獣>-shots.ts）を決まった天候で撮る
 // （src/ui/kaiju-shot.ts）。見た目だけの乱数（Math.random）は決まった種にする（前後で粒の出方をそろえる）。

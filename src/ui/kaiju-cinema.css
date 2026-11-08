@@ -124,3 +124,10 @@
   --kc-glow: rgba(140, 240, 255, 0.95);
   --kc-glow2: rgba(150, 110, 255, 0.7);
 }
+
+/* ヴォルガス（溶岩の橙と結晶の青。10-7e） */
+.kaiju-cinema.is-vorgas {
+  --kc-text: #fff1e6;
+  --kc-glow: rgba(255, 120, 40, 0.95);
+  --kc-glow2: rgba(80, 160, 255, 0.7);
+}

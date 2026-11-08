@@ -10,6 +10,16 @@
 | 解放 | 最初から | 最初から | 最初から | 最初から | 条件付き（下の推奨案） |
 | 共通の部品 | — | — | 部位・子分 | 部位・弾幕・弾 | 部位・光線・バリア・瞬間移動 |
 
+## ヴォルガス（Vorgas）の見た目 — 10-7e
+
+ヴォルガスの判定・数値は 6-1 の本体のまま（`docs/spec.md` の「怪獣ヴォルガスとレイドの決めた数値」）。見た目は 10-7b の共通の部品（`src/render/kaiju-look/`・`src/ui/kaiju-cinema.ts`・`kaiju-shot.ts`）で作り直した（`src/data/vorgas-visual.ts`・`src/render/kaiju-model/`・`src/ui/vorgas-*.ts`）。`tests/vorgas-visual.test.ts` が描画あり / なしで状態のハッシュが毎秒同じことを、画質 低・中・高で確かめる。前後の画像と重さは [docs/visual-pilot/README.md](visual-pilot/README.md)、決定は `docs/decisions.md` の 10-7e。
+
+- まとめ方（`geometry.ts`）: 部位の皮膚 5 つ + 骨板を 1 つのメッシュ（体の描く回数 6 → 2、影 5 → 1）
+- 質感（`skin-material.ts`・`textures.ts`）: 6-1 の亀裂の合わせ込み（溝・にじむ熱・溜めの白熱の脈）・喉・縁の光・濡れ・鱗の板と古傷の絵（「中」「高」）
+- 形（`scutes.ts`）: 背と尾の骨板。6-1b の体の面 + 6m の中（体は通り抜けられるまま）
+- 動き（`motion.ts`）: 重い足取り・頭が追う・身じろぎ・撃破で崩れ落ちる
+- 粒と演出（`vorgas-effects.ts`・`vorgas-particles.ts`・`beam.ts`・`src/ui/vorgas-cinema.ts`）: 土煙 / 水しぶき・上陸の水・溜めの光の粒・熱線の芯・火の粉・破片と煙・登場の場面（海から上陸。5.4 秒・タップで飛ばす）
+
 ## 白鯨（アルビオン / Albion）— 10-3
 
 10-3a で設計・モデル・動き（予兆と見た目まで）と確かめる場（`?dev=albion`）を作った。10-3b でソロ / 協力のレイドに組み込み、数値をボットの表で決める。数値は `src/data/albion.ts`（動き・攻撃・部位・子分）と `src/data/albion-model.ts`（形・色・画質）。下の数値は 10-3a の仮の値。

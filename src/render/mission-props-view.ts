@@ -23,6 +23,7 @@ import { hitFlashScale } from './aircraft-model/accumulator';
 import { buildAircraft } from './aircraft-model/build';
 import { createPaintMaterial } from './aircraft-model/material';
 import type { KaijuObject } from './kaiju-model/kaiju-object';
+import type { VorgasLook } from './kaiju-model/vorgas-view';
 
 /** 怪獣のモデルのチャンク（8-2） */
 const kaijuModelChunk = lazyChunk(() => import('./kaiju-model/kaiju-object'));
@@ -64,6 +65,8 @@ export class MissionPropsView {
   private kaijuSource: { body: KaijuBodyView; fx: KaijuEffectsView | null } | null = null;
   private detail: AircraftDetail = 'high';
   private lastMs: number | null = null;
+  /** 10-7e: 見た目の段・演出の入力（遅延チャンクの vorgas-runtime。読むまでは null で決まった値） */
+  private look: VorgasLook | null = null;
 
   constructor(
     private readonly scene: Scene,
@@ -95,8 +98,9 @@ export class MissionPropsView {
     if (this.kaiju) return this.kaiju;
     const m = kaijuModelChunk.loaded();
     if (!m) return null;
-    const kaiju = new m.KaijuObject('high');
-    if (this.detail !== 'high') kaiju.setDetail(this.detail);
+    const kaiju = new m.KaijuObject(this.look?.tier ?? 'high');
+    if (!this.look && this.detail !== 'high') kaiju.setDetail(this.detail);
+    kaiju.attachLights(this.scene);
     this.scene.add(...kaiju.objects);
     this.photoGroup.push(...kaiju.objects);
     this.kaiju = kaiju;
@@ -109,7 +113,16 @@ export class MissionPropsView {
     this.detail = detail;
     this.transports.geometry.dispose();
     this.transports.geometry = createTransportGeometry(detail);
-    this.kaiju?.setDetail(detail);
+    if (!this.look) this.kaiju?.setDetail(detail);
+  }
+
+  /** 10-7e: 見た目の段・演出の入力の口（ヴォルガスの演出の遅延チャンクを読んだとき） */
+  setKaijuLook(look: VorgasLook): void {
+    this.look = look;
+    look.bind((shown) => {
+      if (!shown) this.kaiju?.hide();
+      else this.updateKaiju(1);
+    });
   }
 
   /** 怪獣の表示元を差し替える（協力のクライアント。null でミッションの怪獣に戻す） */
@@ -151,7 +164,8 @@ export class MissionPropsView {
 
   private updateKaiju(alpha: number): void {
     const now = performance.now();
-    const dt = this.lastMs === null ? 0 : Math.min(0.1, (now - this.lastMs) / 1000);
+    const look = this.look;
+    const dt = look?.clock ?? (this.lastMs === null ? 0 : Math.min(0.1, (now - this.lastMs) / 1000));
     this.lastMs = now;
     const src = this.kaijuSource;
     const body = src ? src.body : this.props.kaiju;
@@ -171,8 +185,19 @@ export class MissionPropsView {
       kaiju.advanceTime(this.kaijuPendingSeconds);
       this.kaijuPendingSeconds = 0;
     }
-    if (src) kaiju.update(src.body, src.fx, alpha, dt);
-    else kaiju.update(this.props.kaiju, this.props.kaijuAi, alpha, dt);
+    const fx = src ? src.fx : this.props.kaijuAi;
+    if (!look) {
+      kaiju.update(body, fx, alpha, dt);
+      return;
+    }
+    if (kaiju.tier !== look.tier) kaiju.setDetail(look.tier);
+    if (!look.shown) {
+      kaiju.hide();
+      return;
+    }
+    const t0 = performance.now();
+    kaiju.update(body, fx, alpha, dt, look.input(body, dt), look);
+    if (body.visible) look.measured(performance.now() - t0);
   }
 }
 
