@@ -7,8 +7,13 @@ import { hasMessage, t } from '../core/i18n';
 import { parseDevFlags } from '../core/debug-flags';
 import type { RaidDifficulty } from './raid';
 
-/** 画像の場面: 天候とカメラ（怪獣の基準点からの相対。m。9-10d の KaijuArtScene） */
+/**
+ * 画像の場面（9-10d。10-7f から見た目の撮影 ?dev=kshot の場面に置いて撮る）: 怪獣の形（src/data/<怪獣>-shots.ts の場面の id。
+ * 位置・状態・攻撃）・天候・カメラ（場面と同じ怪獣の基準点からの相対。m）
+ */
 export interface KaijuArtScene {
+  /** 怪獣を置く場面（撮影の場面の id） */
+  readonly shot: string;
   readonly weather: string;
   /** カメラの位置（怪獣の向きの前 = +forward、右 = +right、上 = +up。怪獣の基準点から） */
   readonly camera: { readonly forward: number; readonly right: number; readonly up: number };
@@ -16,8 +21,6 @@ export interface KaijuArtScene {
   readonly look: { readonly forward: number; readonly right: number; readonly up: number };
   /** 縦の画角（度） */
   readonly fov: number;
-  /** 出撃してから撮るまでの秒数（上陸・飛び立ちを待つ） */
-  readonly waitSeconds: number;
 }
 
 /**
@@ -94,14 +97,14 @@ const DEFS = [
     art: 'kaiju-art/vorgas.webp',
     latinName: 'VORGAS',
     attacks: ['sweep', 'roar', 'beam', 'throw'],
-    focus: '50% 45%',
-    // 夕方の湾: 海面すれすれの低い所から、上陸して街へ歩く姿を斜め前から見上げる
+    focus: '56% 45%',
+    // 10-7f: 熱線の溜め（夕方の港）: 亀裂が尾から頭へ白熱し、光の粒を口へ吸い込む姿を斜め前の下から見上げる
     scene: {
+      shot: 'charge',
       weather: 'evening-clear',
-      camera: { forward: 200, right: -115, up: 6 },
-      look: { forward: 0, right: 0, up: 84 },
-      fov: 56,
-      waitSeconds: 26,
+      camera: { forward: 230, right: 130, up: 95 },
+      look: { forward: -30, right: 0, up: 82 },
+      fov: 50,
     },
     recordKey: 'difficulty',
     ranked: true,
@@ -119,14 +122,14 @@ const DEFS = [
     art: 'kaiju-art/nephirga.webp',
     latinName: 'NEPHIRGA',
     attacks: ['orb', 'gust', 'dive', 'tail'],
-    focus: '50% 50%',
-    // 嵐の空: 翼を広げて飛ぶ姿を斜め下から見上げる
+    focus: '56% 50%',
+    // 10-7f: 嵐の空: 雷球の予兆で喉と膜の筋が光る姿を斜め前から
     scene: {
+      shot: 'orbs',
       weather: 'day-rain',
-      camera: { forward: 310, right: -240, up: -95 },
-      look: { forward: 0, right: 0, up: 0 },
-      fov: 52,
-      waitSeconds: 14,
+      camera: { forward: 230, right: 150, up: 20 },
+      look: { forward: 0, right: 0, up: 22 },
+      fov: 46,
     },
     recordKey: 'kaiju',
     ranked: true,
@@ -144,15 +147,14 @@ const DEFS = [
     art: 'kaiju-art/albion.webp',
     latinName: 'ALBION',
     attacks: ['minion', 'geyser', 'sonar', 'roll', 'spout', 'cloud'],
-    focus: '50% 50%',
-    // 10-3b: 晴れた昼の湾: 腹の赤い巣と子分の群れを、斜め下から見上げる（白い巨体が青空に浮かぶ）
+    focus: '64% 50%',
+    // 10-7f: 雲を伴う巨体と鳥の群れ: 半円で傾いて曲がる姿を斜め下から見上げる
     scene: {
-      weather: 'day-clear',
-      camera: { forward: 380, right: -520, up: -260 },
-      look: { forward: -10, right: 0, up: -40 },
-      fov: 54,
-      // 子分が巣から出た直後・最初の攻撃（潮吹き）の前（撮る時計はミッションの経過で、怪獣の時計より数秒遅れる）
-      waitSeconds: 5,
+      shot: 'turn',
+      weather: 'evening-clear',
+      camera: { forward: 620, right: 300, up: -200 },
+      look: { forward: -70, right: 0, up: 10 },
+      fov: 52,
     },
     recordKey: 'kaiju',
     // SQL 0006（キーの決まり）で受け付ける（0003 の一覧には無い）
@@ -178,13 +180,13 @@ const DEFS = [
     latinName: 'GOURAI',
     attacks: ['barrage', 'volley', 'sweep', 'vent', 'purge'],
     focus: '50% 50%',
-    // 10-4b: 晴れた昼の湾: 海面の近くから、前の装甲と砲台を向けて浮く箱舟を斜め前から見上げる（弾幕の曳光）
+    // 10-7f: 光る目と顔: 夕方の湾に浮かぶ姿を、水面の近くから正面に少し見上げる（目・熾火の口・牙）
     scene: {
-      weather: 'day-clear',
-      camera: { forward: 230, right: -150, up: -20 },
-      look: { forward: 10, right: 0, up: 12 },
-      fov: 50,
-      waitSeconds: 8,
+      shot: 'front',
+      weather: 'evening-clear',
+      camera: { forward: 235, right: 55, up: -14 },
+      look: { forward: 0, right: 0, up: 10 },
+      fov: 52,
     },
     recordKey: 'kaiju',
     // SQL 0006（キーの決まり）で受け付ける
@@ -208,14 +210,14 @@ const DEFS = [
     art: 'kaiju-art/xenolith.webp',
     latinName: 'XENOLITH',
     attacks: ['warp', 'barrier', 'sweep', 'charged', 'orbs'],
-    focus: '50% 50%',
-    // 10-5b: 夕方の湾の上空: 光る縁と発光体の円盤を斜め下から見上げる（バリアの青い殻）
+    focus: '50% 38%',
+    // 10-7f: 鏡の金属と光の輪: 夕方の空に浮かぶ円盤を斜め下から見上げる（下の光の輪・回る光の模様）
     scene: {
+      shot: 'under',
       weather: 'evening-clear',
-      camera: { forward: 260, right: -200, up: -110 },
-      look: { forward: 0, right: 0, up: 0 },
-      fov: 50,
-      waitSeconds: 6,
+      camera: { forward: 210, right: 130, up: -170 },
+      look: { forward: 0, right: 0, up: -15 },
+      fov: 55,
     },
     recordKey: 'kaiju',
     // SQL 0006（キーの決まり）で受け付ける

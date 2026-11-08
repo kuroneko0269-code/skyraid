@@ -107,17 +107,17 @@ OGP の `og:image` は、Cloudflare Pages ではビルドに渡される `CF_PAG
 
 | ファイル | 怪獣 | 今の構図 |
 | --- | --- | --- |
-| `public/kaiju-art/vorgas.webp` | ヴォルガス | 夕方の湾。海面すれすれから見上げる |
-| `public/kaiju-art/nephirga.webp` | ネフィルガ | 雨の空。斜め下から見上げる |
-| `public/kaiju-art/albion.webp` | アルビオン | 晴れた昼の湾。腹の赤い巣と子分を斜め下から見上げる |
-| `public/kaiju-art/gourai.webp` | ゴウライ | 晴れた昼の湾。海面の近くから、前の装甲と砲台を向けて浮く姿を斜め前から見上げる |
-| `public/kaiju-art/xenolith.webp` | ゼノリス | 夕方の湾の上空。バリアの青い殻に包まれた円盤を斜め下から見上げる（光の弾） |
+| `public/kaiju-art/vorgas.webp` | ヴォルガス | 夕方の港。熱線の溜めで亀裂が尾から頭へ白熱し、光の粒を口へ吸い込む姿を斜め前の下から見上げる |
+| `public/kaiju-art/nephirga.webp` | ネフィルガ | 嵐の空。雷球の予兆で喉と膜の発光の筋が光る姿を斜め前から |
+| `public/kaiju-art/albion.webp` | アルビオン | 雲を伴って傾いて曲がる巨体と鳥の群れを斜め下から見上げる |
+| `public/kaiju-art/gourai.webp` | ゴウライ | 夕方の湾。浮かび上がって目が灯る瞬間の顔を、水面の近くから正面に見上げる |
+| `public/kaiju-art/xenolith.webp` | ゼノリス | 夕方の空。鏡の金属の円盤と光の輪を斜め下から見上げる |
 
 - 大きさと形式: **正方形 960×960px の WebP**（画質 80〜90。300KB 以下を目安）。名前は同じにする。ビルドでプリキャッシュに入り、オフラインでも出ます
 - 構図: **怪獣を真ん中に**置く。画面の枠は 844×390 で横長（約 440×374）、568×320 で縦長（約 220×304）なので、正方形の中央から切り取られます。下の 3 割には名前の帯（暗いグラデーション）が重なり、左上には「‹ 戻る」と怪獣の切り替えが重なります
 - フォトモードの写真から作るとき: フォトモード（ポーズ →「フォトモード」）で撮った PNG を、怪獣が中央に来るように正方形に切り抜き、960×960 に縮めて WebP に書き出す（例 `cwebp -q 90 -resize 960 960 photo.png -o public/kaiju-art/vorgas.webp`、Pillow なら `Image.open(p).crop(box).resize((960, 960)).save(out, 'WEBP', quality=90)`）
 - 切り取る中心を変えたいとき: `src/data/raid-kaiju.ts`（10-2 からの怪獣の登録簿）の `focus`（CSS の object-position。例 `'50% 40%'`）
-- ゲームの描画で作り直す: `npm run render-kaiju-art`（登録簿の全部）・`npm run render-kaiju-art -- nephirga`（1 体だけ）。開発サーバーを立て、画質「高」でソロのレイドに出て撮ります（クラウドの GPU の無い環境で 1 体 1 分ほど）。構図（天候・カメラの位置・画角・待つ秒数）は `src/data/raid-kaiju.ts` の `scene`。未公開の怪獣はその `?dev=` を付けて開き、解放の条件は見ません
+- ゲームの描画で作り直す: `npm run render-kaiju-art`（登録簿の全部）・`npm run render-kaiju-art -- nephirga`（1 体だけ）。開発サーバーを立て、画質「高」でソロのレイドに出て、見た目の撮影（`?dev=kshot`。10-7f）で怪獣を見せ場の場面の形に置いて撮ります（クラウドの GPU の無い環境で 1 体 2〜3 分）。構図（置く場面 `shot`・天候・カメラの位置・画角）は `src/data/raid-kaiju.ts` の `scene`。場面は `src/data/<怪獣>-shots.ts` の id。構図を試すときは `npm run render-kaiju-art -- gourai --out <dir> --scene '{"fov":45}'`（public/ に書かない）。未公開の怪獣はその `?dev=` を付けて開き、解放の条件は見ません。前後の画像は `docs/visual-pilot/README.md` の「怪獣選びの画像」
 - 怪獣を足すとき: `docs/kaiju-roster.md` の「怪獣を 1 体足す手順」（登録簿 `src/data/raid-kaiju.ts` に 1 件、文を `src/data/i18n/ja.json` / `en.json` の `raidSelect.kaiju.<id>` に、画像を `public/kaiju-art/<id>.webp` に）
 
 ## BGM の差し替え
