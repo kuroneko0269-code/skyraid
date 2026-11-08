@@ -3,15 +3,14 @@
 import type { PerspectiveCamera } from 'three';
 import { getLocale, t } from '../core/i18n';
 import { VORGAS_VISUAL } from '../data/vorgas-visual';
+import en from '../data/i18n/vorgas/en.json';
+import ja from '../data/i18n/vorgas/ja.json';
 import type { Kaiju } from '../entities/kaiju';
 import type { FlightFrame } from '../render/flight-frame';
 import { KaijuCinema, type KaijuCinemaSubject } from './kaiju-cinema';
 
-/** 場面の文（遅延チャンクだけが読む小さな表。名前は起動時の表の kaiju.name） */
-const TEXT = {
-  ja: { sub: '海から上陸する溶岩の巨人', skip: 'タップで飛ばす' },
-  en: { sub: 'The lava giant comes ashore', skip: 'Tap to skip' },
-} as const;
+/** 場面の文（表は src/data/i18n/vorgas/。遅延チャンクだけが読む。名前は起動時の表の kaiju.name） */
+const TEXT = { ja, en } as const;
 
 /** レイドの値を演出が読む形で（毎フレーム今の値を読む）。基準点は足元の床（上陸の間も水面の高さ） */
 export class VorgasSubject implements KaijuCinemaSubject {
@@ -63,8 +62,8 @@ export function createVorgasCinema(p: {
       shake: p.shake,
       roar: p.roar,
       name: t('kaiju.name'),
-      sub: text.sub,
-      skip: text.skip,
+      sub: text['cinema.sub'],
+      skip: text['cinema.skip'],
       theme: 'vorgas',
     },
     VORGAS_VISUAL.cinema,
