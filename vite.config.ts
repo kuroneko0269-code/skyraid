@@ -94,6 +94,8 @@ export default defineConfig(({ mode }) => ({
           '**/assets/kaiju2-dev-*',
           // 9-10d: ?dev=kaiju-art（怪獣の画像を描く開発用の部品）も同じ
           '**/assets/kaiju-art-*',
+          // 10-5a: ?dev=xenolith（UFO ゼノリスを作っている間）も同じ。10-5b で公開するときに外す
+          '**/assets/xenolith-runtime-*',
           ...(readOnlineEnv(loadEnv(mode, root, 'VITE_')) ? [] : ['**/assets/online-app-*']),
         ],
         // 8-2: 遅延読み込みのチャンク（PvP・怪獣・フォトモード・リプレイ・情報画面）もすべてプリキャッシュする（オフラインで

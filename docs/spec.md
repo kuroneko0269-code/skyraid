@@ -801,6 +801,14 @@
   - 登録簿 `gourai`（協力の番号 3・記録のキー `gourai:normal` / `gourai:hard`・SQL 0006 の決まりで送る）。起動時に読むのは入口 `src/ui/gourai-link.ts` とミッションの登録だけで、判定・形・HUD・協力は遅延チャンク `gourai-runtime`（プリキャッシュする）
   - 勲章: 標準の 10 個 + 砲台をすべて壊して倒した・放熱の間に核を壊して倒した・ミサイルに一度も当たらずに倒した（フレアで 4 発以上外す）
 
+#### UFO ゼノリス（10-5a。`?dev=xenolith` の裏だけ。設計は `docs/kaiju-roster.md` の「UFO」、値は `src/data/xenolith.ts` / `src/data/xenolith-model.ts`、体は `src/entities/xenolith/`、本体と攻撃は `src/ai/xenolith-ai.ts`・`xenolith-attacks.ts`・`xenolith-hull.ts`、形は `src/render/xenolith-model/`、確かめる場は `src/missions/xenolith-dev.ts`・`src/ui/xenolith-runtime.ts`。決定は `docs/decisions.md` の 10-5a）
+
+- 直径 160m の銀の円盤。狙う人の周りを 150 m/s で回り、4.5〜7.5 秒ごとに急停止 → 急加速（320 m/s）。床（地面・屋根・海面）+ 90m より下へ行かない・戦域 4,300m の内へ寄せる。体は通り抜けられない（円盤の楕円体とドーム。体から見た相対の動きで調べる）
+- 部位（10-2 の `PartSet`）: 胴（壊れない）・ドーム（弱点 ×1.8）・砲口（壊すと溜め撃ちなし）・縁の発光体 4（瞬間移動の間隔 +3 秒ずつ・4 つで無し）・下の発生器 3（殻の外。バリアの外れる時間 ×1.5 ずつ）。体力 6,000（仮）
+- バリア（10-2 の `Barrier`）: ふだんは殻の中に効かない（波紋）。光線の 0.6 秒前に揺らいで外れ、撃つ間と硬直の間 + 4 秒は外れたまま。瞬間移動（`Warp`）: 13 秒ごと、移る先の柱と輪が 1.2 秒光ってから移る（画面の外なら端に印）。光線（`Beam`）: なぎ払い（予兆の線 2 本 → ±60°）・溜め撃ち（ロック 1.5 秒追う → 溜め 0.8 秒止まる → 撃つ。60）
+- 段階: 60% 未満で瞬間移動が多く速い、30% 未満で溜め撃ちの後に続けてなぎ払う
+- `?dev=xenolith` のときだけ遅延チャンク `xenolith-runtime`（プリキャッシュしない）を読み、フリーフライトに出す。値の表示（状態・段階・バリア・次の光線・瞬間移動までの時間・速さなど）。`&xnhp=` `&xnbreak=`。付けないときは読み込み・挙動・リプレイのハッシュとも今までと同じ。解放の条件の定数 `XENOLITH_UNLOCK`（登録は 10-5b）
+
 #### 港湾都市と破壊される建物（6-4。マップは `src/data/maps.ts`、地形は `src/data/terrain-harbor.ts` / `src/render/terrain-gen/harbor-shape.ts`、街は `src/data/city.ts` / `src/render/city/`、建物の判定は `src/combat/buildings.ts` / `city-damage.ts`、今のマップは `src/missions/active-map.ts`。決定は `docs/decisions.md` の 6-4）
 
 - マップ: 「海岸と島」（island）と「港湾都市」（harbor）。マップごとに地形のパラメータ（シード・大きさ・形）・街の有無・フリーフライトの開始位置・怪獣の上陸地点と向かう先・レイドの開始位置・木の撒き方を持つ。フリーフライト（モード選択の「フリーフライト」→ マップを選ぶ。開発用 `?map=harbor`）と PvP（ロビーのホストの設定「マップ」）は選べる。キャンペーン M1〜M5 は島、レイド（ソロ・協力）は港湾都市に固定。タイトル画面に戻ると島に戻す
