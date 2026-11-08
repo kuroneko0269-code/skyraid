@@ -1,10 +1,8 @@
-// 10-7a: ネフィルガの見た目の試作の前後を同じ構図で撮る場面（?dev=k2shot・scripts/kaiju2-visual-pilot.js）。
-// カメラは怪獣の基準点（体の中心と水平の向き）からの前・右・上の m。画像は docs/visual-pilot/<天候>-<場面>.webp
-export interface Kaiju2ShotOffset {
-  readonly forward: number;
-  readonly right: number;
-  readonly up: number;
-}
+// 10-7a: ネフィルガの見た目の試作の前後を同じ構図で撮る場面（?dev=kshot・scripts/kaiju-visual-pilot.js nephirga）。
+// カメラは怪獣の基準点（体の中心と水平の向き）からの前・右・上の m。画像は docs/visual-pilot/nephirga/<before|after>/<天候>-<場面>.webp
+import type { KaijuOffset } from './kaiju-look';
+
+export type Kaiju2ShotOffset = KaijuOffset;
 
 export type Kaiju2ShotScene = 'entrance' | 'orbit' | 'orbs' | 'perch' | 'break' | 'defeat';
 

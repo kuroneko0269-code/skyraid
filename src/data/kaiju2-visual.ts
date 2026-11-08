@@ -1,7 +1,10 @@
 // 10-7a: ネフィルガの見た目の試作（質感・光・動き・演出・粒）の数値。判定・時間には使わない（描画と演出だけ）。
-// 生成器は src/render/kaiju2-model/（絵は textures.ts・光は material.ts・粒は kaiju2-fx.ts・動きは motion.ts）、
-// 演出は src/ui/kaiju2-cinema.ts。画質ごとの切り替えは tier（低 low = 9-6a に近い軽さ・中 medium・高 high）
-export type Kaiju2Tier = 'low' | 'medium' | 'high';
+// 生成器は src/render/kaiju2-model/（絵は textures.ts・光は material.ts・動きは motion.ts・演出の進行は kaiju2-effects.ts）、
+// 演出は src/ui/kaiju2-cinema.ts。画質ごとの切り替えは tier（低 low = 9-6a に近い軽さ・中 medium・高 high）。
+// 10-7b: 粒・シェーダー・演出・撮影の部品は共通（src/render/kaiju-look/・src/ui/kaiju-cinema.ts・kaiju-shot.ts）
+import type { KaijuCinemaSpec, KaijuDebrisSpec, KaijuStreakSpec, KaijuTier } from './kaiju-look';
+
+export type Kaiju2Tier = KaijuTier;
 
 export interface Kaiju2TierSpec {
   /** 起動時（チャンクを読んだとき）に作る絵の一辺（0 は絵を作らない = 9-6a の頂点の色だけ） */
@@ -81,7 +84,7 @@ export const KAIJU2_VISUAL = {
     flinchDecay: 6,
     roarNeck: 0.55,
   },
-  /** 粒: 体の周りの雨の箱の半分の大きさ（m）・落ちる速さ・風の筋の長さと寿命・破片の速さ・煙の寿命 */
+  /** 粒: 体の周りの雨の箱の半分の大きさ（m）・落ちる速さ・風の筋の長さと寿命・破片の速さ・煙の寿命・破片（うろこ・膜）と煙の色 */
   fx: {
     rainBox: 170,
     rainSpeed: 140,
@@ -90,24 +93,22 @@ export const KAIJU2_VISUAL = {
     debrisSpeed: 70,
     debrisLife: 3.2,
     smokeLife: 2.4,
-  },
+    shardColors: [0x2a2c33, 0x3a3264, 0xbdb5a3],
+    smokeColor: 0x48464c,
+  } satisfies KaijuStreakSpec & KaijuDebrisSpec,
   /** 登場の場面（秒）・寄りのカメラの最初と最後の位置（怪獣の基準点からの前・右・上 m）・咆哮の時刻 */
   cinema: {
     seconds: 3.6,
     from: { forward: 620, right: 160, up: 60 },
     to: { forward: 230, right: -90, up: -95 },
+    lookFrom: { forward: -20, right: 0, up: 10 },
+    lookTo: { forward: -20, right: 0, up: 10 },
+    fovFrom: 40,
+    fovTo: 55,
+    moveShare: 0.8,
     roarAt: 1.4,
     /** 段階が変わるときの画面の揺れ（強さ）・撃破の揺れ */
     phaseShake: 1.4,
     defeatShake: 1,
-  },
+  } satisfies KaijuCinemaSpec,
 } as const;
-
-/** 画質の設定（機体の細かさとブルーム）から見た目の段 */
-export function kaiju2Tier(p: {
-  readonly aircraftDetail: string;
-  readonly bloom: boolean;
-}): Kaiju2Tier {
-  if (p.aircraftDetail === 'low') return 'low';
-  return p.bloom ? 'high' : 'medium';
-}

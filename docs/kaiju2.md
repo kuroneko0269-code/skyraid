@@ -407,4 +407,5 @@
 - 粒: 体の周りの雨（嵐のとき。体について動く箱）・翼の先の風の筋（打ち下ろし）と突風の筋・電気の弧（雷球の予兆・嵐・咆哮・倒した後）と稲妻（嵐で 2〜6 秒ごと）・墜ちるときの煙
 - 演出（`src/ui/kaiju2-cinema.ts`）: 登場の場面（ソロのレイドの始め 3.6 秒・タップかキーで飛ばす・名前の字幕と上下の帯）・段階が変わるときの画面の揺れ（咆哮の声は 9-6b のまま）・撃破の揺れと、雨の空なら晴れ間へ
 - 画質ごとの段: 低 = 9-6a に近い（絵なし・とげなし・雨 / 風 / 弧なし）、中 = 絵 256・粒少なめ、高 = 絵 512・とげ・粒多め
-- 前後の記録: `node scripts/kaiju2-visual-pilot.js <before|after> [--measure] [--quality low|high] [--scenes a,b] [--weathers day]`（`?dev=k2shot`。場面は `src/data/kaiju2-shots.ts`）
+- 10-7b: 粒（`kaiju2-fx.ts`・`kaiju2-arcs.ts`・`kaiju2-debris.ts`）とシェーダーの部品（`material-glsl.ts`）・絵の道具・光の入力・登場の場面・撮影は怪獣ごとに使える共通の部品へ移した（`src/render/kaiju-look/`・`src/ui/kaiju-cinema.ts`・`kaiju-shot.ts`）。ネフィルガの見た目と挙動は変えていない（前後の画像は docs/visual-pilot/README.md の「共通の部品へ移した前後」）
+- 前後の記録: `node scripts/kaiju-visual-pilot.js nephirga <before|after> [--measure] [--quality low|high] [--scenes a,b] [--weathers day]`（10-7b で怪獣ごとの共通の仕組みにした。`?dev=kshot`。場面は `src/data/kaiju2-shots.ts`、画像は docs/visual-pilot/nephirga/）

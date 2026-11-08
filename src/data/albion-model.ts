@@ -24,6 +24,8 @@ export const ALBION_MODEL_CONFIG = {
     blowhole: 0x5a6066,
     nest: 0xff3a2a,
     nestDark: 0x3a1010,
+    /** 10-7b: 口の中 */
+    mouth: 0x4a1c20,
     /** 子分（灰白の小さな翼の怪獣。目は赤） */
     minion: 0xc9cdd1,
     minionWing: 0x8d949b,

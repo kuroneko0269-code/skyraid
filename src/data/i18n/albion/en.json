@@ -50,5 +50,8 @@
   ],
   "briefingTap": "Tap to close",
   "result.nests": "Nests",
-  "result.minions": "Swarm"
+  "result.minions": "Swarm",
+  "cinema.name": "ALBION",
+  "cinema.sub": "The white leviathan of the cloud sea",
+  "cinema.skip": "Tap to skip"
 }

@@ -32,7 +32,7 @@ import { Kaiju2Briefing } from './kaiju2-briefing';
 import { Kaiju2Finale } from './kaiju2-finale';
 import { Kaiju2Hud, type Kaiju2CoopFrame } from './kaiju2-hud';
 import { Kaiju2Cinema } from './kaiju2-cinema';
-import { kaiju2Tier } from '../data/kaiju2-visual';
+import { kaijuTier } from '../data/kaiju-look';
 
 /** 9-6c: 協力のレイドの表示元（ホストは本体、クライアントは state の写し）と、HUD の協力の印 */
 export interface Kaiju2CoopSource {
@@ -96,7 +96,7 @@ export function startKaiju2(p: Kaiju2RuntimeParts): Kaiju2Runtime {
   p.scene.add(...obj.objects);
   obj.attachLights(p.scene);
   p.onDetail((d) => {
-    obj.setDetail(kaiju2Tier(d));
+    obj.setDetail(kaijuTier(d));
   });
   const hud = new Kaiju2Hud(document.body);
   const briefing = new Kaiju2Briefing(document.body);
@@ -133,11 +133,11 @@ export function startKaiju2(p: Kaiju2RuntimeParts): Kaiju2Runtime {
     panel.classList.toggle('is-collapsed', collapsed);
   });
   document.body.append(panel);
-  // 10-7a: 撮影（?dev=k2shot）: 止めている間も演出を進める秒数・怪獣を描くか・形を動かす時間
+  // 10-7a: 撮影（?dev=kshot）: 止めている間も演出を進める秒数・怪獣を描くか・形を動かす時間
   let shotDt: number | null = null;
   let kaijuShown = true;
   const updateTimes: number[] = [];
-  if (parseDevFlags(p.search).has('k2shot'))
+  if (parseDevFlags(p.search).has('kshot'))
     void import('./kaiju2-shot').then((m) => {
       m.linkKaiju2Shot({
         raid: () => coop?.raid ?? dev.raid,

@@ -18,7 +18,8 @@ import {
   SkinnedMesh,
   Vector3,
 } from 'three';
-import { Color, DirectionalLight, HemisphereLight, type Object3D } from 'three';
+import type { Object3D } from 'three';
+import { KaijuLights } from '../kaiju-look/lights';
 import type { AircraftDetail } from '../../data/aircraft-model';
 import { KAIJU2_VISUAL, type Kaiju2Tier } from '../../data/kaiju2-visual';
 import { KAIJU2_CONFIG } from '../../data/kaiju2';
@@ -52,9 +53,6 @@ const zAxis = new Vector3(0, 0, 1);
 const worldUp = new Vector3(0, 1, 0);
 const inv = new Quaternion();
 const lookLocal = new Vector3();
-const sunDir = new Vector3();
-const sunColor = new Color();
-const skyColor = new Color();
 
 export class Kaiju2Object {
   readonly group = new Group();
@@ -66,8 +64,7 @@ export class Kaiju2Object {
   /** 粒（ワールド座標。段を変えると中身を入れ替える） */
   private readonly fxRoot = new Group();
   private tier: Kaiju2Tier;
-  private sun: DirectionalLight | null = null;
-  private hemi: HemisphereLight | null = null;
+  private readonly lights = new KaijuLights();
   private readonly orbs: InstancedMesh;
   private readonly gust: Mesh;
   private readonly gustMaterial: MeshBasicMaterial;
@@ -129,10 +126,7 @@ export class Kaiju2Object {
 
   /** 10-7a: 日と空の光（縁の光・膜の透けの向きと色）をシーンから探す */
   attachLights(scene: { readonly children: readonly Object3D[] }): void {
-    for (const o of scene.children) {
-      if (o instanceof DirectionalLight) this.sun ??= o;
-      if (o instanceof HemisphereLight) this.hemi ??= o;
-    }
+    this.lights.attach(scene);
   }
 
   private prepare(mesh: SkinnedMesh): SkinnedMesh {
@@ -255,18 +249,8 @@ export class Kaiju2Object {
 
   /** 日の向き・色と空の色をマテリアルへ（強さを色に掛ける） */
   private updateLights(): void {
-    const s = this.sun;
-    if (s) {
-      sunDir.subVectors(s.position, s.target.position);
-      sunColor.copy(s.color).multiplyScalar(s.intensity);
-    } else {
-      sunDir.set(0.4, 0.8, 0.3);
-      sunColor.setRGB(1, 1, 1);
-    }
-    const h = this.hemi;
-    if (h) skyColor.copy(h.color).multiplyScalar(h.intensity);
-    else skyColor.setRGB(0.5, 0.6, 0.8);
-    this.materials.setSun(sunDir, sunColor, skyColor);
+    const l = this.lights.read();
+    this.materials.setSun(l.sunDir, l.sunColor, l.skyColor);
   }
 
   private updateOrbs(k: SkyKaiju, alpha: number): void {
