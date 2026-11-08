@@ -1,10 +1,12 @@
 // 9-6a: ネフィルガのマテリアル: PBR（色は頂点の色）に発光を足す。皮膚は目（aGlow 1）と喉の袋（2。雷球の予兆で光る）、
 // 翼の膜（両面）は筋が紫白に脈打ち、雷球の予兆で強くなる（ブルームに乗る）。
 // 10-7a: 画質「中」「高」は起動時に作った絵（textures.ts）で、皮膚はうろこの明るさ・つや・凹凸（三方向から貼る）と嵐の発光の筋、
-// 膜は指の骨と細い筋・傷・透け（日を透かす）・壊れた翼の裂け目。どの画質も縁の光（逆光で強い）・稲光の照り返し・呼吸（腹のふくらみ）
+// 膜は指の骨と細い筋・傷・透け（日を透かす）・壊れた翼の裂け目。どの画質も縁の光（逆光で強い）・稲光の照り返し・呼吸（腹のふくらみ）。
+// 10-7b: シェーダーの部品は共通の kaiju-look/glsl.ts
 import { Color, DoubleSide, MeshStandardMaterial, Vector3, type DataTexture } from 'three';
 import { KAIJU2_MODEL_CONFIG } from '../../data/kaiju2-model';
-import { KAIJU2_VISUAL, type Kaiju2Tier } from '../../data/kaiju2-visual';
+import { KAIJU2_VISUAL } from '../../data/kaiju2-visual';
+import type { KaijuTier } from '../../data/kaiju-look';
 
 const M = KAIJU2_MODEL_CONFIG;
 const V = KAIJU2_VISUAL;
@@ -41,24 +43,31 @@ export interface Kaiju2Materials {
   dispose(): void;
 }
 
-import { BUMP, RIM, common, f, num, vec, vertexPatch, type U } from './material-glsl';
+import {
+  BUMP,
+  common,
+  f,
+  num,
+  rimGlsl,
+  sharedUniforms,
+  toViewDir,
+  triplanarGlsl,
+  vec,
+  vertexPatch,
+  type U,
+} from '../kaiju-look/glsl';
+
+const RIM = rimGlsl(V.rim, V.colors);
+/** 呼吸: 胴の下側がふくらむ（翼・首・尾は動かさない） */
+const BELLY =
+  'smoothstep(2.0, -8.0, position.y) * smoothstep(34.0, 8.0, abs(position.z + 2.0)) * smoothstep(18.0, 10.0, abs(position.x))';
 
 export function createKaiju2Materials(
-  tier: Kaiju2Tier,
+  tier: KaijuTier,
   tex: { skin: DataTexture; membrane: DataTexture } | null,
 ): Kaiju2Materials {
   const detail = tex !== null && V.tiers[tier].surfaceDetail;
-  const shared = {
-    uSunDirV: { value: new Vector3(0, 1, 0) },
-    uSunColor: { value: new Color(1, 1, 1) },
-    uSkyColor: { value: new Color(0.5, 0.6, 0.8) },
-    uLightDirV: { value: new Vector3(0, 1, 0) },
-    uLightning: { value: 0 },
-    uStorm: { value: 0 },
-    uDead: { value: 0 },
-    uTime: { value: 0 },
-    uBreath: { value: 0 },
-  };
+  const shared = sharedUniforms();
   const sunWorld = new Vector3(0, 1, 0);
   const lightWorld = new Vector3(0, 1, 0);
   const skinU = {
@@ -78,14 +87,10 @@ export function createKaiju2Materials(
   const skin = new MeshStandardMaterial({ vertexColors: true, roughness: 0.62, metalness: 0 });
   skin.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, skinU, skinTex);
-    vertexPatch(shader, false);
+    vertexPatch(shader, { uv: false, belly: BELLY });
     const sample = detail
-      ? /* glsl */ `
-      vec3 k2w = pow(abs(vRestNrm), vec3(4.0));
-      k2w /= (k2w.x + k2w.y + k2w.z + 1e-4);
-      float k2t = ${f(1 / V.skin.tileMeters)};
-      vec4 k2s = texture2D(tSkin, vRestPos.zy * k2t) * k2w.x + texture2D(tSkin, vRestPos.xz * k2t) * k2w.y
-        + texture2D(tSkin, vRestPos.xy * k2t) * k2w.z;
+      ? /* glsl */ `${triplanarGlsl('tSkin', V.skin.tileMeters)}
+      vec4 k2s = kTex;
       float k2body = 1.0 - step(0.5, vGlow);
       // 遠くでは細かい凹凸とむらを弱める（1 画素がうろこの大きさに近いとちらつく）
       float k2near = 1.0 - smoothstep(0.12, 0.5, length(fwidth(vRestPos)) * ${f(V.skin.scalesPerTile / V.skin.tileMeters)});
@@ -103,7 +108,7 @@ export function createKaiju2Materials(
       )
       .replace(
         '#include <normal_fragment_maps>',
-        `#include <normal_fragment_maps>\n${detail ? `float k2h = k2s.b * ${f(V.skin.bump)} * k2body;\n${BUMP}` : ''}`,
+        `#include <normal_fragment_maps>\n${detail ? `float kh = k2s.b * ${f(V.skin.bump)} * k2body;\n${BUMP}` : ''}`,
       )
       .replace(
         '#include <emissivemap_fragment>',
@@ -127,12 +132,12 @@ export function createKaiju2Materials(
   });
   membrane.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, memU, memTex);
-    vertexPatch(shader, true);
+    vertexPatch(shader, { uv: true, belly: BELLY });
     const sample = detail
-      ? 'vec4 k2m = texture2D(tMem, vK2Uv);'
+      ? 'vec4 k2m = texture2D(tMem, vKUv);'
       : 'vec4 k2m = vec4(vGlow * 0.6, 0.6, 0.0, vGlow);';
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', common({ ...memU, ...memTex }, 'varying vec2 vK2Uv;'))
+      .replace('#include <common>', common({ ...memU, ...memTex }, 'varying vec2 vKUv;'))
       .replace(
         '#include <color_fragment>',
         /* glsl */ `#include <color_fragment>
@@ -140,10 +145,10 @@ export function createKaiju2Materials(
       // 壊れた翼の裂け目（先の方・後縁寄りに、ぎざぎざの穴）
       float k2torn = vRestPos.x < 0.0 ? uTornL : uTornR;
       if (k2torn > 0.5) {
-        vec2 c = floor(vK2Uv * vec2(9.0, 5.0));
+        vec2 c = floor(vKUv * vec2(9.0, 5.0));
         float n = fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.5453);
-        float edge = vK2Uv.y - (0.35 + 0.45 * n) + k2m.r * 0.25;
-        if (vK2Uv.x > 0.32 && n > 0.35 && edge > 0.0) discard;
+        float edge = vKUv.y - (0.35 + 0.45 * n) + k2m.r * 0.25;
+        if (vKUv.x > 0.32 && n > 0.35 && edge > 0.0) discard;
       }
       ${detail ? 'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.38, 0.5), k2m.r * 0.55) * (1.0 - 0.45 * k2m.b);' : ''}`,
       )
@@ -153,12 +158,12 @@ export function createKaiju2Materials(
       )
       .replace(
         '#include <normal_fragment_maps>',
-        `#include <normal_fragment_maps>\n${detail ? `float k2h = (k2m.r - k2m.b * 0.6) * ${f(V.membrane.bump)};\n${BUMP}` : ''}`,
+        `#include <normal_fragment_maps>\n${detail ? `float kh = (k2m.r - k2m.b * 0.6) * ${f(V.membrane.bump)};\n${BUMP}` : ''}`,
       )
       .replace(
         '#include <emissivemap_fragment>',
         /* glsl */ `#include <emissivemap_fragment>
-      float k2wave = vK2Uv.x * 5.0 + vK2Uv.y * 2.0;
+      float k2wave = vKUv.x * 5.0 + vKUv.y * 2.0;
       totalEmissiveRadiance += ${vec(M.colors.storm)} * uVein * k2m.a * ${pulse} * (1.0 - uDead);`,
       )
       .replace(
@@ -180,19 +185,6 @@ export function createKaiju2Materials(
   };
   skin.customProgramCacheKey = () => `kaiju2-skin-${detail ? 'd' : 'p'}`;
   membrane.customProgramCacheKey = () => `kaiju2-membrane-${detail ? 'd' : 'p'}`;
-  const toV = (src: Vector3, dst: unknown, e: ArrayLike<number>): void => {
-    if (!(dst instanceof Vector3)) return;
-    const x = src.x;
-    const y = src.y;
-    const z = src.z;
-    dst
-      .set(
-        (e[0] ?? 0) * x + (e[4] ?? 0) * y + (e[8] ?? 0) * z,
-        (e[1] ?? 0) * x + (e[5] ?? 0) * y + (e[9] ?? 0) * z,
-        (e[2] ?? 0) * x + (e[6] ?? 0) * y + (e[10] ?? 0) * z,
-      )
-      .normalize();
-  };
   return {
     skin,
     membrane,
@@ -224,8 +216,8 @@ export function createKaiju2Materials(
       shared.uSkyColor.value.copy(sky);
     },
     toView(m) {
-      toV(sunWorld, shared.uSunDirV.value, m.elements);
-      toV(lightWorld, shared.uLightDirV.value, m.elements);
+      toViewDir(sunWorld, shared.uSunDirV.value, m.elements);
+      toViewDir(lightWorld, shared.uLightDirV.value, m.elements);
     },
     dispose() {
       skin.dispose();

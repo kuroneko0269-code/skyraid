@@ -2,7 +2,8 @@
 // 画質ごとの重さ（三角形・描く物の数・作る絵の大きさ）。描画そのものはテストしない
 import { describe, expect, it } from 'vitest';
 import { InstancedMesh, Mesh, SkinnedMesh, type Object3D } from 'three';
-import { KAIJU2_VISUAL, kaiju2Tier } from '../src/data/kaiju2-visual';
+import { KAIJU2_VISUAL } from '../src/data/kaiju2-visual';
+import { kaijuTier } from '../src/data/kaiju-look';
 import { HARBOR_TERRAIN } from '../src/data/terrain-harbor';
 import { Kaiju2Raid } from '../src/missions/kaiju2-raid';
 import { hashState } from '../src/replay/state-walk';
@@ -11,8 +12,8 @@ import { Kaiju2Object, buildKaiju2Geometries } from '../src/render/kaiju2-model/
 import {
   buildKaiju2MembranePixels,
   buildKaiju2SkinPixels,
-  kaiju2TextureBytes,
 } from '../src/render/kaiju2-model/textures';
+import { kaijuTextureBytes } from '../src/render/kaiju-look/noise';
 import { createHeightField } from '../src/render/terrain-height';
 
 const DT = 1 / 60;
@@ -89,8 +90,8 @@ describe('ネフィルガの見た目の試作（10-7a）', () => {
 
   it('作る絵: 「高」で縮めた絵を含めて 4MB 以内・「低」は作らない。どの画素も決まった値（種が同じなら同じ絵）', () => {
     const hi = KAIJU2_VISUAL.tiers.high.textureSize;
-    expect(kaiju2TextureBytes(hi)).toBeLessThanOrEqual(4 * 1024 * 1024);
-    expect(kaiju2TextureBytes(KAIJU2_VISUAL.tiers.low.textureSize)).toBe(0);
+    expect(kaijuTextureBytes(hi, 2)).toBeLessThanOrEqual(4 * 1024 * 1024);
+    expect(kaijuTextureBytes(KAIJU2_VISUAL.tiers.low.textureSize, 2)).toBe(0);
     const a = buildKaiju2SkinPixels(64);
     expect(buildKaiju2SkinPixels(64)).toEqual(a);
     expect(a.length).toBe(64 * 64 * 4);
@@ -131,8 +132,8 @@ describe('ネフィルガの見た目の試作（10-7a）', () => {
   });
 
   it('画質の設定から段: 低 = low、中（ブルームなし）= medium、高 = high', () => {
-    expect(kaiju2Tier({ aircraftDetail: 'low', bloom: false })).toBe('low');
-    expect(kaiju2Tier({ aircraftDetail: 'high', bloom: false })).toBe('medium');
-    expect(kaiju2Tier({ aircraftDetail: 'high', bloom: true })).toBe('high');
+    expect(kaijuTier({ aircraftDetail: 'low', bloom: false })).toBe('low');
+    expect(kaijuTier({ aircraftDetail: 'high', bloom: false })).toBe('medium');
+    expect(kaijuTier({ aircraftDetail: 'high', bloom: true })).toBe('high');
   });
 });

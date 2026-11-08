@@ -1,45 +1,25 @@
-// 10-7a: ネフィルガの見た目の試作の前後を撮る（?dev=k2shot のときだけ読む遅延チャンク。遊ぶ人は読まない）。
-// scripts/kaiju2-visual-pilot.js がソロのレイドに出てから window.__k2shot.shoot(<場面>, <天候>) を呼ぶ: 止めて、怪獣の状態を
-// 場面の形に置き（撮るためだけ。この飛行の結果は使わない）、決まった構図のカメラで 2 倍の大きさで描いて縮め、webp にして返す
-import type { PerspectiveCamera } from 'three';
+// 10-7a: ネフィルガの見た目の試作の前後を撮る（?dev=kshot のときだけ読む遅延チャンク。遊ぶ人は読まない）。
+// scripts/kaiju-visual-pilot.js がソロのレイドに出てから window.__kshot.shoot(<場面>, <天候>) を呼ぶ: 止めて、怪獣の状態を
+// 場面の形に置き（撮るためだけ。この飛行の結果は使わない）、決まった構図のカメラで描く。
+// 10-7b: 撮る・測る仕組みは共通の kaiju-shot.ts。ここはネフィルガを場面の形に置くことだけ
 import { forcePerch } from '../ai/kaiju2-perch';
 import {
   KAIJU2_SHOTS,
+  KAIJU2_SHOT_BASE,
   KAIJU2_SHOT_IMAGE,
   KAIJU2_SHOT_WEATHERS,
   type Kaiju2ShotDef,
-  type Kaiju2ShotOffset,
-  KAIJU2_SHOT_BASE,
 } from '../data/kaiju2-shots';
 import { updateKaiju2Pose } from '../entities/kaiju2/kaiju2-pose';
-import type { SkyKaiju } from '../entities/kaiju2/sky-kaiju';
 import type { Kaiju2Raid } from '../missions/kaiju2-raid';
-import type { RenderPipeline } from '../render/pipeline';
+import { linkKaijuShot, type KaijuShotParts } from './kaiju-shot';
 
-export interface Kaiju2ShotParts {
+export type Kaiju2ShotParts = Pick<
+  KaijuShotParts<Kaiju2ShotDef>,
+  'camera' | 'pipeline' | 'weather' | 'game' | 'setFxClock' | 'setKaijuShown' | 'updateMs' | 'cue'
+> & {
   readonly raid: () => Kaiju2Raid;
-  readonly camera: PerspectiveCamera;
-  readonly pipeline: RenderPipeline;
-  readonly weather: { set(id: string, instant?: boolean): void };
-  readonly game: { transition(to: 'pause'): boolean };
-  /** 演出（粒・破片）を止めている間も進める 1 フレームの秒数（null で普段どおり） */
-  readonly setFxClock: (dt: number | null) => void;
-  /** 計測: 怪獣（体・雷球・粒）を描くか・形を動かす時間の中央値（ms） */
-  readonly setKaijuShown: (shown: boolean) => void;
-  readonly updateMs: () => number;
-  /** 10-7a の後: 演出の場面を始める（登場の寄り・咆哮など。前の版には無いので省略可） */
-  readonly cue?: (scene: Kaiju2ShotDef['id']) => void;
-}
-
-const frames = (n: number): Promise<void> =>
-  new Promise((resolve) => {
-    let left = n;
-    const tick = (): void => {
-      if (--left <= 0) resolve();
-      else requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  });
+};
 
 interface Base {
   x: number;
@@ -47,24 +27,6 @@ interface Base {
   z: number;
   fx: number;
   fz: number;
-}
-
-function place(camera: PerspectiveCamera, k: SkyKaiju, s: Kaiju2ShotDef): void {
-  const len = Math.hypot(k.forward.x, k.forward.z) || 1;
-  const fx = k.forward.x / len;
-  const fz = k.forward.z / len;
-  const at = (o: Kaiju2ShotOffset) => ({
-    x: k.position.x + fx * o.forward - fz * o.right,
-    y: k.position.y + o.up,
-    z: k.position.z + fz * o.forward + fx * o.right,
-  });
-  const c = at(s.camera);
-  const l = at(s.look);
-  camera.position.set(c.x, c.y, c.z);
-  camera.up.set(0, 1, 0);
-  camera.fov = s.fov;
-  camera.lookAt(l.x, l.y, l.z);
-  camera.updateProjectionMatrix();
 }
 
 /** 怪獣を場面の形に置く（状態・姿勢・壊れた部位・倒した後） */
@@ -116,89 +78,26 @@ function arrange(raid: Kaiju2Raid, base: Base, s: Kaiju2ShotDef): void {
 }
 
 export function linkKaiju2Shot(p: Kaiju2ShotParts): void {
-  let base: Base | null = null;
-  const api = {
-    scenes: KAIJU2_SHOTS.map((s) => s.id),
-    weathers: KAIJU2_SHOT_WEATHERS.map((w) => w.id),
-    elapsed: (): number => p.raid().elapsed,
-    /** 今の位置と向き（基準の位置を決めるとき） */
+  const b = KAIJU2_SHOT_BASE;
+  // 決まった位置と向き（撮るたびに同じ背景）
+  const base: Base = { x: b.x, y: b.y, z: b.z, fx: Math.sin(b.heading), fz: -Math.cos(b.heading) };
+  linkKaijuShot<Kaiju2ShotDef>({
+    ...p,
+    shots: KAIJU2_SHOTS,
+    weathers: KAIJU2_SHOT_WEATHERS,
+    image: KAIJU2_SHOT_IMAGE,
+    subject: () => p.raid().body,
+    elapsed: () => p.raid().elapsed,
     where: () => {
       const k = p.raid().body;
       return { ...k.position, heading: Math.atan2(k.forward.x, -k.forward.z) };
     },
-    /** 撮って webp の data URL を返す */
-    shoot: async (sceneId: string, weatherId: string): Promise<string> => {
-      const s = KAIJU2_SHOTS.find((x) => x.id === sceneId);
-      const w = KAIJU2_SHOT_WEATHERS.find((x) => x.id === weatherId);
-      if (!s || !w) throw new Error(`unknown shot: ${sceneId} ${weatherId}`);
-      const raid = p.raid();
-      const k = raid.body;
-      p.game.transition('pause');
-      // 決まった位置と向き（撮るたびに同じ背景）
-      if (!base) {
-        const b = KAIJU2_SHOT_BASE;
-        base = { x: b.x, y: b.y, z: b.z, fx: Math.sin(b.heading), fz: -Math.cos(b.heading) };
-      }
-      p.weather.set(w.weather, true);
-      p.setFxClock(1 / 30);
-      // 壊れる前の形を一度描いてから壊す（破片の演出は壊れた瞬間に出る）
-      if (s.id === 'break') {
-        arrange(raid, base, { ...s, id: 'orbit' });
-        place(p.camera, k, s);
-        await frames(3);
-      }
-      arrange(raid, base, s);
-      place(p.camera, k, s);
-      p.cue?.(s.id);
-      // 天候・影・粒が落ち着くまで描く（破片は 0.5 秒ぶん飛ぶ）
-      await frames(s.id === 'break' ? 15 : 24);
-      place(p.camera, k, s);
-      const big = p.pipeline.capture(KAIJU2_SHOT_IMAGE.width * 2, KAIJU2_SHOT_IMAGE.height * 2);
-      p.setFxClock(null);
-      const out = document.createElement('canvas');
-      out.width = KAIJU2_SHOT_IMAGE.width;
-      out.height = KAIJU2_SHOT_IMAGE.height;
-      const ctx = out.getContext('2d');
-      if (!ctx) throw new Error('no 2d context');
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(big, 0, 0, out.width, out.height);
-      return out.toDataURL('image/webp', KAIJU2_SHOT_IMAGE.quality);
+    arrange: (s) => {
+      arrange(p.raid(), base, s);
     },
-    /**
-     * 怪獣の描画の重さ: 今の構図で、怪獣を出して / 隠して 描いた差（draw call・三角形・描く時間の中央値 ms。gl.finish まで）。
-     * 時間は描く間だけ（クラウドはソフトウェアの描画なので目安）。update は怪獣の形を動かす時間（ms・中央値）
-     */
-    measure: async (sceneId: string): Promise<Record<string, number>> => {
-      const s = KAIJU2_SHOTS.find((x) => x.id === sceneId);
-      if (!s) throw new Error(`unknown shot: ${sceneId}`);
-      const raid = p.raid();
-      place(p.camera, raid.body, s);
-      const run = (shown: boolean) => {
-        p.setKaijuShown(shown);
-        const times: number[] = [];
-        for (let i = 0; i < 7; i++) {
-          const t0 = performance.now();
-          p.pipeline.render();
-          p.pipeline.finish();
-          times.push(performance.now() - t0);
-        }
-        times.sort((a, b) => a - b);
-        const st = p.pipeline.lastStats;
-        return { calls: st.drawCalls, triangles: st.triangles, ms: times[3] ?? 0 };
-      };
-      await frames(2);
-      const on = run(true);
-      const off = run(false);
-      p.setKaijuShown(true);
-      return {
-        calls: on.calls - off.calls,
-        triangles: on.triangles - off.triangles,
-        renderMs: on.ms - off.ms,
-        frameMs: on.ms,
-        updateMs: p.updateMs(),
-      };
-    },
-  };
-  Object.assign(window, { __k2shot: api });
+    // 壊れる前の形を一度描いてから壊す（破片の演出は壊れた瞬間に出る）
+    preRoll: (s) => (s.id === 'break' ? { ...s, id: 'orbit' } : null),
+    // 天候・影・粒が落ち着くまで描く（破片は 0.5 秒ぶん飛ぶ）
+    settle: (s) => (s.id === 'break' ? 15 : 24),
+  });
 }

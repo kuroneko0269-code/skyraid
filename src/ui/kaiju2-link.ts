@@ -39,7 +39,7 @@ export interface Kaiju2LinkParts {
     set(id: string, instant?: boolean): void;
     readonly params: Readonly<{ rain: number }>;
   };
-  /** 10-7a: 演出のカメラ（登場の場面）・撮影（?dev=k2shot）・画面の揺れ（咆哮） */
+  /** 10-7a: 演出のカメラ（登場の場面）・撮影（?dev=kshot）・画面の揺れ（咆哮） */
   readonly frame: FlightFrame;
   readonly pipeline: RenderPipeline;
   readonly shake: (strength: number) => void;

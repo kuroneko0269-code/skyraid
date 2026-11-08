@@ -1,5 +1,6 @@
 // 10-3a: 白鯨アルビオンの形（手続き生成）: 皮膚 1 つ（胴・頭のこぶ・胸びれ・尾びれ・背びれ・目・噴気孔・腹の巣 3・古傷）。
-// 頂点の積み方はヴォルガスの KaijuMeshBuilder（管・楕円体、骨 2 本までの混ぜ）。aGlow: 皮膚 0 / 目 1 / 噴気孔 2 / 巣 3・4・5
+// 頂点の積み方はヴォルガスの KaijuMeshBuilder（管・楕円体、骨 2 本までの混ぜ）。aGlow: 皮膚 0 / 目 1 / 噴気孔 2 / 巣 3・4・5 /
+// 口の中 6（10-7b）
 import { Vector3 } from 'three';
 import { ALBION_MODEL_CONFIG, type AlbionDetailSpec } from '../../data/albion-model';
 import {
@@ -159,6 +160,21 @@ export function buildAlbionSkin(d: AlbionDetailSpec): KaijuMeshBuilder {
   nests.forEach(([y, z, bone], i) => {
     b.ellipsoid(v(0, y, z), 13, 5, 30, rows, cols, rgb(C.nest), bone, 3 + i);
   });
+  // 10-7b: 下あご（閉じていると頭の中に隠れ、開けると頭の前の下へ出る）と口の中（暗い赤）・口の線
+  b.ellipsoid(v(0, -24, -268), 28, 7, 30, rows, cols, rgb(C.belly, 1.02), one('jaw'));
+  b.ellipsoid(
+    v(0, -18, -272),
+    24,
+    7,
+    26,
+    Math.max(3, rows - 1),
+    cols,
+    rgb(C.mouth),
+    one('head'),
+    6,
+  );
+  for (const s of [-1, 1] as const)
+    b.ellipsoid(v(41 * s, -16, -286), 1.4, 1.6, 22, 2, 6, rgb(C.mouth), one('head'), 6);
   for (const [x, y, z, rx, ry, rz] of SCARS)
     b.ellipsoid(v(x, y, z), rx, ry, rz, 2, 6, rgb(C.scar), one('root'));
   return b;

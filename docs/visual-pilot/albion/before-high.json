@@ -1,0 +1,44 @@
+{
+  "entrance": {
+    "calls": 2,
+    "triangles": 6632,
+    "renderMs": 58.5,
+    "frameMs": 1841.1999999999534,
+    "updateMs": 0
+  },
+  "orbit": {
+    "calls": 2,
+    "triangles": 6632,
+    "renderMs": 223.39999999990687,
+    "frameMs": 1594.8999999999069,
+    "updateMs": 0
+  },
+  "spout": {
+    "calls": 4,
+    "triangles": 6728,
+    "renderMs": 2.1000000000931323,
+    "frameMs": 1390.5,
+    "updateMs": 0
+  },
+  "roar": {
+    "calls": 2,
+    "triangles": 6632,
+    "renderMs": 84.19999999995343,
+    "frameMs": 1536.8999999999069,
+    "updateMs": 0
+  },
+  "break": {
+    "calls": 2,
+    "triangles": 6632,
+    "renderMs": -15.299999999813735,
+    "frameMs": 956.8000000000466,
+    "updateMs": 0
+  },
+  "defeat": {
+    "calls": 2,
+    "triangles": 6632,
+    "renderMs": -44.4000000001397,
+    "frameMs": 2276.8000000000466,
+    "updateMs": 0
+  }
+}

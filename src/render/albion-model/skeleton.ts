@@ -1,5 +1,6 @@
 // 10-3a: 白鯨アルビオンの骨格: Bone の階層。原点は体の中心・前方 −Z・右 +X・上 +Y（全長 640m: 頭の先 z −321・尾びれの先 z +326）。
-// 泳ぎ（尾を上下にあおぐ・胸びれをあおぐ）・尾を持ち上げる / 打ち下ろす・頭の上下・壊れた部位は animateAlbion() が骨で付ける
+// 泳ぎ（尾を上下にあおぐ・胸びれをあおぐ）・尾を持ち上げる / 打ち下ろす・頭の上下・壊れた部位は animateAlbion() が骨で付ける。
+// 10-7b: 下あごの骨（口を開けるのは描画だけの motion.ts）
 import { Bone, Skeleton } from 'three';
 import { ALBION_MODEL_CONFIG } from '../../data/albion-model';
 import type { AlbionPose } from '../../entities/albion/albion-body';
@@ -15,6 +16,8 @@ const BONE_DEFS = [
   ['finL', 0, -40, -32, -125],
   ['finR', 0, 40, -32, -125],
   ['dorsal', 0, 0, 50, 40],
+  // 10-7b: 下あご（口を開ける。頭の子）
+  ['jaw', 1, 0, -20, -232],
 ] as const;
 
 export type AlbionBoneName = (typeof BONE_DEFS)[number][0];
@@ -82,6 +85,8 @@ export function animateAlbion(
   const finR = rig.bones[ALBION_BONE.finR];
   if (finL) finL.rotation.z = -fin;
   if (finR) finR.rotation.z = fin;
+  const jaw = rig.bones[ALBION_BONE.jaw];
+  if (jaw) jaw.rotation.set(0, 0, 0);
   const dorsal = rig.bones[ALBION_BONE.dorsal];
   if (dorsal) dorsal.scale.set(1, broken.dorsal ? 0.35 : 1, broken.dorsal ? 0.7 : 1);
   const flukes = rig.bones[ALBION_BONE.flukes];

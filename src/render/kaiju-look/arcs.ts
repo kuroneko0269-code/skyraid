@@ -1,4 +1,5 @@
-// 10-7a: ネフィルガの電気の弧と稲妻（描画だけ。kaiju2-fx.ts から分けた）: 端から端をぎざぎざの帯でつなぐ（帯 1 つ = 1 draw call）。
+// 10-7b: 怪獣の電気の弧と稲妻（描画だけ。10-7a のネフィルガの kaiju2-arcs.ts から共通にした）: 端から端をぎざぎざの帯でつなぐ
+// （帯 1 つ = 1 draw call）。
 // 乱数は Math.random（見た目だけ）
 import {
   AdditiveBlending,
@@ -11,7 +12,6 @@ import {
   MeshBasicMaterial,
   Vector3,
 } from 'three';
-import { KAIJU2_VISUAL } from '../../data/kaiju2-visual';
 
 const axis = new Vector3();
 const side = new Vector3();
@@ -30,18 +30,22 @@ interface Arc {
 }
 
 const SEG = 8;
-const arcColor = new Color(KAIJU2_VISUAL.colors.lightning);
 
 /** 電気の弧と稲妻: 端から端をぎざぎざの帯でつなぐ（毎フレーム形を変えて瞬く）。1 本 8 区間 = 48 頂点 */
-export class Kaiju2Arcs {
+export class KaijuArcs {
   readonly mesh: Mesh;
   private readonly pos: Float32Array;
   private readonly col: Float32Array;
   private readonly arcs: Arc[] = [];
   private next = 0;
   private readonly pts: Vector3[] = Array.from({ length: SEG + 1 }, () => new Vector3());
+  private readonly arcColor: Color;
 
-  constructor(readonly capacity: number) {
+  constructor(
+    readonly capacity: number,
+    color: number,
+  ) {
+    this.arcColor = new Color(color);
     const verts = Math.max(1, capacity) * SEG * 6;
     this.pos = new Float32Array(verts * 3);
     this.col = new Float32Array(verts * 3);
@@ -137,9 +141,9 @@ export class Kaiju2Arcs {
           this.pos[v * 3] = p.x + side.x * sg;
           this.pos[v * 3 + 1] = p.y + side.y * sg;
           this.pos[v * 3 + 2] = p.z + side.z * sg;
-          this.col[v * 3] = arcColor.r * c;
-          this.col[v * 3 + 1] = arcColor.g * c;
-          this.col[v * 3 + 2] = arcColor.b * c;
+          this.col[v * 3] = this.arcColor.r * c;
+          this.col[v * 3 + 1] = this.arcColor.g * c;
+          this.col[v * 3 + 2] = this.arcColor.b * c;
           v++;
         }
       }

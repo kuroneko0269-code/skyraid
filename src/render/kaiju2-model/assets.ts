@@ -3,9 +3,10 @@
 import { Float32BufferAttribute, type BufferGeometry, type DataTexture } from 'three';
 import type { AircraftDetail } from '../../data/aircraft-model';
 import { KAIJU2_MODEL_CONFIG } from '../../data/kaiju2-model';
-import type { Kaiju2Tier } from '../../data/kaiju2-visual';
+import { toKaijuTier, type KaijuTier } from '../../data/kaiju-look';
+import { makeKaijuTexture } from '../kaiju-look/noise';
 import { buildKaiju2Membrane, buildKaiju2Skin } from './parts';
-import { buildKaiju2MembranePixels, buildKaiju2SkinPixels, makeKaiju2Texture } from './textures';
+import { buildKaiju2MembranePixels, buildKaiju2SkinPixels } from './textures';
 
 const M = KAIJU2_MODEL_CONFIG;
 
@@ -37,8 +38,8 @@ export function kaiju2Textures(size: number): { skin: DataTexture; membrane: Dat
   let t = textureCache.get(size);
   if (!t) {
     t = {
-      skin: makeKaiju2Texture(buildKaiju2SkinPixels(size), size, true),
-      membrane: makeKaiju2Texture(buildKaiju2MembranePixels(size), size, false),
+      skin: makeKaijuTexture(buildKaiju2SkinPixels(size), size, true),
+      membrane: makeKaijuTexture(buildKaiju2MembranePixels(size), size, false),
     };
     textureCache.set(size, t);
   }
@@ -46,6 +47,6 @@ export function kaiju2Textures(size: number): { skin: DataTexture; membrane: Dat
 }
 
 /** 画質の機体の細かさ（9-6a）か見た目の段 */
-export function toTier(d: AircraftDetail | Kaiju2Tier): Kaiju2Tier {
-  return d === 'low' ? 'low' : d === 'medium' ? 'medium' : 'high';
+export function toTier(d: AircraftDetail | KaijuTier): KaijuTier {
+  return toKaijuTier(d);
 }

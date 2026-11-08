@@ -192,7 +192,7 @@ export class RenderPipeline {
     this.stats.steps = shadowSteps + (this.post ? this.post.steps : 1);
   }
 
-  /** 10-7a: GPU の描画が終わるまで待つ（撮影の計測 ?dev=k2shot だけ） */
+  /** 10-7a: GPU の描画が終わるまで待つ（撮影の計測 ?dev=kshot だけ） */
   finish(): void {
     const gl = this.renderer.getContext();
     gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, this.pixel);

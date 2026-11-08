@@ -1,4 +1,4 @@
-// 10-7a: ネフィルガの破片と煙（描画だけ）: 部位を壊したときの破片（うろこ・膜のかけら）と、墜ちるときの煙。
+// 10-7b: 怪獣の破片と煙（描画だけ。10-7a のネフィルガの kaiju2-debris.ts から共通にした）: 部位を壊したときの破片と、墜ちるときの煙。
 // 破片は光を受ける小さな四面体（InstancedMesh 1 つ）、煙はインスタンスごとに薄くなる球（InstancedMesh 1 つ）。どちらも出ているときだけ描く
 import {
   Color,
@@ -13,10 +13,9 @@ import {
   Vector3,
   type InstancedBufferAttribute,
 } from 'three';
-import { KAIJU2_VISUAL } from '../../data/kaiju2-visual';
+import type { KaijuDebrisSpec } from '../../data/kaiju-look';
 import { addAlphaAttribute, useInstanceAlpha } from '../fx/instance-alpha';
 
-const FX = KAIJU2_VISUAL.fx;
 const GRAVITY = 30;
 
 interface Bit {
@@ -33,8 +32,6 @@ interface Bit {
 const m4 = new Matrix4();
 const q = new Quaternion();
 const s3 = new Vector3();
-const shardColors = [new Color(0x2a2c33), new Color(0x3a3264), new Color(0xbdb5a3)];
-const smokeColor = new Color(0x48464c);
 
 function bits(n: number): Bit[] {
   return Array.from({ length: n }, () => ({
@@ -49,7 +46,7 @@ function bits(n: number): Bit[] {
   }));
 }
 
-export class Kaiju2Debris {
+export class KaijuDebris {
   readonly shards: InstancedMesh;
   readonly smoke: InstancedMesh;
   private readonly smokeAlpha: InstancedBufferAttribute;
@@ -57,8 +54,15 @@ export class Kaiju2Debris {
   private readonly smokeBits: Bit[];
   private nextShard = 0;
   private nextSmoke = 0;
+  private readonly shardColors: Color[];
+  private readonly smokeColor: Color;
 
-  constructor(capacity: number) {
+  constructor(
+    capacity: number,
+    private readonly fx: KaijuDebrisSpec,
+  ) {
+    this.shardColors = fx.shardColors.map((c) => new Color(c));
+    this.smokeColor = new Color(fx.smokeColor);
     const n = Math.max(1, Math.floor(capacity / 2));
     this.shards = new InstancedMesh(
       new TetrahedronGeometry(1, 0),
@@ -82,7 +86,7 @@ export class Kaiju2Debris {
     this.smokeBits = bits(n);
   }
 
-  /** 破片をまとめて（at を中心に、vel の速さに散る速さを足す）。membrane は膜のかけらの色を混ぜる */
+  /** 破片をまとめて（at を中心に、vel の速さに散る速さを足す）。membrane は 2 つ目の色（膜のかけら）を多く混ぜる */
   burst(at: Readonly<Vector3>, vel: Readonly<Vector3>, count: number, membrane: boolean): void {
     for (let i = 0; i < count; i++) {
       const b = this.shardBits[this.nextShard];
@@ -98,15 +102,15 @@ export class Kaiju2Debris {
       b.v
         .set(Math.random() - 0.5, Math.random() * 0.8 - 0.2, Math.random() - 0.5)
         .normalize()
-        .multiplyScalar(FX.debrisSpeed * (0.3 + Math.random() * 0.7))
+        .multiplyScalar(this.fx.debrisSpeed * (0.3 + Math.random() * 0.7))
         .add(vel);
       b.axis.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
       b.age = 0;
-      b.life = FX.debrisLife * (0.6 + Math.random() * 0.4);
+      b.life = this.fx.debrisLife * (0.6 + Math.random() * 0.4);
       b.size = 1.2 + Math.random() * 3.2;
       b.spin = (Math.random() - 0.5) * 12;
       const pick = membrane && Math.random() < 0.5 ? 1 : Math.random() < 0.7 ? 0 : 2;
-      b.color.copy(shardColors[pick] ?? smokeColor);
+      b.color.copy(this.shardColors[pick] ?? this.smokeColor);
     }
   }
 
@@ -119,11 +123,11 @@ export class Kaiju2Debris {
     b.v.copy(vel);
     b.v.y += 6;
     b.age = 0;
-    b.life = FX.smokeLife * (0.7 + Math.random() * 0.6);
+    b.life = this.fx.smokeLife * (0.7 + Math.random() * 0.6);
     b.size = size * (0.7 + Math.random() * 0.6);
     b.axis.set(Math.random(), Math.random(), Math.random()).normalize();
     b.spin = 0;
-    b.color.copy(smokeColor).multiplyScalar(0.8 + Math.random() * 0.5);
+    b.color.copy(this.smokeColor).multiplyScalar(0.8 + Math.random() * 0.5);
   }
 
   update(dt: number): void {

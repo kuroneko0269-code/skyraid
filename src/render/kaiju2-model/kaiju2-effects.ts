@@ -1,14 +1,14 @@
 // 10-7a: ネフィルガの見た目の演出の進行（描画だけ。判定の値は読むだけ）: 嵐の強さ（段階 3・雨。倒すと晴れる）と稲光、
 // 体の電気の弧（雷球の予兆・嵐・咆哮・倒れた後）、翼の風の筋と突風、部位を壊したときの破片・身じろぎ、墜ちるときの煙、
-// 呼吸・裂けた翼をマテリアルへ。乱数は Math.random（見た目だけ）
+// 呼吸・裂けた翼をマテリアルへ。乱数は Math.random（見た目だけ）。10-7b: 粒（線の粒・電気の弧・破片と煙）は共通の kaiju-look/
 import { Vector3, type Bone, type Object3D } from 'three';
 import { KAIJU2_CONFIG } from '../../data/kaiju2';
 import { KAIJU2_VISUAL, type Kaiju2TierSpec } from '../../data/kaiju2-visual';
 import type { Kaiju2Part } from '../../data/kaiju2';
 import type { SkyKaiju } from '../../entities/kaiju2/sky-kaiju';
-import { Kaiju2Debris } from './kaiju2-debris';
-import { Kaiju2Arcs } from './kaiju2-arcs';
-import { Kaiju2Streaks } from './kaiju2-fx';
+import { KaijuArcs } from '../kaiju-look/arcs';
+import { KaijuDebris } from '../kaiju-look/debris';
+import { KaijuStreaks } from '../kaiju-look/streaks';
 import type { Kaiju2Look } from './material';
 import { Kaiju2Motion } from './motion';
 import type { Kaiju2ViewInput } from './kaiju2-view-input';
@@ -39,9 +39,9 @@ const ANCHORS = [
 ] as const;
 
 export class Kaiju2Effects {
-  readonly streaks: Kaiju2Streaks;
-  readonly arcs: Kaiju2Arcs;
-  readonly debris: Kaiju2Debris;
+  readonly streaks: KaijuStreaks;
+  readonly arcs: KaijuArcs;
+  readonly debris: KaijuDebris;
   readonly motion = new Kaiju2Motion();
   readonly look: Kaiju2Look = {
     throat: 0,
@@ -81,9 +81,9 @@ export class Kaiju2Effects {
     private readonly spec: Kaiju2TierSpec,
     private readonly rig: Kaiju2Skeleton,
   ) {
-    this.streaks = new Kaiju2Streaks(spec.streaks);
-    this.arcs = new Kaiju2Arcs(spec.arcs);
-    this.debris = new Kaiju2Debris(spec.debris);
+    this.streaks = new KaijuStreaks(spec.streaks, VL.fx);
+    this.arcs = new KaijuArcs(spec.arcs, VL.colors.lightning);
+    this.debris = new KaijuDebris(spec.debris, VL.fx);
   }
 
   get objects(): readonly Object3D[] {

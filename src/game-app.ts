@@ -325,7 +325,7 @@ export function startGame(shell: AppShell): GameApp {
   const shake = chaseCamera.addImpact.bind(chaseCamera);
   linkKaiju2({ ...kaiju2, ...runtime, weather: world.weather, pipeline, shake });
   // 10-3b: 白鯨アルビオン（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=albion は起動時に読む）
-  linkAlbion({ ...kaiju2, ...runtime });
+  linkAlbion({ ...kaiju2, ...runtime, weather: world.weather, pipeline, shake });
   // 10-4b: メカ怪獣ゴウライ（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=gourai は起動時に読む）
   linkGourai({ ...kaiju2, ...runtime });
   // 10-5b: UFO ゼノリス（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=xenolith は起動時に読む）

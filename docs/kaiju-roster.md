@@ -96,6 +96,17 @@
 
 `tests/albion-model.test.ts` が上限（高はネフィルガの高以下・低 1,500 以下・子分 50 以下）と draw call（2 分動かして 4 以下）を確かめる。
 
+### 見た目（10-7b。`src/data/albion-visual.ts`・`src/render/albion-model/`）
+
+10-7a のネフィルガの作り方（コードのまま質感・光・動き・演出）を共通の部品（`src/render/kaiju-look/`・`src/ui/kaiju-cinema.ts`・`kaiju-shot.ts`）にして、アルビオンに使った。判定（`src/ai/albion-*`・`src/entities/albion/`・`src/missions/albion-*`・`src/data/albion.ts`・`albion-raid.ts`）は変えていない（`tests/albion-visual.test.ts` が描画あり / なしで状態のハッシュが毎秒同じことを、画質 低・中・高で確かめる）。前後の画像と重さは [docs/visual-pilot/README.md](visual-pilot/README.md)。
+
+- 皮（`textures.ts`・`material.ts`）: 絵 1 枚（R むら・G つや・B 凹凸・A フジツボ）を 90m に 1 枚、三方向から。腹のうねは体の軸の周りの角度から式で。白い体の照り・縁の光・巣のまわりの赤い脈（巣からの距離と溝）・登場の雲の幕（頭から尾へ晴れる）
+- 形: 下あごの骨（頭の子）と下あご・口の中・口の線（閉じると頭の中に隠れる。開いても当たりの形の中。吠えると口の線が赤く光る）
+- 泳ぎ（`motion.ts`）: 尾びれの上下の打ち（約 9 秒に 1 回・先で ±39m）と後ろ半分のうねりは判定の形と同じ式（当たりも同じ）。描画では打ちに合わせた体の上下の揺れ・機首の上下・胸びれの舵（傾き・半円）・小さな身じろぎ・口を足す。描画だけの動きは当たりの形から 3m（機体の大きさの半分。呼吸を含む）の中（`tests/albion-visual.test.ts` が頂点ごとに確かめる）
+- 粒（`albion-effects.ts`・`albion-puffs.ts`）: 尾びれの水の筋（打ちの途中で強い）と打ち返しの渦の霧・体に沿って流れる雲・潮吹きのしぶきと霧・雲を吐く前の霧・胸びれ / 尾びれの水の筋・雨と稲光・影・鳥の群れ・破片と煙・巣の赤い霧・撃破の水柱
+- 演出（`src/ui/albion-cinema.ts`）: 登場の場面・段階の変わり目と撃破の揺れ・海に着いたときの大きな揺れ
+- 重さ: 体の三角形 高 3,316 → 3,628・低 840 → 960（下あご・口）。絵は高 512（1.4MB）・中 256（0.35MB）・低なし。draw call は高で 7〜11（粒・影・鳥を含む）、低は 10-3a に近い（粒と破片は出たときだけ）
+
 ### 決まった計算と確かめたこと（`tests/albion.test.ts`）
 
 - 本体 `AlbionKaiju`（`src/ai/albion-ai.ts`）は体・部位・子分・攻撃の段・段階・雲を 1 つの根に持つ。乱数は種の列（`SeededRandom`。飛行のシード xor `0x41b10`）だけ、時間は dt の足し算だけ、状態は数・配列のプロパティだけ

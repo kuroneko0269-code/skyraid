@@ -2,9 +2,17 @@
 // レイドの表示元（ホストの本体・クライアントの写し。差し込み口 net/albion-coop.ts の attachView）を、形（render/albion-model/）・
 // HUD・ブリーフィングで出す。協力の差し込み口もここで登録する（ホストは開始の前にこのチャンクを読む）。
 // ?dev=albion のときだけ（10-3a）: フリーフライトにアルビオンを出し、左に値の表示（タップ / クリックで畳む）。
-// URL: ?abhp=<1〜100>（体力の割合 → 段階）・?abbreak=nestFront,nestMid,nestRear,dorsal,tail,head・?abroute=bay（港湾都市の湾）
+// URL: ?abhp=<1〜100>（体力の割合 → 段階）・?abbreak=nestFront,nestMid,nestRear,dorsal,tail,head・?abroute=bay（港湾都市の湾）。
+// 10-7b: 見た目の段（画質）・登場の場面（雲の中から現れる。ソロのレイドだけ・タップで飛ばす）・段階 / 撃破 / 海に落ちたときの揺れ・
+// 撮影（?dev=kshot）
 import './albion-dev.css';
-import type { Scene } from 'three';
+import type { PerspectiveCamera, Scene } from 'three';
+import { parseDevFlags } from '../core/debug-flags';
+import { ALBION_VISUAL } from '../data/albion-visual';
+import { kaijuTier } from '../data/kaiju-look';
+import type { FlightFrame } from '../render/flight-frame';
+import type { RenderPipeline } from '../render/pipeline';
+import { createAlbionCinema } from './albion-cinema';
 import { attackWeights, axisOffset, inCloud } from '../ai/albion-attacks';
 import type { ScreenState } from '../core/game-state';
 import type { AircraftDetail } from '../data/aircraft-model';
@@ -40,11 +48,22 @@ export interface AlbionRuntimeParts {
   readonly map: () => Pick<MapDef, 'center' | 'id'>;
   readonly state: () => ScreenState;
   readonly inFreeFlight: () => boolean;
-  readonly onDetail: (fn: (d: AircraftDetail) => void) => void;
+  /** 画質の機体の細かさとブルーム（今の値をすぐと、変わるたび。10-7b の見た目の段） */
+  readonly onDetail: (fn: (d: { aircraftDetail: AircraftDetail; bloom: boolean }) => void) => void;
   readonly onRender: (fn: (alpha: number) => void) => void;
   readonly hudVisible: () => boolean;
   /** ?dev=albion: フリーフライトに出す・値の表示 */
   readonly devFree: boolean;
+  /** 10-7b: 天候（雨の強さ）・カメラ・演出のカメラの口・描画（撮影）・画面の揺れ・画面の状態の移り */
+  readonly weather: {
+    set(id: string, instant?: boolean): void;
+    readonly params: Readonly<{ rain: number }>;
+  };
+  readonly camera: PerspectiveCamera;
+  readonly frame: FlightFrame;
+  readonly pipeline: RenderPipeline;
+  readonly shake: (strength: number) => void;
+  readonly game: { transition(to: 'pause' | 'flight'): boolean };
 }
 
 export interface AlbionRuntime {
@@ -105,9 +124,50 @@ export function startAlbion(p: AlbionRuntimeParts): AlbionRuntime {
   );
   const obj = new AlbionObject('high');
   p.scene.add(...obj.objects);
+  obj.attachLights(p.scene);
   p.onDetail((d) => {
-    obj.setDetail(d);
+    obj.setDetail(kaijuTier(d));
   });
+  // 10-7b: 登場の場面（雲の中から頭が出てくる）・段階と撃破の揺れ（ソロのレイドだけ）
+  const { cinema, subject } = createAlbionCinema(p, () => {
+    obj.cloudBank();
+  });
+  let briefingPending = false;
+  let fxElapsed = Infinity;
+  let wasLanded = false;
+  // 10-7b: 撮影（?dev=kshot）: 止めている間も演出を進める秒数・怪獣を描くか・形を動かす時間・登場の雲の幕
+  let shotDt: number | null = null;
+  let shotVeil = 0;
+  let kaijuShown = true;
+  const updateTimes: number[] = [];
+  if (parseDevFlags(p.search).has('kshot'))
+    void import('./albion-shot').then((m) => {
+      m.linkAlbionShot({
+        raid: () => coop?.raid ?? dev.raid,
+        camera: p.camera,
+        pipeline: p.pipeline,
+        weather: p.weather,
+        game: p.game,
+        setFxClock: (d) => {
+          shotDt = d;
+        },
+        setKaijuShown: (v) => {
+          kaijuShown = v;
+          obj.setVisible(v);
+          const raid = coop?.raid ?? dev.raid;
+          if (v) obj.update(raid.kaiju, 1, 0, () => raid.kaiju.body.position);
+        },
+        updateMs: () => {
+          const t = [...updateTimes].sort((a, b) => a - b);
+          return t[t.length >> 1] ?? 0;
+        },
+        cue: (scene) => {
+          obj.clearParticles();
+          shotVeil = scene === 'entrance' ? 0.45 : 0;
+          if (scene === 'entrance') obj.cloudBank();
+        },
+      });
+    });
   const hud = new AlbionHud(document.body);
   const briefing = new AlbionBriefing(document.body);
   const panel = document.createElement('div');
@@ -144,22 +204,49 @@ export function startAlbion(p: AlbionRuntimeParts): AlbionRuntime {
   };
   p.onRender((alpha) => {
     const now = performance.now();
-    const dt = Math.min(0.1, (now - last) / 1000);
+    const dt = shotDt ?? Math.min(0.1, (now - last) / 1000);
     last = now;
     const state = p.state();
     const raid = coop?.raid ?? dev.raid;
     const minions = coop?.minions ?? dev.minionTargets;
     const active = coop !== null || dev.flying || dev.raiding;
-    const shown = active && SHOWN.includes(state) && raid.kaiju.body.visible;
+    const shown = active && SHOWN.includes(state) && raid.kaiju.body.visible && kaijuShown;
     obj.setVisible(shown);
-    if (shown)
+    // 新しく始まった（やり直し・再生のシーク）: 破片・煙の残りを消す
+    if (raid.elapsed < fxElapsed) obj.resetEffects(raid.kaiju);
+    fxElapsed = raid.elapsed;
+    const landed = raid.dead && raid.landedTime >= 0;
+    if (landed && !wasLanded && active && state === 'flight' && shotDt === null)
+      p.shake(ALBION_VISUAL.splashShake);
+    wasLanded = landed;
+    if (shown) {
+      const t0 = performance.now();
+      // 登場の雲の幕: 場面の始めは雲に包まれ、頭から尾へ晴れていく
+      const veil = cinema.active ? Math.max(0, 1 - cinema.progress * 1.35) : shotVeil;
       obj.update(
         raid.kaiju,
         alpha,
         dt,
         (i) => minions[i]?.prevPosition ?? raid.kaiju.body.position,
         raid.flash / ALBION_RAID_CONFIG.flashSeconds,
+        {
+          camera: p.camera.position,
+          rain: p.weather.params.rain,
+          dead: raid.dead,
+          landed,
+          veil,
+          fxDt: shotDt ?? (state === 'flight' ? dt : 0),
+        },
       );
+      updateTimes.push(performance.now() - t0);
+      if (updateTimes.length > 120) updateTimes.shift();
+    }
+    subject.raid = raid;
+    cinema.update(
+      !coop && dev.raiding && HUD_SHOWN.includes(state) && shotDt === null ? subject : null,
+      state === 'flight',
+      dt,
+    );
     const me = p.play.session.aircraft.state.position;
     if (dev.taken.body > lastBodyHits && !coop && state === 'flight')
       showToast(abt('bodyHit'), { seconds: 2 });
@@ -169,8 +256,19 @@ export function startAlbion(p: AlbionRuntimeParts): AlbionRuntime {
       const locked = sel instanceof AlbionPartTarget ? sel : null;
       const cloud = coop ? raid.kaiju.cloudLeft > 0 && inCloud(raid.kaiju.body, me) : dev.inCloud;
       if (coop) coopCloud.apply(p.play.session.combat.targeting, cloud);
-      hud.update(raid, p.hudVisible(), locked, cloud, coop ? frameOf(coop) : null);
-      if (!coop && raid.elapsed < lastElapsed) briefing.show(raid.difficulty);
+      hud.update(
+        raid,
+        p.hudVisible() && !cinema.active,
+        locked,
+        cloud,
+        coop ? frameOf(coop) : null,
+      );
+      // 10-7b: ブリーフィングは登場の場面の後に出す
+      if (!coop && raid.elapsed < lastElapsed) briefingPending = true;
+      if (briefingPending && !cinema.active) {
+        briefingPending = false;
+        briefing.show(raid.difficulty);
+      }
       lastElapsed = coop ? Infinity : raid.elapsed;
     } else {
       hud.hide();

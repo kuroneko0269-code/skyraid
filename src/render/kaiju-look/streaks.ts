@@ -1,5 +1,5 @@
-// 10-7a: ネフィルガの粒の効果（描画だけ）: 体の周りの雨と翼の風の筋（線の粒 InstancedMesh 1 つ）、電気の弧と稲妻（帯 1 つ）。
-// どちらもカメラへ向けた細い板（電気の弧は kaiju2-arcs.ts）。乱数は Math.random（見た目だけ。判定・リプレイに入らない）。数は画質ごと（KAIJU2_VISUAL.tiers）
+// 10-7b: 怪獣の線の粒（描画だけ。10-7a のネフィルガの kaiju2-fx.ts から共通にした）: 体の周りの雨と、翼・ひれの先の風や水の筋
+// （線の粒 InstancedMesh 1 つ）。カメラへ向けた細い板。乱数は Math.random（見た目だけ。判定・リプレイに入らない）。数は画質ごと
 import {
   AdditiveBlending,
   Color,
@@ -11,10 +11,9 @@ import {
   Vector3,
   type InstancedBufferAttribute,
 } from 'three';
-import { KAIJU2_VISUAL } from '../../data/kaiju2-visual';
+import type { KaijuStreakSpec } from '../../data/kaiju-look';
 import { addAlphaAttribute, useInstanceAlpha } from '../fx/instance-alpha';
 
-const FX = KAIJU2_VISUAL.fx;
 const RAIN_SHARE = 0.7;
 
 const m4 = new Matrix4();
@@ -24,8 +23,6 @@ const toCam = new Vector3();
 const tmp = new Vector3();
 const scaled = new Vector3();
 const rainDir = new Vector3(0.12, -1, 0.05).normalize();
-const rainColor = new Color(0.55, 0.62, 0.75);
-const windColor = new Color(0.9, 0.95, 1);
 
 interface Streak {
   readonly p: Vector3;
@@ -37,15 +34,23 @@ interface Streak {
 }
 
 /** 線の粒: 先頭の 7 割が体の周りの箱の雨（体について動く）、残りが翼の先と突風の風の筋（ワールドに置く） */
-export class Kaiju2Streaks {
+export class KaijuStreaks {
   readonly mesh: InstancedMesh;
   private readonly alpha: InstancedBufferAttribute;
   private readonly rain: Vector3[] = [];
   private readonly wind: Streak[] = [];
   private nextWind = 0;
   private spawnAcc = 0;
+  /** 雨・風の筋の色（変えてよい） */
+  readonly rainColor = new Color(0.55, 0.62, 0.75);
+  readonly windColor = new Color(0.9, 0.95, 1);
+  /** 風の筋の明るさ（最大） */
+  windAlpha = 0.28;
 
-  constructor(readonly capacity: number) {
+  constructor(
+    readonly capacity: number,
+    private readonly fx: KaijuStreakSpec,
+  ) {
     const mat = useInstanceAlpha(
       new MeshBasicMaterial({
         transparent: true,
@@ -59,7 +64,7 @@ export class Kaiju2Streaks {
     this.mesh.count = 0;
     this.alpha = addAlphaAttribute(this.mesh, Math.max(1, capacity));
     const nRain = Math.floor(capacity * RAIN_SHARE);
-    const B = FX.rainBox;
+    const B = this.fx.rainBox;
     for (let i = 0; i < nRain; i++)
       this.rain.push(
         new Vector3(
@@ -80,7 +85,12 @@ export class Kaiju2Streaks {
   }
 
   /** 風の筋を 1 本（p から v の速さで、向き dir に長さ len） */
-  emit(p: Readonly<Vector3>, v: Readonly<Vector3>, len: number, life: number = FX.windLife): void {
+  emit(
+    p: Readonly<Vector3>,
+    v: Readonly<Vector3>,
+    len: number,
+    life: number = this.fx.windLife,
+  ): void {
     if (this.wind.length === 0) return;
     const s = this.wind[this.nextWind];
     this.nextWind = (this.nextWind + 1) % this.wind.length;
@@ -93,21 +103,27 @@ export class Kaiju2Streaks {
     s.len = len;
   }
 
-  /** 翼の先から（羽ばたきの打ち下ろしの強さ flap 0〜1）。dt は演出の秒数 */
-  wingTrail(tip: Readonly<Vector3>, forward: Readonly<Vector3>, flap: number, dt: number): void {
+  /** 翼の先から（羽ばたきの打ち下ろしの強さ flap 0〜1）。dt は演出の秒数。back は後ろへ流れる速さ m/秒 */
+  wingTrail(
+    tip: Readonly<Vector3>,
+    forward: Readonly<Vector3>,
+    flap: number,
+    dt: number,
+    back = 25,
+  ): void {
     this.spawnAcc += dt * 18 * flap;
     while (this.spawnAcc >= 1) {
       this.spawnAcc -= 1;
-      tmp.copy(forward).multiplyScalar(-25);
+      tmp.copy(forward).multiplyScalar(-back);
       tmp.y -= 6 * flap;
-      this.emit(tip, tmp, FX.windLength * (0.5 + flap * 0.5));
+      this.emit(tip, tmp, this.fx.windLength * (0.5 + flap * 0.5));
     }
   }
 
   update(center: Readonly<Vector3>, camera: Readonly<Vector3>, rain: number, dt: number): void {
     let n = 0;
-    const B = FX.rainBox;
-    const fall = FX.rainSpeed * dt;
+    const B = this.fx.rainBox;
+    const fall = this.fx.rainSpeed * dt;
     if (rain > 0.02) {
       const len = 10;
       for (const r of this.rain) {
@@ -116,7 +132,7 @@ export class Kaiju2Streaks {
         tmp.copy(center).add(r);
         this.place(n, tmp, rainDir, 0.25, len, camera);
         this.alpha.setX(n, rain * 0.13 * (1 - Math.abs(r.y) / B));
-        this.mesh.setColorAt(n, rainColor);
+        this.mesh.setColorAt(n, this.rainColor);
         n++;
       }
     }
@@ -126,8 +142,8 @@ export class Kaiju2Streaks {
       s.p.addScaledVector(s.v, dt);
       const t = s.age / s.life;
       this.place(n, s.p, s.dir, 0.5, s.len * (0.4 + 0.6 * t), camera);
-      this.alpha.setX(n, Math.sin(Math.min(1, t) * Math.PI) * 0.28);
-      this.mesh.setColorAt(n, windColor);
+      this.alpha.setX(n, Math.sin(Math.min(1, t) * Math.PI) * this.windAlpha);
+      this.mesh.setColorAt(n, this.windColor);
       n++;
     }
     this.mesh.count = n;
