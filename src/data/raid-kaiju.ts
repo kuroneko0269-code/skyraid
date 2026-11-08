@@ -97,7 +97,7 @@ const DEFS = [
     art: 'kaiju-art/vorgas.webp',
     latinName: 'VORGAS',
     attacks: ['sweep', 'roar', 'beam', 'throw'],
-    focus: '50% 45%',
+    focus: '56% 45%',
     // 10-7f: 熱線の溜め（夕方の港）: 亀裂が尾から頭へ白熱し、光の粒を口へ吸い込む姿を斜め前の下から見上げる
     scene: {
       shot: 'charge',
@@ -122,7 +122,7 @@ const DEFS = [
     art: 'kaiju-art/nephirga.webp',
     latinName: 'NEPHIRGA',
     attacks: ['orb', 'gust', 'dive', 'tail'],
-    focus: '50% 50%',
+    focus: '56% 50%',
     // 10-7f: 嵐の空: 雷球の予兆で喉と膜の筋が光る姿を斜め前から
     scene: {
       shot: 'orbs',
@@ -147,7 +147,7 @@ const DEFS = [
     art: 'kaiju-art/albion.webp',
     latinName: 'ALBION',
     attacks: ['minion', 'geyser', 'sonar', 'roll', 'spout', 'cloud'],
-    focus: '50% 50%',
+    focus: '64% 50%',
     // 10-7f: 雲を伴う巨体と鳥の群れ: 半円で傾いて曲がる姿を斜め下から見上げる
     scene: {
       shot: 'turn',
@@ -210,7 +210,7 @@ const DEFS = [
     art: 'kaiju-art/xenolith.webp',
     latinName: 'XENOLITH',
     attacks: ['warp', 'barrier', 'sweep', 'charged', 'orbs'],
-    focus: '50% 50%',
+    focus: '50% 38%',
     // 10-7f: 鏡の金属と光の輪: 夕方の空に浮かぶ円盤を斜め下から見上げる（下の光の輪・回る光の模様）
     scene: {
       shot: 'under',
