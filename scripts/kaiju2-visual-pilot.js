@@ -61,8 +61,14 @@ try {
     timeout: 10 * 60 * 1000,
     polling: 500,
   });
-  const scenes = await page.evaluate(() => window.__k2shot.scenes);
-  const weathers = await page.evaluate(() => window.__k2shot.weathers);
+  // --scenes a,b / --weathers day で一部だけ（見た目の調整用）
+  const pick = (name, all) => {
+    const i = args.indexOf(name);
+    return i >= 0 ? (args[i + 1] ?? '').split(',').filter((x) => all.includes(x)) : all;
+  };
+  const scenes = pick('--scenes', await page.evaluate(() => window.__k2shot.scenes));
+  const weathers = pick('--weathers', await page.evaluate(() => window.__k2shot.weathers));
+  console.log(`where: ${JSON.stringify(await page.evaluate(() => window.__k2shot.where()))}`);
   const report = {};
   for (const w of weathers) {
     for (const s of scenes) {

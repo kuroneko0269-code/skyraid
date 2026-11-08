@@ -10,8 +10,6 @@ export type Kaiju2ShotScene = 'entrance' | 'orbit' | 'orbs' | 'perch' | 'break' 
 
 export interface Kaiju2ShotDef {
   readonly id: Kaiju2ShotScene;
-  /** 見出し（docs/visual-pilot/README.md） */
-  readonly label: string;
   readonly camera: Kaiju2ShotOffset;
   readonly look: Kaiju2ShotOffset;
   readonly fov: number;
@@ -24,7 +22,6 @@ export interface Kaiju2ShotDef {
 export const KAIJU2_SHOTS: readonly Kaiju2ShotDef[] = [
   {
     id: 'entrance',
-    label: '登場（下から見上げる）',
     camera: { forward: 230, right: -90, up: -95 },
     look: { forward: 0, right: 0, up: 12 },
     fov: 55,
@@ -33,7 +30,6 @@ export const KAIJU2_SHOTS: readonly Kaiju2ShotDef[] = [
   },
   {
     id: 'orbit',
-    label: '周回（横から）',
     camera: { forward: 90, right: 320, up: 35 },
     look: { forward: -5, right: 0, up: 0 },
     fov: 45,
@@ -42,7 +38,6 @@ export const KAIJU2_SHOTS: readonly Kaiju2ShotDef[] = [
   },
   {
     id: 'orbs',
-    label: '雷球の予兆（喉と膜の筋が光る）',
     camera: { forward: 250, right: 150, up: 45 },
     look: { forward: 0, right: 0, up: 5 },
     fov: 45,
@@ -51,7 +46,6 @@ export const KAIJU2_SHOTS: readonly Kaiju2ShotDef[] = [
   },
   {
     id: 'perch',
-    label: '止まり木（翼をたたんで休む）',
     camera: { forward: 190, right: 150, up: 35 },
     look: { forward: 0, right: 0, up: 5 },
     fov: 45,
@@ -60,7 +54,6 @@ export const KAIJU2_SHOTS: readonly Kaiju2ShotDef[] = [
   },
   {
     id: 'break',
-    label: '部位の破壊（右翼を壊した直後）',
     camera: { forward: -120, right: 260, up: 90 },
     look: { forward: 0, right: 40, up: 0 },
     fov: 48,
@@ -69,7 +62,6 @@ export const KAIJU2_SHOTS: readonly Kaiju2ShotDef[] = [
   },
   {
     id: 'defeat',
-    label: '撃破（墜ちていく）',
     camera: { forward: 230, right: 260, up: -30 },
     look: { forward: 0, right: 0, up: -20 },
     fov: 48,
@@ -78,10 +70,19 @@ export const KAIJU2_SHOTS: readonly Kaiju2ShotDef[] = [
   },
 ];
 
+/** 怪獣を置く決まった位置（港湾都市の湾の上。ソロのレイドの出てすぐの所）・向き（ラジアン。0 が −Z）・止まり木の乱数の種 */
+export const KAIJU2_SHOT_BASE = {
+  x: -80,
+  y: 780,
+  z: 2100,
+  heading: -0.78,
+  perchSeed: 0x5107,
+} as const;
+
 /** 撮る天候（昼と嵐の空） */
 export const KAIJU2_SHOT_WEATHERS = [
-  { id: 'day', weather: 'day-clear', label: '昼・快晴' },
-  { id: 'storm', weather: 'day-rain', label: '嵐（昼・雨）' },
+  { id: 'day', weather: 'day-clear' },
+  { id: 'storm', weather: 'day-rain' },
 ] as const;
 
 /** 書き出し: 2 倍で描いて縮めた大きさ（16:9）と webp の品質 */

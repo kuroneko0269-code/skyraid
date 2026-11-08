@@ -9,6 +9,7 @@ import {
   KAIJU2_SHOT_WEATHERS,
   type Kaiju2ShotDef,
   type Kaiju2ShotOffset,
+  KAIJU2_SHOT_BASE,
 } from '../data/kaiju2-shots';
 import { updateKaiju2Pose } from '../entities/kaiju2/kaiju2-pose';
 import type { SkyKaiju } from '../entities/kaiju2/sky-kaiju';
@@ -85,6 +86,8 @@ function arrange(raid: Kaiju2Raid, base: Base, s: Kaiju2ShotDef): void {
   if (s.id === 'orbs') {
     k.setState('windup', 'orbs');
   } else if (s.id === 'perch') {
+    // 降りる場所の乱数を決まった種に（判定の乱数の状態によらず同じ場所）
+    k.random.reseed(KAIJU2_SHOT_BASE.perchSeed);
     if (forcePerch(k)) {
       k.position.x = k.perch.x;
       k.position.y = k.perch.y;
@@ -118,6 +121,11 @@ export function linkKaiju2Shot(p: Kaiju2ShotParts): void {
     scenes: KAIJU2_SHOTS.map((s) => s.id),
     weathers: KAIJU2_SHOT_WEATHERS.map((w) => w.id),
     elapsed: (): number => p.raid().elapsed,
+    /** 今の位置と向き（基準の位置を決めるとき） */
+    where: () => {
+      const k = p.raid().body;
+      return { ...k.position, heading: Math.atan2(k.forward.x, -k.forward.z) };
+    },
     /** 撮って webp の data URL を返す */
     shoot: async (sceneId: string, weatherId: string): Promise<string> => {
       const s = KAIJU2_SHOTS.find((x) => x.id === sceneId);
@@ -126,9 +134,10 @@ export function linkKaiju2Shot(p: Kaiju2ShotParts): void {
       const raid = p.raid();
       const k = raid.body;
       p.game.transition('pause');
+      // 決まった位置と向き（撮るたびに同じ背景）
       if (!base) {
-        const len = Math.hypot(k.forward.x, k.forward.z) || 1;
-        base = { ...k.position, fx: k.forward.x / len, fz: k.forward.z / len };
+        const b = KAIJU2_SHOT_BASE;
+        base = { x: b.x, y: b.y, z: b.z, fx: Math.sin(b.heading), fz: -Math.cos(b.heading) };
       }
       p.weather.set(w.weather, true);
       p.setFxClock(1 / 30);

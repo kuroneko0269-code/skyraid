@@ -41,7 +41,7 @@ describe('ネフィルガのモデル（9-6a）', () => {
       if (o instanceof SkinnedMesh) skinned++;
     });
     expect(skinned).toBe(2);
-    expect(obj.objects.length).toBe(3);
+    expect(obj.objects.length).toBe(4);
     // 画質を変えると作り直す（三角形が減る）
     const hi = obj.triangles;
     obj.setDetail('low');

@@ -74,7 +74,7 @@ function startRuntime(m: typeof import('./kaiju2-runtime'), p: Kaiju2LinkParts):
       !p.pvp.flying,
     onDetail: (fn) => {
       p.quality.onPreset((preset) => {
-        fn(preset.aircraftDetail);
+        fn(preset);
       });
     },
     onRender: p.onRender,

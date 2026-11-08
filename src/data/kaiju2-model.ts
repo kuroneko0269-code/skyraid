@@ -17,12 +17,16 @@ export const KAIJU2_MODEL_CONFIG = {
     low: { radial: 8, rings: 1, membraneSpan: 14, membraneChord: 4 },
   } satisfies Record<'high' | 'low', Kaiju2DetailSpec>,
   colors: {
-    /** 背: 灰白（骨のような色）、腹: 少し暖かい灰、膜: 深い藍 */
-    back: 0x9a968c,
-    belly: 0x6f6a62,
-    dark: 0x3a3632,
-    membrane: 0x2b2548,
-    membraneEdge: 0x15122a,
+    /**
+     * 背: 暗い青灰、腹: 骨のような明るい灰白、膜: 深い藍（10-7a で背と腹の明るさを入れ替えた。9-6a は背 0x9a968c・腹 0x6f6a62）。
+     * horn: 角・とさか・爪（骨の色）
+     */
+    back: 0x3b3f4a,
+    belly: 0xb9b2a2,
+    dark: 0x1c1d22,
+    horn: 0xd8d0bc,
+    membrane: 0x2a2350,
+    membraneEdge: 0x120f26,
     /** 目（淡い黄）・喉の袋と膜の筋（雷の紫白） */
     eye: 0xffe58a,
     storm: 0xb9a6ff,
