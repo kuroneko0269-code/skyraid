@@ -102,9 +102,9 @@ const DEFS = [
     scene: {
       shot: 'charge',
       weather: 'evening-clear',
-      camera: { forward: 230, right: 110, up: 40 },
-      look: { forward: -20, right: 0, up: 95 },
-      fov: 55,
+      camera: { forward: 230, right: 130, up: 95 },
+      look: { forward: -30, right: 0, up: 82 },
+      fov: 50,
     },
     recordKey: 'difficulty',
     ranked: true,
@@ -128,8 +128,8 @@ const DEFS = [
       shot: 'orbs',
       weather: 'day-rain',
       camera: { forward: 230, right: 150, up: 20 },
-      look: { forward: 0, right: 0, up: 5 },
-      fov: 50,
+      look: { forward: 0, right: 0, up: 22 },
+      fov: 42,
     },
     recordKey: 'kaiju',
     ranked: true,
@@ -153,8 +153,8 @@ const DEFS = [
       shot: 'turn',
       weather: 'evening-clear',
       camera: { forward: 620, right: 300, up: -200 },
-      look: { forward: 0, right: 0, up: -20 },
-      fov: 55,
+      look: { forward: -70, right: 0, up: 10 },
+      fov: 46,
     },
     recordKey: 'kaiju',
     // SQL 0006（キーの決まり）で受け付ける（0003 の一覧には無い）
@@ -180,9 +180,9 @@ const DEFS = [
     latinName: 'GOURAI',
     attacks: ['barrage', 'volley', 'sweep', 'vent', 'purge'],
     focus: '50% 50%',
-    // 10-7f: 光る目と顔: 湾から浮かび上がって目が灯る瞬間を、水面の近くから正面に見上げる
+    // 10-7f: 光る目と顔: 夕方の湾に浮かぶ姿を、水面の近くから正面に少し見上げる（目・熾火の口・牙）
     scene: {
-      shot: 'entrance',
+      shot: 'front',
       weather: 'evening-clear',
       camera: { forward: 185, right: 45, up: -12 },
       look: { forward: 0, right: 0, up: 8 },
