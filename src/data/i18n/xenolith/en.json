@@ -61,5 +61,8 @@
   "result.dome": "Dome",
   "result.cannon": "Cannon",
   "result.emitters": "Emitters",
-  "result.gens": "Generators"
+  "result.gens": "Generators",
+  "cinema.name": "XENOLITH",
+  "cinema.sub": "The silver disc descends on a pillar of light",
+  "cinema.skip": "Tap to skip"
 }

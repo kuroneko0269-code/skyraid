@@ -1,0 +1,79 @@
+{
+  "entrance": {
+    "calls": 2,
+    "triangles": 1624,
+    "renderMs": 34.5,
+    "frameMs": 431.70000000018626,
+    "updateMs": 0.10000000009313226
+  },
+  "orbit": {
+    "calls": 2,
+    "triangles": 1624,
+    "renderMs": -6.7000000001862645,
+    "frameMs": 247.89999999990687,
+    "updateMs": 0.09999999962747097
+  },
+  "under": {
+    "calls": 2,
+    "triangles": 1624,
+    "renderMs": 8,
+    "frameMs": 203.1999999997206,
+    "updateMs": 0.09999999962747097
+  },
+  "dash": {
+    "calls": 2,
+    "triangles": 1624,
+    "renderMs": 2,
+    "frameMs": 248.70000000018626,
+    "updateMs": 0
+  },
+  "barrier": {
+    "calls": 2,
+    "triangles": 1624,
+    "renderMs": -104.29999999981374,
+    "frameMs": 277.89999999990687,
+    "updateMs": 0
+  },
+  "warp": {
+    "calls": 6,
+    "triangles": 1880,
+    "renderMs": 24.299999999813735,
+    "frameMs": 499.1999999997206,
+    "updateMs": 0
+  },
+  "sweep": {
+    "calls": 3,
+    "triangles": 704,
+    "renderMs": 80.59999999962747,
+    "frameMs": 607.8999999999069,
+    "updateMs": 0
+  },
+  "charged": {
+    "calls": 4,
+    "triangles": 1664,
+    "renderMs": 197.8000000002794,
+    "frameMs": 601.3000000002794,
+    "updateMs": 0
+  },
+  "orbs": {
+    "calls": 3,
+    "triangles": 1696,
+    "renderMs": -11.200000000186265,
+    "frameMs": 452.89999999990687,
+    "updateMs": 0.09999999962747097
+  },
+  "break": {
+    "calls": 2,
+    "triangles": 1624,
+    "renderMs": 41.1999999997206,
+    "frameMs": 457.6999999997206,
+    "updateMs": 0
+  },
+  "defeat": {
+    "calls": 1,
+    "triangles": 664,
+    "renderMs": 37.200000000186265,
+    "frameMs": 482.3000000002794,
+    "updateMs": 0
+  }
+}

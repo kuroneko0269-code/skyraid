@@ -1,6 +1,6 @@
 // 10-5a: UFO ゼノリスの骨格: Bone の階層。原点は円盤の中心・前方 −Z・右 +X・上 +Y（直径 160m）。円盤の飾り（disc）がゆっくり回り、
 // 縁の発光体の輪（ring）が判定と同じ角度で回る。砲口・発生器・ドームは体の向きに付く。壊れた部位（発光体・発生器・砲口）は
-// 骨で縮める（体の皮は SkinnedMesh 1 つ。描画 1 回）
+// 骨で縮める（体の皮は SkinnedMesh 1 つ。描画 1 回）。10-7d: 浮かぶ光の輪 2 つ（halo・underRing）が描画だけで回る
 import { Bone, Skeleton } from 'three';
 import { XENOLITH_TARGET_SPHERES } from '../../data/xenolith';
 
@@ -31,6 +31,9 @@ const BONE_DEFS: readonly (readonly [string, number, readonly [number, number, n
   ['gen1', 0, sp('gen1')],
   ['gen2', 0, sp('gen2')],
   ['dome', 0, [0, 12, 0]],
+  // 10-7d: 上の面に浮かぶ光の輪・下の面に浮かぶ光の輪（描画だけで回る）
+  ['halo', 0, [0, 0, 0]],
+  ['underRing', 0, [0, 0, 0]],
 ];
 
 export type XenolithBoneName =
@@ -45,7 +48,9 @@ export type XenolithBoneName =
   | 'gen0'
   | 'gen1'
   | 'gen2'
-  | 'dome';
+  | 'dome'
+  | 'halo'
+  | 'underRing';
 
 export const XENOLITH_BONE: Readonly<Record<XenolithBoneName, number>> = Object.fromEntries(
   BONE_DEFS.map((d, i) => [d[0], i]),

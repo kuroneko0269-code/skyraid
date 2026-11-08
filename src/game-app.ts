@@ -329,7 +329,7 @@ export function startGame(shell: AppShell): GameApp {
   // 10-4b: メカ怪獣ゴウライ（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=gourai は起動時に読む）
   linkGourai({ ...kaiju2, ...runtime, weather: world.weather, pipeline, shake });
   // 10-5b: UFO ゼノリス（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=xenolith は起動時に読む）
-  linkXenolith({ ...kaiju2, ...runtime });
+  linkXenolith({ ...kaiju2, ...runtime, weather: world.weather, pipeline, shake });
 
   // 9-10d: ?dev=kaiju-art（レイドの怪獣選びの画像を描く。遊ぶ人は読まない）
   linkKaijuArtDev(search, { ...runtime, camera, pipeline, play, weather: world.weather, game });

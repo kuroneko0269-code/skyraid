@@ -12,9 +12,9 @@ export interface XenolithDetailSpec {
 
 export const XENOLITH_MODEL_CONFIG = {
   colors: {
-    /** 銀の円盤（上は明るく、下は少し暗い）・継ぎ目（暗い灰）・ドームのガラス（青みの暗い色） */
-    silver: 0xc9d0d8,
-    under: 0x8d959e,
+    /** 銀の円盤（上は明るく、下は少し暗い）・継ぎ目（暗い灰）・ドームのガラス（青みの暗い色）。10-7d で鏡の金属の映り込みの色に */
+    silver: 0xe6ecf4,
+    under: 0xa9b2bf,
     seam: 0x4a5058,
     glass: 0x203040,
     /** 光る所: 縁の帯（水色）・発光体（白に近い水色）・砲口（溜めで橙）・発生器（青）・ドーム（薄紫） */

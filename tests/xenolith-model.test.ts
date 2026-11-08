@@ -1,5 +1,5 @@
 // 10-5a: UFO ゼノリスのモデルの重さ（三角形・描画の回数）をほかの怪獣と比べる。効果（バリア・光線・瞬間移動の光）は出ているときだけ描く。
-// 描画そのものはテストしない
+// 描画そのものはテストしない。10-7d で飾り・粒・光の効果を足した（上限を 3,000・16 回に。見た目のテストは xenolith-visual.test.ts）
 import { describe, expect, it } from 'vitest';
 import { InstancedMesh, SkinnedMesh } from 'three';
 import { XenolithKaiju } from '../src/ai/xenolith-ai';
@@ -14,7 +14,7 @@ import {
 const DT = 1 / 60;
 
 describe('UFO ゼノリスのモデル（10-5a）', () => {
-  it('三角形: 「高」は 2,000 以下でアルビオン・ネフィルガの「高」以下（丸い円盤なのでゴウライの箱より多い）、「低」は 1,000 以下で「高」より軽い', () => {
+  it('三角形: 「高」は 3,000 以下（10-7d の飾りで 2,000 から）でアルビオン・ネフィルガの「高」以下、「低」は 1,000 以下で「高」より軽い', () => {
     const hi = buildXenolithGeometry('high').triangles;
     const lo = buildXenolithGeometry('low').triangles;
     const g = [buildGouraiGeometry('high').triangles, buildGouraiGeometry('low').triangles];
@@ -23,7 +23,7 @@ describe('UFO ゼノリスのモデル（10-5a）', () => {
     console.info(
       `xenolith triangles high ${String(hi)} / low ${String(lo)} (gourai ${g.join(' / ')}, albion ${a.join(' / ')}, nephirga ${n.join(' / ')})`,
     );
-    expect(hi).toBeLessThanOrEqual(Math.min(2000, a[0] ?? 0, n[0] ?? 0));
+    expect(hi).toBeLessThanOrEqual(Math.min(3000, a[0] ?? 0, n[0] ?? 0));
     expect(lo).toBeLessThanOrEqual(1000);
     expect(lo).toBeLessThan(hi);
   });
@@ -42,7 +42,7 @@ describe('UFO ゼノリスのモデル（10-5a）', () => {
     }
   });
 
-  it('描画の回数: 体 1（SkinnedMesh）+ 殻・光線・柱と輪は出ているときだけ = 5 以下。3 分動かしても例外・NaN が出ない', () => {
+  it('描画の回数: 体 1（SkinnedMesh）+ 殻・光線・柱と輪・10-7d の粒と光は出ているときだけ = 16 以下。3 分動かしても例外・NaN が出ない', () => {
     const obj = new XenolithObject('high');
     let skinned = 0;
     obj.group.traverse((o) => {
@@ -77,8 +77,8 @@ describe('UFO ゼノリスのモデル（10-5a）', () => {
       minDraws = Math.min(minDraws, obj.draws);
     }
     expect(seen).toEqual({ barrier: true, beam: true, warp: true });
-    expect(maxDraws).toBeLessThanOrEqual(5);
-    expect(minDraws).toBe(1);
+    expect(maxDraws).toBeLessThanOrEqual(16);
+    expect(minDraws).toBeLessThanOrEqual(3);
     expect(Number.isFinite(obj.group.quaternion.w)).toBe(true);
     expect(Number.isFinite(obj.group.position.y)).toBe(true);
     console.info(`xenolith draws ${String(minDraws)}〜${String(maxDraws)}`);
