@@ -1,0 +1,23 @@
+{
+  "orbit": {
+    "calls": 11,
+    "triangles": 36290,
+    "renderMs": 91.8000000002794,
+    "frameMs": 2071.100000000093,
+    "updateMs": 0.10000000009313226
+  },
+  "beam": {
+    "calls": 12,
+    "triangles": 36314,
+    "renderMs": 218.60000000009313,
+    "frameMs": 2317.7000000001863,
+    "updateMs": 0.10000000009313226
+  },
+  "defeat": {
+    "calls": 11,
+    "triangles": 36290,
+    "renderMs": 165.59999999962747,
+    "frameMs": 2364,
+    "updateMs": 0.10000000009313226
+  }
+}
