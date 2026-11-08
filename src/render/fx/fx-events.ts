@@ -17,6 +17,8 @@ export interface FxListener {
   /** 海面への墜落 */
   splash?(x: number, y: number, z: number): void;
   playerHit?(x: number, y: number, z: number): void;
+  /** 10-4c: 自機がレイドの怪獣の体にぶつかった（位置は自機） */
+  kaijuRam?(x: number, y: number, z: number): void;
   enemyHit?(x: number, y: number, z: number): void;
   /** (dx, dy, dz) は発射の向き（単位ベクトル） */
   missileLaunch?(
@@ -66,6 +68,9 @@ export class FxEvents {
     });
     combat.onDestroyed(this.handleDestroyed);
     combat.onImpact(this.handleImpact);
+    combat.ramListeners.on((x, y, z) => {
+      this.emit((l) => l.kaijuRam?.(x, y, z));
+    });
     this.sync();
   }
 

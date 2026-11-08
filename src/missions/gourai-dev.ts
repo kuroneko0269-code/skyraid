@@ -4,13 +4,13 @@
 // 弾は自機に当たる。ミサイルは自機のフレアに乗り換える。
 // 10-4b: ソロのレイド（ミッション raidGourai）も引き受ける（体力・制限時間・撃破は gourai-raid.ts）。体は通り抜けられない
 // （弾く・ダメージ・短い操作不能）。追ってくるミサイルは HUD の MISSILE の警告に数える
+import { RamGrace, ramDamage } from '../combat/kaiju-ram';
 import { TEAM_ENEMY } from '../combat/target';
 import { GOURAI_CONFIG as C, GOURAI_PARTS } from '../data/gourai';
 import type { MapDef } from '../data/maps';
 import type { GouraiKaiju } from '../ai/gourai-ai';
 import { createHullContact } from '../ai/albion-hull';
 import { gouraiContact } from '../ai/gourai-hull';
-import { bounceAircraft } from '../entities/albion/albion-bounce';
 import type { Vec3 } from '../flight/math';
 import { fitPatrol, type GouraiGround, type GouraiPatrol } from '../entities/gourai/gourai-body';
 import { createGouraiTargets, type GouraiPartTarget } from '../entities/gourai/gourai-target';
@@ -101,7 +101,8 @@ export class GouraiDev implements FreeExtra {
   /** 自機が受けた当たりの数え（値の表示・ボット）: 機銃の弾幕・回転掃射・ミサイル・体への衝突 */
   readonly taken = { gun: 0, sweep: 0, missile: 0, body: 0 };
   /** 体への衝突の後、続けて当たらない残り秒 */
-  bodyGrace = 0;
+  /** 10-4c: 体への衝突の「続けて当たらない」間（共通の部品） */
+  readonly ram = new RamGrace();
   private readonly contact = createHullContact();
   private readonly velocity = { x: 0, y: 0, z: 0 };
   /** 追ってくるミサイルの数（HUD の MISSILE の警告に足す口） */
@@ -197,7 +198,7 @@ export class GouraiDev implements FreeExtra {
     );
     for (const t of this.partTargets) t.place(true);
     for (const key of Object.keys(this.taken) as (keyof typeof this.taken)[]) this.taken[key] = 0;
-    this.bodyGrace = 0;
+    this.ram.clear();
     // 追ってくるミサイルを HUD の MISSILE の警告・警告音に数える
     s.player.extraIncoming = this.incoming;
   }
@@ -256,21 +257,20 @@ export class GouraiDev implements FreeExtra {
   }
 
   /**
-   * 10-4b: 体への衝突（アルビオンと同じ扱い）: 弾く・ダメージ・短い操作不能。続けて当たらない間がある。
-   * 倒した後（沈む間）と撃墜されている間は無し
+   * 10-4c: 体への衝突: 最大 HP の約 8 割のダメージ（足りなければ撃墜）。跳ねない（10-4b は弾いて 30 と操作不能）。続けて当たらない間がある。
+   * 倒した後と撃墜されている間は無し
    */
   private collide(dt: number): void {
-    this.bodyGrace = Math.max(0, this.bodyGrace - dt);
+    this.ram.tick(dt);
     const s = this.play.session;
     const k = this.kaiju;
     if (!s.player.active || this.raid.dead || !k.body.visible) return;
     const a = s.aircraft;
     const B = C.collision;
-    const armored = k.phase === 1;
     if (
       !gouraiContact(
         k.body,
-        armored,
+        k.phase === 1,
         a.prevPosition,
         a.state.position,
         B.margin,
@@ -279,13 +279,12 @@ export class GouraiDev implements FreeExtra {
       )
     )
       return;
-    bounceAircraft(a, this.contact, B);
-    if (this.bodyGrace > 0) return;
-    this.bodyGrace = B.invulnerable;
+    if (!this.ram.hit(0)) return;
     this.taken.body++;
     this.raid.bodyTaken++;
-    s.kaijuExposure.applyStun(B.stun);
-    s.combat.dealDamage(s.player, B.damage * k.damageScale, TEAM_ENEMY);
+    const p = a.state.position;
+    s.combat.ramListeners.report(p.x, p.y, p.z);
+    s.combat.dealDamage(s.player, ramDamage(s.player.maxHp), TEAM_ENEMY);
   }
 }
 

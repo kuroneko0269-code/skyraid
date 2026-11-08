@@ -134,10 +134,11 @@ class CoopPilot {
     if (k.action === 'windup' && this.lastAction !== 'windup') this.attacks++;
     this.lastAction = k.action;
     const v = { x: fwd.x * s.speed, y: fwd.y * s.speed, z: fwd.z * s.speed };
-    // 体へ入りそうなら外へ（予兆を避けている途中でも先に）
+    // 体へ入りそうなら外へ（予兆を避けている途中でも先に）。10-4c: ソロのボットと同じ「近づきすぎない」避け方（体の面から 300m・
+    // 見越し ×0.4・体の軸から横へ）。ぶつかると最大 HP の 8 割
     if (
       this.avoid <= 0 &&
-      albionHullAvoid(k, s.position, v, this.lookahead, this.avoidPoint.position)
+      albionHullAvoid(k, s.position, v, this.lookahead * 0.4, this.avoidPoint.position, 300, true)
     )
       this.avoid = 1.5;
     // 予兆への反応（狙われているとき・歌は全員。1 回の攻撃に 1 度だけ決める）

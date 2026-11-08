@@ -76,6 +76,9 @@ export class GouraiKaiju {
   /** 10-4b: 回転掃射の面の傾き（度）と弾を揃える水平の距離（m。予兆の始めに狙う人へ） */
   sweepPitch = 0;
   sweepRange = 700;
+  /** 10-4c: 回転掃射のすき間の向き（1 = 上 / −1 = 下。予兆の始めに決める）と撃った回数（輪の段を回す） */
+  sweepSide = 1;
+  sweepShot = 0;
   /** 数え: 大きな攻撃の回数・放熱の回数・撃った弾（機銃 / ミサイル）・当てた弾 */
   readonly attacksUsed = { volley: 0, sweep: 0 };
   vents = 0;
@@ -274,7 +277,8 @@ export class GouraiKaiju {
         this.lastAttack = pick;
         this.attacksUsed[pick]++;
         // 10-4b: 回転掃射は予兆の始めに、狙う人の高さへ面を傾けて決める（予兆の筒もその高さへ。見て高さを変えれば外れる）
-        if (pick === 'sweep' && p) aimSweep(this, p);
+        // 10-4c: すき間の向き（上 / 下）も決める
+        if (pick === 'sweep' && p) aimSweep(this, p, this.body.floorAt(p.x, p.z), this.random.next);
         this.setAction('windup', pick);
         return;
       }
@@ -311,6 +315,7 @@ export class GouraiKaiju {
             this.addHeat(C.heat.sweep);
             this.sweepAngle = 0;
             this.sweepGap = 0;
+            this.sweepShot = 0;
           }
         }
         return;

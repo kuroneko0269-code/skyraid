@@ -108,7 +108,7 @@ describe('メカ怪獣ゴウライのソロのレイド（10-4b）', () => {
     expect(gouraiPenetration(k.body, true, { x: b.x + 80, y: b.y, z: b.z }, 6, hit)).toBe(false);
   });
 
-  it('体の当たり（ソロのレイド）: 体へ突っ込むと弾かれて外へ・30 のダメージと短い操作不能。1.5 秒は続けて当たらない', () => {
+  it('10-4c: 体の当たり（ソロのレイド）: 体へ突っ込むと最大 HP の約 8 割・跳ねない（向き・速さはそのまま）・演出の知らせ。1.5 秒は続けて当たらない', () => {
     const { w, dev } = createGouraiWorld();
     startFromHeader(w, gouraiStart(3, 'normal'));
     const s = w.play.session;
@@ -136,13 +136,27 @@ describe('メカ怪獣ゴウライのソロのレイド（10-4b）', () => {
     };
     put();
     const hp = s.player.hp;
-    for (let i = 0; i < 60; i++)
+    let rams = 0;
+    s.combat.ramListeners.on(() => rams++);
+    let hitAt = -1;
+    for (let i = 0; i < 60; i++) {
+      const qBefore = { ...a.state.orientation };
+      const speed = a.state.speed;
       stepWorld(w.play, w.buildings(), w.controls, createCombatInput(), DT);
+      if (hitAt < 0 && dev.taken.body === 1) {
+        hitAt = i;
+        // 跳ねない: ぶつかったステップで向きが跳ね返らない・速さが大きく落ちない
+        const q = a.state.orientation;
+        expect(
+          Math.abs(q.x * qBefore.x + q.y * qBefore.y + q.z * qBefore.z + q.w * qBefore.w),
+        ).toBeGreaterThan(0.99);
+        expect(a.state.speed).toBeGreaterThan(speed * 0.95);
+      }
+    }
     expect(dev.taken.body).toBe(1);
-    expect(hp - s.player.hp).toBeGreaterThanOrEqual(C.collision.damage - 1);
-    const hit: HullHit = { depth: 0, normal: { x: 0, y: 0, z: 0 }, shape: 'body' };
-    expect(gouraiPenetration(k.body, k.phase === 1, p, 0, hit)).toBe(false);
-    // すぐにもう一度突っ込んでも、続けて当たらない間はダメージなし（弾くのは毎回）
+    expect(rams).toBe(1);
+    expect(hp - s.player.hp).toBeCloseTo(s.player.maxHp * 0.8, 0);
+    // すぐにもう一度突っ込んでも、続けて当たらない間はダメージなし
     put();
     for (let i = 0; i < 20; i++)
       stepWorld(w.play, w.buildings(), w.controls, createCombatInput(), DT);

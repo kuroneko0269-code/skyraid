@@ -8,6 +8,7 @@ import {
   HIT_FX_CONFIG,
   MISSILE_LAUNCH_FX_CONFIG as L,
 } from '../../data/fx';
+import { KAIJU_RAM_FX } from '../../data/kaiju-ram';
 import type { EnemyAircraft } from '../../entities/enemy-aircraft';
 import type { Vec3 } from '../../flight/math';
 import { randomDirection } from '../particles';
@@ -51,6 +52,9 @@ export class FxLink {
       },
       playerHit: () => {
         this.shake(HIT_FX_CONFIG.playerShake);
+      },
+      kaijuRam: (x, y, z) => {
+        this.ram(x, y, z);
       },
       enemyHit: (x, y, z) => {
         const s = HIT_FX_CONFIG.hitPuff;
@@ -102,6 +106,28 @@ export class FxLink {
         -dy * v + dir.y * s,
         -dz * v + dir.z * s,
         0.5,
+      );
+    }
+  }
+
+  /** 10-4c: 怪獣の体にぶつかった: 強い揺れ・閃光・こすれて散る破片の煙（火花は combat-view.ts） */
+  private ram(x: number, y: number, z: number): void {
+    const f = KAIJU_RAM_FX;
+    this.shake(f.shake);
+    this.explosions.flash(x, y, z, f.flashSize, 4);
+    for (let i = 0; i < f.puffs; i++) {
+      randomDirection(dir);
+      const r = f.puffSpread;
+      const v = f.puffSpeed * (0.5 + Math.random() * 0.5);
+      this.smoke.emit(
+        x + dir.x * r,
+        y + dir.y * r,
+        z + dir.z * r,
+        f.puff,
+        dir.x * v,
+        dir.y * v,
+        dir.z * v,
+        1,
       );
     }
   }

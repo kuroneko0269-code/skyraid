@@ -151,8 +151,7 @@ export class GouraiTally {
     }
     if (k.attack === 'sweep' && k.action === 'active' && s.player.active) {
       this.sweepSteps++;
-      if (inSweepBand(k.body, me, k.sweepPitch) && Math.hypot(me.x - b.x, me.z - b.z) < 1300)
-        this.bandSteps++;
+      if (inSweepBand(k, me) && Math.hypot(me.x - b.x, me.z - b.z) < 1300) this.bandSteps++;
     }
     this.lastAction = k.action;
   }

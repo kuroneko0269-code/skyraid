@@ -83,8 +83,8 @@ describe('白鯨アルビオンの確かめる場（10-3a）', () => {
       }
     };
     walk('src');
-    // 10-4b: ゴウライの遅延チャンク（gourai-*）も体の当たり・弾き方・世界をアルビオンから借りる（本体ではない）
-    // 10-5a: ゼノリス（遅延チャンク）もアルビオンの体の当たり・弾き方を使う
+    // 10-4b: ゴウライの遅延チャンク（gourai-*）も体の当たり・世界をアルビオンから借りる（本体ではない。10-4c で弾き方はやめた）
+    // 10-5a: ゼノリス（遅延チャンク）もアルビオンの体の当たりの型を使う
     const isAlbion = (f: string): boolean => /albion|gourai|xenolith/.test(f.replace(/\\/g, '/'));
     for (const f of files) {
       if (isAlbion(f)) continue;

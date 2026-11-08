@@ -39,6 +39,8 @@ export function writeGouraiState(raid: GouraiRaid, targetId: number | null): Uin
   w.u8(k.phase).u8(Math.round(Math.min(100, k.heat) * 2.55));
   w.u16(Math.round((((k.sweepAngle % 360) + 360) % 360) * 100));
   w.i16(Math.round(k.sweepPitch * 100)).u16(Math.round(k.sweepRange));
+  // 10-4c: 回転掃射のすき間の向き
+  w.i8(k.sweepSide >= 0 ? 1 : -1);
   w.u16(Math.round(Math.min(6000, raid.elapsed) * 10));
   w.u8(targetId ?? NONE)
     .u8(Math.min(255, k.vents))
@@ -109,6 +111,7 @@ export function readGouraiState(
   k.sweepAngle = r.u16() / 100;
   k.sweepPitch = r.i16() / 100;
   k.sweepRange = r.u16();
+  k.sweepSide = r.i8() >= 0 ? 1 : -1;
   raid.elapsed = r.u16() / 10;
   const tid = r.u8();
   out.targetId = tid === NONE ? null : tid;
@@ -154,6 +157,8 @@ export function readGouraiState(
     s.targetId = (tb & 0x7f) === 127 ? -1 : tb & 0x7f;
     s.decoyed = (tb & 0x80) !== 0;
     s.age = age;
+    s.life = GOURAI_SHOTS.missile.life;
+    s.bendAge = 0;
     s.position.x = mx;
     s.position.y = my;
     s.position.z = mz;

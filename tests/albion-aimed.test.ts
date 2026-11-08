@@ -12,10 +12,7 @@ import {
 } from '../src/ai/albion-hull';
 import { ALBION_CONFIG as C, type AlbionAttack } from '../src/data/albion';
 import { HARBOR_TERRAIN } from '../src/data/terrain-harbor';
-import { Aircraft } from '../src/entities/aircraft';
-import { bounceAircraft } from '../src/entities/albion/albion-bounce';
-import { LOCAL_FORWARD } from '../src/flight/flight-model';
-import { rotateVec3, vec3, type Vec3 } from '../src/flight/math';
+import { vec3, type Vec3 } from '../src/flight/math';
 import { bayRoute } from '../src/missions/albion-dev';
 import { createHeightField } from '../src/render/terrain-height';
 
@@ -102,30 +99,13 @@ describe('アルビオンの体の当たり（10-3c）', () => {
     expect(side).toBeGreaterThan(90);
   });
 
-  it('体を横切る移動の線分は手前でめり込み、弾くと体の外へ・機首は外を向き・速さが落ちる', () => {
+  it('体を横切る移動の線分は手前でめり込む（10-4c: 弾かない。ぶつかった後の扱いは共通の kaiju-ram）', () => {
     const k = whale();
     const a = at(k, 0, 200, 0);
     const b = at(k, 0, -200, 0);
     const c = createHullContact();
     expect(hullContact(k.body, a, b, C.collision.margin, C.collision.sampleStep, c)).toBe(true);
     expect(bodyLocal(k.body, c.point).side).toBeGreaterThan(40);
-    // 自機を体へ向けて置き、弾く
-    const plane = new Aircraft();
-    plane.respawn(a);
-    // 機首を体へ（右 → 左。方位は体の左の向き）
-    const h = Math.atan2(-(b.x - a.x), -(b.z - a.z));
-    plane.state.orientation.x = 0;
-    plane.state.orientation.y = Math.sin(h / 2);
-    plane.state.orientation.z = 0;
-    plane.state.orientation.w = Math.cos(h / 2);
-    const before = plane.state.speed;
-    bounceAircraft(plane, c);
-    const f = rotateVec3(vec3(), plane.state.orientation, LOCAL_FORWARD);
-    const n = c.normal;
-    expect(f.x * n.x + f.y * n.y + f.z * n.z).toBeGreaterThanOrEqual(C.collision.minExit - 1e-6);
-    expect(plane.state.speed).toBeCloseTo(before * C.collision.speedKeep, 5);
-    const hit: HullHit = { depth: 0, normal: vec3(), shape: 'body' };
-    expect(hullPenetration(k.body, plane.state.position, C.collision.margin, hit)).toBe(false);
   });
 });
 

@@ -23,6 +23,11 @@ export interface Shot {
   readonly position: Vec3;
   readonly velocity: Vec3;
   age: number;
+  /** 10-4c: 寿命（秒。撃つときに決める） */
+  life: number;
+  /** 10-4c: 曲がる秒（0 は曲がらない）と、曲がった後の上下の速さ（m/s） */
+  bendAge: number;
+  bendVy: number;
   /** フレアに乗り換えた（もう狙う人を追わない） */
   decoyed: boolean;
 }
@@ -60,6 +65,9 @@ export class ShotPool {
       position: vec3(),
       velocity: vec3(),
       age: 0,
+      life: 0,
+      bendAge: 0,
+      bendVy: 0,
       decoyed: false,
     }));
   }
@@ -89,6 +97,9 @@ export class ShotPool {
     s.velocity.y = o.direction.y * spec.speed;
     s.velocity.z = o.direction.z * spec.speed;
     s.age = 0;
+    s.life = o.life ?? spec.life;
+    s.bendAge = o.bendAge ?? 0;
+    s.bendVy = o.bendVy ?? 0;
     s.decoyed = false;
   };
 
@@ -107,11 +118,15 @@ export class ShotPool {
       if (!s.active) continue;
       const spec = this.specs[s.kind];
       s.age += dt;
-      if (s.age >= spec.life) {
+      if (s.age >= s.life) {
         s.active = false;
         continue;
       }
       if (spec.turnDeg > 0) this.home(s, spec, dt, targetOf, decoy);
+      if (s.bendAge > 0 && s.age >= s.bendAge) {
+        s.velocity.y = s.bendVy;
+        s.bendAge = 0;
+      }
       const px = s.position.x;
       const py = s.position.y;
       const pz = s.position.z;

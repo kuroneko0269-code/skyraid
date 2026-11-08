@@ -20,6 +20,7 @@ import {
   MUZZLE_FLASH_CONFIG,
   SPARK_CONFIG,
 } from '../data/effects';
+import { KAIJU_RAM_FX } from '../data/kaiju-ram';
 import { TARGET_CONFIG } from '../data/targets';
 import { GUN_CONFIG } from '../data/weapons';
 import { vec3, type Vec3 } from '../flight/math';
@@ -93,6 +94,7 @@ export class CombatView {
     combat.onImpact(this.spawnSparks);
     combat.onDestroyed(this.spawnDebris);
     combat.onExplosion(this.spawnExplosionSparks);
+    combat.ramListeners.on(this.spawnRamSparks);
   }
 
   /** 描画フレームごとに呼ぶ。alpha は固定ステップの補間係数、frameSeconds はポーズ中 0 */
@@ -164,6 +166,25 @@ export class CombatView {
       p.vy = (onTarget ? dir.y : Math.abs(dir.y)) * speed;
       p.vz = dir.z * speed;
       p.sx = p.sy = p.sz = c.size;
+    }
+  };
+
+  /** 10-4c: 怪獣の体にこすれた火花（命中の火花より多く・強く・長く） */
+  private readonly spawnRamSparks = (x: number, y: number, z: number): void => {
+    const c = SPARK_CONFIG;
+    const f = KAIJU_RAM_FX;
+    for (let i = 0; i < f.sparks; i++) {
+      const p = this.sparks.spawn((c.lifeMin + Math.random() * (c.lifeMax - c.lifeMin)) * 2);
+      if (!p) return;
+      randomDirection(dir);
+      const speed = (c.speedMin + Math.random() * (c.speedMax - c.speedMin)) * f.sparkSpeed;
+      p.x = x;
+      p.y = y;
+      p.z = z;
+      p.vx = dir.x * speed;
+      p.vy = dir.y * speed;
+      p.vz = dir.z * speed;
+      p.sx = p.sy = p.sz = c.size * 1.4;
     }
   };
 

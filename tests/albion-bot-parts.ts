@@ -187,7 +187,8 @@ export const HULL_LOOKAHEAD: Readonly<Record<string, number>> = {
 };
 
 /**
- * 10-3c: このまま進むと ahead 秒の間に体（余裕 pad m）へ入るなら、体の面から外へ逃げる先（out）を決めて true
+ * 10-3c: このまま進むと ahead 秒の間に体（余裕 pad m）へ入るなら、体の面から外へ逃げる先（out）を決めて true。
+ * 10-4c: standoff は「近づきすぎない」避け方（大きな余裕・短い見越しで、体の軸から横へ離れる。ぶつかると 8 割なので人は離れて撃つ）
  */
 export function albionHullAvoid(
   k: AlbionKaiju,
@@ -196,6 +197,7 @@ export function albionHullAvoid(
   ahead: number,
   out: Vec3,
   pad = 35,
+  standoff = false,
 ): boolean {
   const b = k.body.position;
   if (Math.hypot(me.x - b.x, me.y - b.y, me.z - b.z) > 420 + Math.hypot(v.x, v.y, v.z) * ahead)
@@ -207,6 +209,17 @@ export function albionHullAvoid(
     p.y = me.y + v.y * t;
     p.z = me.z + v.z * t;
     if (!hullPenetration(k.body, p, pad, hullHit)) continue;
+    if (standoff) {
+      // 10-4c: 体の軸から横へ離れる（細長い体・ひれも横へ出れば当たらない）。高さは今のまま（下がらない）、進む向きを少し残す
+      const fx = -Math.sin(k.body.heading);
+      const fz = -Math.cos(k.body.heading);
+      const side = (me.x - b.x) * -fz + (me.z - b.z) * fx >= 0 ? 1 : -1;
+      const hs = Math.hypot(v.x, v.z) || 1;
+      out.x = me.x + -fz * side * 800 + (v.x / hs) * 300;
+      out.z = me.z + fx * side * 800 + (v.z / hs) * 300;
+      out.y = Math.max(me.y, k.body.floorAt(me.x, me.z) + 250);
+      return true;
+    }
     // 面に沿って横へ（進む向きから面へ向かう成分を除き、外へ少し）。真っすぐ戻ろうとすると曲がりきれない
     const n = hullHit.normal;
     const sp = Math.hypot(v.x, v.y, v.z) || 1;

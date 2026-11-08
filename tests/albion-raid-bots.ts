@@ -37,6 +37,9 @@ import {
 import { DEFAULT_HANDS, Hands } from '../scripts/replay-analysis/hands';
 
 const DT = 1 / 60;
+/** 10-4c: 近づきすぎない避け方の見越し（役ごとの見越しの倍率）と体の面からの余裕（m） */
+const RAM_LOOKAHEAD = 0.4;
+const RAM_PAD = 300;
 
 export {
   ALBION_FOCUS,
@@ -150,8 +153,10 @@ export function runAlbionBot(o: AlbionBotOptions, world?: AlbionBotWorld): Albio
       dodge = Math.max(1.2, Math.min(cap, left));
     }
     // 10-3c: 体へ入りそうなら外へ（短く。予兆を避けている途中でも先に）
-    if (avoid <= 0 && albionHullAvoid(k, me, vel, HULL_LOOKAHEAD[o.role] ?? 1.2, avoidPoint))
-      avoid = 1.5;
+    // 10-4c: ぶつかると最大 HP の 8 割（跳ねない）なので、人は体から離れて撃つ: 体の面から 300m に入りそうなら（見越しは短く）
+    // 体の軸から横へ離れる。10-3c は見越し 1.1〜2.0 秒・余裕 35m で体の面へ向かって逃げ、間に合わずに弾かれていた（1 回に約 3 回）
+    const ahead = (HULL_LOOKAHEAD[o.role] ?? 1.2) * RAM_LOOKAHEAD;
+    if (avoid <= 0 && albionHullAvoid(k, me, vel, ahead, avoidPoint, RAM_PAD, true)) avoid = 1.5;
     let intent: Readonly<AircraftControls>;
     let goal: Readonly<Vec3> | null = null;
     let fight = false;

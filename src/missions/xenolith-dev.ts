@@ -3,6 +3,7 @@
 // 部位は CombatSystem の撃てる対象の末尾に足す（機銃・ミサイルで減らせる。バリアの間は殻の中に効かない。フリーフライトでは倒れない:
 // 体力は 1% で止める）。光線は自機に当たる。体は通り抜けられない（10-5b から 10-4c の扱い: 最大 HP の約 8 割・弾かない）。
 // 10-5b: ソロのレイド（ミッション raidXenolith）も引き受ける（体力・制限時間・撃破は xenolith-raid.ts）
+import { RamGrace, ramDamage } from '../combat/kaiju-ram';
 import { TEAM_ENEMY } from '../combat/target';
 import { XENOLITH_CONFIG as C, XENOLITH_PARTS } from '../data/xenolith';
 import type { MapDef } from '../data/maps';
@@ -92,7 +93,8 @@ export class XenolithDev implements FreeExtra {
   /** 自機が受けた当たりの数え（値の表示・ボット）: なぎ払い・溜め撃ち・光の弾・体への衝突 */
   readonly taken = { sweep: 0, charged: 0, orbs: 0, body: 0 };
   /** 体への衝突の後、続けて当たらない残り秒 */
-  bodyGrace = 0;
+  /** 10-4c: 体への衝突の「続けて当たらない」間（共通の部品） */
+  readonly ram = new RamGrace();
   private readonly contact = createHullContact();
   private readonly velocity = { x: 0, y: 0, z: 0 };
 
@@ -195,7 +197,7 @@ export class XenolithDev implements FreeExtra {
     this.raid.spawn(x, y, z, heading, this.seed, this.env.map().center, hpRatio, broken);
     for (const t of this.partTargets) t.place(true);
     for (const key of Object.keys(this.taken) as (keyof typeof this.taken)[]) this.taken[key] = 0;
-    this.bodyGrace = 0;
+    this.ram.clear();
   }
 
   /** 飛行の途中から出す（遅延チャンクの読み込みが飛行の始めに間に合わなかったとき） */
@@ -232,11 +234,11 @@ export class XenolithDev implements FreeExtra {
   }
 
   /**
-   * 体への衝突（10-5b: 10-4c の扱い）: 最大 HP の約 8 割のダメージ（足りなければ撃墜）。弾かない。続けて当たらない間がある。
-   * 倒した後（落ちる間）と撃墜されている間は無し
+   * 体への衝突（10-4c の共通の扱い。10-5b で先に入れた）: 最大 HP の約 8 割のダメージ（足りなければ撃墜）。跳ねない。続けて当たらない間がある。
+   * 倒した後と撃墜されている間は無し
    */
   private collide(dt: number): void {
-    this.bodyGrace = Math.max(0, this.bodyGrace - dt);
+    this.ram.tick(dt);
     const s = this.play.session;
     const k = this.kaiju;
     if (!s.player.active || this.raid.dead || k.parts.dead || !k.body.visible) return;
@@ -254,12 +256,12 @@ export class XenolithDev implements FreeExtra {
       )
     )
       return;
-    // 10-5b: 10-4c の扱い（弾かない・最大 HP の約 8 割。残りが足りなければ撃墜）
-    if (this.bodyGrace > 0) return;
-    this.bodyGrace = B.invulnerable;
+    if (!this.ram.hit(0)) return;
     this.taken.body++;
     this.raid.bodyTaken++;
-    s.combat.dealDamage(s.player, s.player.maxHp * B.hpShare, TEAM_ENEMY);
+    const p = a.state.position;
+    s.combat.ramListeners.report(p.x, p.y, p.z);
+    s.combat.dealDamage(s.player, ramDamage(s.player.maxHp), TEAM_ENEMY);
   }
 }
 

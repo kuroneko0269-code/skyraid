@@ -1,10 +1,10 @@
 // 10-4b: メカ怪獣ゴウライのボットの共通（gourai-raid-bots.ts・gourai-coop-bots.ts）: 熟練が狙う順・世界の用意・始めの状態・
 // 予兆が自分に向いているか（回転掃射の輪・一斉発射のミサイル）・体を見越して避ける
 import type { GouraiKaiju } from '../src/ai/gourai-ai';
-import { inSweepBand } from '../src/ai/gourai-attacks';
+import { inSweepBand, sweepOffset } from '../src/ai/gourai-attacks';
 import { gouraiPenetration } from '../src/ai/gourai-hull';
 import type { HullHit } from '../src/ai/albion-hull';
-import { GOURAI_CONFIG as C } from '../src/data/gourai';
+import { GOURAI_CONFIG as C, GOURAI_SHOTS } from '../src/data/gourai';
 import { RAID_CONFIG } from '../src/data/kaiju';
 import type { RaidDifficulty } from '../src/data/raid';
 import type { Vec3 } from '../src/flight/math';
@@ -56,37 +56,60 @@ export function sweepThreat(
   v: Readonly<Vec3>,
   ahead = 1.2,
 ): boolean {
-  if (k.attack !== 'sweep' || (k.action !== 'windup' && k.action !== 'active')) return false;
-  const b = k.body.position;
+  if (k.attack !== 'sweep') return false;
+  // 10-4c: 攻撃が終わっても、飛んでいる弾が届くまで（狙う人の距離 ÷ 弾の速さ + 0.4 秒）は危ない
+  const flying =
+    k.action === 'recover' && k.actionTime < k.sweepRange / GOURAI_SHOTS.gun.speed + 0.4;
+  if (k.action !== 'windup' && k.action !== 'active' && !flying) return false;
   for (let i = 0; i <= 4; i++) {
     const t = (ahead * i) / 4;
     const p = { x: me.x + v.x * t, y: me.y + v.y * t, z: me.z + v.z * t };
-    if (Math.hypot(p.x - b.x, p.z - b.z) > C.attacks.sweep.range + 150) continue;
-    if (inSweepBand(k.body, p, k.sweepPitch)) return true;
+    if (inSweepBand(k, p, 10)) return true;
   }
   return false;
 }
 
-/** 回転掃射を避ける先: 進む向きのまま、輪の高さから上か下へ 250m（床に近ければ上へ） */
+/**
+ * 回転掃射を避ける先: 進む向きのまま上か下へ。10-4c: 輪が上下 2 つになった。近い輪の外側（すき間の反対）へ SWEEP_CLEAR m 出る。
+ * 床に近くて出られなければ、すき間の真ん中へ（ボットは高さを細かく合わせられないので、外へ出られるときは外へ）
+ */
 export function sweepDodgePoint(
   k: GouraiKaiju,
   me: Readonly<Vec3>,
   v: Readonly<Vec3>,
   out: Vec3,
 ): void {
-  const b = k.body.position;
-  const h = Math.hypot(me.x - b.x, me.z - b.z);
-  const band =
-    b.y +
-    (C.attacks.sweep.bandLow + C.attacks.sweep.bandHigh) / 2 +
-    h * Math.tan((k.sweepPitch * Math.PI) / 180);
+  const s = C.attacks.sweep;
+  const side = k.sweepSide >= 0 ? 1 : -1;
+  const off = sweepOffset(k, me);
   const floor = k.body.floorAt(me.x, me.z);
-  const up = me.y >= band || band - 250 < floor + 150;
+  // 近い輪の外側の端（すき間の反対）から SWEEP_CLEAR m 外
+  const edge = side > 0 ? s.near[0] : -s.near[0];
+  const outer = edge - side * SWEEP_CLEAR;
+  const gapMid = (side * (s.near[1] + s.far[0])) / 2;
+  const toOuter = outer - off;
+  const blocked = me.y + toOuter < floor + 160;
+  const want = blocked ? gapMid - off : toOuter;
+  const b = k.body.position;
+  const dx = me.x - b.x;
+  const dz = me.z - b.z;
+  const d = Math.hypot(dx, dz) || 1;
+  if (blocked || d < 350) {
+    // 床に近い（すき間へ）・体に近い（弾が機銃から段へ寄る所）: 体から外へ離れて、弾の届く輪の端の外へも出る
+    out.x = me.x + (dx / d) * 700;
+    out.z = me.z + (dz / d) * 700;
+    out.y = me.y + want;
+    return;
+  }
+  // 先の点は近く（450m）: 上下へ早く動く（10-4b は 1,400m 先で、上下 250m を緩く上った）
   const sp = Math.hypot(v.x, v.z) || 1;
-  out.x = me.x + (v.x / sp) * 1400;
-  out.z = me.z + (v.z / sp) * 1400;
-  out.y = band + (up ? 250 : -250);
+  out.x = me.x + (v.x / sp) * 450;
+  out.z = me.z + (v.z / sp) * 450;
+  out.y = me.y + want;
 }
+
+/** 10-4c: 回転掃射の近い輪の外へどれだけ離れるか（m） */
+const SWEEP_CLEAR = 80;
 
 /** 自分を追ってくるミサイルが range m 以内にあるか（フレアを撒く判断） */
 export function missileNear(k: GouraiKaiju, id: number, me: Readonly<Vec3>, range = 700): boolean {
