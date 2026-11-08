@@ -133,7 +133,7 @@ export function createVorgasSkin(tex: DataTexture | null): VorgasSkin {
       float kPulse = 0.8 + 0.2 * sin(uTime * ${f(c.pulse * Math.PI * 2)} + vRestPos.y * 0.05);
       vec3 kCol = mix(${vec(M.colors.crack)}, ${vec(V.colors.hot)}, uHeat * (0.35 + 0.65 * kWave));
       float kI = ${f(c.intensity)} * kPulse * (1.0 + ${f(C.heatBoost)} * uHeat * (0.4 + 0.6 * kWave));
-      totalEmissiveRadiance += kCol * (kCrack + kHalo * ${f(C.haloStrength)}) * kI * vCrackK * kLive;
+      totalEmissiveRadiance += kCol * (kCrack + kHalo * ${f(C.haloStrength)} * (1.0 - 0.5 * uHeat)) * kI * vCrackK * kLive;
       // 目（溜めと喉の光で強く）
       totalEmissiveRadiance += ${vec(M.colors.eye)} * vGlow * ${f(M.eyeIntensity)} * (1.0 + 1.2 * uHeat) * kLive;
       // 喉の奥（口のまわりと首の下側）

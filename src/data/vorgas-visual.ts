@@ -41,7 +41,7 @@ export const VORGAS_VISUAL = {
   /** 皮膚の絵: 一枚の絵が覆う皮膚の大きさ（m。三方向から貼る）・一辺の鱗の板の数・凹凸の強さ・古傷の数 */
   skin: { tileMeters: 40, platesPerTile: 9, bump: 0.75, scars: 6 },
   /** 亀裂: 溝の深さ（凹凸）・まわりのにじむ熱の幅と強さ・熱線の溜めで明るくなる倍率と尾から頭へ流れる脈の速さ */
-  crack: { groove: 0.6, halo: 0.05, haloStrength: 0.22, heatBoost: 2.6, waveSpeed: 1.6 },
+  crack: { groove: 0.6, halo: 0.05, haloStrength: 0.22, heatBoost: 1.6, waveSpeed: 1.6 },
   /** 縁の光: 強さ（逆光で最大）・幅の指数・空の色の常時の分 */
   rim: { strength: 0.42, power: 3.2, ambient: 0.25 },
   /** 濡れ（上陸した直後。暗くつやつや）が乾くまでの秒数 */
