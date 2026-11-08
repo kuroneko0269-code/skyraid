@@ -1,0 +1,44 @@
+{
+  "entrance": {
+    "calls": 2,
+    "triangles": 1282,
+    "renderMs": 8.299999998882413,
+    "frameMs": 245.69999999925494,
+    "updateMs": 0.19999999925494194
+  },
+  "orbit": {
+    "calls": 2,
+    "triangles": 1282,
+    "renderMs": 9.299999999813735,
+    "frameMs": 250.90000000037253,
+    "updateMs": 0.10000000055879354
+  },
+  "orbs": {
+    "calls": 2,
+    "triangles": 1282,
+    "renderMs": 4.599999999627471,
+    "frameMs": 256.59999999962747,
+    "updateMs": 0.09999999962747097
+  },
+  "perch": {
+    "calls": 2,
+    "triangles": 1282,
+    "renderMs": -11.400000000372529,
+    "frameMs": 314.59999999962747,
+    "updateMs": 0.09999999962747097
+  },
+  "break": {
+    "calls": 2,
+    "triangles": 1282,
+    "renderMs": 9.599999999627471,
+    "frameMs": 281,
+    "updateMs": 0.09999999962747097
+  },
+  "defeat": {
+    "calls": 4,
+    "triangles": 2290,
+    "renderMs": 7.6000000005587935,
+    "frameMs": 261.5,
+    "updateMs": 0.09999999962747097
+  }
+}

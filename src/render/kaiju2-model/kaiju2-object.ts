@@ -1,6 +1,8 @@
 // 9-6a: ネフィルガの 3D オブジェクト: 骨格 1 つに皮膚と翼の膜の SkinnedMesh 2 つ、雷球（InstancedMesh）・突風の輪を足す。
 // draw call は 体 2 + 雷球 1（出ているときだけ）+ 突風 1（出ているときだけ）= 2〜4（シャドウは体 2 の分だけ別）。
-// ヴォルガス（8）より少ない。「低」はジオメトリを作り直す（三角形 5,000 以下）
+// ヴォルガス（8）より少ない。「低」はジオメトリを作り直す（三角形 5,000 以下）。
+// 10-7a: 見た目の段（低・中・高）で、起動時に作る絵（textures.ts）・とげの作り込み・粒（雨と風の筋 1・電気の弧 1・破片と煙 2。
+// どれも出ているときだけ）を切り替える。動きの上乗せ（motion.ts）と演出の進行（kaiju2-effects.ts）は描画だけ
 import {
   AdditiveBlending,
   CylinderGeometry,
@@ -15,14 +17,19 @@ import {
   Quaternion,
   SkinnedMesh,
   Vector3,
-  type BufferGeometry,
 } from 'three';
+import { Color, DirectionalLight, HemisphereLight, type Object3D } from 'three';
 import type { AircraftDetail } from '../../data/aircraft-model';
+import { KAIJU2_VISUAL, type Kaiju2Tier } from '../../data/kaiju2-visual';
 import { KAIJU2_CONFIG } from '../../data/kaiju2';
 import { KAIJU2_MODEL_CONFIG } from '../../data/kaiju2-model';
 import { MAX_ORBS, type SkyKaiju } from '../../entities/kaiju2/sky-kaiju';
 import { createKaiju2Materials, type Kaiju2Materials } from './material';
-import { buildKaiju2Membrane, buildKaiju2Skin } from './parts';
+import { Kaiju2Effects } from './kaiju2-effects';
+import type { Kaiju2ViewInput } from './kaiju2-view-input';
+import { buildKaiju2Geometries, kaiju2Textures, toTier } from './assets';
+
+export { buildKaiju2Geometries } from './assets';
 import {
   animateKaiju2,
   applyKaiju2Broken,
@@ -31,18 +38,6 @@ import {
 } from './skeleton';
 
 const M = KAIJU2_MODEL_CONFIG;
-
-/** 皮膚と膜のジオメトリ（テストで三角形を数える） */
-export function buildKaiju2Geometries(detail: AircraftDetail): {
-  skin: BufferGeometry;
-  membrane: BufferGeometry;
-  triangles: number;
-} {
-  const d = M.detail[detail];
-  const s = buildKaiju2Skin(d);
-  const m = buildKaiju2Membrane(d);
-  return { skin: s.build(), membrane: m.build(), triangles: s.triangleCount + m.triangleCount };
-}
 
 const matrix = new Matrix4();
 const quat = new Quaternion();
@@ -55,13 +50,24 @@ const up = new Vector3();
 const back = new Vector3();
 const zAxis = new Vector3(0, 0, 1);
 const worldUp = new Vector3(0, 1, 0);
+const inv = new Quaternion();
+const lookLocal = new Vector3();
+const sunDir = new Vector3();
+const sunColor = new Color();
+const skyColor = new Color();
 
 export class Kaiju2Object {
   readonly group = new Group();
   private readonly rig: Kaiju2Skeleton;
   private readonly skin: SkinnedMesh;
   private readonly membrane: SkinnedMesh;
-  private readonly materials: Kaiju2Materials;
+  private materials: Kaiju2Materials;
+  private effects: Kaiju2Effects;
+  /** 粒（ワールド座標。段を変えると中身を入れ替える） */
+  private readonly fxRoot = new Group();
+  private tier: Kaiju2Tier;
+  private sun: DirectionalLight | null = null;
+  private hemi: HemisphereLight | null = null;
   private readonly orbs: InstancedMesh;
   private readonly gust: Mesh;
   private readonly gustMaterial: MeshBasicMaterial;
@@ -69,14 +75,18 @@ export class Kaiju2Object {
   /** 三角形の数（今の画質。報告・テスト） */
   triangles = 0;
 
-  constructor(detail: AircraftDetail = 'high') {
+  constructor(detail: AircraftDetail | Kaiju2Tier = 'high') {
     this.rig = createKaiju2Skeleton();
     this.group.add(this.rig.root);
-    const g = buildKaiju2Geometries(detail);
+    this.tier = toTier(detail);
+    const spec = KAIJU2_VISUAL.tiers[this.tier];
+    const g = buildKaiju2Geometries(this.tier === 'low' ? 'low' : 'high', spec.extraSpikes);
     this.triangles = g.triangles;
-    this.materials = createKaiju2Materials();
+    this.materials = createKaiju2Materials(this.tier, kaiju2Textures(spec.textureSize));
     this.skin = this.prepare(new SkinnedMesh(g.skin, this.materials.skin));
     this.membrane = this.prepare(new SkinnedMesh(g.membrane, this.materials.membrane));
+    this.effects = new Kaiju2Effects(spec, this.rig);
+    this.fxRoot.add(...this.effects.objects);
     const orbMaterial = new MeshBasicMaterial({
       color: M.colors.orb,
       transparent: true,
@@ -107,12 +117,29 @@ export class Kaiju2Object {
     this.group.visible = false;
   }
 
-  /** シーンに足すもの（体・雷球・突風。雷球と突風はワールド座標で置く） */
+  /** シーンに足すもの（体・雷球・突風・粒。雷球・突風・粒はワールド座標で置く） */
   get objects(): readonly (Group | Mesh | InstancedMesh)[] {
-    return [this.group, this.orbs, this.gust];
+    return [this.group, this.orbs, this.gust, this.fxRoot];
+  }
+
+  /** 今の見た目の段 */
+  get visualTier(): Kaiju2Tier {
+    return this.tier;
+  }
+
+  /** 10-7a: 日と空の光（縁の光・膜の透けの向きと色）をシーンから探す */
+  attachLights(scene: { readonly children: readonly Object3D[] }): void {
+    for (const o of scene.children) {
+      if (o instanceof DirectionalLight) this.sun ??= o;
+      if (o instanceof HemisphereLight) this.hemi ??= o;
+    }
   }
 
   private prepare(mesh: SkinnedMesh): SkinnedMesh {
+    // 10-7a: 日と稲光の向きを描くカメラの向きへ直す
+    mesh.onBeforeRender = (_r, _s, camera) => {
+      this.materials.toView(camera.matrixWorldInverse);
+    };
     mesh.bind(this.rig.skeleton, new Matrix4());
     mesh.frustumCulled = false;
     mesh.castShadow = true;
@@ -121,26 +148,47 @@ export class Kaiju2Object {
     return mesh;
   }
 
-  /** 画質（LOD）を変える: ジオメトリを作り直す */
-  setDetail(detail: AircraftDetail): void {
-    const g = buildKaiju2Geometries(detail);
+  /** 画質（LOD）を変える: ジオメトリ・絵・粒を作り直す（9-6a の機体の細かさか、10-7a の見た目の段） */
+  setDetail(detail: AircraftDetail | Kaiju2Tier): void {
+    const tier = toTier(detail);
+    if (tier === this.tier) return;
+    this.tier = tier;
+    const spec = KAIJU2_VISUAL.tiers[tier];
+    const g = buildKaiju2Geometries(tier === 'low' ? 'low' : 'high', spec.extraSpikes);
     this.skin.geometry.dispose();
     this.skin.geometry = g.skin;
     this.membrane.geometry.dispose();
     this.membrane.geometry = g.membrane;
     this.triangles = g.triangles;
+    this.materials.dispose();
+    this.materials = createKaiju2Materials(tier, kaiju2Textures(spec.textureSize));
+    this.skin.material = this.materials.skin;
+    this.membrane.material = this.materials.membrane;
+    this.fxRoot.remove(...this.effects.objects);
+    this.effects.dispose();
+    this.effects = new Kaiju2Effects(spec, this.rig);
+    this.fxRoot.add(...this.effects.objects);
   }
 
   setVisible(v: boolean): void {
     this.group.visible = v;
+    this.fxRoot.visible = v;
     if (!v) {
       this.orbs.visible = false;
       this.gust.visible = false;
     }
   }
 
-  /** 描画フレームごと。前ステップとの間を alpha で補間し、骨を動かす。flash は被弾で白く光る残り（0〜1。9-6b） */
-  update(k: SkyKaiju, alpha: number, dt: number, flash = 0): void {
+  /** 10-7a: 新しく出した（レイドの始め・再生のシーク）: 破片・煙・身じろぎの残りを消す */
+  resetEffects(k: SkyKaiju): void {
+    this.effects.reset(k);
+  }
+
+  /**
+   * 描画フレームごと。前ステップとの間を alpha で補間し、骨を動かす。flash は被弾で白く光る残り（0〜1。9-6b）。
+   * view は 10-7a の演出の入力（カメラ・頭が追う相手・雨・撃破・咆哮・演出の秒数。省略は粒を dt で進めて追わない）
+   */
+  update(k: SkyKaiju, alpha: number, dt: number, flash = 0, view?: Kaiju2ViewInput): void {
     this.time += dt;
     if (!this.group.visible) return;
     const p = k.position;
@@ -169,16 +217,56 @@ export class Kaiju2Object {
     const bank = k.prevBank + (k.bank - k.prevBank) * alpha;
     roll.setFromAxisAngle(zAxis, -bank);
     this.group.quaternion.copy(quat).multiply(roll);
+    const input: Kaiju2ViewInput = view ?? {
+      camera: { x: p.x, y: p.y + 100, z: p.z + 500 },
+      target: null,
+      rain: 0,
+      dead: false,
+      shout: false,
+      fxDt: dt,
+    };
     animateKaiju2(this.rig, k.pose, this.time);
-    applyKaiju2Broken(this.rig, k.broken);
-    this.materials.setGlow(
-      k.pose.throatGlow,
-      k.attack === 'orbs' ? k.pose.throatGlow : 0,
+    // 10-7a: 動きの上乗せ（頭が追う相手は体の座標へ）
+    let look: Vector3 | null = null;
+    if (input.target) {
+      inv.copy(this.group.quaternion).invert();
+      look = lookLocal
+        .set(input.target.x - p.x, input.target.y - p.y, input.target.z - p.z)
+        .applyQuaternion(inv);
+    }
+    this.effects.motion.apply(
+      this.rig,
+      { pose: k.pose, bank, look, roar: this.effects.roarAmount, dead: input.dead },
       this.time,
+      dt,
     );
+    applyKaiju2Broken(this.rig, k.broken);
+    this.group.updateMatrixWorld(true);
+    this.effects.update(k, this.group.position, Math.min(1, flash), input, this.time);
+    const look2 = this.effects.look;
+    look2.throat = k.pose.throatGlow;
+    look2.vein = k.attack === 'orbs' ? k.pose.throatGlow : 0;
+    this.materials.setLook(look2, this.time);
     this.materials.setFlash(Math.min(1, flash), k.broken.head);
+    this.updateLights();
     this.updateOrbs(k, alpha);
     this.updateGust(k);
+  }
+
+  /** 日の向き・色と空の色をマテリアルへ（強さを色に掛ける） */
+  private updateLights(): void {
+    const s = this.sun;
+    if (s) {
+      sunDir.subVectors(s.position, s.target.position);
+      sunColor.copy(s.color).multiplyScalar(s.intensity);
+    } else {
+      sunDir.set(0.4, 0.8, 0.3);
+      sunColor.setRGB(1, 1, 1);
+    }
+    const h = this.hemi;
+    if (h) skyColor.copy(h.color).multiplyScalar(h.intensity);
+    else skyColor.setRGB(0.5, 0.6, 0.8);
+    this.materials.setSun(sunDir, sunColor, skyColor);
   }
 
   private updateOrbs(k: SkyKaiju, alpha: number): void {

@@ -2,7 +2,7 @@
 // レイドの選択・リプレイ・記録カードの題）、判定・形・HUD・音・文言の遅延チャンク（kaiju2-runtime.ts）を、ネフィルガのレイドを
 // 始める前・ネフィルガのリプレイを再生する前・協力のネフィルガの飛行の前に読む（読み込み中・失敗の表示付き）。
 // モード選択でネフィルガを選んだときは先読みする。?dev=kaiju2（9-6a の確かめる場）のときは起動時に読む
-import type { Scene } from 'three';
+import type { PerspectiveCamera, Scene } from 'three';
 import { lazyChunk } from '../core/lazy-chunk';
 import { parseDevFlags } from '../core/debug-flags';
 import type { GameState } from '../core/game-state';
@@ -12,6 +12,8 @@ import { NEPHIRGA_VARIANT } from '../missions/kaiju2-mission';
 import { registerRaidVariant } from '../missions/raid-variants';
 import type { MissionDef } from '../missions/types';
 import type { QualityLink } from '../render/quality-link';
+import type { FlightFrame } from '../render/flight-frame';
+import type { RenderPipeline } from '../render/pipeline';
 import type { GameAudio } from '../audio/game-audio';
 import { loadChunk, prefetchChunk } from './lazy-load';
 import { registerRaidKaijuChunk } from './raid-kaiju-link';
@@ -31,9 +33,16 @@ export interface Kaiju2LinkParts {
   /** レイドの HUD（H キーの表示の切り替え）・音（エンジンとリスナーの位置） */
   readonly hud: { readonly visible: boolean };
   readonly audio: GameAudio;
-  readonly camera: { readonly position: Readonly<{ x: number; y: number; z: number }> };
-  /** 9-7: 天候（M8 の決戦の演出で移す） */
-  readonly weather: { set(id: string): void };
+  readonly camera: PerspectiveCamera;
+  /** 9-7: 天候（M8 の決戦の演出で移す）。10-7a: 雨の強さ（体の周りの雨・稲光の多さ） */
+  readonly weather: {
+    set(id: string, instant?: boolean): void;
+    readonly params: Readonly<{ rain: number }>;
+  };
+  /** 10-7a: 演出のカメラ（登場の場面）・撮影（?dev=k2shot）・画面の揺れ（咆哮） */
+  readonly frame: FlightFrame;
+  readonly pipeline: RenderPipeline;
+  readonly shake: (strength: number) => void;
 }
 
 let parts: Kaiju2LinkParts | null = null;
@@ -65,7 +74,7 @@ function startRuntime(m: typeof import('./kaiju2-runtime'), p: Kaiju2LinkParts):
       !p.pvp.flying,
     onDetail: (fn) => {
       p.quality.onPreset((preset) => {
-        fn(preset.aircraftDetail);
+        fn(preset);
       });
     },
     onRender: p.onRender,
@@ -76,6 +85,12 @@ function startRuntime(m: typeof import('./kaiju2-runtime'), p: Kaiju2LinkParts):
     setWeather: (id) => {
       p.weather.set(id);
     },
+    weather: p.weather,
+    camera: p.camera,
+    frame: p.frame,
+    pipeline: p.pipeline,
+    shake: p.shake,
+    game,
   });
 }
 

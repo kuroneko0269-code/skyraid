@@ -62,8 +62,8 @@ function tubeAlong(
   b.tube(rings, d.radial, true, true, true);
 }
 
-/** 皮膚: 胴・首・頭（くちばし・とさか・目・喉の袋）・尾・翼の骨・脚 */
-export function buildKaiju2Skin(d: Kaiju2DetailSpec): KaijuMeshBuilder {
+/** 皮膚: 胴・首・頭（くちばし・とさか・目・喉の袋）・尾・翼の骨・脚。extra は 10-7a の作り込み（高画質だけ） */
+export function buildKaiju2Skin(d: Kaiju2DetailSpec, extra = false): KaijuMeshBuilder {
   const b = new KaijuMeshBuilder();
   const cols = Math.max(6, d.radial);
   const rows = Math.max(4, Math.round(d.radial * 0.6));
@@ -85,7 +85,7 @@ export function buildKaiju2Skin(d: Kaiju2DetailSpec): KaijuMeshBuilder {
   const head = one('head');
   b.ellipsoid(v(0, 12, -71), 7, 6, 11, rows, cols, rgb(C.back), head, 0, rgb(C.belly));
   b.spike(v(0, 10, -79), v(0, 7, -94), 4.2, Math.max(4, d.radial >> 1), rgb(C.dark), head);
-  b.spike(v(0, 16, -67), v(0, 24, -44), 3.2, 4, rgb(C.dark), head);
+  b.spike(v(0, 16, -67), v(0, 24, -44), 3.2, 4, rgb(C.horn), head);
   for (const s of [-1, 1])
     b.ellipsoid(v(5.4 * s, 13.5, -75), 1.6, 1.4, 2, 3, 6, rgb(C.eye), head, 1);
   // 喉の袋（雷球の予兆で光る）
@@ -118,7 +118,7 @@ export function buildKaiju2Skin(d: Kaiju2DetailSpec): KaijuMeshBuilder {
       rgb(C.dark),
     );
     const w = bone2Position(`wing${n}2`);
-    b.spike(w, v(w.x + 3 * side, w.y + 2, w.z - 12), 2, 4, rgb(C.dark), one(`wing${n}2`));
+    b.spike(w, v(w.x + 3 * side, w.y + 2, w.z - 12), 2, 4, rgb(C.horn), one(`wing${n}2`));
     // 脚（たたんで後ろへ）と爪
     const leg = one(`leg${n}`);
     const hip = bone2Position(`leg${n}`);
@@ -133,15 +133,77 @@ export function buildKaiju2Skin(d: Kaiju2DetailSpec): KaijuMeshBuilder {
     );
     b.spike(v(hip.x, hip.y - 18, hip.z + 6), v(hip.x, hip.y - 22, hip.z), 1.6, 4, rgb(C.dark), leg);
   }
+  if (extra) addKaiju2Spikes(b);
   return b;
+}
+
+/**
+ * 10-7a: 輪郭のとがり（高画質だけ）: 頭の両脇から後ろへ反る角 2 本、首と背の筋のとげ、尾のとげ、翼の肘と指の先の爪。
+ * 1 本 4〜5 面の角錐（三角形は 1 本 4〜5）
+ */
+function addKaiju2Spikes(b: KaijuMeshBuilder): void {
+  const head = one('head');
+  const horn = rgb(C.horn);
+  for (const s of [-1, 1]) {
+    b.spike(v(4.5 * s, 16, -70), v(11 * s, 22, -52), 2.2, 5, horn, head);
+    b.spike(v(5.5 * s, 13, -66), v(9 * s, 15, -56), 1.3, 4, horn, head);
+  }
+  // 首の筋（後ろへ寝る）
+  const neck: readonly [number, number, number, Kaiju2BoneName][] = [
+    [6.5, -58, 2.2, 'neck1'],
+    [5.6, -50, 2.4, 'neck1'],
+    [4.4, -42, 2.6, 'neck0'],
+  ];
+  for (const [y, z, r, bone] of neck)
+    b.spike(v(0, y + 3, z), v(0, y + 9, z + 7), r, 4, horn, one(bone));
+  // 背の筋（胸 → 尾の付け根）
+  for (let i = 0; i < 6; i++) {
+    const z = -30 + i * 9;
+    const y = 13 - Math.abs(z + 6) * 0.08;
+    const bone = z < -14 ? mix('root', 'chest', 0.7) : z < 16 ? one('root') : one('tail0');
+    b.spike(v(0, y - 1, z), v(0, y + 6 - i * 0.4, z + 6), 2.8 - i * 0.2, 4, horn, bone);
+  }
+  // 尾のとげ（先へ小さく）
+  const tails: readonly Kaiju2BoneName[] = ['tail1', 'tail2', 'tail3'];
+  tails.forEach((t, i) => {
+    const p = bone2Position(t);
+    b.spike(
+      v(0, p.y + 3.2 - i, p.z - 2),
+      v(0, p.y + 7 - i * 1.4, p.z + 5),
+      1.8 - i * 0.4,
+      4,
+      horn,
+      one(t),
+    );
+  });
+  // 翼の肘の爪と指の先の爪
+  for (const side of [-1, 1] as const) {
+    const n = side < 0 ? 'L' : 'R';
+    const e = bone2Position(`wing${n}1`);
+    b.spike(
+      v(e.x, e.y + 2, e.z),
+      v(e.x + 2 * side, e.y + 5, e.z - 9),
+      2,
+      4,
+      horn,
+      one(`wing${n}1`),
+    );
+    const tip = v(WING_TIP.x * side, WING_TIP.y, WING_TIP.z);
+    b.spike(tip, v(tip.x + 7 * side, tip.y + 1, tip.z + 6), 1.2, 4, horn, one(`wing${n}2`));
+  }
 }
 
 /**
  * 翼の膜（両翼）と尾の先のひれ。前縁は翼の骨（肩 → 肘 → 手首 → 指の先）、後縁は胴の脇から指の先へ、
  * 指の間でえぐれた曲線（シルエットの「ぎざぎざの後縁」）。筋（aGlow）は付け根から先へ放射状に
  */
-export function buildKaiju2Membrane(d: Kaiju2DetailSpec): KaijuMeshBuilder {
+export function buildKaiju2Membrane(d: Kaiju2DetailSpec): {
+  builder: KaijuMeshBuilder;
+  uv: number[];
+} {
   const b = new KaijuMeshBuilder();
+  // 10-7a: 膜の絵の座標（横 = 付け根 → 先、縦 = 前縁 → 後縁）。頂点を足した順に並べる
+  const uv: number[] = [];
   const nu = d.membraneSpan;
   const nv = d.membraneChord;
   for (const side of [-1, 1] as const) {
@@ -173,6 +235,7 @@ export function buildKaiju2Membrane(d: Kaiju2DetailSpec): KaijuMeshBuilder {
         // 後縁側は胴の骨へ少し寄せる（付け根の膜が胴について来る）
         const bb: BoneBind = u < 0.15 && t > 0.5 ? mix('root', `wing${n}0`, u / 0.15) : bone;
         row.push(b.vertex(p, UP, color, bb, vein));
+        uv.push(u, t);
       }
       grid.push(row);
     }
@@ -199,9 +262,10 @@ export function buildKaiju2Membrane(d: Kaiju2DetailSpec): KaijuMeshBuilder {
   const p1 = b.vertex(v(0, 6, 82), SIDE, rgb(C.membrane), fin, 0.6);
   const p2 = b.vertex(v(0, -2, 92), SIDE, rgb(C.membraneEdge), fin, 0.3);
   const p3 = b.vertex(v(0, -10, 82), SIDE, rgb(C.membrane), fin, 0.6);
+  uv.push(0.2, 0.1, 0.5, 0.5, 0.2, 0.9, 0.05, 0.5);
   b.triangle(p0, p1, p2);
   b.triangle(p0, p2, p3);
-  return b;
+  return { builder: b, uv };
 }
 
 const UP = v(0, 1, 0);

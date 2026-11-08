@@ -4,7 +4,11 @@
 // ?dev=kaiju2 のときだけ（9-6a）: フリーフライトにネフィルガを出し、左に値の表示（状態・段階・次の攻撃・スタミナ・距離・部位・
 // 当てた回数・三角形。タップ / クリックで畳む）。URL: ?k2hp=<1〜100>（体力の割合 → 段階）・?k2break=wingL,wingR,head,tail
 import './kaiju2-dev.css';
-import type { Scene } from 'three';
+import type { PerspectiveCamera, Scene } from 'three';
+import type { FlightFrame } from '../render/flight-frame';
+import type { RenderPipeline } from '../render/pipeline';
+import type { Kaiju2LinkParts } from './kaiju2-link';
+import { parseDevFlags } from '../core/debug-flags';
 import { attackCandidates, geometryTo } from '../ai/kaiju2-attacks';
 import type { GameAudio } from '../audio/game-audio';
 import { Kaiju2SoundWatch } from '../audio/kaiju2-watch';
@@ -27,6 +31,8 @@ import { k2list } from '../data/kaiju2-text';
 import { Kaiju2Briefing } from './kaiju2-briefing';
 import { Kaiju2Finale } from './kaiju2-finale';
 import { Kaiju2Hud, type Kaiju2CoopFrame } from './kaiju2-hud';
+import { Kaiju2Cinema } from './kaiju2-cinema';
+import { kaiju2Tier } from '../data/kaiju2-visual';
 
 /** 9-6c: 協力のレイドの表示元（ホストは本体、クライアントは state の写し）と、HUD の協力の印 */
 export interface Kaiju2CoopSource {
@@ -49,8 +55,8 @@ export interface Kaiju2RuntimeParts {
   readonly state: () => ScreenState;
   /** 今フリーフライトを飛んでいる（読み込みが遅れたときに使う） */
   readonly inFreeFlight: () => boolean;
-  /** 画質の機体の細かさ（今の値をすぐと、変わるたび） */
-  readonly onDetail: (fn: (d: AircraftDetail) => void) => void;
+  /** 画質の機体の細かさとブルーム（今の値をすぐと、変わるたび。10-7a の見た目の段） */
+  readonly onDetail: (fn: (d: { aircraftDetail: AircraftDetail; bloom: boolean }) => void) => void;
   /** 描画フレームごと（補間の alpha） */
   readonly onRender: (fn: (alpha: number) => void) => void;
   /** 9-6b: HUD を出しているか（H キー）・音のエンジン・リスナー（カメラ）の位置 */
@@ -61,6 +67,13 @@ export interface Kaiju2RuntimeParts {
   readonly devFree: boolean;
   /** 9-7: 天候を移す（M8 の決戦の演出。3 秒で補間） */
   readonly setWeather: (id: string) => void;
+  /** 10-7a: 天候（雨の強さ）・カメラ・演出のカメラの口・描画（撮影）・画面の揺れ・画面の状態の移り */
+  readonly weather: Kaiju2LinkParts['weather'];
+  readonly camera: PerspectiveCamera;
+  readonly frame: FlightFrame;
+  readonly pipeline: RenderPipeline;
+  readonly shake: (strength: number) => void;
+  readonly game: { transition(to: 'pause' | 'flight'): boolean };
 }
 
 /** 怪獣を出している画面（ポーズ・フォトモード・結果の画面の後ろも見える） */
@@ -81,8 +94,9 @@ export function startKaiju2(p: Kaiju2RuntimeParts): Kaiju2Runtime {
   let coop: Kaiju2CoopSource | null = null;
   const obj = new Kaiju2Object('high');
   p.scene.add(...obj.objects);
+  obj.attachLights(p.scene);
   p.onDetail((d) => {
-    obj.setDetail(d);
+    obj.setDetail(kaiju2Tier(d));
   });
   const hud = new Kaiju2Hud(document.body);
   const briefing = new Kaiju2Briefing(document.body);
@@ -96,6 +110,20 @@ export function startKaiju2(p: Kaiju2RuntimeParts): Kaiju2Runtime {
       k2sounds.scream('shout', 1);
     },
   });
+  // 10-7a: 登場の場面・段階の変わり目と撃破の揺れ・撃破の晴れ間（ソロのレイドだけ）
+  const cinema = new Kaiju2Cinema({
+    parent: document.body,
+    frame: p.frame,
+    camera: p.camera,
+    shake: p.shake,
+    roar: () => {
+      k2sounds.scream('shout', 1);
+    },
+    setWeather: p.setWeather,
+    rain: () => p.weather.params.rain,
+  });
+  let briefingPending = false;
+  let fxElapsed = Infinity;
   const panel = document.createElement('div');
   panel.className = 'kaiju2-dev';
   panel.hidden = true;
@@ -105,27 +133,79 @@ export function startKaiju2(p: Kaiju2RuntimeParts): Kaiju2Runtime {
     panel.classList.toggle('is-collapsed', collapsed);
   });
   document.body.append(panel);
+  // 10-7a: 撮影（?dev=k2shot）: 止めている間も演出を進める秒数・怪獣を描くか・形を動かす時間
+  let shotDt: number | null = null;
+  let kaijuShown = true;
+  const updateTimes: number[] = [];
+  if (parseDevFlags(p.search).has('k2shot'))
+    void import('./kaiju2-shot').then((m) => {
+      m.linkKaiju2Shot({
+        raid: () => coop?.raid ?? dev.raid,
+        camera: p.camera,
+        pipeline: p.pipeline,
+        weather: p.weather,
+        game: p.game,
+        setFxClock: (d) => {
+          shotDt = d;
+        },
+        setKaijuShown: (v) => {
+          kaijuShown = v;
+          obj.setVisible(v);
+          if (v) obj.update((coop?.raid ?? dev.raid).body, 1, 0);
+        },
+        updateMs: () => {
+          const t = [...updateTimes].sort((a, b) => a - b);
+          return t[t.length >> 1] ?? 0;
+        },
+      });
+    });
   let last = performance.now();
   let lastText = '';
   /** 今のレイドの経過（小さくなったら新しいレイド → ブリーフィング） */
   let lastElapsed = Infinity;
   p.onRender((alpha) => {
     const now = performance.now();
-    const dt = Math.min(0.1, (now - last) / 1000);
+    const dt = shotDt ?? Math.min(0.1, (now - last) / 1000);
     last = now;
     const state = p.state();
     const raid = coop?.raid ?? dev.raid;
     const active = coop !== null || dev.freeFlying || dev.raiding;
-    const shown = active && SHOWN.includes(state) && raid.body.visible;
+    const shown = active && SHOWN.includes(state) && raid.body.visible && kaijuShown;
     obj.setVisible(shown);
-    if (shown) obj.update(raid.body, alpha, dt, raid.flash / KAIJU2_RAID_CONFIG.flashSeconds);
+    // 新しく始まった（やり直し・再生のシーク）: 破片・煙の残りを消す
+    if (raid.elapsed < fxElapsed) obj.resetEffects(raid.body);
+    fxElapsed = raid.elapsed;
+    if (shown) {
+      const t0 = performance.now();
+      obj.update(raid.body, alpha, dt, raid.flash / KAIJU2_RAID_CONFIG.flashSeconds, {
+        camera: p.camera.position,
+        // 頭が追う相手: ソロは自機、協力は自分のカメラ（自機のすぐ後ろ）
+        target: coop ? p.camera.position : dev.playerPosition,
+        rain: p.weather.params.rain,
+        dead: raid.dead,
+        shout: raid.shout > 0,
+        fxDt: shotDt ?? (state === 'flight' ? dt : 0),
+      });
+      updateTimes.push(performance.now() - t0);
+      if (updateTimes.length > 120) updateTimes.shift();
+    }
+    cinema.update(
+      !coop && dev.raiding && HUD_SHOWN.includes(state) && shotDt === null ? raid : null,
+      state === 'flight',
+      dt,
+    );
     // レイドの HUD・ブリーフィング（協力のブリーフィングは開始前に協力の画面が出す）
     if ((coop || dev.raiding) && HUD_SHOWN.includes(state)) {
       const sel = p.play.session.combat.targeting.selected;
       const locked = sel instanceof Kaiju2PartTarget ? sel : null;
-      hud.update(raid, p.hudVisible(), locked, coop ? coop.frame() : null);
-      // 9-7: キャンペーン版はブリーフィングの画面で読んだので出さない（登場の演出を出す）
-      if (!coop && !raid.campaign && raid.elapsed < lastElapsed) briefing.show(raid.difficulty);
+      hud.update(raid, p.hudVisible() && !cinema.active, locked, coop ? coop.frame() : null);
+      // 9-7: キャンペーン版はブリーフィングの画面で読んだので出さない（登場の演出を出す）。
+      // 10-7a: 登場の場面の後に出す
+      if (!coop && !raid.campaign && raid.elapsed < lastElapsed) briefingPending = true;
+      if (briefingPending && !cinema.active) {
+        briefingPending = false;
+        briefing.show(raid.difficulty);
+      }
       lastElapsed = coop ? Infinity : raid.elapsed;
     } else {
       hud.hide();
