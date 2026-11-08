@@ -38,8 +38,8 @@ export const VORGAS_SHOTS: readonly VorgasShotDef[] = [
   {
     // 登場の場面の中ほど（海から上陸する途中。水面の近くから見上げる）
     id: 'entrance',
-    camera: { forward: 300, right: 120, up: 8 },
-    look: { forward: 0, right: 0, up: 55 },
+    camera: { forward: 230, right: 90, up: 6 },
+    look: { forward: 0, right: 0, up: 62 },
     fov: 55,
     at: 'sea',
   },
@@ -132,7 +132,7 @@ export const VORGAS_SHOTS: readonly VorgasShotDef[] = [
 /** 陸に置く決まった位置（港湾都市の岸壁の上。海から 70m。足元の床の高さは地形から）・向き（ラジアン。0 が −Z = 街の方） */
 export const VORGAS_SHOT_BASE = { x: 60, z: 1380, heading: 0.25 } as const;
 /** 海に置く位置（上陸の途中。沖から岸へ向かう）と、浮かび上がった割合 */
-export const VORGAS_SHOT_SEA = { x: 0, z: 3600, heading: 0, rise: 0.55 } as const;
+export const VORGAS_SHOT_SEA = { x: 0, z: 3600, heading: 0, rise: 0.66 } as const;
 
 /** 撮る天候（昼と夕方の空） */
 export const VORGAS_SHOT_WEATHERS = [
