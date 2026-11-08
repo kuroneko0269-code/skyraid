@@ -1,7 +1,10 @@
 // 10-5a: UFO ゼノリスの 3D オブジェクト: 骨格 1 つに皮の SkinnedMesh 1 つ（銀の円盤・縁の帯・ドーム・発光体・砲口・発生器）、
-// バリアの殻・光線（InstancedMesh 1 つ）・瞬間移動の柱と輪（出ているときだけ）。draw call は 体 1 + 殻 0〜1 + 光線 0〜1 + 柱と輪 0〜2
-// = 1〜5（シャドウは体の 1 つだけ）。「低」はジオメトリを作り直す
+// バリアの殻・光線（InstancedMesh 1 つ）・瞬間移動の柱と輪・光の弾（どれも出ているときだけ）。シャドウは体の 1 つだけ。
+// 10-7d: 見た目の段（低・中・高）で、鏡の金属と虹色の板・光の筋（chrome-material.ts）・六角のバリア（holo.ts）・粒と演出
+// （xenolith-effects.ts: きらめく粒・光の波・光の尾・ほどける / 組み上がる・破片・電気の弧・目印・影）を切り替える。
+// 足した飾り（結晶・浮かぶ光の輪）は体の当たりの中。動き（浮かぶ揺れ・つんのめり・輪の回転）と演出は描画だけ
 import {
+  Color,
   Group,
   Matrix4,
   Quaternion,
@@ -9,20 +12,20 @@ import {
   Vector3,
   type BufferGeometry,
   type Mesh,
+  type Object3D,
 } from 'three';
 import type { AircraftDetail } from '../../data/aircraft-model';
-import {
-  XENOLITH_CONFIG,
-  XENOLITH_EMITTERS,
-  XENOLITH_GENS,
-  XENOLITH_PARTS,
-} from '../../data/xenolith';
+import { XENOLITH_CONFIG } from '../../data/xenolith';
 import { XENOLITH_MODEL_CONFIG } from '../../data/xenolith-model';
-import { xenolithSpherePoint, type XenolithKaiju } from '../../ai/xenolith-ai';
-import { bodyDirection } from '../../ai/raid-kit/frame';
-import { BeamFx, createBarrierMesh, createWarpFx } from './fx';
+import { XENOLITH_VISUAL } from '../../data/xenolith-visual';
+import { toKaijuTier, type KaijuTier } from '../../data/kaiju-look';
+import type { XenolithKaiju } from '../../ai/xenolith-ai';
+import { KaijuLights } from '../kaiju-look/lights';
+import { drawBeam, drawOrbHalos } from './attack-fx';
+import { BeamFx } from './beam-fx';
+import { createXenolithMaterial, type XenolithMaterial } from './chrome-material';
+import { createBarrierMesh, createWarpFx } from './holo';
 import { OrbMesh } from './orb-mesh';
-import { createXenolithMaterial, type XenolithGlow, type XenolithMaterial } from './material';
 import { buildXenolithSkin } from './parts';
 import {
   createXenolithSkeleton,
@@ -30,16 +33,19 @@ import {
   type XenolithBoneName,
   type XenolithSkeleton,
 } from './skeleton';
+import { XenolithEffects, type XenolithViewInput } from './xenolith-effects';
+import { setXenolithBarrier, setXenolithGlow, animateXenolithParts } from './xenolith-animate';
 
 const M = XENOLITH_MODEL_CONFIG;
 const X = XENOLITH_CONFIG;
+const V = XENOLITH_VISUAL;
 
 /** 皮のジオメトリ（テストで三角形を数える） */
 export function buildXenolithGeometry(detail: AircraftDetail): {
   skin: BufferGeometry;
   triangles: number;
 } {
-  const b = buildXenolithSkin(M.detail[detail]);
+  const b = buildXenolithSkin(M.detail[detail === 'low' ? 'low' : 'high']);
   return { skin: b.build(), triangles: b.triangleCount };
 }
 
@@ -49,258 +55,246 @@ const tilt = new Quaternion();
 const xAxis = new Vector3(1, 0, 0);
 const yAxis = new Vector3(0, 1, 0);
 const zAxis = new Vector3(0, 0, 1);
-const PART = (id: (typeof XENOLITH_PARTS)[number]): number => XENOLITH_PARTS.indexOf(id);
-const CANNON = PART('cannon');
-const DOME = PART('dome');
-const glow: XenolithGlow = {
-  rim: 0,
-  emitters: [0, 0, 0, 0],
-  gens: [0, 0, 0],
-  cannon: 0,
-  dome: 0,
-  flash: 0,
-};
-const origin = new Vector3();
-const dir = new Vector3();
-const tmp = { x: 0, y: 0, z: 0 };
-const rippleDir = new Vector3(0, 1, 0);
+const coreWorld = new Vector3();
+const horizon = new Color();
+const sea = new Color();
+const sun = new Color();
 
 export class XenolithObject {
   readonly group = new Group();
   private readonly rig: XenolithSkeleton;
   private readonly skin: SkinnedMesh;
-  private readonly material: XenolithMaterial;
-  readonly barrier: Mesh;
-  private readonly barrierFx: ReturnType<typeof createBarrierMesh>;
+  private material: XenolithMaterial;
+  private effects: XenolithEffects;
+  private readonly lights = new KaijuLights();
+  /** 粒（ワールド座標。段を変えると中身を入れ替える） */
+  private readonly fxRoot = new Group();
+  /** バリアの殻（段を変えると中身を入れ替える。barrier は今の殻） */
+  private readonly barrierRoot = new Group();
+  barrier: Mesh;
+  private barrierFx: ReturnType<typeof createBarrierMesh>;
   readonly beam = new BeamFx();
   private readonly warp = createWarpFx();
   /** 10-5b: 光の弾（出ているときだけ描く） */
   readonly orbs = new OrbMesh(X.orbs.cap);
+  private tier: KaijuTier;
   private time = 0;
   triangles = 0;
 
-  constructor(detail: AircraftDetail = 'high') {
+  constructor(detail: AircraftDetail | KaijuTier = 'high') {
     this.rig = createXenolithSkeleton();
     this.group.add(this.rig.root);
-    const g = buildXenolithGeometry(detail);
+    this.tier = toKaijuTier(detail);
+    const spec = V.tiers[this.tier];
+    const g = buildXenolithGeometry(this.tier === 'low' ? 'low' : 'high');
     this.triangles = g.triangles;
-    this.material = createXenolithMaterial();
+    this.material = createXenolithMaterial(spec);
     this.skin = new SkinnedMesh(g.skin, this.material.skin);
     this.skin.bind(this.rig.skeleton, matrix.identity());
     this.skin.frustumCulled = false;
     this.skin.castShadow = true;
     this.skin.receiveShadow = true;
+    // 日の向き・ドームの核の中心を描くカメラの向きへ直す
+    this.skin.onBeforeRender = (_r, _s, camera) => {
+      const dome = this.bone('dome');
+      if (dome) coreWorld.set(0, 9, 0).applyMatrix4(dome.matrixWorld);
+      this.material.toView(camera.matrixWorldInverse, coreWorld);
+    };
     this.group.add(this.skin);
-    const b = createBarrierMesh(M.detail[detail].segments);
-    this.barrier = b.mesh;
-    this.barrierFx = b;
+    this.effects = new XenolithEffects(spec);
+    this.fxRoot.add(...this.effects.objects);
+    this.barrierFx = createBarrierMesh(M.detail.high.segments, spec.surfaceDetail);
+    this.barrier = this.barrierFx.mesh;
+    this.barrierRoot.add(this.barrier);
     this.group.visible = false;
   }
 
-  /** シーンに足すもの（体・殻・光線・柱と輪。体のほかはワールド座標で置く） */
-  get objects(): readonly (Group | Mesh)[] {
+  /** シーンに足すもの（体・殻・光線・柱と輪・光の弾・粒。体のほかはワールド座標で置く） */
+  get objects(): readonly Object3D[] {
     return [
       this.group,
-      this.barrier,
+      this.barrierRoot,
       this.beam.mesh,
       this.warp.pillar,
       this.warp.ring,
       this.orbs.mesh,
+      this.fxRoot,
     ];
   }
 
-  /** 今の描画の回数（体 1 + 出ている効果） */
+  /** 10-7d: 演出の粒（数える・テスト） */
+  get effectObjects(): readonly Object3D[] {
+    return this.effects.objects;
+  }
+
+  /** 今の描画の回数（体 1 + 出ている効果と粒） */
   get draws(): number {
     if (!this.group.visible) return 0;
     return (
       1 +
       [this.barrier, this.beam.mesh, this.warp.pillar, this.warp.ring, this.orbs.mesh].filter(
         (m) => m.visible,
-      ).length
+      ).length +
+      this.effects.objects.filter((m) => m.visible).length
     );
   }
 
-  setDetail(detail: AircraftDetail): void {
-    const g = buildXenolithGeometry(detail);
-    this.skin.geometry.dispose();
-    this.skin.geometry = g.skin;
-    this.triangles = g.triangles;
+  /** 今の見た目の段 */
+  get visualTier(): KaijuTier {
+    return this.tier;
+  }
+
+  /** 10-7d: 日と空の光をシーンから探す（映り込みの空・水平線の色） */
+  attachLights(scene: { readonly children: readonly Object3D[] }): void {
+    this.lights.attach(scene);
+  }
+
+  /** 画質（LOD）を変える: ジオメトリ・マテリアル・殻・粒を作り直す（機体の細かさか、10-7d の見た目の段） */
+  setDetail(detail: AircraftDetail | KaijuTier): void {
+    const tier = toKaijuTier(detail);
+    if (tier === this.tier) return;
+    const wasLow = this.tier === 'low';
+    this.tier = tier;
+    const spec = V.tiers[tier];
+    if (wasLow !== (tier === 'low')) {
+      const g = buildXenolithGeometry(tier === 'low' ? 'low' : 'high');
+      this.skin.geometry.dispose();
+      this.skin.geometry = g.skin;
+      this.triangles = g.triangles;
+    }
+    this.material.dispose();
+    this.material = createXenolithMaterial(spec);
+    this.skin.material = this.material.skin;
+    this.fxRoot.remove(...this.effects.objects);
+    this.effects.dispose();
+    this.effects = new XenolithEffects(spec);
+    this.fxRoot.add(...this.effects.objects);
+    this.barrierRoot.remove(this.barrier);
+    this.barrier.geometry.dispose();
+    this.barrierFx = createBarrierMesh(M.detail.high.segments, spec.surfaceDetail);
+    this.barrier = this.barrierFx.mesh;
+    this.barrierRoot.add(this.barrier);
   }
 
   setVisible(v: boolean): void {
     this.group.visible = v;
+    this.fxRoot.visible = v;
     if (!v) {
       this.barrier.visible = false;
-      this.beam.begin();
+      this.beam.begin(this.time);
       this.beam.end();
       this.warp.set(false, 0, 0, 0, 0, 0);
       this.orbs.update([], 0, 0, false);
+      this.effects.hide();
     }
   }
 
-  /** 描画フレームごと。前ステップとの間を alpha で補間し、骨と効果を動かす。flash は被弾の光（0〜1） */
-  update(k: XenolithKaiju, alpha: number, dt: number, flash = 0): void {
+  /** 10-7d: 新しく出した（レイドの始め・再生のシーク）: 粒・光の残りを消す */
+  resetEffects(k: XenolithKaiju): void {
+    this.effects.reset(k);
+  }
+
+  /** 10-7d: 粒だけ消す（撮影の場面の切り替え） */
+  clearParticles(): void {
+    this.effects.clearParticles();
+  }
+
+  /**
+   * 描画フレームごと。前ステップとの間を alpha で補間し、骨と効果を動かす。flash は被弾の光（0〜1）。view は 10-7d の演出の入力
+   * （カメラ・雨・撃破・海に着いた・沈む・登場の高さ・演出の秒数。省略は粒を dt で進める）
+   */
+  update(k: XenolithKaiju, alpha: number, dt: number, flash = 0, view?: XenolithViewInput): void {
     this.time += dt;
     if (!this.group.visible) return;
     const b = k.body;
     const p = b.position;
     const q = b.prevPosition;
+    const input: XenolithViewInput = view ?? {
+      camera: { x: p.x + 300, y: p.y + 120, z: p.z + 300 },
+      rain: 0,
+      dead: false,
+      landed: false,
+      sink: 0,
+      descend: 0,
+      fxDt: dt,
+    };
+    const fx = this.effects;
     this.group.position.set(
       q.x + (p.x - q.x) * alpha,
-      q.y + (p.y - q.y) * alpha,
+      q.y + (p.y - q.y) * alpha + fx.bob + input.descend * V.descend.height - input.sink * 25,
       q.z + (p.z - q.z) * alpha,
     );
     let dh = b.heading - b.prevHeading;
     dh = Math.atan2(Math.sin(dh), Math.cos(dh));
-    yawQ.setFromAxisAngle(yAxis, b.prevHeading + dh * alpha);
-    tilt.setFromAxisAngle(xAxis, b.pitch);
+    const heading = b.prevHeading + dh * alpha;
+    yawQ.setFromAxisAngle(yAxis, heading);
+    tilt.setFromAxisAngle(xAxis, b.pitch - fx.tilt);
     yawQ.multiply(tilt);
     tilt.setFromAxisAngle(zAxis, -b.roll);
     this.group.quaternion.copy(yawQ).multiply(tilt);
-    this.animate(k, alpha);
-    this.setGlow(k, flash);
-    this.updateBarrier(k);
-    this.updateBeam(k);
+    animateXenolithParts(this.rig, k, alpha, this.time);
+    this.group.updateMatrixWorld(true);
+    // 演出（粒・波・尾・ほどける）
+    const l = this.lights.read();
+    fx.update(k, this.group.position, heading, Math.min(1, flash), input, l.sunDir);
+    const glow = fx.glow;
+    setXenolithGlow(glow, k, flash, this.time);
+    this.material.set(glow, this.time);
+    this.readSky();
+    this.material.setSky(l.sunDir, l.sunColor, l.skyColor, horizon, sea);
+    setXenolithBarrier(this.barrierFx, this.barrier, k, this.group.position, this.time);
+    drawBeam(k, this.beam, fx.sprites, this.time, input.fxDt);
+    // 瞬間移動の予兆（移る先の柱と輪）・登場（空から体までの光の柱）
     const w = k.warp;
     const d = w.destination;
-    this.warp.set(w.phase === 'telegraph', d.x, d.y, d.z, b.floorAt(d.x, d.z), w.glow);
+    const cam = fx.camera;
+    if (input.descend > 0) {
+      const floor = b.floorAt(p.x, p.z);
+      const top = this.group.position.y + 900;
+      const k2 = 0.15 + 0.25 * (1 - input.descend);
+      this.warp.set(
+        true,
+        p.x,
+        (top + floor) / 2,
+        p.z,
+        floor,
+        k2,
+        V.descend.pillar,
+        top - floor,
+        this.time,
+      );
+    } else
+      this.warp.set(
+        w.phase === 'telegraph',
+        d.x,
+        d.y,
+        d.z,
+        b.floorAt(d.x, d.z),
+        w.glow,
+        undefined,
+        undefined,
+        this.time,
+      );
     this.orbs.update(k.orbs.shots, alpha, dt, true);
+    if (V.tiers[this.tier].orbHalo) drawOrbHalos(k, fx.sprites, cam, alpha, this.time);
+    fx.sprites.end();
   }
 
   private bone(name: XenolithBoneName) {
     return this.rig.bones[XENOLITH_BONE[name]];
   }
 
-  private animate(k: XenolithKaiju, alpha: number): void {
-    const b = k.body;
-    let ds = b.spin - b.prevSpin;
-    if (ds < 0) ds += Math.PI * 2;
-    const disc = this.bone('disc');
-    if (disc) disc.rotation.y = -(b.prevSpin + ds * alpha);
-    const ring = this.bone('ring');
-    if (ring) ring.rotation.y = -(b.ringDeg * Math.PI) / 180;
-    // 壊れた部位は縮める（発光体・発生器・砲口）
-    const shrink = (name: XenolithBoneName, broken: boolean, s: number): void => {
-      const bn = this.bone(name);
-      if (bn) bn.scale.setScalar(broken ? s : 1);
-    };
-    XENOLITH_EMITTERS.forEach((id) => {
-      shrink(id as XenolithBoneName, k.parts.isBroken(PART(id)), 0.4);
-    });
-    XENOLITH_GENS.forEach((id) => {
-      shrink(id as XenolithBoneName, k.parts.isBroken(PART(id)), 0.45);
-    });
-    shrink('cannon', k.parts.isBroken(CANNON), 0.6);
-    // 溜め撃ちの溜めの間、砲口が小刻みに震える
-    const cannon = this.bone('cannon');
-    if (cannon) {
-      const shake = k.beam.kind === 'charged' && k.beam.phase === 'charge' ? 0.6 : 0;
-      cannon.position.set(Math.sin(this.time * 70) * shake, -14, Math.cos(this.time * 63) * shake);
-    }
-  }
-
-  private setGlow(k: XenolithKaiju, flash: number): void {
-    const bar = k.barrier;
-    const G = M.glow;
-    // 縁の帯: 張っている間は明るく、揺らぎで点滅、外れている間は暗い（攻めどきの印）
-    glow.rim =
-      bar.phase === 'up'
-        ? G.rim
-        : bar.phase === 'flicker'
-          ? Math.sin(this.time * 40) > 0
-            ? G.rim * 1.6
-            : 0.2
-          : G.rim * 0.2;
-    // 10-5b: 光の弾の予兆: 縁の帯と発光体が白く強く光る（点滅しながら明るく）
-    const orbK =
-      k.orbPhase === 'warn'
-        ? (0.5 + k.orbTime / X.orbs.warn) * (Math.sin(this.time * 30) > 0 ? 1 : 0.7)
-        : 0;
-    if (orbK > 0) glow.rim = Math.max(glow.rim, G.rim * M.orb.warnRim * orbK);
-    // 瞬間移動の予兆の間は発光体が強く光る
-    const warpK = Math.max(k.warp.glow, orbK);
-    XENOLITH_EMITTERS.forEach((id, i) => {
-      glow.emitters[i] = k.parts.isBroken(PART(id)) ? 0 : G.emitter * (1 + warpK * 1.5);
-    });
-    XENOLITH_GENS.forEach((id, i) => {
-      glow.gens[i] = k.parts.isBroken(PART(id))
-        ? 0
-        : G.gen * (0.8 + 0.2 * Math.sin(this.time * 5 + i));
-    });
-    const beam = k.beam;
-    let cannon: number = G.cannonIdle;
-    if (beam.kind === 'charged') {
-      if (beam.phase === 'warn')
-        cannon = G.cannonIdle + (G.cannonMax * 0.4 * beam.time) / beam.spec.warn;
-      else if (beam.phase === 'charge')
-        cannon = G.cannonMax * (Math.sin(this.time * 30) > 0 ? 1 : 0.6);
-      else if (beam.phase === 'fire') cannon = G.cannonMax;
-    }
-    glow.cannon = k.parts.isBroken(CANNON) ? 0 : cannon;
-    glow.dome = k.parts.isBroken(DOME) ? 0 : G.dome;
-    glow.flash = flash;
-    this.material.set(glow);
-  }
-
-  private updateBarrier(k: XenolithKaiju): void {
-    const bar = k.barrier;
-    const B = X.barrier;
-    const on = bar.absorbs;
-    this.barrier.visible = on;
-    if (!on) return;
-    this.barrier.position.copy(this.group.position);
-    this.barrier.position.y += B.up;
-    this.barrier.scale.set(B.rx, B.ry, B.rx);
-    let opacity: number = M.barrier.opacity;
-    if (bar.phase === 'flicker') opacity *= Math.sin(this.time * 45) > 0 ? 1.4 : 0.15;
-    // 波紋: 止めた判定の球の向き（殻の中心から、殻の大きさで割った向き）
-    const age = k.rippleAge;
-    const life = M.barrier.ripple;
-    let ripple = 0;
-    if (k.rippleSphere >= 0 && age < life) {
-      xenolithSpherePoint(tmp, k.body, k.rippleSphere);
-      rippleDir
-        .set(
-          (tmp.x - k.body.position.x) / B.rx,
-          (tmp.y - k.body.position.y - B.up) / B.ry,
-          (tmp.z - k.body.position.z) / B.rx,
-        )
-        .normalize();
-      ripple = 1 - age / life;
-    }
-    this.barrierFx.set(opacity, rippleDir, ripple);
-  }
-
-  private updateBeam(k: XenolithKaiju): void {
-    const beam = k.beam;
-    const fx = this.beam;
-    fx.begin();
-    if (beam.busy && beam.phase !== 'recover') {
-      const s = beam.spec;
-      origin.set(beam.origin.x, beam.origin.y, beam.origin.z);
-      const charged = beam.kind === 'charged';
-      const hex = charged ? M.colors.chargedBeam : M.colors.sweepBeam;
-      const warnR = M.beam.warnRadius;
-      if (beam.phase === 'fire') {
-        const r = s.radius * M.beam.fireScale * (0.85 + 0.15 * Math.sin(this.time * 50));
-        dir.set(beam.direction.x, beam.direction.y, beam.direction.z);
-        fx.add(origin, dir, s.length, r, hex, 1.3);
-      } else if (!charged) {
-        // なぎ払いの予兆: 撃つ線の始めと終わりが薄く光る（点滅しながら明るく）
-        const kk = 0.25 + 0.5 * (beam.time / s.warn) * (Math.sin(this.time * 18) > 0 ? 1 : 0.6);
-        for (const yaw of [beam.fromYawDeg, beam.toYawDeg]) {
-          bodyDirection(tmp, k.body, yaw, beam.pitchDeg);
-          dir.set(tmp.x, tmp.y, tmp.z);
-          fx.add(origin, dir, s.length, warnR, hex, kk);
-        }
-      } else {
-        // 溜め撃ち: ロック警告の間は追う細い線（点滅）、溜めの間は止まった線（明るく）
-        dir.set(beam.direction.x, beam.direction.y, beam.direction.z);
-        const lock = beam.phase === 'warn';
-        const kk = lock ? (Math.sin(this.time * 14) > 0 ? 0.55 : 0.2) : 0.9;
-        fx.add(origin, dir, s.length, lock ? warnR : warnR * 1.6, hex, kk);
-      }
-    }
-    fx.end();
+  /**
+   * 水平線の色と海の色（空の光と日の光から。シーンの霧の色は大気散乱の値を入れているので使わない）
+   */
+  private readSky(): void {
+    const l = this.lights;
+    const sm = Math.max(1, l.sunColor.r, l.sunColor.g, l.sunColor.b);
+    const km = Math.max(1, l.skyColor.r, l.skyColor.g, l.skyColor.b);
+    horizon
+      .copy(l.skyColor)
+      .multiplyScalar(0.55 / km)
+      .add(sun.copy(l.sunColor).multiplyScalar(0.4 / sm));
+    sea.set(V.colors.sea).lerp(horizon, 0.15);
   }
 }

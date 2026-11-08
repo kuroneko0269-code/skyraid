@@ -61,5 +61,8 @@
   "result.dome": "ドーム",
   "result.cannon": "砲口",
   "result.emitters": "発光体",
-  "result.gens": "発生器"
+  "result.gens": "発生器",
+  "cinema.name": "UFO ゼノリス",
+  "cinema.sub": "光の柱に乗って空から降りてくる銀の円盤",
+  "cinema.skip": "タップで飛ばす"
 }

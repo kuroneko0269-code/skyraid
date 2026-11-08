@@ -3,7 +3,9 @@
 // HUD・ブリーフィング・見失ったときの画面の端の印（画面の外のゼノリス = 水色、画面の外の瞬間移動の移る先 = 白く点滅）で出す。
 // 溜め撃ちのロックは HUD の LOCK と警告音（PlayerVitals.extraLock）。協力の差し込み口もここで登録する（ホストは開始の前にこのチャンクを読む）。
 // ?dev=xenolith のときだけ（10-5a）: フリーフライトにゼノリスを出し、左に値の表示（タップ / クリックで畳む）。
-// URL: ?xnhp=<1〜100>・?xnbreak=gen0,emitter1,...
+// URL: ?xnhp=<1〜100>・?xnbreak=gen0,emitter1,...。
+// 10-7d: 見た目の段（画質）・登場の場面（空から光の柱で降りてくる。ソロのレイドだけ・タップで飛ばす）・段階 / 撃破 / 海に着いたときの
+// 揺れ・撮影（?dev=kshot）
 import './xenolith-dev.css';
 import type { PerspectiveCamera, Scene } from 'three';
 import { parseDevFlags } from '../core/debug-flags';
@@ -28,6 +30,11 @@ import type { XenolithRaid } from '../missions/xenolith-raid';
 import { registerRaidPlugin, type RaidPluginView } from '../net/raid-plugin';
 import { XenolithCoopHost, XenolithCoopMirror, xenolithRaidPlugin } from '../net/xenolith-coop';
 import { XenolithObject } from '../render/xenolith-model/xenolith-object';
+import type { XenolithViewInput } from '../render/xenolith-model/xenolith-effects';
+import { XENOLITH_RAID_CONFIG } from '../data/xenolith-raid';
+import { XENOLITH_VISUAL } from '../data/xenolith-visual';
+import { kaijuTier } from '../data/kaiju-look';
+import { createXenolithCinema, xenolithDescend } from './xenolith-cinema';
 import { showToast } from './toast';
 import { XenolithBriefing } from './xenolith-briefing';
 import { XenolithEdges } from './xenolith-edge';
@@ -124,12 +131,19 @@ export function startXenolith(p: XenolithRuntimeParts): XenolithRuntime {
   );
   const obj = new XenolithObject('high');
   p.scene.add(...obj.objects);
+  obj.attachLights(p.scene);
   p.onDetail((d) => {
-    obj.setDetail(d.aircraftDetail);
+    obj.setDetail(kaijuTier(d));
   });
+  // 10-7d: 登場の場面（空から光の柱で降りてくる）・段階と撃破の揺れ（ソロのレイドだけ）
+  const { cinema, subject } = createXenolithCinema(p);
+  let briefingPending = false;
+  let fxElapsed = Infinity;
+  let wasLanded = false;
   // 10-7d: 撮影（?dev=kshot）: 止めている間も演出を進める秒数・怪獣を描くか・形を動かす時間
   let shotDt: number | null = null;
   let kaijuShown = true;
+  let shotDescend = 0;
   const updateTimes: number[] = [];
   if (parseDevFlags(p.search).has('kshot'))
     void import('./xenolith-shot').then((m) => {
@@ -146,11 +160,16 @@ export function startXenolith(p: XenolithRuntimeParts): XenolithRuntime {
           kaijuShown = v;
           obj.setVisible(v);
           const raid = coop?.raid ?? dev.raid;
-          if (v) obj.update(raid.kaiju, 1, 0, 0);
+          if (v) obj.update(raid.kaiju, 1, 0, 0, view(raid, 0));
         },
         updateMs: () => {
           const t = [...updateTimes].sort((a, b) => a - b);
           return t[t.length >> 1] ?? 0;
+        },
+        cue: (scene) => {
+          obj.clearParticles();
+          // 登場の場面の中ほど（光の柱の中を降りてくる途中）
+          shotDescend = scene === 'entrance' ? 0.3 : 0;
         },
       });
     });
@@ -189,6 +208,19 @@ export function startXenolith(p: XenolithRuntimeParts): XenolithRuntime {
     coopFrame.targeted = src.view.targeted();
     return coopFrame;
   };
+  /** 10-7d: 演出の入力（カメラ・雨・撃破・海に着いた・沈む・登場の高さ・演出の秒数） */
+  const view = (raid: XenolithRaid, fxDt: number, descend = shotDescend): XenolithViewInput => {
+    const landed = raid.dead && raid.landedTime >= 0;
+    return {
+      camera: p.camera.position,
+      rain: p.weather.params.rain,
+      dead: raid.dead,
+      landed,
+      sink: landed ? Math.min(1, raid.landedTime / XENOLITH_RAID_CONFIG.vanishSeconds) : 0,
+      descend,
+      fxDt,
+    };
+  };
   p.onRender((alpha) => {
     const now = performance.now();
     const dt = shotDt ?? Math.min(0.1, (now - last) / 1000);
@@ -203,17 +235,37 @@ export function startXenolith(p: XenolithRuntimeParts): XenolithRuntime {
     const hp = k.parts.hp;
     flash = raid.flash > 0 ? 1 : hp < lastHp ? 1 : Math.max(0, flash - dt * 12);
     lastHp = hp;
+    // 新しく始まった（やり直し・再生のシーク）: 粒・光の残りを消す
+    if (raid.elapsed < fxElapsed) obj.resetEffects(k);
+    fxElapsed = raid.elapsed;
+    const landed = raid.dead && raid.landedTime >= 0;
+    if (landed && !wasLanded && active && state === 'flight' && shotDt === null)
+      p.shake(XENOLITH_VISUAL.splashShake);
+    wasLanded = landed;
     if (shown) {
       const t0 = performance.now();
-      obj.update(k, alpha, dt, flash);
+      const fxDt = shotDt ?? (state === 'flight' ? dt : 0);
+      obj.update(
+        k,
+        alpha,
+        dt,
+        flash,
+        view(raid, fxDt, cinema.active ? xenolithDescend(cinema.progress) : shotDescend),
+      );
       updateTimes.push(performance.now() - t0);
       if (updateTimes.length > 120) updateTimes.shift();
     }
+    subject.raid = raid;
+    cinema.update(
+      !coop && dev.raiding && HUD_SHOWN.includes(state) && shotDt === null ? subject : null,
+      state === 'flight',
+      dt,
+    );
     if (dev.taken.body > lastBodyHits && !coop && state === 'flight')
       showToast(xnt('bodyHit'), { seconds: 2 });
     lastBodyHits = dev.taken.body;
     // 見失ったときの手がかり: 画面の外の本体と、画面の外の瞬間移動の移る先（飛行中だけ）
-    if (shown && state === 'flight' && !raid.dead && p.hudVisible())
+    if (shown && state === 'flight' && !raid.dead && p.hudVisible() && !cinema.active)
       edges.update(
         p.camera,
         obj.group.position,
@@ -223,8 +275,13 @@ export function startXenolith(p: XenolithRuntimeParts): XenolithRuntime {
     if ((coop || dev.raiding) && HUD_SHOWN.includes(state)) {
       const sel = session.combat.targeting.selected;
       const locked = sel instanceof XenolithPartTarget ? sel : null;
-      hud.update(raid, p.hudVisible(), locked, coop ? frameOf(coop) : null, me());
-      if (!coop && raid.elapsed < lastElapsed) briefing.show(raid.difficulty);
+      hud.update(raid, p.hudVisible() && !cinema.active, locked, coop ? frameOf(coop) : null, me());
+      // 10-7d: ブリーフィングは登場の場面の後に出す
+      if (!coop && raid.elapsed < lastElapsed) briefingPending = true;
+      if (briefingPending && !cinema.active) {
+        briefingPending = false;
+        briefing.show(raid.difficulty);
+      }
       lastElapsed = coop ? Infinity : raid.elapsed;
     } else {
       hud.hide();

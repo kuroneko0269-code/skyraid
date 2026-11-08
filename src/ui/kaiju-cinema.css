@@ -117,3 +117,10 @@
   --kc-glow: rgba(255, 204, 80, 0.95);
   --kc-glow2: rgba(255, 96, 30, 0.7);
 }
+
+/* ゼノリス（光の水色と紫。10-7d） */
+.kaiju-cinema.is-xenolith {
+  --kc-text: #effcff;
+  --kc-glow: rgba(140, 240, 255, 0.95);
+  --kc-glow2: rgba(150, 110, 255, 0.7);
+}
