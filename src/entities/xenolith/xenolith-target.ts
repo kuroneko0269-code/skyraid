@@ -22,7 +22,7 @@ export class XenolithPartTarget implements CombatTarget {
   readonly hitRadius: number;
   readonly visualRadius: number;
   readonly team = TEAM_ENEMY;
-  /** 小さく速い的なので、狙いの補助はほかの怪獣（0.6）より少し強め（仮。10-5b で決める） */
+  /** 小さく速い的なので、狙いの補助はほかの怪獣（0.6）より少し強め（10-5b で 0.8 のまま決めた） */
   readonly assistScale = 0.8;
   /** 範囲ダメージは体の球のうち最も近い 1 つだけ */
   readonly blastGroup: object;
@@ -51,6 +51,11 @@ export class XenolithPartTarget implements CombatTarget {
     // 壊れたドームは胴として当たり続ける（中身が見える）。ほかの壊れた部位は外す（ロックが移る）
     if (this.partIndex === DOME) return true;
     return !k.parts.isBroken(this.partIndex);
+  }
+
+  /** 10-5b: 協力の部位の番号（入力の targetId は KAIJU_ID_BASE + これ。判定の球の番号） */
+  get kaijuIndex(): number {
+    return this.sphere;
   }
 
   get id(): string {

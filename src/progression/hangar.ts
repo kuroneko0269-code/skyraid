@@ -45,6 +45,11 @@ export class Hangar {
     readonly models: readonly AircraftModel[] = AIRCRAFT_MODELS,
   ) {}
 
+  /** 10-5b: セーブの今の中身（読むだけ。協力のロビーで、ホストがレイドの怪獣を解放しているか） */
+  get snapshot(): Readonly<SaveData> {
+    return this.save.snapshot;
+  }
+
   get credits(): number {
     return this.save.snapshot.credits;
   }

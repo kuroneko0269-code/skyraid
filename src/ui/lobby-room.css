@@ -352,6 +352,17 @@
   font-size: 14px;
 }
 
+/* 10-5b: レイドの怪獣は 3 個ずつ 2 段（5 体） */
+.lobby-rule-grid .lobby-seg-kaiju .ui-seg-items {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lobby-rule-grid .lobby-seg-kaiju .ui-seg-item {
+  min-width: 0;
+  padding-inline: 4px;
+}
+
 /* 天候は 4 個ずつ 2 段 */
 .lobby-rule-grid .lobby-seg-weather .ui-seg-items {
   display: grid;

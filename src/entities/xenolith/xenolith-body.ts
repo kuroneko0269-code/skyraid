@@ -10,6 +10,13 @@ export type XenolithGround = (x: number, z: number) => number;
 
 const DEG = Math.PI / 180;
 
+/** ぶつかりそうな人（位置・速度。協力は全員） */
+export interface Rammer {
+  readonly position: Readonly<Vec3>;
+  readonly velocity?: Readonly<Vec3>;
+  readonly active: boolean;
+}
+
 function wrapRad(a: number): number {
   return Math.atan2(Math.sin(a), Math.cos(a));
 }
@@ -130,7 +137,14 @@ export class XenolithBody implements BodyFrame {
    * 1 ステップ: focus は回る中心（狙う人。いなければ戦域の中心の上）、hold は止まる（光線の間）、turn は体の向きを回すか。
    * rnd は種の列（急停止・急加速の間合いと回り方）
    */
-  step(dt: number, focus: Readonly<Vec3>, hold: boolean, turn: boolean, rnd: () => number): void {
+  step(
+    dt: number,
+    focus: Readonly<Vec3>,
+    hold: boolean,
+    turn: boolean,
+    rnd: () => number,
+    rammers: readonly Rammer[] = [],
+  ): void {
     this.copyPrev();
     this.prevHeading = this.heading;
     this.prevSpin = this.spin;
@@ -201,6 +215,18 @@ export class XenolithBody implements BodyFrame {
         wz -= (az / ar) * k;
       }
     }
+    // 10-5b: 人（協力は全員）がぶつかる進路なら（急停止・光線で止まった所へ後ろから追いつくなど）、上か下へ避ける（急に止まって
+    // ぶつけさせない。避けるのは上下だけ: 光線の向きは変えない）
+    let dodge = 0;
+    for (const r of rammers) {
+      if (!r.active || !r.velocity) continue;
+      dodge = this.rammed(r.position, r.velocity);
+      if (dodge !== 0) break;
+    }
+    if (dodge !== 0) {
+      wy = dodge * C.dodge.speed;
+      accel = Math.max(accel, C.dodge.accel);
+    }
     // 加速の上限で寄せる（急停止・急加速は大きい）
     const dvx = wx - this.velocity.x;
     const dvy = wy - this.velocity.y;
@@ -247,6 +273,30 @@ export class XenolithBody implements BodyFrame {
     this.roll += (clamp(sideA * 0.0012, -0.35, 0.35) - this.roll) * r;
     this.spin = (this.spin + m.spin * dt) % (Math.PI * 2);
     this.ringDeg = (this.ringDeg + m.ringDeg * dt) % 360;
+  }
+
+  /**
+   * 人（位置 p・速度 v）が体へぶつかる進路か: 相対の動きで dodge.ahead 秒以内にいちばん近づく水平の距離が dodge.miss m 未満で、
+   * 上下の差が dodge.band m 未満。ぶつかるなら避ける向き（+1 上 / −1 下。人の反対側。床に近ければ上）、無ければ 0
+   */
+  private rammed(p: Readonly<Vec3>, v: Readonly<Vec3>): number {
+    const D = C.dodge;
+    const x0 = p.x - this.position.x;
+    const y0 = p.y - this.position.y;
+    const z0 = p.z - this.position.z;
+    const rx = v.x - this.velocity.x;
+    const ry = v.y - this.velocity.y;
+    const rz = v.z - this.velocity.z;
+    const r2 = rx * rx + ry * ry + rz * rz;
+    if (r2 < 1) return 0;
+    const t = Math.max(0, Math.min(D.ahead, -(x0 * rx + y0 * ry + z0 * rz) / r2));
+    if (t <= 0) return 0;
+    const hx = x0 + rx * t;
+    const hz = z0 + rz * t;
+    const hy = y0 + ry * t;
+    if (Math.hypot(hx, hz) > D.miss || Math.abs(hy) > D.band) return 0;
+    const low = this.position.y - D.band < this.minAltitude();
+    return hy > 0 && !low ? -1 : 1;
   }
 
   private setMove(m: XenolithMove): void {

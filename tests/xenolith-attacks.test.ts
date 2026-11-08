@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { XenolithKaiju, type XenolithTarget } from '../src/ai/xenolith-ai';
 import { startAttack } from '../src/ai/xenolith-attacks';
+import { XENOLITH_CHARGED, XENOLITH_SWEEP } from '../src/data/xenolith';
 import { vec3, type Vec3 } from '../src/flight/math';
 
 const DT = 1 / 60;
@@ -35,7 +36,7 @@ function spawnAt(k: XenolithKaiju, seed = 5, hp = 1, broken: readonly string[] =
 }
 
 describe('ゼノリスの光線（10-5a）', () => {
-  it('溜め撃ち: ロック警告の間は追い、溜めの間に横へ 150m 逃げれば外れる。逃げなければ当たる（60）。砲口を壊すと使わない', () => {
+  it('溜め撃ち: ロック警告の間は追い、溜めの間に横へ 150m 逃げれば外れる。逃げなければ当たる（10-5b で 40）。砲口を壊すと使わない', () => {
     const shot = (dodge: boolean): number => {
       const k = new XenolithKaiju(flat);
       spawnAt(k);
@@ -63,7 +64,7 @@ describe('ゼノリスの光線（10-5a）', () => {
       expect(lockMoved).toBe(true);
       return dmg;
     };
-    expect(shot(false)).toBe(60);
+    expect(shot(false)).toBe(XENOLITH_CHARGED.damage);
     expect(shot(true)).toBe(0);
     const k = new XenolithKaiju(flat);
     spawnAt(k, 5, 1, ['cannon']);
@@ -76,7 +77,7 @@ describe('ゼノリスの光線（10-5a）', () => {
     expect(k.attacksUsed.sweep).toBeGreaterThan(3);
   });
 
-  it('なぎ払い: 予兆の線の高さにいると当たる（35）。予兆を見て 0.6 秒後に上へ 120m 動けば外れる', () => {
+  it('なぎ払い: 予兆の線の高さにいると当たる（10-5b で 45）。予兆を見て 0.6 秒後に上へ 120m 動けば外れる', () => {
     const shot = (climb: boolean): number => {
       const k = new XenolithKaiju(flat);
       spawnAt(k);
@@ -100,7 +101,7 @@ describe('ゼノリスの光線（10-5a）', () => {
       }
       return dmg;
     };
-    expect(shot(false)).toBe(35);
+    expect(shot(false)).toBe(XENOLITH_SWEEP.damage);
     expect(shot(true)).toBe(0);
   });
 });

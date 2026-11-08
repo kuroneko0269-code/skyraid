@@ -61,6 +61,7 @@ export async function buildOverlaySamples(page) {
     const { Kaiju2Briefing } = await import('/src/ui/kaiju2-briefing.ts');
     const { AlbionBriefing } = await import('/src/ui/albion-briefing.ts');
     const { GouraiBriefing } = await import('/src/ui/gourai-briefing.ts');
+    const { XenolithBriefing } = await import('/src/ui/xenolith-briefing.ts');
     const { RankingScreen } = await import('/src/ui/ranking-screen.ts');
     const { askSaveChoice } = await import('/src/ui/sync-dialog.ts');
     new PvpBoard(root);
@@ -72,6 +73,7 @@ export async function buildOverlaySamples(page) {
     new Kaiju2Briefing(root).show('normal');
     new AlbionBriefing(root).show('normal');
     new GouraiBriefing(root).show('normal');
+    new XenolithBriefing(root).show('normal');
     const source = { ranking: () => Promise.resolve([]), selfId: null };
     new RankingScreen(root, source, noop);
     const save = { pilotName: 'ACE', credits: 1000, missions: {} };

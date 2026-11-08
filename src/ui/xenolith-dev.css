@@ -1,4 +1,4 @@
-/* 10-5a: ?dev=xenolith の値の表示と、見失ったときの画面の端の印（開発用。遊ぶ人には出ない） */
+/* 10-5a: ?dev=xenolith の値の表示と、見失ったときの画面の端の印（10-5b からレイドでも出す）。10-5b: レイドのブリーフィング・HUD */
 .xenolith-dev {
   position: fixed;
   left: calc(8px + env(safe-area-inset-left, 0px));
@@ -61,4 +61,74 @@
   .xenolith-edge.is-warp {
     animation: none;
   }
+}
+
+/* 10-5b: レイドのブリーフィング（出撃の直後に画面の下。タップで閉じる。ネフィルガと同じ形） */
+.xenolith-briefing {
+  position: fixed;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(640px, calc(100cqw - 32px));
+  max-height: 46cqh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  pointer-events: auto;
+}
+
+.xenolith-briefing[hidden] {
+  display: none;
+}
+
+.xenolith-briefing-lines {
+  margin: 6px 0 4px;
+  padding-left: 1.2em;
+}
+
+.xenolith-briefing-tap {
+  font-size: 11px;
+  opacity: 0.7;
+  text-align: right;
+}
+
+/* レイドの HUD の部位の一覧（ロック中は枠） */
+.xenolith-hud .kaiju-coop-part.is-own {
+  border-color: rgba(110, 240, 255, 0.85);
+}
+
+/* 部位の一覧は 9 つ（ドーム・砲口・発光体 4・発生器 3）なので詰める */
+.xenolith-hud .kaiju-coop {
+  gap: 3px;
+  font-size: 10px;
+}
+
+/* 10-5b: バリアが外れている間の上の帯（攻めどきの印）と、LOCK の警告（狙われている間は赤く点滅） */
+.xenolith-hud .kaiju-phase.is-open {
+  color: #ffe08a;
+}
+
+.xenolith-hud .kaiju-warning.is-lock {
+  color: #ff6060;
+  animation: xenolith-lock-blink 0.35s steps(2, jump-none) infinite;
+}
+
+@keyframes xenolith-lock-blink {
+  to {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xenolith-hud .kaiju-warning.is-lock {
+    animation: none;
+  }
+}
+
+/* ゼノリスは警告（光線）と攻めどき（バリアが外れた）が同時に出るので、攻めどきを警告の下へ */
+.xenolith-hud .kaiju-down {
+  top: calc(24% + 48px);
 }

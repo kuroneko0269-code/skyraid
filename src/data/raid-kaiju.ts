@@ -3,7 +3,7 @@
 // 勲章のまとまり・遅延チャンクの有無・未公開の ?dev= の名前。怪獣選び・ブリーフィング・結果・記録カード・リプレイ・ランキング・
 // 勲章・ロビーはここから並べる。並びは協力の設定（GameSettings.raidKaiju）の番号なので、足すのは最後だけ（9-6c の番号を変えない）。
 // 9-6c までの id・記録のキー・番号はそのまま。Three.js・DOM 非依存（起動時に読まないが、小さく保つ）
-import { t } from '../core/i18n';
+import { hasMessage, t } from '../core/i18n';
 import { parseDevFlags } from '../core/debug-flags';
 import type { RaidDifficulty } from './raid';
 
@@ -76,6 +76,16 @@ export interface RaidKaijuDef {
   /** 協力の結果の題の文言のキー（クリア） */
   readonly coopClearKey: string;
 }
+
+/**
+ * UFO ゼノリスの解放の条件（10-5a で決め、10-5b で登録）: ほかの 4 体のうち 2 体を通常でクリア（高難度のクリアも数える。
+ * docs/kaiju-roster.md の「解放の条件」）。協力はホストが解放していれば選べる（ロビーの怪獣の選択。参加する人は見ない）
+ */
+export const XENOLITH_UNLOCK: RaidUnlock = {
+  kaiju: ['vorgas', 'nephirga', 'albion', 'gourai'],
+  count: 2,
+  difficulty: 'normal',
+};
 
 const DEFS = [
   {
@@ -192,19 +202,40 @@ const DEFS = [
     city: false,
     coopClearKey: 'pvp.title.raid4Clear',
   },
+  {
+    id: 'xenolith',
+    nameKey: 'xenolith.name',
+    art: 'kaiju-art/xenolith.webp',
+    latinName: 'XENOLITH',
+    attacks: ['warp', 'barrier', 'sweep', 'charged', 'orbs'],
+    focus: '50% 50%',
+    // 10-5b: 夕方の湾の上空: 光る縁と発光体の円盤を斜め下から見上げる（バリアの青い殻）
+    scene: {
+      weather: 'evening-clear',
+      camera: { forward: 260, right: -200, up: -110 },
+      look: { forward: 0, right: 0, up: 0 },
+      fov: 50,
+      waitSeconds: 6,
+    },
+    recordKey: 'kaiju',
+    // SQL 0006（キーの決まり）で受け付ける
+    ranked: false,
+    unlock: XENOLITH_UNLOCK,
+    // 報酬は 1 つ 300 CR（勲章の報酬の合計を 10 万 CR 以内に保つ。tests/badges.test.ts）
+    badges: [
+      { id: 'xenolithGens', reward: 300 },
+      { id: 'xenolithWarp', reward: 300 },
+      { id: 'xenolithCharged', reward: 300 },
+    ],
+    lazy: true,
+    dev: null,
+    coop: true,
+    city: false,
+    coopClearKey: 'pvp.title.raid5Clear',
+  },
 ] as const satisfies readonly RaidKaijuDef[];
 
 export type RaidKaijuId = (typeof DEFS)[number]['id'];
-
-/**
- * 10-5a: UFO ゼノリス（10-5b で登録簿の最後に足す）の解放の条件: ほかの 4 体のうち 2 体を通常でクリア（高難度のクリアも数える。
- * docs/kaiju-roster.md の「解放の条件」）。登録するまで、ここから読む所は無い
- */
-export const XENOLITH_UNLOCK: RaidUnlock = {
-  kaiju: ['vorgas', 'nephirga', 'albion', 'gourai'],
-  count: 2,
-  difficulty: 'normal',
-};
 
 /** 登録簿（並びは協力の設定の番号。型は広げて持つ: 条件の分岐を怪獣の値に縛らない） */
 export const RAID_KAIJU: readonly (RaidKaijuDef & { readonly id: RaidKaijuId })[] = DEFS;
@@ -216,6 +247,7 @@ export const VORGAS_ID: RaidKaijuId = 'vorgas';
 export const NEPHIRGA_ID: RaidKaijuId = 'nephirga';
 export const ALBION_RAID_ID: RaidKaijuId = 'albion';
 export const GOURAI_RAID_ID: RaidKaijuId = 'gourai';
+export const XENOLITH_RAID_ID: RaidKaijuId = 'xenolith';
 
 export function isRaidKaijuId(v: unknown): v is RaidKaijuId {
   return typeof v === 'string' && (RAID_KAIJU_IDS as readonly string[]).includes(v);
@@ -243,6 +275,12 @@ export function raidKaijuIndex(id: string | undefined): number {
 /** 名前（今の言語） */
 export function raidKaijuName(id: RaidKaijuId): string {
   return t(raidKaijuDef(id).nameKey);
+}
+
+/** 短い名前（raidSelect.tab.<id>。怪獣選びの切り替え・ロビー。無ければ名前） */
+export function raidKaijuShortName(id: RaidKaijuId): string {
+  const key = `raidSelect.tab.${id}`;
+  return hasMessage(key) ? t(key) : raidKaijuName(id);
 }
 
 /**

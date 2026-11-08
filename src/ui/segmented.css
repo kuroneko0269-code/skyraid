@@ -79,3 +79,9 @@
 :root:not([data-input='touch']) .ui-seg-item[aria-checked='true']:focus-visible {
   --edge: var(--ui-text);
 }
+
+/* 10-5b: 選べない値（ロビーのホストがまだ解放していないレイドの怪獣）に鍵の印 */
+.ui-seg-item.is-locked::after {
+  content: ' 🔒';
+  font-size: 0.85em;
+}

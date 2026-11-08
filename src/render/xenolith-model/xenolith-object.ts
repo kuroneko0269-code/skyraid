@@ -21,6 +21,7 @@ import { XENOLITH_MODEL_CONFIG } from '../../data/xenolith-model';
 import { xenolithSpherePoint, type XenolithKaiju } from '../../ai/xenolith-ai';
 import { bodyDirection } from '../../ai/raid-kit/frame';
 import { BeamFx, createBarrierMesh, createWarpFx } from './fx';
+import { OrbMesh } from './orb-mesh';
 import { createXenolithMaterial, type XenolithGlow, type XenolithMaterial } from './material';
 import { buildXenolithSkin } from './parts';
 import {
@@ -73,6 +74,8 @@ export class XenolithObject {
   private readonly barrierFx: ReturnType<typeof createBarrierMesh>;
   readonly beam = new BeamFx();
   private readonly warp = createWarpFx();
+  /** 10-5b: 光の弾（出ているときだけ描く） */
+  readonly orbs = new OrbMesh(X.orbs.cap);
   private time = 0;
   triangles = 0;
 
@@ -96,7 +99,14 @@ export class XenolithObject {
 
   /** シーンに足すもの（体・殻・光線・柱と輪。体のほかはワールド座標で置く） */
   get objects(): readonly (Group | Mesh)[] {
-    return [this.group, this.barrier, this.beam.mesh, this.warp.pillar, this.warp.ring];
+    return [
+      this.group,
+      this.barrier,
+      this.beam.mesh,
+      this.warp.pillar,
+      this.warp.ring,
+      this.orbs.mesh,
+    ];
   }
 
   /** 今の描画の回数（体 1 + 出ている効果） */
@@ -104,8 +114,9 @@ export class XenolithObject {
     if (!this.group.visible) return 0;
     return (
       1 +
-      [this.barrier, this.beam.mesh, this.warp.pillar, this.warp.ring].filter((m) => m.visible)
-        .length
+      [this.barrier, this.beam.mesh, this.warp.pillar, this.warp.ring, this.orbs.mesh].filter(
+        (m) => m.visible,
+      ).length
     );
   }
 
@@ -123,6 +134,7 @@ export class XenolithObject {
       this.beam.begin();
       this.beam.end();
       this.warp.set(false, 0, 0, 0, 0, 0);
+      this.orbs.update([], 0, 0, false);
     }
   }
 
@@ -152,6 +164,7 @@ export class XenolithObject {
     const w = k.warp;
     const d = w.destination;
     this.warp.set(w.phase === 'telegraph', d.x, d.y, d.z, b.floorAt(d.x, d.z), w.glow);
+    this.orbs.update(k.orbs.shots, alpha, dt, true);
   }
 
   private bone(name: XenolithBoneName) {
@@ -198,8 +211,14 @@ export class XenolithObject {
             ? G.rim * 1.6
             : 0.2
           : G.rim * 0.2;
+    // 10-5b: 光の弾の予兆: 縁の帯と発光体が白く強く光る（点滅しながら明るく）
+    const orbK =
+      k.orbPhase === 'warn'
+        ? (0.5 + k.orbTime / X.orbs.warn) * (Math.sin(this.time * 30) > 0 ? 1 : 0.7)
+        : 0;
+    if (orbK > 0) glow.rim = Math.max(glow.rim, G.rim * M.orb.warnRim * orbK);
     // 瞬間移動の予兆の間は発光体が強く光る
-    const warpK = k.warp.glow;
+    const warpK = Math.max(k.warp.glow, orbK);
     XENOLITH_EMITTERS.forEach((id, i) => {
       glow.emitters[i] = k.parts.isBroken(PART(id)) ? 0 : G.emitter * (1 + warpK * 1.5);
     });

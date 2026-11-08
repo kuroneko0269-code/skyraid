@@ -28,6 +28,9 @@ export const XENOLITH_MODEL_CONFIG = {
     sweepBeam: 0x7ff6ff,
     chargedBeam: 0xffa060,
     warp: 0xf0f8ff,
+    /** 10-5b: 光の弾（外は白に近い水色・芯は白） */
+    orb: 0x9ff8ff,
+    orbCore: 0xffffff,
   },
   /** 画質ごと（「高」「中」は high、「低」は low。機体と同じ aircraftDetail） */
   detail: {
@@ -40,6 +43,8 @@ export const XENOLITH_MODEL_CONFIG = {
   barrier: { opacity: 0.22, flicker: 0.5, ripple: 0.8 },
   /** 光線の太さ（m。撃つ間の芯の半径の倍率・予兆の線の半径） */
   beam: { fireScale: 1, warnRadius: 1.6 },
+  /** 10-5b: 光の弾の粒の大きさ（m。当たりの半径 7m より少し大きく見せる）と、ばらまきの予兆の縁の光の倍率 */
+  orb: { radius: 9, warnRim: 2.4 },
   /** 瞬間移動の予兆: 柱の高さと太さ・地上の輪の半径（m） */
   warp: { pillarHeight: 900, pillarRadius: 14, ringRadius: 110 },
 } as const;

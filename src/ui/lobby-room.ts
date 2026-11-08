@@ -5,6 +5,7 @@
 // - 下の帯: 「機体 · （今の機体）」（ハンガー）、「定型文」（選ぶ小さなダイアログ）、今何を待っているか、主のボタン
 //   （ホストは「開始」、参加者は「準備OK / 準備を取り消す」。押せないときは灰色）
 // 判定・通信は今までどおり（設定の正規化は net/lobby-rules.ts、送るのは pvp-lobby-actions.ts）。文字は textContent だけで入れる
+import { RAID_KAIJU } from '../data/raid-kaiju';
 import {
   PVP_CONFIG,
   PVP_MODES,
@@ -58,6 +59,8 @@ export interface LobbyRoomHandlers {
   onTeam: (playerId: number, team: number) => void;
   onAutoTeams: () => void;
   onChat: (phrase: number) => void;
+  /** 10-5b: レイドの怪獣（設定の番号）をまだ解放していない（ホストの自分のセーブ。押せない） */
+  raidKaijuLocked?: (index: number) => boolean;
 }
 
 const CONFIG_TABS = ['rules', 'options'] as const;
@@ -280,6 +283,11 @@ export class LobbyRoom {
     this.timeSelect.value = String(st.timeLimitSeconds);
     this.difficultySelect.value = st.hard ? 'hard' : 'normal';
     this.kaijuSelect.value = String(st.raidKaiju);
+    // 10-5b: 解放の条件のある怪獣（ゼノリス）は、ホストが解放していれば選べる（参加する人は見ない）
+    RAID_KAIJU.forEach((_, i) => {
+      const locked = v.isHost && i !== st.raidKaiju && (this.h.raidKaijuLocked?.(i) ?? false);
+      this.kaijuSelect.setLocked(String(i), locked);
+    });
     for (const [key, b] of this.ruleToggles) {
       b.setAttribute('aria-pressed', String(st[key]));
       if (key === 'aimAssist' || key === 'autoFire') b.hidden = raid || defense;

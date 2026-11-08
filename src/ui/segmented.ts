@@ -60,6 +60,14 @@ export class Segmented {
     return this.buttons.find((b) => b.dataset.value === this.current) ?? this.buttons[0] ?? null;
   }
 
+  /** 10-5b: 選べない値（押せない・鍵の印。ロビーのホストがまだ解放していないレイドの怪獣） */
+  setLocked(value: string, locked: boolean): void {
+    const b = this.buttons.find((x) => x.dataset.value === value);
+    if (!b || b.disabled === locked) return;
+    b.disabled = locked;
+    b.classList.toggle('is-locked', locked);
+  }
+
   private sync(): void {
     for (const b of this.buttons)
       b.setAttribute('aria-checked', String(b.dataset.value === this.current));

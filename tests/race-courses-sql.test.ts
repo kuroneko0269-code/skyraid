@@ -59,7 +59,9 @@ describe('マイグレーション 0004（新しいコースのランキング�
     expect(sql).toContain(
       `kind = 'raid' and key in (${validKeys('raid')
         // 10-3b: アルビオン・10-4b: ゴウライは 0006 のキーの決まりで受け付ける
-        .filter((k) => !k.startsWith('albion:') && !k.startsWith('gourai:'))
+        .filter(
+          (k) => !k.startsWith('albion:') && !k.startsWith('gourai:') && !k.startsWith('xenolith:'),
+        )
         .map((k) => `'${k}'`)
         .join(', ')})`,
     );

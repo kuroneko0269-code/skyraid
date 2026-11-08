@@ -40,6 +40,7 @@
     "/src/ui/kaiju2-briefing.ts",
     "/src/ui/albion-briefing.ts",
     "/src/ui/gourai-briefing.ts",
+    "/src/ui/xenolith-briefing.ts",
     "/src/ui/ranking-screen.ts",
     "/src/ui/sync-dialog.ts",
     "/src/ui/lobby.ts",

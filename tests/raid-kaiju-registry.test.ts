@@ -23,8 +23,10 @@ import { useLocale } from './i18n-helpers';
 
 describe('10-2: レイドの怪獣の登録簿', () => {
   it('9-6c までの id・協力の番号・記録のキーのまま', () => {
-    // 10-3b: アルビオンは最後に足した（協力の番号 2）。10-4b: ゴウライ（協力の番号 3）
-    expect(RAID_KAIJU_IDS).toEqual(['vorgas', 'nephirga', 'albion', 'gourai']);
+    // 10-3b: アルビオンは最後に足した（協力の番号 2）。10-4b: ゴウライ（協力の番号 3）。10-5b: ゼノリス（協力の番号 4）
+    expect(RAID_KAIJU_IDS).toEqual(['vorgas', 'nephirga', 'albion', 'gourai', 'xenolith']);
+    expect(raidKaijuIndex('xenolith')).toBe(4);
+    expect(raidRecordKey('xenolith', 'hard')).toBe('xenolith:hard');
     expect(raidKaijuIndex('gourai')).toBe(3);
     expect(raidRecordKey('gourai', 'normal')).toBe('gourai:normal');
     expect(raidKaijuIndex('albion')).toBe(2);
@@ -57,7 +59,7 @@ describe('10-2: レイドの怪獣の登録簿', () => {
 
   it('ランキング: SQL 0006 を流した（10-3a）。流す前は ranked の怪獣だけ、流した後は「id:難易度」の怪獣も。未公開は送らない', () => {
     expect(RAID_KEY_RULE_ENABLED).toBe(true);
-    expect(RANKED_RAID_KAIJU).toEqual(['vorgas', 'nephirga', 'albion', 'gourai']);
+    expect(RANKED_RAID_KAIJU).toEqual(['vorgas', 'nephirga', 'albion', 'gourai', 'xenolith']);
     expect(validKeys('raid')).toEqual([
       'normal',
       'hard',
@@ -67,14 +69,16 @@ describe('10-2: レイドの怪獣の登録簿', () => {
       'albion:hard',
       'gourai:normal',
       'gourai:hard',
+      'xenolith:normal',
+      'xenolith:hard',
     ]);
     const base = RAID_KAIJU[1] as RaidKaijuDef;
     const list: RaidKaijuDef[] = [
       ...RAID_KAIJU,
-      { ...base, id: 'xenolith', ranked: false, dev: 'kaiju5' },
+      { ...base, id: 'kaiju6', ranked: false, dev: 'kaiju6' },
     ];
     expect(rankedOf(list, false)).toEqual(['vorgas', 'nephirga']);
-    expect(rankedOf(list, true)).toEqual(['vorgas', 'nephirga', 'albion', 'gourai']);
+    expect(rankedOf(list, true)).toEqual(['vorgas', 'nephirga', 'albion', 'gourai', 'xenolith']);
     expect(
       checkRecord({
         kind: 'raid',
@@ -88,7 +92,7 @@ describe('10-2: レイドの怪獣の登録簿', () => {
     expect(
       checkRecord({
         kind: 'raid',
-        key: 'xenolith:normal',
+        key: 'kaiju6:normal',
         aircraftId: 'kestrel',
         valueMs: 300000,
         detail: {},
@@ -145,7 +149,9 @@ describe('10-2: レイドの怪獣の登録簿', () => {
     expect(raid.indexOf('nephirgaParts')).toBeLessThan(first('albion'));
     expect(first('albion')).toBeLessThan(first('gourai'));
     expect(raid.indexOf('albionMinions500')).toBeLessThan(first('gourai'));
-    expect(raid.slice(-3)).toEqual(['gouraiTurrets', 'gouraiVentCore', 'gouraiFlares']);
+    expect(raid.indexOf('gouraiFlares')).toBeLessThan(first('xenolith'));
+    // 10-5b: ゼノリスはゴウライの後（レイドの最後）
+    expect(raid.slice(-3)).toEqual(['xenolithGens', 'xenolithWarp', 'xenolithCharged']);
     // 収集はレイドの後（怪獣を足すと番号がずれるのは収集だけ）
     const collect = BADGE_LIST.findIndex((b) => b.group === 'collect');
     const lastRaid = BADGE_LIST.findLastIndex((b) => b.group === 'raid');
