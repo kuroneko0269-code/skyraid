@@ -1,8 +1,12 @@
 // 10-4a: メカ怪獣ゴウライの形（手続き生成）: 皮 1 つ（胴・頭と目の帯・前の装甲の板 2 枚・核・砲台 6・背のハッチ・排気口 2・
 // 下の推進器 4・アンテナ）。機械らしく面ごとに法線を分けた箱と円柱で組む。頂点の積み方はヴォルガスの KaijuMeshBuilder。
-// aGlow: 0 なし / 1 核 / 2 左の排気口 / 3 右の排気口 / 4 ミサイルのハッチ / 5 機銃 / 6 推進器 / 7 目の帯
+// aGlow: 0 なし / 1 核 / 2 左の排気口 / 3 右の排気口 / 4 ミサイルのハッチ / 5 機銃 / 6 推進器 / 7 目（10-4a の目の帯）/
+// 8 放熱の格子（10-7c）/ 9 口の中（10-7c）/ 10 前の装甲の口の切れ目（10-7c）。
+// 10-7c: 「ただの建物」に見えないように生き物らしい形を足した（creature.ts: 頭とあご・光る目・大あごの牙・腕と爪・背の放熱板・
+// 背のとげ・尾）。足した形は体の当たりの箱 + 衝突の余裕の中（tests/gourai-visual.test.ts）
 import { GOURAI_MODEL_CONFIG, type GouraiDetailSpec } from '../../data/gourai-model';
 import { KaijuMeshBuilder, rgb, type BoneBind } from '../kaiju-model/builder';
+import { buildCreature } from './creature';
 import { box, boxPair, cylinder, hexa, v } from './primitives';
 import { bonePosition, GOURAI_BONE, type GouraiBoneName } from './skeleton';
 
@@ -18,6 +22,9 @@ export const GLOW = {
   gun: 5,
   hover: 6,
   visor: 7,
+  grill: 8,
+  mouth: 9,
+  slit: 10,
 } as const;
 
 function buildHull(b: KaijuMeshBuilder, d: GouraiDetailSpec): void {
@@ -42,13 +49,10 @@ function buildHull(b: KaijuMeshBuilder, d: GouraiDetailSpec): void {
     hull,
     root,
   );
-  // 腹の竜骨・後ろの機関・背骨
+  // 腹の竜骨・後ろの機関・背骨（10-7c: 背骨は放熱板の前まで。頭は creature.ts）
   box(b, -26, 26, -32, -22, -40, 56, dark, root);
   box(b, -38, 38, -16, 20, 66, 86, dark, root);
-  box(b, -10, 10, 24, 34, -30, 60, dark, root);
-  // 頭と目の帯（前の上。正面の目の帯が黄色く光る）
-  box(b, -16, 16, 26, 38, -50, -30, armor, root);
-  box(b, -13, 13, 31, 35, -50.8, -50, rgb(C.visor), root, GLOW.visor);
+  box(b, -10, 10, 24, 34, -30, 46, dark, root);
   // 核の部屋（装甲が開くと見える暗い奥）
   box(b, -20, 20, -18, 20, -66, -56, dark, root);
   // 肩・腰の砲台の台
@@ -65,17 +69,17 @@ function buildHull(b: KaijuMeshBuilder, d: GouraiDetailSpec): void {
   for (const x of [-32, 32])
     for (const z of [-36, 48])
       cylinder(b, v(x, -22, z), v(x, -34, z), 8, 11, d.sides, dark, root, rgb(C.hover), GLOW.hover);
-  // アンテナ（遠くからの形）
-  b.spike(v(0, 34, -18), v(2, 64, -10), 3, 4, dark, root);
+  // アンテナ（遠くからの形。10-7c: 前の 1 本は頭の後ろへ寄せた）
+  b.spike(v(0, 34, -14), v(2, 64, -6), 3, 4, dark, root);
   b.spike(v(-12, 32, 52), v(-16, 56, 66), 2.2, 4, dark, root);
   b.spike(v(12, 32, 52), v(16, 56, 66), 2.2, 4, dark, root);
   if (!d.greebles) return;
   // 細かな凹凸（「高」だけ）: 警告の帯・放熱板のすじ・横の継ぎ目・脇の箱
   boxPair(b, 40.5, 42.5, -14, -8, -50, 60, accent, root);
-  for (let i = 0; i < 6; i++) box(b, -22, 22, 24, 27, 30 + i * 6, 33 + i * 6, dark, root);
+  for (let i = 0; i < 3; i++) box(b, -22, 22, 24, 27, 30 + i * 6, 33 + i * 6, dark, root);
   boxPair(b, 33, 41.5, 4, 8, -40, 64, dark, root);
   boxPair(b, 20, 30, -30, -22, -30, 20, hull, root);
-  boxPair(b, 12, 14, 34, 40, -28, 56, accent, root);
+  boxPair(b, 12, 14, 34, 40, -28, 44, accent, root);
   box(b, -30, 30, 18, 22, 86, 90, accent, root);
 }
 
@@ -191,8 +195,43 @@ function buildTurrets(b: KaijuMeshBuilder, d: GouraiDetailSpec): void {
           GLOW.hatch,
         );
   }
-  // 背のハッチ（骨 hatch。後ろの蝶番で前が持ち上がる）
-  box(b, -36, 36, 50, 52.5, 14, 44, rgb(C.armor), one('hatch'));
+  // 背のハッチ（骨 hatch。後ろの蝶番で前が持ち上がる）。10-7c: 平らな板から、真ん中の背が高い甲羅の形に（高さは 10-4a の板の中）
+  const hatchBone = one('hatch');
+  for (const sx of [-1, 1] as const) {
+    hexa(
+      b,
+      [
+        v(0, 50, 14),
+        v(36 * sx, 47.5, 15),
+        v(36 * sx, 47.5, 44),
+        v(0, 50, 44),
+        v(0, 52.5, 14),
+        v(36 * sx, 49.6, 15),
+        v(36 * sx, 49.6, 44),
+        v(0, 52.5, 44),
+      ],
+      rgb(C.armor),
+      hatchBone,
+    );
+    // 甲羅の重なった帯（3 本）
+    if (d.greebles)
+      for (const z of [22, 30, 38])
+        hexa(
+          b,
+          [
+            v(0, 52.3, z),
+            v(34 * sx, 49.4, z),
+            v(34 * sx, 49.4, z + 1.6),
+            v(0, 52.3, z + 1.6),
+            v(0, 52.5, z),
+            v(34 * sx, 49.9, z),
+            v(34 * sx, 49.9, z + 1.6),
+            v(0, 52.5, z + 1.6),
+          ],
+          rgb(C.dark),
+          hatchBone,
+        );
+  }
 }
 
 export function buildGouraiSkin(d: GouraiDetailSpec): KaijuMeshBuilder {
@@ -201,5 +240,6 @@ export function buildGouraiSkin(d: GouraiDetailSpec): KaijuMeshBuilder {
   buildArmor(b, d);
   buildCore(b, d);
   buildTurrets(b, d);
+  buildCreature(b, d);
   return b;
 }

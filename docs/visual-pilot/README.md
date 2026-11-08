@@ -1,11 +1,65 @@
-# 怪獣の見た目の前後（10-7a・10-7b）
+# 怪獣の見た目の前後（10-7a・10-7b・10-7c）
 
-撮り方: `node scripts/kaiju-visual-pilot.js <nephirga|albion> <before|after> [--measure] [--quality low|medium|high]`（10-7b で怪獣ごとの共通の仕組みにした。`?dev=kshot`・`src/ui/kaiju-shot.ts`。場面は `src/data/<怪獣>-shots.ts`）。見た目だけの乱数（`Math.random`）は決まった種にして撮る。
+撮り方: `node scripts/kaiju-visual-pilot.js <nephirga|albion|gourai> <before|after> [--measure] [--quality low|medium|high]`（10-7b で怪獣ごとの共通の仕組みにした。`?dev=kshot`・`src/ui/kaiju-shot.ts`。場面は `src/data/<怪獣>-shots.ts`）。見た目だけの乱数（`Math.random`）は決まった種にして撮る。
 クラウドには GPU が無く、ソフトウェアの描画で撮った絵（ブルーム・影は本物と同じ式だが、色の細かい違い・ちらつきは実機で確かめる）。
 
+- [メカ怪獣ゴウライ（10-7c）](#メカ怪獣ゴウライ10-7c)
 - [白鯨アルビオン（10-7b）](#白鯨アルビオン10-7b)
 - [ネフィルガ: 共通の部品へ移した前後（10-7b）](#ネフィルガ-共通の部品へ移した前後10-7b)
 - [ネフィルガの見た目の試作（10-7a）](#ネフィルガの見た目の試作10-7a)
+
+## メカ怪獣ゴウライ（10-7c）
+
+画質「高」・同じ構図。左が変更前（10-4a〜10-4c の見た目）、右が変更後。要望「ただの建物に見えるので、もう少し怪獣らしく」への推奨案は、前の装甲の楔（正面の面積の大半）を光る大きな目・熾火の口・牙の「顔」にし（放熱で板が開くと大あごの内側の牙と喉の核）、頭とあご・腕と爪・背の放熱板・背のとげ・尾・甲羅の形のハッチを足すこと。足した形は体の当たりの箱 + 衝突の余裕（6m）の中（動かしても。頂点ごとにテスト）で、当たりは変えていない（docs/decisions.md の 10-7c）。
+登場の場面は撮る仕組みで「半分浮かび上がって目が灯った瞬間」に止めて撮った。変更前の撮影は 10-7c の撮る仕組みだけを足した 10-4c の見た目（場面の置き方・カメラは同じ）。
+
+### 昼・快晴
+
+| 場面 | 変更前 | 変更後 |
+| --- | --- | --- |
+| 登場（湾から浮かび上がり、目が灯る瞬間。水面の近くから見上げる。演出の場面の中ほどの構図） | ![変更前](gourai/before/day-entrance.webp) | ![変更後](gourai/after/day-entrance.webp) |
+| 周回（斜め前の上から。全体の形・顔・腕・海面の吹きおろし） | ![変更前](gourai/before/day-orbit.webp) | ![変更後](gourai/after/day-orbit.webp) |
+| 正面（少し下から。前の装甲の顔・頭・牙） | ![変更前](gourai/before/day-front.webp) | ![変更後](gourai/after/day-front.webp) |
+| 後ろ（斜め後ろの上から。排気口の熱のゆらぎ・尾・背の放熱板） | ![変更前](gourai/before/day-rear.webp) | ![変更後](gourai/after/day-rear.webp) |
+| 一斉発射の予兆（ハッチが開いて赤く点滅。腕を構えて爪を鳴らし、目が赤い） | ![変更前](gourai/before/day-volley.webp) | ![変更後](gourai/after/day-volley.webp) |
+| 回転掃射の予兆（機銃が赤く光り、危ない高さの輪。腕を構える） | ![変更前](gourai/before/day-sweep.webp) | ![変更後](gourai/after/day-sweep.webp) |
+| 放熱（大あごが開いて牙と喉の核。背の板が開いて蒸気、継ぎ目から熱の光） | ![変更前](gourai/before/day-vent.webp) | ![変更後](gourai/after/day-vent.webp) |
+| 装甲を捨てる（板が外・上へ飛ぶ途中。爆発と煙） | ![変更前](gourai/before/day-purge.webp) | ![変更後](gourai/after/day-purge.webp) |
+| 部位の破壊（右の肩の機銃を壊した直後。爆発・火花・破片） | ![変更前](gourai/before/day-break.webp) | ![変更後](gourai/after/day-break.webp) |
+| 撃破（傾きながら海へ。爆発が連鎖する） | ![変更前](gourai/before/day-defeat.webp) | ![変更後](gourai/after/day-defeat.webp) |
+
+### 夕方・快晴
+
+| 場面 | 変更前 | 変更後 |
+| --- | --- | --- |
+| 登場（湾から浮かび上がり、目が灯る瞬間。水面の近くから見上げる。演出の場面の中ほどの構図） | ![変更前](gourai/before/evening-entrance.webp) | ![変更後](gourai/after/evening-entrance.webp) |
+| 周回（斜め前の上から。全体の形・顔・腕・海面の吹きおろし） | ![変更前](gourai/before/evening-orbit.webp) | ![変更後](gourai/after/evening-orbit.webp) |
+| 正面（少し下から。前の装甲の顔・頭・牙） | ![変更前](gourai/before/evening-front.webp) | ![変更後](gourai/after/evening-front.webp) |
+| 後ろ（斜め後ろの上から。排気口の熱のゆらぎ・尾・背の放熱板） | ![変更前](gourai/before/evening-rear.webp) | ![変更後](gourai/after/evening-rear.webp) |
+| 一斉発射の予兆（ハッチが開いて赤く点滅。腕を構えて爪を鳴らし、目が赤い） | ![変更前](gourai/before/evening-volley.webp) | ![変更後](gourai/after/evening-volley.webp) |
+| 回転掃射の予兆（機銃が赤く光り、危ない高さの輪。腕を構える） | ![変更前](gourai/before/evening-sweep.webp) | ![変更後](gourai/after/evening-sweep.webp) |
+| 放熱（大あごが開いて牙と喉の核。背の板が開いて蒸気、継ぎ目から熱の光） | ![変更前](gourai/before/evening-vent.webp) | ![変更後](gourai/after/evening-vent.webp) |
+| 装甲を捨てる（板が外・上へ飛ぶ途中。爆発と煙） | ![変更前](gourai/before/evening-purge.webp) | ![変更後](gourai/after/evening-purge.webp) |
+| 部位の破壊（右の肩の機銃を壊した直後。爆発・火花・破片） | ![変更前](gourai/before/evening-break.webp) | ![変更後](gourai/after/evening-break.webp) |
+| 撃破（傾きながら海へ。爆発が連鎖する） | ![変更前](gourai/before/evening-defeat.webp) | ![変更後](gourai/after/evening-defeat.webp) |
+
+### 重さ（怪獣だけ。怪獣を出して / 隠して描いた差）
+
+場面ごとの値は `gourai/before-<画質>.json` / `after-<画質>.json`（夕方の空・撮影の 10 場面で測った）。draw call・三角形はシャドウの分を含む（「中」「高」はシャドウあり、「低」はなし）。
+
+| | 低 変更前 | 低 変更後 | 中 変更前 | 中 変更後 | 高 変更前 | 高 変更後 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 体の三角形（モデル） | 600 | 1,264（顔・頭・腕・板・尾 +664） | 1,208 | 2,504（+1,296） | 1,208 | 2,504（+1,296） |
+| 描いた三角形（場面の最小〜最大） | 600〜984 | 1,264〜1,648 | 2,416〜2,800 | 5,344〜5,932 | 2,416〜2,800 | 5,368〜6,024 |
+| draw call（場面の最小〜最大） | 1〜3 | 1〜6（爆発・蒸気・水は出たときだけ） | 2〜4 | 8〜11 | 2〜4 | 8〜11 |
+| 作る絵（縮めた絵を含む） | 0 | 0 | 0 | 0.35MB（256 × 256 × 1 枚） | 0 | 1.4MB（512 × 512 × 1 枚） |
+| 形を動かす時間（JS・中央値） | 0.1ms 未満 | 0.1〜0.2ms | 0.1ms 未満 | 0.1〜0.3ms | 0.1ms 未満 | 0.1〜0.2ms |
+| 1 フレームの時間（ソフトウェアの描画・目安） | 約 214〜320ms | 約 239〜273ms | 約 1,085〜2,180ms | 約 1,117〜1,284ms | 約 1,327〜2,798ms | 約 1,461〜1,584ms |
+
+- draw call の内訳（「高」）: 体 1 + シャドウ 1 + 弾 0〜2・回転掃射の輪 0〜1（10-4a のまま）+ 柔らかい粒（蒸気・煙・水）1 + 光る粒（炎・熱のゆらぎ）1 + 影 1 + 雨と火花の筋 0〜1 + 破片と煙 0〜2（出ているときだけ）。海面の映り込みの分も数に入る。「低」は体 1 + 攻撃 + 粒・破片（出たときだけ。熱のゆらぎ・海面の吹きおろし・筋・影は無し）
+- 描く時間はクラウドのソフトウェアの描画（GPU なし）で、ほかの撮影・テストと同時に動かしたのでばらつきが大きい（変更前の方が遅い場面があるのはばらつき）。実機の GPU での重さは実機で確かめる（設定の「デバッグ表示」の fps・draw call）
+- 起動の量（タイトルまでに読む JS・CSS）: gzip 290.4KB → 290.4KB（変わらない。上限 320KB）。ゴウライの遅延チャンク `gourai-runtime`: JS gzip 21.3KB → 33.4KB（ゴウライを選んだときだけ読む）。共通の部品のチャンク（シェーダーの部品・登場の場面 5.1KB・影 1.9KB）もゴウライを選んだときに読む（ネフィルガ・アルビオンと共有）
+- 絵は起動時（ゴウライのチャンクを読んだとき）に作る。画質を変えると作り直す（同じ大きさは使い回す）
 
 ## 白鯨アルビオン（10-7b）
 
