@@ -9,7 +9,6 @@ import type { GameState } from '../core/game-state';
 import type { ActiveMap } from '../missions/active-map';
 import { ALBION_VARIANT } from '../missions/albion-mission';
 import type { GamePlay } from '../missions/game-play';
-import { registerRaidKaijuHooks } from '../missions/raid-kaiju-hooks';
 import { registerRaidVariant } from '../missions/raid-variants';
 import type { QualityLink } from '../render/quality-link';
 import type { FlightFrame } from '../render/flight-frame';
@@ -86,14 +85,6 @@ export function linkAlbion(p: AlbionLinkParts): void {
     load: () => loadChunk(chunk).then((rt) => rt !== null),
     prefetch: () => {
       prefetchChunk(chunk);
-    },
-  });
-  // 画像を撮るときの基準点（体の中心と水平の向き）
-  registerRaidKaijuHooks(ALBION_VARIANT.id, {
-    artAnchor: () => {
-      const b = runtime?.dev.kaiju.body;
-      if (!b?.visible) return null;
-      return { ...b.position, fx: -Math.sin(b.heading), fz: -Math.cos(b.heading) };
     },
   });
   if (parseDevFlags(p.search).has('albion'))

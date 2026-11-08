@@ -17,9 +17,7 @@ import type { RenderPipeline } from '../render/pipeline';
 import type { GameAudio } from '../audio/game-audio';
 import { loadChunk, prefetchChunk } from './lazy-load';
 import { registerRaidKaijuChunk } from './raid-kaiju-link';
-import { registerRaidKaijuHooks } from '../missions/raid-kaiju-hooks';
 import type { Kaiju2Runtime } from './kaiju2-runtime';
-import type { KaijuArtParts } from './kaiju-art';
 
 export interface Kaiju2LinkParts {
   readonly search: string;
@@ -103,15 +101,6 @@ export function linkKaiju2(p: Kaiju2LinkParts): void {
     load: () => loadKaiju2().then((rt) => rt !== null),
     prefetch: prefetchKaiju2,
   });
-  // 10-2: 画像を撮るときの基準点（体の中心と水平の向き。9-10d の kaiju-art.ts から）
-  registerRaidKaijuHooks(NEPHIRGA_VARIANT.id, {
-    artAnchor: () => {
-      const body = runtime?.dev.body;
-      if (!body) return null;
-      const len = Math.hypot(body.forward.x, body.forward.z) || 1;
-      return { ...body.position, fx: body.forward.x / len, fz: body.forward.z / len };
-    },
-  });
   if (parseDevFlags(p.search).has('kaiju2'))
     chunk().catch((e: unknown) => {
       console.error('kaiju2 failed to load', e);
@@ -154,16 +143,5 @@ export function withCampaignMission(def: MissionDef | null, go: () => void): voi
   }
   void loadKaiju2().then((rt) => {
     if (rt && parts?.game.state === 'briefing') go();
-  });
-}
-
-/**
- * 9-10d: ?dev=kaiju-art のときだけ、レイドの怪獣選びの画像を描く部品（kaiju-art.ts。scripts/render-kaiju-art.js が使う）を読む。
- * 遊ぶ人は読まない
- */
-export function linkKaijuArtDev(search: string, p: KaijuArtParts): void {
-  if (!parseDevFlags(search).has('kaiju-art')) return;
-  void import('./kaiju-art').then((m) => {
-    m.linkKaijuArt(p);
   });
 }

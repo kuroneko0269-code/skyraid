@@ -8,7 +8,6 @@ import { parseDevFlags } from '../core/debug-flags';
 import type { GameState } from '../core/game-state';
 import type { ActiveMap } from '../missions/active-map';
 import type { GamePlay } from '../missions/game-play';
-import { registerRaidKaijuHooks } from '../missions/raid-kaiju-hooks';
 import { registerRaidVariant } from '../missions/raid-variants';
 import { XENOLITH_VARIANT } from '../missions/xenolith-mission';
 import type { QualityLink } from '../render/quality-link';
@@ -86,14 +85,6 @@ export function linkXenolith(p: XenolithLinkParts): void {
     load: () => loadChunk(chunk).then((rt) => rt !== null),
     prefetch: () => {
       prefetchChunk(chunk);
-    },
-  });
-  // 画像を撮るときの基準点（体の中心と水平の向き）
-  registerRaidKaijuHooks(XENOLITH_VARIANT.id, {
-    artAnchor: () => {
-      const b = runtime?.dev.kaiju.body;
-      if (!b?.visible) return null;
-      return { ...b.position, fx: -Math.sin(b.heading), fz: -Math.cos(b.heading) };
     },
   });
   if (parseDevFlags(p.search).has('xenolith'))

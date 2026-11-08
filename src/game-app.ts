@@ -40,7 +40,7 @@ import { linkContextLoss } from './ui/context-loss';
 import { createLanguageSettings } from './ui/language-settings';
 import { linkTiltPause } from './ui/tilt-settings';
 import { screenRoll } from './render/screen-roll';
-import { linkKaiju2, linkKaijuArtDev } from './ui/kaiju2-link';
+import { linkKaiju2 } from './ui/kaiju2-link';
 import { linkAlbion } from './ui/albion-link';
 import { linkGourai } from './ui/gourai-link';
 import { linkXenolith } from './ui/xenolith-link';
@@ -330,9 +330,6 @@ export function startGame(shell: AppShell): GameApp {
   linkGourai({ ...kaiju2, ...runtime, weather: world.weather, pipeline, shake });
   // 10-5b: UFO ゼノリス（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=xenolith は起動時に読む）
   linkXenolith({ ...kaiju2, ...runtime, weather: world.weather, pipeline, shake });
-
-  // 9-10d: ?dev=kaiju-art（レイドの怪獣選びの画像を描く。遊ぶ人は読まない）
-  linkKaijuArtDev(search, { ...runtime, camera, pipeline, play, weather: world.weather, game });
 
   // 8-3: WebGL のコンテキストを失ったら、ソロの飛行中はポーズ（リプレイの再生・PvP・協力は止めない）
   linkContextLoss(renderer.domElement, {
