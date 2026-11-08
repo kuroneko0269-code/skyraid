@@ -1,12 +1,68 @@
-# 怪獣の見た目の前後（10-7a・10-7b・10-7c）
+# 怪獣の見た目の前後（10-7a・10-7b・10-7c・10-7d）
 
-撮り方: `node scripts/kaiju-visual-pilot.js <nephirga|albion|gourai> <before|after> [--measure] [--quality low|medium|high]`（10-7b で怪獣ごとの共通の仕組みにした。`?dev=kshot`・`src/ui/kaiju-shot.ts`。場面は `src/data/<怪獣>-shots.ts`）。見た目だけの乱数（`Math.random`）は決まった種にして撮る。
+撮り方: `node scripts/kaiju-visual-pilot.js <nephirga|albion|gourai|xenolith> <before|after> [--measure] [--quality low|medium|high]`（10-7b で怪獣ごとの共通の仕組みにした。`?dev=kshot`・`src/ui/kaiju-shot.ts`。場面は `src/data/<怪獣>-shots.ts`）。見た目だけの乱数（`Math.random`）は決まった種にして撮る。
 クラウドには GPU が無く、ソフトウェアの描画で撮った絵（ブルーム・影は本物と同じ式だが、色の細かい違い・ちらつきは実機で確かめる）。
 
+- [UFO ゼノリス（10-7d）](#ufo-ゼノリス10-7d)
 - [メカ怪獣ゴウライ（10-7c）](#メカ怪獣ゴウライ10-7c)
 - [白鯨アルビオン（10-7b）](#白鯨アルビオン10-7b)
 - [ネフィルガ: 共通の部品へ移した前後（10-7b）](#ネフィルガ-共通の部品へ移した前後10-7b)
 - [ネフィルガの見た目の試作（10-7a）](#ネフィルガの見た目の試作10-7a)
+
+## UFO ゼノリス（10-7d）
+
+画質「高」・同じ構図。左が変更前（10-5a〜10-5b の見た目）、右が変更後。要望「ただの UFO に見えるので、もっとキラキラ・近未来に」への推奨案は、銀の面を空・水平線・海・日が映り込む鏡の金属にし（式で映す。絵は作らない）、見る角度で色が変わる虹色の板・継ぎ目を走る光の筋・上下に浮かんで回る光の輪・ドームのまわりの結晶・ガラスの奥の光る核・六角のホログラムのバリア・光の尾 / 波 / きらめく粒を重ねること。足した形は体の当たり（円盤の楕円体とドーム）+ 衝突の余裕（6m）の中（頂点ごとにテスト。当たりは変えていない。docs/decisions.md の 10-7d）。
+速くて小さいので見失わないよう、遠くでは光る星の目印が付く（光線の予兆の線より暗い）。変更前の撮影は 10-7d の撮る仕組みだけを足した 10-5b の見た目（場面の置き方・カメラは同じ）。
+
+### 昼・快晴
+
+| 場面 | 変更前 | 変更後 |
+| --- | --- | --- |
+| 登場（空から光の柱の中を降りてくる途中。下から見上げる。演出の場面の中ほどの構図） | ![変更前](xenolith/before/day-entrance.webp) | ![変更後](xenolith/after/day-entrance.webp) |
+| 周回（斜め前の上から。鏡の金属・虹色の板・浮かぶ光の輪・結晶・六角のバリア） | ![変更前](xenolith/before/day-orbit.webp) | ![変更後](xenolith/after/day-orbit.webp) |
+| 下から（砲口・発生器・下の面の回る光の模様・下の光の輪） | ![変更前](xenolith/before/day-under.webp) | ![変更後](xenolith/after/day-under.webp) |
+| 急加速（横へ 320 m/s。光の尾ときらめく粒） | ![変更前](xenolith/before/day-dash.webp) | ![変更後](xenolith/after/day-dash.webp) |
+| バリア（殻に当たった波紋が六角を光らせる） | ![変更前](xenolith/before/day-barrier.webp) | ![変更後](xenolith/after/day-barrier.webp) |
+| 瞬間移動の予兆（移る先の光の柱と輪。本体は光がほどけ始める） | ![変更前](xenolith/before/day-warp.webp) | ![変更後](xenolith/after/day-warp.webp) |
+| なぎ払う光線（撃つ途中。白い芯と外側の光） | ![変更前](xenolith/before/day-sweep.webp) | ![変更後](xenolith/after/day-sweep.webp) |
+| 溜め撃ちの溜め（止まった線 = 避けどき。流れる点線） | ![変更前](xenolith/before/day-charged.webp) | ![変更後](xenolith/after/day-charged.webp) |
+| 光の弾のばらまき（予兆の縁の光と、撃ったばかりの弾のきらめき） | ![変更前](xenolith/before/day-orbs.webp) | ![変更後](xenolith/after/day-orbs.webp) |
+| 部位の破壊（縁の発光体を壊した直後。破片と電気の弧） | ![変更前](xenolith/before/day-break.webp) | ![変更後](xenolith/after/day-break.webp) |
+| 撃破（光が消え、電気の弧と煙を引いて落ちる） | ![変更前](xenolith/before/day-defeat.webp) | ![変更後](xenolith/after/day-defeat.webp) |
+
+### 夕方・快晴
+
+| 場面 | 変更前 | 変更後 |
+| --- | --- | --- |
+| 登場（空から光の柱の中を降りてくる途中。下から見上げる。演出の場面の中ほどの構図） | ![変更前](xenolith/before/evening-entrance.webp) | ![変更後](xenolith/after/evening-entrance.webp) |
+| 周回（斜め前の上から。鏡の金属・虹色の板・浮かぶ光の輪・結晶・六角のバリア） | ![変更前](xenolith/before/evening-orbit.webp) | ![変更後](xenolith/after/evening-orbit.webp) |
+| 下から（砲口・発生器・下の面の回る光の模様・下の光の輪） | ![変更前](xenolith/before/evening-under.webp) | ![変更後](xenolith/after/evening-under.webp) |
+| 急加速（横へ 320 m/s。光の尾ときらめく粒） | ![変更前](xenolith/before/evening-dash.webp) | ![変更後](xenolith/after/evening-dash.webp) |
+| バリア（殻に当たった波紋が六角を光らせる） | ![変更前](xenolith/before/evening-barrier.webp) | ![変更後](xenolith/after/evening-barrier.webp) |
+| 瞬間移動の予兆（移る先の光の柱と輪。本体は光がほどけ始める） | ![変更前](xenolith/before/evening-warp.webp) | ![変更後](xenolith/after/evening-warp.webp) |
+| なぎ払う光線（撃つ途中。白い芯と外側の光） | ![変更前](xenolith/before/evening-sweep.webp) | ![変更後](xenolith/after/evening-sweep.webp) |
+| 溜め撃ちの溜め（止まった線 = 避けどき。流れる点線） | ![変更前](xenolith/before/evening-charged.webp) | ![変更後](xenolith/after/evening-charged.webp) |
+| 光の弾のばらまき（予兆の縁の光と、撃ったばかりの弾のきらめき） | ![変更前](xenolith/before/evening-orbs.webp) | ![変更後](xenolith/after/evening-orbs.webp) |
+| 部位の破壊（縁の発光体を壊した直後。破片と電気の弧） | ![変更前](xenolith/before/evening-break.webp) | ![変更後](xenolith/after/evening-break.webp) |
+| 撃破（光が消え、電気の弧と煙を引いて落ちる） | ![変更前](xenolith/before/evening-defeat.webp) | ![変更後](xenolith/after/evening-defeat.webp) |
+
+### 重さ（怪獣だけ。怪獣を出して / 隠して描いた差）
+
+場面ごとの値は `xenolith/before-<画質>.json` / `after-<画質>.json`（夕方の空・撮影の 11 場面で測った）。draw call・三角形はシャドウの分を含む（「中」「高」はシャドウあり、「低」はなし）。
+
+| | 低 変更前 | 低 変更後 | 中 変更前 | 中 変更後 | 高 変更前 | 高 変更後 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 体の三角形（モデル） | 664 | 952（結晶・光の輪 +288） | 1,920 | 2,528（+608） | 1,920 | 2,528（+608） |
+| 描いた三角形（場面の最小〜最大） | 664〜1,880 | 984〜2,582 | 3,840〜5,056 | 5,124〜6,858 | 3,840〜5,056 | 5,134〜6,922 |
+| draw call（場面の最小〜最大） | 1〜6 | 2〜6 | 2〜7 | 6〜12 | 2〜7 | 6〜12 |
+| 作る絵（縮めた絵を含む） | 0 | 0 | 0 | 0 | 0 | 0（式だけ） |
+| 形を動かす時間（JS・中央値） | 0.1ms 以下 | 0.1ms | 0.1ms 以下 | 0.1〜0.2ms | 0.1ms 以下 | 0.1ms |
+| 1 フレームの時間（ソフトウェアの描画・目安） | 約 203〜608ms | 約 399〜572ms | 約 1,434〜3,234ms | 約 1,392〜2,375ms | 約 1,053〜4,317ms | 約 1,302〜3,250ms |
+
+- draw call の内訳（「高」）: 体 1 + シャドウ 1 + 六角のバリア 0〜1 + 光線 0〜1 + 柱と輪 0〜2 + 光の弾 0〜1（10-5b まで）+ 光る星（きらめく粒・弾のきらめき・目印）1 + 光の波 0〜1 + 光の尾 0〜1 + 電気の弧 0〜1 + 破片と煙 0〜2 + 影 1（出ているときだけ）。「低」は体 1 + 殻・光線・柱 + 星 0〜1 + 波・破片（出たときだけ。尾・弧・影・虹色・筋・六角は無し）
+- 描く時間はクラウドのソフトウェアの描画（GPU なし）で、ほかの撮影と同時に動かしたのでばらつきが大きい（変更前の方が遅い場面があるのはばらつき）。実機の GPU での重さは実機で確かめる（設定の「デバッグ表示」の fps・draw call）
+- 起動の量（タイトルまでに読む JS・CSS。`scripts/startup-breakdown.js`）: gzip 288.2KB → 288.2KB（変わらない。上限 320KB）。ゼノリスの遅延チャンク `xenolith-runtime`: JS gzip 23.1KB → 35.4KB（ゼノリスを選んだときだけ読む）
+- 絵は作らない（鏡の映り込み・虹色・光の筋・六角はシェーダーの式）。画質を変えるとマテリアルと粒を作り直す
 
 ## メカ怪獣ゴウライ（10-7c）
 
