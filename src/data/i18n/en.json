@@ -2850,7 +2850,7 @@
         "size": "Length 180 m",
         "motion": "Hovers low on patrol over the bay and turns its body toward whoever it targets",
         "parts": "Core, 4 shoulder and hip guns, 2 back missile pods, 2 exhausts (hull and front armor can't be broken)",
-        "opening": "You can't fly through its body (you bounce off). The front is heavy armor and dense fire. Read where the tracers come from and circle in from the thin sides and below the rear; every turret you break thins the barrage. When it overheats, the armor opens and the core glows (venting). Its guns lead their target, so keep turning to dodge. In co-op the barrage aims at whoever is nearest each turret.",
+        "opening": "You can't fly through its body. The front is heavy armor. Read the tracers and circle in from the thin sides or below the rear; each turret you break thins the barrage. When it overheats, the armor opens and the core glows. Its guns lead you, so keep turning.",
         "normal": "Normal: 16 min overall",
         "hard": "Hard: HP ×1.3, faster barrage and attacks, 13 min overall, reward ×1.8",
         "attacks": {
