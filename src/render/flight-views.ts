@@ -5,6 +5,7 @@ import type { Vec3 } from '../flight/math';
 import type { AircraftDetail } from '../data/aircraft-model';
 import type { KaijuBodyView, KaijuEffectsView } from '../entities/kaiju-display';
 import type { FlightSession } from '../missions/flight-session';
+import type { VorgasLook } from './kaiju-model/vorgas-view';
 import { CombatView } from './combat-view';
 import { AAA_CONFIG } from '../data/ground-targets';
 import { DroneView } from './drone-view';
@@ -97,6 +98,11 @@ export class FlightViews {
     this.enemies.setDetail(detail);
     this.props.setDetail(detail);
     this.defense.setDetail(detail);
+  }
+
+  /** 10-7e: ヴォルガスの見た目の段・演出の入力の口 */
+  setKaijuLook(look: VorgasLook): void {
+    this.props.setKaijuLook(look);
   }
 
   /** 怪獣の表示元を差し替える（協力のクライアント。6-2。null でミッションの怪獣） */

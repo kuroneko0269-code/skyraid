@@ -19,6 +19,7 @@ import type { DailyLink } from './daily-link';
 import type { BadgeLink } from './badge-link';
 import { createReplayWiring } from './replay-wiring';
 import { viewport } from '../core/viewport';
+import { linkVorgas } from './vorgas-link';
 
 export type FlightRuntimeParts = Omit<
   FlightStartParts,
@@ -161,6 +162,19 @@ export function startFlightRuntime(p: FlightRuntimeParts): {
     frame.render(game.state, alpha, p.keys.menuTick);
     if (game.state === 'flight') p.kaijuHud.update();
     p.tutorial.update(game.state === 'flight');
+  });
+  // 10-7e: ヴォルガスの演出（登場の場面・揺れ・撮影。遅延チャンクで、モード選択かヴォルガスが出たときに読む）
+  linkVorgas({
+    ...p,
+    search: location.search,
+    weather: p.world.weather,
+    frame,
+    onRender: (fn) => {
+      loop.onRender(fn);
+    },
+    shake: (k) => {
+      p.chaseCamera.addImpact(k);
+    },
   });
   return {
     photo,

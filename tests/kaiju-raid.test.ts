@@ -10,8 +10,8 @@ describe('モデル', () => {
     expect(hi.triangles).toBeLessThanOrEqual(40000);
     expect(lo.triangles).toBeLessThanOrEqual(12000);
     expect(lo.triangles).toBeLessThan(hi.triangles);
-    // 部位ごとに別メッシュ: 胴・頭・腕・脚・尾 + 結晶
-    expect(hi.skin.length).toBe(5);
+    // 10-7e: 部位（胴・頭・腕・脚・尾）と骨板は 1 つのメッシュ（頂点に部位の番号）+ 結晶
+    expect(hi.skin.getAttribute('aPart').count).toBe(hi.skin.getAttribute('position').count);
   });
 });
 
