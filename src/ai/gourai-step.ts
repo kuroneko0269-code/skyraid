@@ -37,7 +37,10 @@ export function stepGouraiShots(
       const who = byId(hit.targetId);
       if (!who) return;
       k.hits[hit.shot.kind]++;
-      onHit(hit.shot.kind, hit.damage * k.damageScale, who);
+      // 10-4b: 回転掃射の弾（狙う人なし）は 1 発が重い
+      const sweep = hit.shot.targetId < 0;
+      const mul = sweep ? C.attacks.sweep.damageMul : 1;
+      onHit(hit.shot.kind, hit.damage * mul * k.damageScale, who, sweep);
     },
     (from, dir) => {
       if (!flares) return null;
@@ -102,6 +105,8 @@ export function resetGourai(k: GouraiKaiju, hpRatio: number, broken: readonly st
   k.heat = 0;
   k.sweepAngle = 0;
   k.sweepGap = 0;
+  k.sweepPitch = 0;
+  k.sweepRange = 700;
   k.attacksUsed.volley = 0;
   k.attacksUsed.sweep = 0;
   k.vents = 0;

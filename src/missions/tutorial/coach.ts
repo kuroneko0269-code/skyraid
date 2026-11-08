@@ -41,6 +41,7 @@ export class TutorialCoach {
   /** 最後に宙返りに入ったときの方位（段階をまたいで持つ） */
   private loopHeading = 0;
   private prevAmmo = 0;
+  private prevRockets = 0;
   private prevFlares = 0;
   private prevDamage = 0;
   private prevSelected: unknown = null;
@@ -102,6 +103,7 @@ export class TutorialCoach {
     readAttitude(this.att, st.orientation);
     this.refHeading = this.att.headingDeg;
     this.prevAmmo = s.combat.missileAmmo.count;
+    this.prevRockets = s.combat.rockets.count;
     this.prevFlares = s.combat.flares.magazine.count;
     this.prevDamage = s.player.damageTaken;
     this.prevSelected = s.combat.targeting.selected;
@@ -196,6 +198,13 @@ export class TutorialCoach {
       case 'resupply':
         if (this.resupplied) o.report(1);
         break;
+      case 'rocket': {
+        // 10-4b: ロケットを撃った（残弾が減った）
+        const n = c.rockets.count;
+        if (n < this.prevRockets) o.report(1);
+        this.prevRockets = n;
+        break;
+      }
       case 'flare':
         this.stepFlare(o, dt);
         break;

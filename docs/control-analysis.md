@@ -571,6 +571,10 @@ bandit: 変更後（速度合わせ ON）（シード 1）
 
 ソロ（役 4 つ × 補助の組 かんたん / ふつう × 通常 / 高難度・各 20 シード）と協力（1〜4 人 × 役 4 つ・各 10 シード）の表、手応えの指標（1 分あたりの攻撃・体当たり・攻撃 1 回あたりの被弾率・クリア時の体力の減り・撃墜の内訳）と目安の根拠は `docs/kaiju-roster.md` の「10-3b」。使い方: `VITE_TUNE=1 VITE_TUNE_ROLE=skilled VITE_TUNE_DIFF=normal VITE_TUNE_PRESET=easy VITE_TUNE_SEEDS=20 npx vitest run tests/albion-tune.test.ts --silent=false`（協力は `tests/albion-coop-tune.test.ts`。`VITE_TUNE_PLAYERS`・`VITE_TUNE_LIVES=0`・`VITE_TUNE_JOBS=minion,body`）
 
+## 10-4b メカ怪獣ゴウライの手応え
+
+ソロ（役 4 つ × 補助の組 かんたん / ふつう × 通常、かんたん × 高難度・各 20 シード）と協力（1〜4 人 × 役 4 つ・残機なし・各 6 シード、砲台係の組み合わせ）の表、手応えの指標（1 分あたりの大きな攻撃と機銃の当たり・人を狙う攻撃 1 回あたりの被弾率・クリア時の体力の減り・撃墜の内訳・体への衝突）と目安の根拠は `docs/kaiju-roster.md` の「10-4b」。使い方: `VITE_TUNE=1 VITE_TUNE_ROLE=skilled VITE_TUNE_DIFF=normal VITE_TUNE_PRESET=easy VITE_TUNE_SEEDS=20 npx vitest run tests/gourai-tune.test.ts --reporter=verbose`（`VITE_TUNE_DODGE=1` で必ず避ける。協力は `tests/gourai-coop-tune.test.ts`。`VITE_TUNE_JOBS=turret,body`）
+
 ## ツール（`npm run analyze-replay`）
 
 ```

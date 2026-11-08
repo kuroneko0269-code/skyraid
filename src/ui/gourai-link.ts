@@ -1,11 +1,20 @@
-// 10-4a: メカ怪獣ゴウライの入口（作っている間）。?dev=gourai のときだけ、判定・形・値の表示の遅延チャンク（gourai-runtime.ts）を
-// 起動時に読む。付けないときは何も読まず、何も変えない（遊ぶ人には見えない）。10-4b でレイドの登録と読み方をここに足す
+// 10-4b: メカ怪獣ゴウライの入口。起動時に読むのはここだけ（小さく保つ）: レイドの別の怪獣として登録し（怪獣選び・リプレイ・
+// 記録カードの題）、判定・形・HUD・文言・協力の遅延チャンク（gourai-runtime.ts）を、ゴウライのレイドを始める前・リプレイを
+// 再生する前・協力の飛行の前（ホストは開始の前、クライアントはロビーで先読み）に読む（読み込み中・失敗の表示付き）。
+// 怪獣選びで選んだときは先読みする。?dev=gourai（10-4a の確かめる場）のときは起動時に読み、フリーフライトにも出す
 import type { Scene } from 'three';
+import { lazyChunk } from '../core/lazy-chunk';
 import { parseDevFlags } from '../core/debug-flags';
 import type { GameState } from '../core/game-state';
 import type { ActiveMap } from '../missions/active-map';
 import type { GamePlay } from '../missions/game-play';
+import { GOURAI_VARIANT } from '../missions/gourai-mission';
+import { registerRaidKaijuHooks } from '../missions/raid-kaiju-hooks';
+import { registerRaidVariant } from '../missions/raid-variants';
 import type { QualityLink } from '../render/quality-link';
+import type { GouraiRuntime } from './gourai-runtime';
+import { loadChunk, prefetchChunk } from './lazy-load';
+import { registerRaidKaijuChunk } from './raid-kaiju-link';
 
 export interface GouraiLinkParts {
   readonly search: string;
@@ -16,36 +25,62 @@ export interface GouraiLinkParts {
   readonly quality: QualityLink;
   readonly pvp: { readonly flying: boolean };
   readonly onRender: (fn: (alpha: number) => void) => void;
+  /** レイドの HUD を出しているか（H キー） */
+  readonly hud: { readonly visible: boolean };
 }
 
-/** 起動時: ?dev=gourai なら遅延チャンクを読んでつなぐ */
-export function linkGouraiDev(p: GouraiLinkParts): void {
-  if (!parseDevFlags(p.search).has('gourai')) return;
-  void import('./gourai-runtime')
-    .then((m) => {
-      const { play, activeMap, game } = p;
-      m.startGourai({
-        play,
-        scene: p.scene,
-        search: p.search,
-        ground: activeMap.ordnanceGround,
-        map: () => activeMap.def,
-        state: () => game.state,
-        inFreeFlight: () =>
-          play.runner === null &&
-          play.race === null &&
-          play.defense === null &&
-          play.practice === null &&
-          !p.pvp.flying,
-        onDetail: (fn) => {
-          p.quality.onPreset((preset) => {
-            fn(preset.aircraftDetail);
-          });
-        },
-        onRender: p.onRender,
+let parts: GouraiLinkParts | null = null;
+let runtime: GouraiRuntime | null = null;
+
+const chunk = lazyChunk(async (): Promise<GouraiRuntime> => {
+  const p = parts;
+  if (!p) throw new Error('gourai: not linked');
+  const m = await import('./gourai-runtime');
+  runtime ??= m.startGourai({
+    play: p.play,
+    scene: p.scene,
+    search: p.search,
+    ground: p.activeMap.ordnanceGround,
+    map: () => p.activeMap.def,
+    state: () => p.game.state,
+    inFreeFlight: () =>
+      p.play.runner === null &&
+      p.play.race === null &&
+      p.play.defense === null &&
+      p.play.practice === null &&
+      !p.pvp.flying,
+    onDetail: (fn) => {
+      p.quality.onPreset((preset) => {
+        fn(preset.aircraftDetail);
       });
-    })
-    .catch((e: unknown) => {
+    },
+    onRender: p.onRender,
+    hudVisible: () => p.hud.visible,
+    devFree: parseDevFlags(p.search).has('gourai'),
+  });
+  return runtime;
+});
+
+/** 起動時: 登録して部品をつなぐ（?dev=gourai ならすぐ読む） */
+export function linkGourai(p: GouraiLinkParts): void {
+  parts = p;
+  registerRaidVariant(GOURAI_VARIANT);
+  registerRaidKaijuChunk(GOURAI_VARIANT.id, {
+    load: () => loadChunk(chunk).then((rt) => rt !== null),
+    prefetch: () => {
+      prefetchChunk(chunk);
+    },
+  });
+  // 画像を撮るときの基準点（体の中心と水平の向き）
+  registerRaidKaijuHooks(GOURAI_VARIANT.id, {
+    artAnchor: () => {
+      const b = runtime?.dev.kaiju.body;
+      if (!b?.visible) return null;
+      return { ...b.position, fx: -Math.sin(b.heading), fz: -Math.cos(b.heading) };
+    },
+  });
+  if (parseDevFlags(p.search).has('gourai'))
+    chunk().catch((e: unknown) => {
       console.error('gourai failed to load', e);
     });
 }

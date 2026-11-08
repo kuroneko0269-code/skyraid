@@ -283,8 +283,9 @@ export function runTutorialChapter(
         input.trigger = false;
       }
       // 練習の章はミサイルの章だけミサイルを使う
+      // 10-4b: ロケットの段階はロケットも撃つ（ボットは操作をそのまま渡す）
       if (chapter !== 'missile') input.missile = false;
-      if (chapter === 'missile') input.trigger = false;
+      else Object.assign(input, { trigger: false, rocket: task === 'rocket' });
     } else if (stick || release) {
       intent.pitch = stick ? 1 : 0;
       intent.roll = 0;

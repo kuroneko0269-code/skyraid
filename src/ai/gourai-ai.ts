@@ -22,7 +22,14 @@ import { GouraiBody, type GouraiGround, type GouraiPatrol } from '../entities/go
 import { Barrage, type BarrageTarget, type ShotKind, type ShotOrder } from './raid-kit/barrage';
 import { PartSet } from './raid-kit/parts';
 import { ShotPool } from './raid-kit/shots';
-import { aliveCount, attackTimes, chooseAttack, fireSweep, fireVolley } from './gourai-attacks';
+import {
+  aimSweep,
+  aliveCount,
+  attackTimes,
+  chooseAttack,
+  fireSweep,
+  fireVolley,
+} from './gourai-attacks';
 import { actionLeftOf, resetGourai, stepGouraiPose, stepGouraiShots } from './gourai-step';
 
 /** 狙う人（ソロは自機。id はプレイヤー ID、radius は当たりの球） */
@@ -31,10 +38,12 @@ export interface GouraiTarget {
   readonly active: boolean;
   readonly id?: number;
   readonly radius?: number;
+  /** 10-4b: 速度（機銃の見越し。省略は見越さない） */
+  readonly velocity?: Readonly<Vec3>;
 }
 
-/** 当たり（弾の種類・ダメージ・当たった人） */
-export type GouraiHit = (kind: ShotKind, damage: number, who: GouraiTarget) => void;
+/** 当たり（弾の種類・ダメージ・当たった人・10-4b: 回転掃射の弾か） */
+export type GouraiHit = (kind: ShotKind, damage: number, who: GouraiTarget, sweep: boolean) => void;
 
 const NO_HIT: GouraiHit = () => undefined;
 const PART = (id: (typeof GOURAI_PARTS)[number]): number => GOURAI_PARTS.indexOf(id);
@@ -64,6 +73,9 @@ export class GouraiKaiju {
   /** 回転掃射の向き（度）と次の弾までの秒数 */
   sweepAngle = 0;
   sweepGap = 0;
+  /** 10-4b: 回転掃射の面の傾き（度）と弾を揃える水平の距離（m。予兆の始めに狙う人へ） */
+  sweepPitch = 0;
+  sweepRange = 700;
   /** 数え: 大きな攻撃の回数・放熱の回数・撃った弾（機銃 / ミサイル）・当てた弾 */
   readonly attacksUsed = { volley: 0, sweep: 0 };
   vents = 0;
@@ -78,6 +90,10 @@ export class GouraiKaiju {
   /** 難易度の倍率（10-4b）: 攻撃の間隔・当たりのダメージ */
   intervalScale = 1;
   damageScale = 1;
+  /** 10-4b: 高難度の弾幕の速さの倍率 */
+  barrageScale = 1;
+  /** 10-4b: 弾幕の弾を撃ったら呼ぶ（協力のホストが写しへ知らせる。関数は状態の走査に入らない） */
+  onShot: ((o: ShotOrder) => void) | null = null;
 
   constructor(ground: GouraiGround) {
     this.body = new GouraiBody(ground);
@@ -155,6 +171,7 @@ export class GouraiKaiju {
 
   private readonly fireShot = (o: ShotOrder): void => {
     this.shots.fire(o);
+    this.onShot?.(o);
     this.fired[o.weapon]++;
     const h = o.weapon === 'gun' ? C.heat.gunShot : C.heat.missileShot;
     this.addHeat(h);
@@ -204,7 +221,7 @@ export class GouraiKaiju {
       this.barrageTargets(crowd),
       this.random.next,
       this.fireShot,
-      late ? C.phases.barrageRate : 1,
+      (late ? C.phases.barrageRate : 1) * this.barrageScale,
       barrageOn,
     );
     this.stepAction(dt, target);
@@ -217,7 +234,12 @@ export class GouraiKaiju {
     const out = targetList;
     out.length = 0;
     crowd.forEach((c, i) => {
-      if (c.active) out.push({ id: c.id ?? i, position: c.position });
+      if (!c.active) return;
+      out.push(
+        c.velocity
+          ? { id: c.id ?? i, position: c.position, velocity: c.velocity }
+          : { id: c.id ?? i, position: c.position },
+      );
     });
     return out;
   }
@@ -251,6 +273,8 @@ export class GouraiKaiju {
         this.repeat = pick === this.lastAttack ? this.repeat + 1 : 1;
         this.lastAttack = pick;
         this.attacksUsed[pick]++;
+        // 10-4b: 回転掃射は予兆の始めに、狙う人の高さへ面を傾けて決める（予兆の筒もその高さへ。見て高さを変えれば外れる）
+        if (pick === 'sweep' && p) aimSweep(this, p);
         this.setAction('windup', pick);
         return;
       }

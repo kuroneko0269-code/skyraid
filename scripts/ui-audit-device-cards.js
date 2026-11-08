@@ -122,6 +122,12 @@ export async function auditCards({ browser, base, touchContext, toTitle }) {
       'dialog',
     ],
     [
+      'レイド → 怪獣の切り替え（ゴウライ）',
+      '.mode-card[data-mode="raid"]',
+      '.raid-kaiju-seg .ui-seg-item[data-value="gourai"]',
+      'dialog',
+    ],
+    [
       'レイド → 難易度の切り替え（高難度）',
       '.mode-card[data-mode="raid"]',
       '.raid-diff-seg .ui-seg-item[data-value="hard"]',

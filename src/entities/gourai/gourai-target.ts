@@ -6,6 +6,12 @@ import { GOURAI_PARTS, GOURAI_TARGET_SPHERES } from '../../data/gourai';
 import { vec3, type Vec3 } from '../../flight/math';
 import type { GouraiKaiju } from '../../ai/gourai-ai';
 
+/** 10-4b: 撃てる物が読む本体（レイドの進め方 GouraiRaid。被弾の光・勲章の印も付ける） */
+export interface GouraiDamageHost {
+  readonly kaiju: GouraiKaiju;
+  damageSphere(sphere: number, amount: number, attacker?: number): boolean;
+}
+
 const CORE = GOURAI_PARTS.indexOf('core');
 
 export class GouraiPartTarget implements CombatTarget {
@@ -22,10 +28,14 @@ export class GouraiPartTarget implements CombatTarget {
   /** 当てた回数（値の表示） */
   hits = 0;
 
+  private readonly k: GouraiKaiju;
+
   constructor(
-    private readonly k: GouraiKaiju,
+    private readonly host: GouraiDamageHost,
     readonly sphere: number,
   ) {
+    const k = host.kaiju;
+    this.k = k;
     const s = GOURAI_TARGET_SPHERES[sphere];
     this.hitRadius = s?.radius ?? 20;
     this.visualRadius = this.hitRadius;
@@ -45,6 +55,20 @@ export class GouraiPartTarget implements CombatTarget {
     return !k.parts.isBroken(this.partIndex);
   }
 
+  /** 10-4b: 協力の部位の番号（入力の targetId は KAIJU_ID_BASE + これ。判定の球の番号） */
+  get kaijuIndex(): number {
+    return this.sphere;
+  }
+
+  /** 10-4b: 部位の名前（GOURAI_PARTS） */
+  get id(): string {
+    return GOURAI_PARTS[this.partIndex] ?? 'hull';
+  }
+
+  get broken(): boolean {
+    return this.k.parts.isBroken(this.partIndex);
+  }
+
   get hp(): number {
     return this.k.parts.partHp[this.partIndex] ?? 0;
   }
@@ -58,8 +82,13 @@ export class GouraiPartTarget implements CombatTarget {
   }
 
   applyDamage(amount: number): boolean {
+    return this.damageBy(amount, 0);
+  }
+
+  /** 10-4b: 攻撃した人の ID 付き（協力の PvpArena の部位） */
+  damageBy(amount: number, attacker: number): boolean {
     this.hits++;
-    return this.k.damageSphere(this.sphere, amount);
+    return this.host.damageSphere(this.sphere, amount, attacker);
   }
 
   /** 体の位置から置き直す（first は前の位置も同じに） */
@@ -78,6 +107,6 @@ export class GouraiPartTarget implements CombatTarget {
   }
 }
 
-export function createGouraiTargets(k: GouraiKaiju): GouraiPartTarget[] {
-  return GOURAI_TARGET_SPHERES.map((_, i) => new GouraiPartTarget(k, i));
+export function createGouraiTargets(host: GouraiDamageHost): GouraiPartTarget[] {
+  return GOURAI_TARGET_SPHERES.map((_, i) => new GouraiPartTarget(host, i));
 }

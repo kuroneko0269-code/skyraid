@@ -68,6 +68,7 @@ export class TutorialLink {
    */
   onFlightStart(kind: 'free' | 'mission' | 'tutorial'): void {
     this.hints.stop();
+    if (kind !== 'tutorial') this.weaponNotice();
     if (kind === 'tutorial' || !this.touch.controls.isVisible) return;
     // 9-2: 今の利用者に一度だけ（タッチ操作を出した最初の飛行の始め）
     if (takeSteerNotice(this.save))
@@ -76,6 +77,35 @@ export class TutorialLink {
     if (this.save.flag(flag)) return;
     this.save.setFlag(flag);
     this.hints.start();
+  }
+
+  /** 10-4b: 今の入力の方式（タッチ操作が出ていてパッドを触っていなければタッチ） */
+  private device(): 'touch' | 'keys' | 'pad' {
+    const d = this.input.lastDevice;
+    if (d === 'gamepad') return 'pad';
+    return d === 'touch' || this.touch.controls.isVisible ? 'touch' : 'keys';
+  }
+
+  /** 10-4b: ロケット・爆弾の撃ち方の文（{rocket} {bomb} は今の割当のキー） */
+  private weaponText(key: 'hud.weaponHint' | 'tutorial.weaponHint'): string {
+    const keys = buildKeyBindings(this.save.settings.controls.keys);
+    const name = (a: 'rocket' | 'bomb'): string => {
+      const code = keys[a][0];
+      return code === undefined ? '—' : keyLabel(code);
+    };
+    return t(`${key}.${this.device()}`, { rocket: name('rocket'), bomb: name('bomb') });
+  }
+
+  /** 10-4b: HUD の残弾の列の下の小さな印 */
+  weaponHint(): string {
+    return this.weaponText('hud.weaponHint');
+  }
+
+  /** 10-4b: チュートリアルの外の最初の飛行の始めに 1 回だけ、ロケット・爆弾の撃ち方を知らせる */
+  private weaponNotice(): void {
+    if (this.save.flag('weaponHint')) return;
+    this.save.setFlag('weaponHint');
+    showToast(this.weaponText('tutorial.weaponHint'), { seconds: 6 });
   }
 
   /** 描画フレームごと。ヒントの時間は飛行中だけ進める */

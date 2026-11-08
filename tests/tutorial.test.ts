@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { TUTORIAL_TASKS } from '../src/data/tutorial-tasks';
 // チュートリアル（4-11 → 9-5c で章に分けた）: 章の定義・方式ごとの文・ボットで全章 × 全方式の通し・練習（撃墜されない）・
 // 章の印と初回だけの報酬・ヒント
 import { useLocale } from './i18n-helpers';
@@ -252,5 +254,17 @@ describe('章の印と報酬', () => {
       'gun',
       'steer',
     ]);
+  });
+});
+
+describe('10-4b: チュートリアルの課題の名前', () => {
+  it('課題の種類すべてに目標の名前がある（日本語・英語。生のキーが出ない）', () => {
+    for (const lang of ['ja', 'en'] as const) {
+      const tree = JSON.parse(readFileSync(`src/data/i18n/${lang}.json`, 'utf8')) as {
+        objectives: { task: Record<string, string> };
+      };
+      for (const task of TUTORIAL_TASKS)
+        expect([lang, task, tree.objectives.task[task]]).not.toContain(undefined);
+    }
   });
 });

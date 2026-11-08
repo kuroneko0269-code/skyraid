@@ -33,6 +33,12 @@ export interface TurretSpec {
   /** 狙いの広がり（度。乱数で散らす）と射程（m） */
   readonly spreadDeg: number;
   readonly range: number;
+  /**
+   * 10-4b: 見越し（0〜1。狙う人の速度が分かれば、弾の速さ shotSpeed で会う点へ lead の割合だけ寄せて撃つ。省略は今の位置）。
+   * まっすぐ飛ぶ人には当たり、曲がり続ける人には外れる
+   */
+  readonly lead?: number;
+  readonly shotSpeed?: number;
 }
 
 /** 撃った 1 発（ShotPool.fire に渡す） */
@@ -48,10 +54,13 @@ export interface ShotOrder {
 export interface BarrageTarget {
   readonly id: number;
   readonly position: Readonly<Vec3>;
+  /** 10-4b: 速度（見越しに使う。省略は見越さない） */
+  readonly velocity?: Readonly<Vec3>;
 }
 
 const origin = vec3();
 const dir = vec3();
+const aimPoint = vec3();
 
 export class Barrage {
   /** 砲台ごとの次の連射までの秒数・連射の残りの数・次の弾までの秒数・今の狙う人 */
@@ -143,13 +152,37 @@ export class Barrage {
       this.burstLeft[i] = 0;
       return;
     }
-    const aim = relativeAim(body, origin, target.position);
+    const aim = relativeAim(body, origin, leadPoint(t, origin, target));
     const yaw = aim.yawDeg + (rnd() - 0.5) * 2 * t.spreadDeg;
     const pitch = aim.pitchDeg + (rnd() - 0.5) * 2 * t.spreadDeg;
     bodyDirection(dir, body, yaw, pitch);
     this.fired[i] = (this.fired[i] ?? 0) + 1;
     fire({ turret: i, weapon: t.weapon, origin, direction: dir, targetId: target.id });
   }
+}
+
+/** 10-4b: 見越した狙いの点（見越しが無ければ今の位置）。会う時刻は 2 回の近似 */
+export function leadPoint(
+  t: Pick<TurretSpec, 'lead' | 'shotSpeed'>,
+  from: Readonly<Vec3>,
+  target: BarrageTarget,
+): Readonly<Vec3> {
+  const v = target.velocity;
+  const k = t.lead ?? 0;
+  const sp = t.shotSpeed ?? 0;
+  const p = target.position;
+  if (!v || k <= 0 || sp <= 0) return p;
+  let tt = Math.hypot(p.x - from.x, p.y - from.y, p.z - from.z) / sp;
+  for (let i = 0; i < 2; i++) {
+    aimPoint.x = p.x + v.x * tt;
+    aimPoint.y = p.y + v.y * tt;
+    aimPoint.z = p.z + v.z * tt;
+    tt = Math.hypot(aimPoint.x - from.x, aimPoint.y - from.y, aimPoint.z - from.z) / sp;
+  }
+  aimPoint.x = p.x + v.x * tt * k;
+  aimPoint.y = p.y + v.y * tt * k;
+  aimPoint.z = p.z + v.z * tt * k;
+  return aimPoint;
 }
 
 /** 点が砲台の向きの範囲にあるか */

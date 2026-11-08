@@ -42,7 +42,7 @@ import { linkTiltPause } from './ui/tilt-settings';
 import { screenRoll } from './render/screen-roll';
 import { linkKaiju2, linkKaijuArtDev } from './ui/kaiju2-link';
 import { linkAlbion } from './ui/albion-link';
-import { linkGouraiDev } from './ui/gourai-link';
+import { linkGourai } from './ui/gourai-link';
 import type { AppShell } from './app';
 import { CityView } from './render/city/city-view';
 
@@ -243,6 +243,8 @@ export function startGame(shell: AppShell): GameApp {
   // 天候（7-5）: 飛行・メニュー・ブリーフィング・ロビーの天候、HUD のマーカーと夜の減光、環境音
   // エイムアシスト・自動射撃（9-3）・速度合わせ（9-5b）と「方向へ倒す」方式（9-2）。部屋の補正と HUD の宙返りの速度不足も
   const inputAssist = createInputAssist(play, assistFlags, input, save, activeMap, hudLink, pvp);
+  // 10-4b: HUD の残弾の列の下にロケット・爆弾の撃ち方（タッチは MSL の長押しの切り替え）
+  hudLink.ordnanceHint = () => tutorial.weaponHint();
   // 9-4: ドラッグ操作は画面の傾きで地平線の基準に戻す（宙返りの間は読み直さない）
   Object.assign(touch.controls.drag, {
     screenRoll: () => screenRoll(camera),
@@ -322,8 +324,8 @@ export function startGame(shell: AppShell): GameApp {
   linkKaiju2({ ...kaiju2, ...runtime, weather: world.weather });
   // 10-3b: 白鯨アルビオン（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=albion は起動時に読む）
   linkAlbion({ ...kaiju2, ...runtime });
-  // 10-4a: メカ怪獣ゴウライ（作っている間。?dev=gourai のときだけ遅延チャンクを読む）
-  linkGouraiDev({ ...kaiju2, ...runtime });
+  // 10-4b: メカ怪獣ゴウライ（登録だけ。判定・形・HUD は遅延チャンクで、使う前に読む。?dev=gourai は起動時に読む）
+  linkGourai({ ...kaiju2, ...runtime });
 
   // 9-10d: ?dev=kaiju-art（レイドの怪獣選びの画像を描く。遊ぶ人は読まない）
   linkKaijuArtDev(search, { ...runtime, camera, pipeline, play, weather: world.weather, game });

@@ -69,18 +69,19 @@ describe('協力・PvP の集計', () => {
 });
 
 describe('勲章の定義', () => {
-  it('150〜300 個・id は重ならない・報酬は正', () => {
+  it('150〜320 個・id は重ならない・報酬は正', () => {
     expect(BADGES.length).toBeGreaterThanOrEqual(150);
-    expect(BADGES.length).toBeLessThanOrEqual(300);
+    expect(BADGES.length).toBeLessThanOrEqual(320);
     expect(new Set(BADGES.map((b) => b.id)).size).toBe(BADGES.length);
     for (const b of BADGES) expect(b.reward).toBeGreaterThan(0);
   });
 
   it('報酬: 9-10 からの勲章は 9-10 のまま（段階は 1 つずつに分けて合計 38,000 CR）・9-10b からは 1 つ 100 CR・収集 4 つで 15,000 CR', () => {
     const legacy = BADGES.filter((b) => !b.stat && !b.combo && b.collect === undefined);
-    // 10-3b: アルビオンの巣（albionNests 2,000 CR）、10-3c: 当たらずに倒した（albionUntouched 2,000 CR）を足した
-    expect(legacy.length).toBe(31);
-    expect(totalBadgeRewards(legacy)).toBe(42000);
+    // 10-3b: アルビオンの巣（albionNests 2,000 CR）、10-3c: 当たらずに倒した（albionUntouched 2,000 CR）を足した。
+    // 10-4b: ゴウライの砲台・放熱中の核・ミサイル（各 300 CR。合計を 10 万 CR 以内に保つ）を足した
+    expect(legacy.length).toBe(34);
+    expect(totalBadgeRewards(legacy)).toBe(42900);
     const collect = BADGES.filter((b) => b.collect !== undefined);
     expect(collect.map((b) => b.reward)).toEqual([1000, 2000, 4000, 8000]);
     for (const b of BADGES) if (b.stat || b.combo) expect(b.reward).toBe(BADGE_REWARDS.each);
