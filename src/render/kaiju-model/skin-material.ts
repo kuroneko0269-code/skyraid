@@ -86,7 +86,7 @@ export function createVorgasSkin(tex: DataTexture | null): VorgasSkin {
       // 遠くでは細かい凹凸とむらを弱める（1 画素が鱗の板の大きさに近いとちらつく）
       float kNear = 1.0 - smoothstep(0.1, 0.45, length(fwidth(vRestPos)) * ${f(V.skin.platesPerTile / V.skin.tileMeters)});
       vec4 kS = mix(vec4(0.5, 0.55, 0.5, kTex.a * 0.5), kTex, kNear);
-      diffuseColor.rgb *= mix(1.0, 0.55 + kS.r * 0.85, kBody);
+      diffuseColor.rgb *= mix(1.0, 0.45 + kS.r * 0.75, kBody);
       diffuseColor.rgb = mix(diffuseColor.rgb, ${vec(V.colors.scar)} * 0.55, kS.a * 0.55 * kBody);
       float kRough = 0.42 + 0.5 * kS.g;
       float kH = (kS.b - kCrack * ${f(C.groove)}) * ${f(V.skin.bump)} * kBody;`
