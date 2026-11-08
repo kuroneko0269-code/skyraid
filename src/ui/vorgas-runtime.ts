@@ -61,6 +61,7 @@ export function startVorgas(p: VorgasRuntimeParts): void {
   let shotDead: number | null = null;
   let shotEntrance = -1;
   let shown = true;
+  let resetFx = false;
   let apply: (shown: boolean) => void = () => undefined;
   const updateTimes: number[] = [];
   let deadTime = -1;
@@ -95,6 +96,11 @@ export function startVorgas(p: VorgasRuntimeParts): void {
       input.entrance = cinema.active ? cinema.progress : shotEntrance;
       input.fxDt = fxDt;
       return input;
+    },
+    takeReset() {
+      const r = resetFx;
+      resetFx = false;
+      return r;
     },
     bind(fn) {
       apply = fn;
@@ -133,6 +139,7 @@ export function startVorgas(p: VorgasRuntimeParts): void {
           return t[t.length >> 1] ?? 0;
         },
         cue: (scene) => {
+          resetFx = true;
           deadTime = -1;
           shotDead = scene === 'defeat' ? VORGAS_VISUAL.collapse.fall + 1.2 : null;
           shotEntrance = scene === 'entrance' ? 0.6 : -1;

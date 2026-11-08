@@ -45,7 +45,7 @@ export const VORGAS_VISUAL = {
   /** 縁の光: 強さ（逆光で最大）・幅の指数・空の色の常時の分 */
   rim: { strength: 0.42, power: 3.2, ambient: 0.25 },
   /** 濡れ（上陸した直後。暗くつやつや）が乾くまでの秒数 */
-  wet: { seconds: 28, darken: 0.72, gloss: 0.32 },
+  wet: { seconds: 28, darken: 0.78, gloss: 0.55 },
   /** 呼吸（腹がふくらむ m・回/秒） */
   breath: { amount: 0.8, rate: 0.22 },
   /**

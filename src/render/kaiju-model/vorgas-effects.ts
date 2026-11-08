@@ -29,6 +29,15 @@ export class VorgasEffects extends VorgasParticles {
     return [this.puffs.mesh, this.embers.mesh, this.debris.shards, this.debris.smoke];
   }
 
+  /** 粒・濡れ・身じろぎの残りだけ消す（撮影で置き直した。部位の破壊・足音・撃破の合図は残す） */
+  clearFx(): void {
+    this.puffs.clear();
+    this.embers.clear();
+    this.debris.clear();
+    this.motion.reset();
+    this.look.wet = 0;
+  }
+
   /** 新しく出した（レイドのやり直し・再生のシーク）: 粒・身じろぎの残りを消す */
   reset(body: KaijuBodyView): void {
     this.puffs.clear();

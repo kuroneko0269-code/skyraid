@@ -28,6 +28,8 @@ export interface VorgasLook {
   /** 止めている間も演出を進める 1 フレームの秒数（撮影。null で普段どおり） */
   readonly clock: number | null;
   input(body: KaijuBodyView, dt: number): VorgasViewInput;
+  /** 粒・濡れ・身じろぎの残りを消すか（撮影の場面を置き直したとき。一度 true を返したら false に戻る） */
+  takeReset(): boolean;
   /** 形を動かした時間（ms。撮影の計測） */
   measured(ms: number): void;
   /** 描画の側から、怪獣をすぐ出す / 隠す口を渡す（撮影の計測は描画のループを通らずに描く） */

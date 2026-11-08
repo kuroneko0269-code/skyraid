@@ -65,6 +65,7 @@ function play(render: KaijuObject | null, seconds: number): string[] {
           clock: null,
           input: () => view,
           measured: () => undefined,
+          takeReset: () => false,
           bind: () => undefined,
           impact: () => undefined,
         });

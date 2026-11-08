@@ -203,6 +203,7 @@ export class KaijuObject {
     this.beam.update(fx, body.visible, this.time);
     this.updateRocks(fx, body.visible);
     if (body.visible && !this.wasVisible) this.effects.reset(body);
+    else if (look?.takeReset()) this.effects.clearFx();
     this.wasVisible = body.visible;
     if (!body.visible) {
       this.effects.update(body, input, 0, null, this.time);
