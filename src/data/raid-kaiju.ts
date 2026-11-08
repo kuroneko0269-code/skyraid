@@ -129,7 +129,7 @@ const DEFS = [
       weather: 'day-rain',
       camera: { forward: 230, right: 150, up: 20 },
       look: { forward: 0, right: 0, up: 22 },
-      fov: 42,
+      fov: 46,
     },
     recordKey: 'kaiju',
     ranked: true,
@@ -154,7 +154,7 @@ const DEFS = [
       weather: 'evening-clear',
       camera: { forward: 620, right: 300, up: -200 },
       look: { forward: -70, right: 0, up: 10 },
-      fov: 46,
+      fov: 52,
     },
     recordKey: 'kaiju',
     // SQL 0006（キーの決まり）で受け付ける（0003 の一覧には無い）
@@ -184,9 +184,9 @@ const DEFS = [
     scene: {
       shot: 'front',
       weather: 'evening-clear',
-      camera: { forward: 185, right: 45, up: -12 },
-      look: { forward: 0, right: 0, up: 8 },
-      fov: 50,
+      camera: { forward: 235, right: 55, up: -14 },
+      look: { forward: 0, right: 0, up: 10 },
+      fov: 52,
     },
     recordKey: 'kaiju',
     // SQL 0006（キーの決まり）で受け付ける
