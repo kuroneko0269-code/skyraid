@@ -1,8 +1,10 @@
 // 9-6d: ネフィルガの手応えの表（調整用。ふだんの npm test では回さない）。
 // VITE_TUNE=1 VITE_TUNE_ROLE=skilled VITE_TUNE_DIFF=normal VITE_TUNE_SEEDS=20 npx vitest run tests/kaiju2-tune.test.ts
+// 10-6: VITE_TUNE_NORAM=1 で体への衝突を入れる前の判定（通り抜けた回数を数える）、VITE_TUNE_PRESET=normal で補助の組
 import { describe, it } from 'vitest';
 import { createKaiju2World, runKaiju2Bot, type Kaiju2Role } from './kaiju2-raid-bots';
 import type { RaidDifficulty } from '../src/data/raid';
+import type { AssistPreset } from '../src/data/assist';
 
 const env = import.meta.env as Record<string, string | undefined>;
 const on = env.VITE_TUNE === '1';
@@ -15,7 +17,9 @@ describe.runIf(on)('9-6d: ネフィルガの手応えの表', () => {
     const world = createKaiju2World();
     const rows: string[] = [];
     for (let seed = 0; seed < seeds; seed++) {
-      const r = runKaiju2Bot({ role, seed, difficulty }, world);
+      const preset = env.VITE_TUNE_PRESET as AssistPreset | undefined;
+      const noRam = env.VITE_TUNE_NORAM === '1';
+      const r = runKaiju2Bot({ role, seed, difficulty, preset, noRam }, world);
       rows.push(
         JSON.stringify({
           seed,
@@ -35,6 +39,9 @@ describe.runIf(on)('9-6d: ネフィルガの手応えの表', () => {
           hits: r.hitsTaken,
           parts: r.partsBroken,
           maxHit: Math.round(r.maxHit),
+          rams: r.ramHits,
+          ramDowns: r.ramDowns,
+          ramScenes: r.ramScenes,
         }),
       );
     }

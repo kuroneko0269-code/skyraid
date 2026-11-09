@@ -1,5 +1,7 @@
 // 10-2: レイドの怪獣の共通の土台を入れても、ヴォルガス・ネフィルガのリプレイ（記録の入力・1 秒ごとの丸めたハッシュ）と
-// 終わりの状態のハッシュが変わらないこと。期待値は 10-2 の前のコード（1.1.3 の main 887cd31）で同じ手順を回して取った値
+// 終わりの状態のハッシュが変わらないこと。期待値は 10-2 の前のコード（1.1.3 の main 887cd31）で同じ手順を回して取った値。
+// 10-6: 2 体にも体への衝突（共通の kaiju-ram.ts）を入れたので取り直した（ヴォルガスは衝突の状態が走査に入る分・ネフィルガは衝突の分。
+// 前の版のリプレイは合わなくなる。互換は考えない指示）
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { simHash } from '../src/replay/sim';
@@ -39,6 +41,6 @@ describe('10-2: ヴォルガス・ネフィルガのリプレイと状態のハ�
 });
 
 const GOLDEN = {
-  vorgas: '47f7af2a4cdbefa2',
-  nephirga: 'dbe9e8fc6504a745',
+  vorgas: 'c23fca3823dc23ec',
+  nephirga: 'af84f763285d6b9d',
 };

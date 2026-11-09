@@ -280,6 +280,7 @@ export const EVENT_KINDS = [
   'dspawn',
   'dkill',
   'dsupply',
+  'ram',
 ] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
@@ -302,7 +303,9 @@ export const KILLER_NONE = 255;
  * 7-2（防衛戦）: dspawn: 爆撃機・巡航ミサイルが出た（a = 種類 DEFENSE_KIND、b = 入れ物の番号、xyz = 出た位置、
  * n = 爆撃機の目標の施設の番号）/ dkill: 敵が消えた（a = 撃墜した人・DKILL_IMPACT（巡航ミサイルの着弾）・DKILL_ESCAPE（離脱）・
  * KILLER_NONE（対空砲・墜落）、b = 種類、n = 入れ物の番号、xyz = 位置）/ dsupply: 補給（a = 人、n = 満タンに対する % ）。
- * skip は防衛戦の準備のスキップにも使う
+ * skip は防衛戦の準備のスキップにも使う。
+ * 10-6: ram: レイドの怪獣の体への衝突（a = ぶつかった人、xyz = 位置。ダメージは hit ではなく HP の state で届く）。参加者の画面の
+ * 火花・揺れ・音（ソロの CombatSystem.ramListeners と同じ）
  */
 export interface EventMsg {
   type: 'event';

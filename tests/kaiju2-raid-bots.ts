@@ -13,7 +13,6 @@ import { autoFireReady } from '../src/combat/auto-fire';
 import { createCombatInput } from '../src/combat/combat-input';
 import type { CombatTarget } from '../src/combat/target';
 import { createRandom } from '../src/core/random';
-import type { AssistPreset } from '../src/data/assist';
 import { MISSIONS } from '../src/data/missions';
 import { assistFor, campaignStart } from './campaign-start';
 import { RAID_CONFIG } from '../src/data/kaiju';
@@ -22,13 +21,15 @@ import type { RaidDifficulty } from '../src/data/raid';
 import type { AircraftControls } from '../src/entities/aircraft';
 import type { Vec3 } from '../src/flight/math';
 import { attachKaiju2Dev, type Kaiju2Dev } from '../src/missions/kaiju2-dev';
+import type { Kaiju2BotOptions, Kaiju2BotResult } from './kaiju2-bot-types';
+import { Kaiju2BotRam } from './kaiju2-bot-ram';
 import { NEPHIRGA_VARIANT } from '../src/missions/kaiju2-mission';
 import { registerRaidVariant } from '../src/missions/raid-variants';
 import { ReplayRecorder } from '../src/replay/recorder';
 import { applyFrame, captureFrame, simHash, startFromHeader, stepWorld } from '../src/replay/sim';
-import type { ReplayData, ReplayStart } from '../src/replay/types';
+import type { ReplayStart } from '../src/replay/types';
 import { PilotBot } from './ai-sim';
-import { FOCUS, KAIJU2_ROLES, threatOf, type Kaiju2Role } from './kaiju2-bot-roles';
+import { FOCUS, KAIJU2_ROLES, threatOf } from './kaiju2-bot-roles';
 import { BoundsGuard, ISLAND_CENTER_SKY, WaypointBot } from './mission-bots';
 import { createWorld, type TestWorld } from './replay-helpers';
 import { DirectStick } from '../scripts/replay-analysis/direct';
@@ -38,50 +39,7 @@ const DT = 1 / 60;
 export type { Kaiju2Role } from './kaiju2-bot-roles';
 export { campaignStart } from './campaign-start';
 
-export interface Kaiju2BotOptions {
-  readonly role: Kaiju2Role;
-  readonly seed: number;
-  readonly difficulty?: RaidDifficulty;
-  /** 打ち切り（秒。既定は全体の制限時間 + 10） */
-  readonly maxSeconds?: number;
-  /** 本番の飛行と同じ手順で記録する（量子化した入力で判定。リプレイのテスト） */
-  readonly record?: boolean;
-  /** 毎ステップの後に呼ぶ（テストの確かめ） */
-  readonly onStep?: (dev: Kaiju2Dev) => void;
-  /** 9-7: キャンペーンのミッション（M8 の決戦 'finale'）を飛ぶ。省略はレイド */
-  readonly missionId?: string;
-  /**
-   * 9-7: 補助の組（狙いの補助・自動射撃・速度合わせ。src/data/assist.ts）。省略は役の値（模擬の人はタッチの初期値・ほかは補助なし）。
-   * 組を渡すと、模擬の人と初心者役はスロットルを最大のまま（9-5d と同じ）、速度合わせは組の値
-   */
-  readonly preset?: AssistPreset;
-}
-
-export interface Kaiju2BotResult {
-  readonly status: string;
-  readonly reason: string | null;
-  readonly seconds: number;
-  readonly playerDowns: number;
-  readonly partsBroken: number;
-  readonly stormAt: number | null;
-  /** 1 回の攻撃で受けた最大のダメージ（一撃で落ちないことの確認） */
-  readonly maxHit: number;
-  readonly hitsTaken: Readonly<Record<string, number>>;
-  readonly perches: number;
-  /** 9-6d: 攻撃（予兆）の回数・1 度でも当たった攻撃の回数・クリア時に減っていた体力の割合（成功でなければ null） */
-  readonly attacks: number;
-  readonly hitAttacks: number;
-  readonly hpLostAtClear: number | null;
-  /** 9-6d: 受けたダメージの合計（墜落を除く）/ 最大体力 */
-  readonly damageRatio: number;
-  /** 9-6d: 撃墜のうち攻撃によるもの（残りは墜落）・攻撃の種類ごとの回数・状態ごとの秒数 */
-  readonly attackDowns: number;
-  readonly attackKinds: Readonly<Record<string, number>>;
-  readonly stateSeconds: Readonly<Record<string, number>>;
-  readonly data: ReplayData | null;
-  /** 終わったときの状態のハッシュ */
-  readonly hash: string;
-}
+export type { Kaiju2BotOptions, Kaiju2BotResult } from './kaiju2-bot-types';
 
 export interface Kaiju2BotWorld {
   readonly w: TestWorld;
@@ -167,6 +125,8 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
   const input = createCombatInput();
   const dodgePoint: Vec3 = { x: 0, y: 0, z: 0 };
   let dodge = 0;
+  // 10-6: 体への衝突（近づきすぎない避け方・noRam の変更前の判定・数え）
+  const ram = new Kaiju2BotRam(dev, o.noRam ?? false);
   let decidedKey = '';
   let maxHit = 0;
   let lastHp = s.player.hp;
@@ -206,6 +166,7 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
         if (o.role === 'skilled' && k.attack === 'orbs') input.flare = true;
       }
     }
+    ram.think(s, w.map.ground, DT);
     let intent: Readonly<AircraftControls>;
     let goal: Readonly<Vec3> | null = null;
     let fight = false;
@@ -213,6 +174,11 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
     if (guard.check()) {
       intent = guard.controls;
       goal = ISLAND_CENTER_SKY;
+    } else if (ram.avoid > 0) {
+      ram.avoid -= DT;
+      wp.fly(ram.avoidPoint);
+      intent = wp.controls;
+      goal = ram.avoidPoint;
     } else if (dodge > 0) {
       dodge -= DT;
       wp.fly(dodgePoint);
@@ -224,7 +190,9 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
       const t = s.combat.targeting.selected;
       if (t?.active) goal = s.combat.leadValid ? s.combat.lead : t.position;
     }
-    if (direct) direct.apply(s, goal, intent, out);
+    // 10-6: 体を避けるときは手の癖を通さずまっすぐ（人も大きな体が迫れば引く。10-3c のアルビオンの模擬の人と同じ）
+    if (ram.avoid > 0) Object.assign(out, intent);
+    else if (direct) direct.apply(s, goal, intent, out);
     else if (hands) hands.apply(intent, out);
     else Object.assign(out, intent);
     if (throttleMax) {
@@ -270,6 +238,7 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
       rec.push(f);
     } else Object.assign(w.controls, out);
     stepWorld(play, w.buildings(), w.controls, input, DT);
+    ram.after(s.playerDowns > lastDowns, dodge > 0, DT);
     lastSel = s.combat.targeting.selected;
     o.onStep?.(dev);
     input.flare = false;
@@ -302,6 +271,7 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
     lastState = k.state;
   }
   maxHit = Math.max(maxHit, attackDamage);
+  const ramHits = ram.finish();
   const data = rec?.finish({ label: runner.status, success: runner.status === 'success' }) ?? null;
   return {
     data,
@@ -320,6 +290,9 @@ export function runKaiju2Bot(o: Kaiju2BotOptions, world?: Kaiju2BotWorld): Kaiju
     attackDowns,
     attackKinds,
     stateSeconds,
+    ramHits,
+    ramScenes: ram.scenes,
+    ramDowns: ram.ramDowns,
     damageRatio: s.player.damageTaken / s.player.maxHp,
     hpLostAtClear: runner.status === 'success' ? 1 - s.player.hp / s.player.maxHp : null,
   };

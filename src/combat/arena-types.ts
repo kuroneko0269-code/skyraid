@@ -25,7 +25,7 @@ export interface PvpControls extends AircraftControls {
 
 /** 判定の結果（ホストが event で全員に送る）。a・b・n の意味は protocol.ts の EventMsg と同じ */
 export interface ArenaEvent {
-  kind: 'fire' | 'hit' | 'explode' | 'kill' | 'flare' | 'respawn' | 'stun';
+  kind: 'fire' | 'hit' | 'explode' | 'kill' | 'flare' | 'respawn' | 'stun' | 'ram';
   a: number;
   b: number;
   n: number;

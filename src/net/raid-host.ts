@@ -4,6 +4,8 @@
 // 6-6: 街の建物を壊すのはホストだけ（壊れた建物の番号を溜めて host-game.ts が ruin で配る）。岩の投擲・落下とブレイク
 // （貢献者）は event、攻撃の対象は state。高難度。与ダメージは本体の stats。Three.js 非依存
 import { KaijuAi } from '../ai/kaiju-ai';
+import { VorgasHull } from '../ai/kaiju-hull/vorgas-hull';
+import { RamGrace, ramDamage } from '../combat/kaiju-ram';
 import type { BuildingField } from '../combat/buildings';
 import { applyKaijuToCity } from '../combat/city-damage';
 import type { PvpArena } from '../combat/pvp-arena';
@@ -38,6 +40,11 @@ export class RaidHost {
   readonly ai: KaijuAi;
   /** 壊れた建物のうち、まだ配っていない番号（host-game.ts が ruin で送って空にする） */
   readonly ruins: number[] = [];
+  /** 10-6: 体への衝突（ソロの VorgasRam と同じ共通の扱い）。ホストが参加者に最大 HP の約 8 割のダメージを配る（跳ねない） */
+  private readonly hull = new VorgasHull();
+  private readonly ram = new RamGrace();
+  /** ぶつかった回数（全員。ボット） */
+  bodyHits = 0;
   private readonly msg: KaijuStateMsg;
   private readonly buildings: BuildingField | null;
   private readonly emit: (e: EventMsg) => void;
@@ -104,6 +111,23 @@ export class RaidHost {
       this.emit(eventMsg('rock', i, 0, 0, packRockVelocity(r.velocity), p.x, p.y, p.z));
     });
     if (this.buildings) applyKaijuToCity(this.buildings, this.kaiju, this.ai);
+    this.collide(dt);
+  }
+
+  /** 10-6: 体への衝突（撃てる間 = 上陸中と陸の上だけ） */
+  private collide(dt: number): void {
+    this.ram.tick(dt);
+    const k = this.kaiju;
+    if (!k.targetable) return;
+    this.hull.pose(k.pose);
+    for (const f of this.arena.all) {
+      if (!f.active) continue;
+      const a = f.aircraft;
+      if (!this.hull.contact(k, a.prevPosition, a.state.position)) continue;
+      if (!this.ram.hit(f.id)) continue;
+      this.bodyHits++;
+      this.arena.kaijuDamage(f.id, ramDamage(f.maxHp), true);
+    }
   }
 
   /** 終わったか（成功 / 失敗。続いていれば none） */
