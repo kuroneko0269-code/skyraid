@@ -109,9 +109,13 @@ export class PvpArena {
     return !f.alive;
   }
 
-  /** 怪獣の攻撃が当たった（6-2。撃墜は「墜落」と同じく撃墜した人なし） */
-  kaijuDamage(id: number, amount: number): void {
+  /**
+   * 怪獣の攻撃が当たった（6-2。撃墜は「墜落」と同じく撃墜した人なし）。10-6: ram は体への衝突（kaiju-ram.ts）で、全員に ram の
+   * event（参加者の画面の火花・揺れ・音）を送ってからダメージ
+   */
+  kaijuDamage(id: number, amount: number, ram = false): void {
     const f = this.fighters.get(id);
+    if (ram && f?.active) this.send('ram', id, 0, 0, f.position);
     if (f?.active) this.damage(f, amount, null);
   }
 
@@ -132,10 +136,8 @@ export class PvpArena {
   /** 同じ側か（個人戦は本人だけ、チーム戦は同じチーム） */
   sameSide(a: number, b: number): boolean {
     if (a === b) return true;
-    const t = this.teams;
-    if (!t) return false;
-    const ta = t.get(a);
-    return ta !== undefined && ta === t.get(b);
+    const ta = this.teams?.get(a);
+    return ta !== undefined && ta === this.teams?.get(b);
   }
 
   /** 再接続待ちにする / 戻す（5-4）。戻すときは次の tick の終わりに出現位置へ（撃墜には数えない） */

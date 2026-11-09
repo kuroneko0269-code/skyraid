@@ -2,6 +2,8 @@
 // GamePlay の差し込み口（free-extra.ts）に付け、飛行の始めのシードから怪獣の種を作るので、リプレイでも同じに動く。
 // 9-6b: ソロのレイド（ミッション raidNephirga）も引き受ける（体力・部位・段階・制限時間は kaiju2-raid.ts）。
 // 部位は CombatSystem の撃てる対象の末尾に足すので、機銃・ミサイル・ロケット・爆弾で減らせる（フリーフライトでは倒れない）
+import { Kaiju2Hull } from '../ai/kaiju-hull/kaiju2-hull';
+import { RamGrace, ramDamage } from '../combat/kaiju-ram';
 import { TEAM_ENEMY } from '../combat/target';
 import { KAIJU2_CONFIG, KAIJU2_DEV_CONFIG, KAIJU2_PARTS, type Kaiju2Part } from '../data/kaiju2';
 import { KAIJU2_RAID_CONFIG } from '../data/kaiju2-raid';
@@ -56,6 +58,11 @@ export class Kaiju2Dev implements FreeExtra {
   lateStart = false;
   /** 自機の速度（前のステップの位置との差から） */
   private readonly velocity = vec3();
+  /** 10-6: 体への衝突（ほかの怪獣と同じ共通の扱い: 最大 HP の約 8 割・跳ねない・続けて当たらない間。キャンペーンの M8 は通り抜ける） */
+  readonly hull = new Kaiju2Hull();
+  readonly ram = new RamGrace();
+  /** ぶつかった回数（値の表示・ボット） */
+  ramHits = 0;
   private readonly nose = vec3();
   /** 走査の根（怪獣の本体・体力・部位。AI の hooks は関数なので値は入らない） */
   get stateRoot(): object {
@@ -167,6 +174,8 @@ export class Kaiju2Dev implements FreeExtra {
 
   private spawnAhead(ahead: number, altitude: number): void {
     const s = this.play.session;
+    this.ram.clear();
+    this.ramHits = 0;
     s.combat.addTargets(this.raid.targets);
     const k = this.body;
     const map = this.env.map();
@@ -218,6 +227,23 @@ export class Kaiju2Dev implements FreeExtra {
       a.state.position.x += k.pushX * v;
       a.state.position.z += k.pushZ * v;
     }
+    this.collide(dt);
+  }
+
+  /** 10-6: 体への衝突（このステップの自機の動きが体にめり込んだら）。倒した後・撃墜されている間・キャンペーン（M8）は無し */
+  private collide(dt: number): void {
+    this.ram.tick(dt);
+    const s = this.play.session;
+    const k = this.body;
+    if (!s.player.active || this.raid.dead || !k.visible || this.raid.campaign) return;
+    this.hull.pose(k.pose, k.broken);
+    const a = s.aircraft;
+    if (!this.hull.contact(k, a.prevPosition, a.state.position)) return;
+    if (!this.ram.hit(0)) return;
+    this.ramHits++;
+    const p = a.state.position;
+    s.combat.ramListeners.report(p.x, p.y, p.z);
+    s.combat.dealDamage(s.player, ramDamage(s.player.maxHp), TEAM_ENEMY);
   }
 }
 

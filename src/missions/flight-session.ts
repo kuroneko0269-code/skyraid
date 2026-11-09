@@ -240,7 +240,7 @@ export class FlightSession implements MissionWorld {
     if (this.player.step(dt)) this.respawn();
     this.squadron.step(dt);
     this.kaijuExposure.step(dt);
-    this.props.step(dt, this.player, this.kaijuExposure.targets);
+    this.props.step(dt, this.player, this.kaijuExposure.targets, this);
     const armed = this.player.active && !stunned;
     this.combat.step(armed ? input : NO_INPUT, this.aircraft.state, dt);
     if (this.mode === 'free' && this.player.active) {

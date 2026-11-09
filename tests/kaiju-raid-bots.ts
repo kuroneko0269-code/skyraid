@@ -6,8 +6,9 @@
 // 予兆を見て避ける: 熱線が自分に向いたら横へ、咆哮の範囲なら半分の確率でフレア（なければ上昇）、薙ぎ払いは離れる。
 // 8-6: 腕前 skilled（慣れた人）を足した。減速（150 m/s）して長く撃ち、脚から順に壊してダウンを取る。8-6 の調整の前は
 // 1 人で約 1.1 分（実機の「何度か挑戦すれば 1〜2 分」と合う）。調整の数値はこのボットで決めた（docs/decisions.md の 8-6）
-import { KaijuAi, type KaijuTarget } from '../src/ai/kaiju-ai';
-import { GunHeat } from '../src/combat/heat';
+import { KaijuAi } from '../src/ai/kaiju-ai';
+import { VorgasBotRam } from './vorgas-bot-ram';
+import { Bot } from './vorgas-bot';
 import { createRandom } from '../src/core/random';
 import { findAircraftModel } from '../src/data/aircraft';
 import { GUN_CONFIG, MISSILE_CONFIG, TARGETING_CONFIG } from '../src/data/weapons';
@@ -32,58 +33,6 @@ const getGroundHeight = createHeightField(HARBOR_TERRAIN).getGroundHeight;
 const DT = 1 / 60;
 const DEG = Math.PI / 180;
 
-class Bot implements KaijuTarget {
-  readonly position = { x: 0, y: 0, z: 0 };
-  heading = 0;
-  speed = 230;
-  hp: number;
-  active = true;
-  respawn = 0;
-  out = false;
-  downs = 0;
-  flareAge = Infinity;
-  flares: number;
-  missiles: number;
-  stun = 0;
-  readonly hitRadius = 6;
-  mode: 'in' | 'out' = 'in';
-  part: KaijuPartId = 'crystal';
-  readonly way = { x: 0, y: 500, z: 0 };
-  outTimer = 0;
-  lock = 0;
-  missileCooldown = 0;
-  dodge = 0;
-  dodgeSide = 1;
-  readonly heat = new GunHeat(GUN_CONFIG.heat);
-  shotTimer = 0;
-  reacted = false;
-
-  constructor(
-    readonly id: number,
-    readonly maxHp: number,
-    readonly maxMissiles: number,
-    readonly maxFlares: number,
-  ) {
-    this.hp = maxHp;
-    this.missiles = maxMissiles;
-    this.flares = maxFlares;
-  }
-
-  spawn(i: number): void {
-    const s = RAID_CONFIG.start;
-    this.position.x = s.x + (i - 1.5) * 150;
-    this.position.y = s.y;
-    this.position.z = s.z;
-    this.heading = s.headingDeg * DEG;
-    this.hp = this.maxHp;
-    this.missiles = this.maxMissiles;
-    this.flares = this.maxFlares;
-    this.active = true;
-    this.mode = 'in';
-    this.stun = 0;
-  }
-}
-
 export function runRaidBots(o: RaidBotOptions): RaidBotResult {
   const rng = createRandom(o.seed);
   const base = SKILLS[o.skill ?? 'average'];
@@ -101,18 +50,19 @@ export function runRaidBots(o: RaidBotOptions): RaidBotResult {
   const kaiju = new Kaiju(getGroundHeight);
   const bots: Bot[] = [];
   let playerDowns = 0;
+  const hurt = (id: number, amount: number): boolean => {
+    const b = bots[id];
+    if (!b?.active) return false;
+    b.hp -= amount;
+    if (b.hp > 0) return false;
+    b.active = false;
+    b.respawn = 3;
+    b.out = ++b.downs >= (o.lives ?? Infinity);
+    playerDowns++;
+    return true;
+  };
   const ai = new KaijuAi(kaiju, {
-    damage: (id, amount) => {
-      const b = bots[id];
-      if (!b?.active) return;
-      b.hp -= amount;
-      if (b.hp <= 0) {
-        b.active = false;
-        b.respawn = 3;
-        b.out = ++b.downs >= (o.lives ?? Infinity);
-        playerDowns++;
-      }
-    },
+    damage: hurt,
     stun: (id, s) => {
       const b = bots[id];
       if (b) b.stun = Math.max(b.stun, s);
@@ -150,10 +100,13 @@ export function runRaidBots(o: RaidBotOptions): RaidBotResult {
     if (e.kind === 'windup') attacks[e.attack] = (attacks[e.attack] ?? 0) + 1;
   });
   const max = o.maxSeconds ?? 900;
+  // 10-6: 体への衝突（count は当てずに数えるだけ）
+  const ram = new VorgasBotRam(bots.length, o.ram === 'count');
   // 9-6d: 残機（o.lives）を全員が使い切ったら終わり
   while (t < max && !kaiju.isDestroyed && !kaiju.cityReached && !bots.every((b) => b.out)) {
     for (const b of bots) stepBot(b, kaiju, ai, rng, skill, gunDamage, floor);
     ai.step(bots, DT);
+    ram.after(kaiju, bots, DT, hurt);
     t += DT;
   }
   return {
@@ -167,6 +120,7 @@ export function runRaidBots(o: RaidBotOptions): RaidBotResult {
     livesOut: bots.every((b) => b.out),
     finalAt,
     attacks,
+    ...ram.counts(),
   };
 }
 

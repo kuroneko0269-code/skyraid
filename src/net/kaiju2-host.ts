@@ -4,6 +4,8 @@
 // いちばん近い人に選び直す（今の人がいちばん近い人の 1.25 倍の距離までなら変えない）。全体 HP は人数で増やす（coopHpScale）。
 // state に入れる状態（位置・向き・段階・攻撃と予兆・部位の体力・止まり木・雷球）を作り、倒した（成功）・嵐 / 全体の時間切れ（失敗）で
 // 終わりを知らせる。Three.js 非依存
+import { Kaiju2Hull } from '../ai/kaiju-hull/kaiju2-hull';
+import { RamGrace, ramDamage } from '../combat/kaiju-ram';
 import type { PvpArena } from '../combat/pvp-arena';
 import type { PvpFighter } from '../combat/pvp-fighter';
 import { KAIJU2_ATTACKS, KAIJU2_CONFIG, KAIJU2_PARTS, KAIJU2_STATES } from '../data/kaiju2';
@@ -42,6 +44,11 @@ export class Kaiju2Host {
   private readonly msg: Kaiju2StateMsg;
   private readonly orbPool: Kaiju2OrbMsg[];
   private readonly nose = vec3();
+  /** 10-6: 体への衝突（ソロの Kaiju2Dev と同じ共通の扱い）。ホストが参加者に最大 HP の約 8 割のダメージを配る（跳ねない） */
+  private readonly hull = new Kaiju2Hull();
+  private readonly ram = new RamGrace();
+  /** ぶつかった回数（全員。ボット） */
+  bodyHits = 0;
 
   constructor(
     private readonly arena: PvpArena,
@@ -140,6 +147,23 @@ export class Kaiju2Host {
       const v = g.push * (k.pushLeft / g.pushSeconds) * dt;
       f.aircraft.state.position.x += k.pushX * v;
       f.aircraft.state.position.z += k.pushZ * v;
+    }
+    this.collide(dt);
+  }
+
+  /** 10-6: 体への衝突（倒した後・見えない間は無し） */
+  private collide(dt: number): void {
+    this.ram.tick(dt);
+    const k = this.raid.body;
+    if (this.raid.dead || !k.visible) return;
+    this.hull.pose(k.pose, k.broken);
+    for (const f of this.arena.all) {
+      if (!f.active) continue;
+      const a = f.aircraft;
+      if (!this.hull.contact(k, a.prevPosition, a.state.position)) continue;
+      if (!this.ram.hit(f.id)) continue;
+      this.bodyHits++;
+      this.arena.kaijuDamage(f.id, ramDamage(f.maxHp), true);
     }
   }
 

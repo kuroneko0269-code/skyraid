@@ -106,7 +106,7 @@ export class AlbionCoopHost implements RaidPluginHost {
         continue;
       if (!this.ram.hit(f.id)) continue;
       this.bodyHits++;
-      this.arena.kaijuDamage(f.id, ramDamage(f.maxHp));
+      this.arena.kaijuDamage(f.id, ramDamage(f.maxHp), true);
     }
   }
 

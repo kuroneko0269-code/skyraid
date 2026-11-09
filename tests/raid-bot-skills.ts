@@ -20,6 +20,11 @@ export interface RaidBotOptions {
   readonly hard?: boolean;
   /** 9-6d: 残機（1 人ずつ。撃墜がこの数になった機は戻らない。全員が使い切ったら失敗）。省略は無制限（9-6d の前） */
   readonly lives?: number;
+  /**
+   * 10-6: 体への衝突（最大 HP の約 8 割・1.5 秒は続けて当たらない。src/missions/vorgas-ram.ts と同じ形）。on（既定）= 今の判定、
+   * count = 衝突を入れる前の判定（当たらず、通り抜けた回数だけ数える。変更前の表）
+   */
+  readonly ram?: 'on' | 'count';
 }
 
 export interface RaidBotResult {
@@ -35,6 +40,9 @@ export interface RaidBotResult {
   /** 最終フェーズに入った時刻（入らなければ null） */
   readonly finalAt: number | null;
   readonly attacks: Readonly<Record<string, number>>;
+  /** 10-6: 体への衝突の回数（全員。count なら通り抜けた回数）と、衝突で撃墜された回数 */
+  readonly ramHits: number;
+  readonly ramDowns: number;
 }
 
 export type RaidBotSkill = 'average' | 'skilled';

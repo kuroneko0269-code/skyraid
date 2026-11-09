@@ -1,6 +1,7 @@
 // 10-4c: レイドの怪獣の体への衝突（体当たり）の共通の部品（Three.js 非依存・決まった計算）。めり込んだかは怪獣ごとの形の判定
-// （albion-hull / gourai-hull / xenolith-hull）が決め、ここはダメージと「続けて当たらない間」だけを持つ。跳ね返さない（10-3c・10-4b の
-// 弾く扱いはやめた）。ソロ（missions/*-dev.ts）と協力のホスト（net/*-coop.ts）で同じものを使う
+// （albion-hull / gourai-hull / xenolith-hull、10-6 から kaiju-hull/vorgas-hull・kaiju2-hull）が決め、ここはダメージと「続けて当たらない
+// 間」だけを持つ。跳ね返さない（10-3c・10-4b の弾く扱いはやめた）。ソロ（missions/*-dev.ts・vorgas-ram.ts）と協力のホスト
+// （net/*-coop.ts・raid-host.ts・kaiju2-host.ts）で同じものを使う。協力のホストは PvpArena.kaijuDamage(…, true) で ram のできごとも送る
 import { KAIJU_RAM } from '../data/kaiju-ram';
 
 export interface RamSpec {

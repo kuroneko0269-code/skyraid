@@ -23,8 +23,12 @@ import { createHeightField } from '../src/render/terrain-height';
 import { pursue } from './pvp-bots';
 import { startMatch, type Match } from './pvp-match';
 import { FOCUS, KAIJU2_ROLES, type Kaiju2Role, type RoleSpec } from './kaiju2-bot-roles';
+import { Kaiju2Hull } from '../src/ai/kaiju-hull/kaiju2-hull';
+import { kaiju2HullAvoid } from './kaiju-hull-avoid';
 
 const harbor = createHeightField(HARBOR_TERRAIN).getGroundHeight;
+/** 10-6: 近づきすぎない避け方（ソロのボット tests/kaiju2-raid-bots.ts の AVOID と同じ） */
+const KAIJU2_AVOID = { ahead: 1.0, pad: 30, seconds: 0.8 };
 
 export interface Kaiju2CoopOptions {
   readonly role: Kaiju2Role;
@@ -36,6 +40,8 @@ export interface Kaiju2CoopOptions {
   readonly onSecond?: (m: Match) => void;
   /** 9-6d: false なら残機を外す（9-6c と同じ時間・撃墜の比べ） */
   readonly lives?: boolean;
+  /** 10-6: 体への衝突を入れる前の判定（ホストは当てず、通り抜けた回数だけ数える）。ボットの近づきすぎない避け方も使わない */
+  readonly noRam?: boolean;
 }
 
 export interface Kaiju2CoopResult {
@@ -43,6 +49,8 @@ export interface Kaiju2CoopResult {
   readonly outcome: number;
   readonly seconds: number;
   readonly downs: number;
+  /** 10-6: 体への衝突（全員。noRam なら通り抜けた回数） */
+  readonly ramHits: number;
   readonly match: Match;
 }
 
@@ -57,6 +65,11 @@ class CoopPilot {
   private decided = '';
   private readonly dodgePoint = { position: vec3(), velocity: vec3() };
   private readonly fwd = vec3();
+  /** 10-6: 近づきすぎない（ソロのボットと同じ。noRam では使わない） */
+  avoidOn = true;
+  private avoid = 0;
+  private readonly avoidPoint = { position: vec3(), velocity: vec3() };
+  private readonly avoidHull = new Kaiju2Hull();
 
   constructor(
     private readonly m: Match,
@@ -126,6 +139,42 @@ class CoopPilot {
         d.y = Math.max(p.y, 500);
         if (this.role.focus && k.attack === 'orbs') cmb.flare = true;
       }
+    }
+    if (this.avoidOn && this.avoid <= 0 && game.ownHp > 0 && k.visible && !raid.raid.dead) {
+      const p = s.position;
+      const v = {
+        x: (p.x - a.prevPosition.x) / dt,
+        y: (p.y - a.prevPosition.y) / dt,
+        z: (p.z - a.prevPosition.z) / dt,
+      };
+      const kv = {
+        x: (k.position.x - k.prevPosition.x) / dt,
+        y: (k.position.y - k.prevPosition.y) / dt,
+        z: (k.position.z - k.prevPosition.z) / dt,
+      };
+      this.avoidHull.pose(k.pose, k.broken);
+      const floor = Math.max(0, harbor(p.x, p.z)) + 250;
+      const A = KAIJU2_AVOID;
+      if (
+        kaiju2HullAvoid(
+          this.avoidHull,
+          k,
+          kv,
+          p,
+          v,
+          A.ahead,
+          A.pad,
+          floor,
+          this.avoidPoint.position,
+        )
+      )
+        this.avoid = A.seconds;
+    }
+    if (this.avoid > 0) {
+      this.avoid -= dt;
+      pursue(ctl, a, this.avoidPoint);
+      ctl.throttleTarget = 1;
+      return;
     }
     if (this.dodge > 0) {
       this.dodge -= dt;
@@ -198,11 +247,31 @@ export async function runKaiju2Coop(o: Kaiju2CoopOptions): Promise<Kaiju2CoopRes
     9600 + o.seed,
   );
   if (o.lives === false) m.host.arena.lives = null;
+  // 10-6: 衝突を入れる前の判定（当てずに数える）
+  let passes = 0;
+  if (o.noRam) {
+    const h = m.host.raid2;
+    const hull = h ? (Reflect.get(h, 'hull') as Kaiju2Hull) : null;
+    if (hull) {
+      const contact = hull.contact.bind(hull);
+      const grace = new Map<object, number>();
+      hull.contact = (body, p0, p1, margin, step) => {
+        if (contact(body, p0, p1, margin, step)) {
+          // 同じ機体（自機の位置の入れ物）を 1.5 秒は続けて数えない
+          const now = m.host.tick / 60;
+          if (now - (grace.get(p1) ?? -Infinity) >= 1.5) passes++;
+          grace.set(p1, now);
+        }
+        return false;
+      };
+    }
+  }
   const role = KAIJU2_ROLES[o.role];
   const pilots = Array.from(
     { length: o.players },
     (_, id) => new CoopPilot(m, id, role, createRandom(4100 + o.seed * 7 + id)),
   );
+  if (o.noRam) for (const p of pilots) p.avoidOn = false;
   const max = o.maxSeconds ?? KAIJU2_RAID_CONFIG.totalSeconds[difficulty] + 10;
   let t = 0;
   while (t < max && !m.host.finished) {
@@ -220,6 +289,7 @@ export async function runKaiju2Coop(o: Kaiju2CoopOptions): Promise<Kaiju2CoopRes
     outcome: over?.b ?? 0,
     seconds: (over?.n ?? t * 60) / 60,
     downs,
+    ramHits: o.noRam ? passes : (m.host.raid2?.bodyHits ?? 0),
     match: m,
   };
 }

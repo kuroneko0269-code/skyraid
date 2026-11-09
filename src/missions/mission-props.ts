@@ -8,6 +8,7 @@ import { TRANSPORT_CONFIG } from '../data/mission-props';
 import { GroundTarget } from '../entities/ground-target';
 import { KaijuAi, type KaijuHitHandler, type KaijuTarget } from '../ai/kaiju-ai';
 import { Kaiju } from '../entities/kaiju';
+import { VorgasRam, type RamSession } from './vorgas-ram';
 import { Transport } from '../entities/transport';
 import type { GroundTargetSpawn, KaijuSpawn, TransportSpawn } from './types';
 import { EnemyBombs } from '../combat/enemy-bombs';
@@ -28,6 +29,8 @@ export class MissionProps {
   readonly kaiju: Kaiju;
   /** 怪獣の行動（6-2）。当たりは onKaijuHit */
   readonly kaijuAi: KaijuAi;
+  /** 10-6: ヴォルガスの体への衝突（ソロのレイドだけ。FlightSession が毎ステップ collide を呼ぶ） */
+  readonly vorgasRam = new VorgasRam();
   /** 怪獣の攻撃が当たったとき（FlightSession がダメージ・スタンを与える） */
   onKaijuHit: KaijuHitHandler = { damage: () => undefined, stun: () => undefined };
   /** 遊ぶ人数（怪獣の HP の人数スケール。シングルプレイは 1） */
@@ -102,6 +105,7 @@ export class MissionProps {
     for (const t of this.transports) t.withdraw();
     this.kaiju.withdraw();
     this.kaijuAi.reset();
+    this.vorgasRam.reset();
     for (const g of this.groundTargets) g.withdraw();
     this.aaa.reset();
     for (const g of this.baseTargets) g.withdraw();
@@ -111,14 +115,19 @@ export class MissionProps {
     this.friendlyAaa.reset();
   }
 
-  /** player は対空砲が狙う自機（撃墜されている間は active が false）、kaijuTargets は怪獣が狙う機体 */
+  /**
+   * player は対空砲が狙う自機（撃墜されている間は active が false）、kaijuTargets は怪獣が狙う機体。10-6: session（ソロの飛行）を
+   * 渡すと、ヴォルガスの体への衝突も調べる
+   */
   step(
     dt: number,
     player: AaaTarget | null = null,
     kaijuTargets: readonly KaijuTarget[] = [],
+    session?: RamSession,
   ): void {
     for (const t of this.transports) t.step(dt);
     this.kaijuAi.step(kaijuTargets, dt);
+    if (session) this.vorgasRam.collide(dt, session);
     for (const g of this.groundTargets) g.step(dt);
     for (const g of this.baseTargets) g.step(dt);
     this.aaa.step(this.groundTargets, player, dt);

@@ -279,6 +279,13 @@ export class PvpMirror {
       case 'stun':
         if (e.a === this.localId) this.ownStun = Math.max(this.ownStun, e.n / 100);
         break;
+      // 10-6: 自機が怪獣の体にぶつかった（ホストが決める）: ソロと同じ火花・破片の煙・揺れ・音・振動を自機の所に
+      case 'ram':
+        if (e.a === this.localId) {
+          const p = s.aircraft.state.position;
+          c.ramListeners.report(p.x, p.y, p.z);
+        }
+        break;
       case 'respawn':
         if (e.a === this.localId) {
           // 初心者保護（5-4）: 最大 HP とミサイルの数をこの命の間だけ増やす（revived で満タンにする）
