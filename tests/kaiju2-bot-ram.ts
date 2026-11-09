@@ -39,7 +39,16 @@ export class Kaiju2BotRam {
   think(s: FlightSession, ground: (x: number, z: number) => number, dt: number): void {
     const raid = this.dev.raid;
     const k = raid.body;
-    if (this.noRam || this.avoid > 0 || !s.player.active || !k.visible || raid.dead) return;
+    // キャンペーン（M8）は体を通り抜けられる（衝突なし）ので避けない
+    if (
+      this.noRam ||
+      raid.campaign ||
+      this.avoid > 0 ||
+      !s.player.active ||
+      !k.visible ||
+      raid.dead
+    )
+      return;
     const a = s.aircraft;
     const me = a.state.position;
     const v = {
